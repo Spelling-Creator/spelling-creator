@@ -55,7 +55,7 @@
     "@rsbuild/core": "^1.7.5",
     "@rsbuild/plugin-react": "^1.4.6",
     "@rsbuild/plugin-tailwindcss": "^2.0.3",
-    "tailwindcss": "^4.3.2",
+    "tailwindcss": "^4.3.3",
     "vitest": "~3.2.4"
   }
 }
