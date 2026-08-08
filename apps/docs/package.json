@@ -11,7 +11,7 @@
     "preview": "rspress preview"
   },
   "dependencies": {
-    "@rspress/core": "^2.0.14"
+    "@rspress/core": "^2.0.19"
   },
   "engines": {
     "node": ">=20.0"
