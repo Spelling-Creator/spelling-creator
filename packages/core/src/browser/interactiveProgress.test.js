@@ -111,6 +111,19 @@ describe("saveInteractiveProgress / loadInteractiveProgress", () => {
     expect(loadInteractiveProgress("lesson-1", "user-1")).toBeNull();
   });
 
+  it("says so where there is no storage to refuse us", () => {
+    // A runtime with no localStorage at all — a server render, a browser with
+    // site data switched off. Nothing throws here, so a write that only guarded
+    // against exceptions would report success and promise a resume that can't
+    // happen.
+    delete globalThis.localStorage;
+    expect(
+      saveInteractiveProgress("lesson-1", "user-1", { answers: { b3: "a" } }),
+    ).toBe(false);
+    expect(loadInteractiveProgress("lesson-1", "user-1")).toBeNull();
+    expect(hasInteractiveProgress("lesson-1", "user-1")).toBe(false);
+  });
+
   it("survives junk under its key", () => {
     storage.setItem("spelling-creator:interactive-progress", "not json");
     expect(loadInteractiveProgress("lesson-1", "user-1")).toBeNull();

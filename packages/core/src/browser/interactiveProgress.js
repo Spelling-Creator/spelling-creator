@@ -74,7 +74,12 @@ function readAll() {
 
 function writeAll(records) {
   try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(records));
+    // Checked rather than optional-chained: `localStorage?.setItem(...)` on a
+    // runtime that has no localStorage at all does nothing and throws nothing,
+    // and returning true there would have us promise the learner a resume that
+    // cannot happen.
+    if (!globalThis.localStorage) return false;
+    globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     return true;
   } catch {
     // Private browsing, a full quota, storage switched off. The walkthrough

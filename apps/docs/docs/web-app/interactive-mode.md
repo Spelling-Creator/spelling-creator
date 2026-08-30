@@ -108,13 +108,13 @@ waiting is somebody else's half-finished attempt.
 This is deliberately **not** the same mechanism as the saved run-throughs above,
 and the differences are the point:
 
-|              | Progress (unfinished)                    | A saved run-through (finished) |
-| ------------ | ---------------------------------------- | ------------------------------ |
-| Lives in     | this browser (`localStorage`)            | your account, on the server    |
-| Needs        | nothing — signed out works too           | a signed-in session            |
-| Travels      | no: this device only                     | yes: any device you sign in on |
-| Kept until   | you finish, start again, or 90 days pass | you delete it                  |
-| Anyone else? | never sent anywhere at all               | only you can read it           |
+|              | Progress (unfinished)                                       | A saved run-through (finished) |
+| ------------ | ----------------------------------------------------------- | ------------------------------ |
+| Lives in     | this browser (`localStorage`)                               | your account, on the server    |
+| Needs        | nothing — signed out works too                              | a signed-in session            |
+| Travels      | no: this device only                                        | yes: any device you sign in on |
+| Kept until   | it is filed, you start again or discard it, or 90 days pass | you delete it                  |
+| Anyone else? | never sent anywhere at all                                  | only you can read it           |
 
 Consequences worth knowing:
 
@@ -122,10 +122,21 @@ Consequences worth knowing:
   and finishing on a phone still starts over. Syncing it would mean putting
   half-written answers on the server, which is a much bigger promise than "your
   tab remembers", and this feature isn't worth making it.
-- Records are kept **per learner as well as per lesson**. A shared classroom
-  machine is the normal case here, and resuming into whatever the previous user
-  typed would be worse than not resuming at all. Signing in part-way through
-  therefore starts a fresh record rather than adopting the signed-out one.
+- Records are kept **per signed-in learner as well as per lesson**. A shared
+  classroom machine is the normal case here, and resuming into whatever the
+  previous user typed would be worse than not resuming at all. Two learners who
+  are both **signed out** do share one record per lesson, because there is
+  nothing to tell them apart: the browser is the only identity on offer. That is
+  the same bargain as a half-filled form left in a shared browser, and it is why
+  a resumed run-through always says so and offers _Start again_ rather than
+  quietly continuing.
+- A run-through belongs to **whoever started it**. The signed-in account can
+  change with the walkthrough open — a sign-in in another tab, a sign-out — and
+  the run then carries on writing to the record it began in, rather than moving
+  one person's half-written answers into the account that just appeared.
+  Pressing **Finish** in that state doesn't file them either; the summary says
+  why, and the answers stay on the device for the learner they belong to. This is
+  why the copy has always said to sign in _before_ you start.
 - A browser keeps the 20 most recently touched lessons and forgets a run-through
   nobody came back to within 90 days. Pruning is fine here in a way it explicitly
   [isn't for saved run-throughs](#worker-endpoints): this is a resume cache, not
@@ -133,8 +144,9 @@ Consequences worth knowing:
 - **Closing mid-way no longer discards anything**, so the confirmation on the way
   out now says that instead of warning about it — and carries a _Discard answers_
   button for deliberately throwing the attempt away. Where the browser refuses us
-  storage entirely (private browsing, a full quota), the old warning comes back,
-  because by then it is true again.
+  storage (private browsing, a full quota) or has none at all, the old warning
+  comes back, because by then it is true again: every write reports whether it
+  landed, and the confirmation only promises what was actually kept.
 - The local copy is dropped **as soon as the run-through is filed** to your
   account. A _failed_ save deliberately leaves it, so closing and coming back is
   a way to try again rather than a way to lose the lot. Signed out — where saving

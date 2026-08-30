@@ -498,6 +498,7 @@ function SummaryStep({
   error,
   onRetry,
   signedIn,
+  ownerChanged,
   showAnswers,
   blockFor,
 }) {
@@ -572,9 +573,14 @@ function SummaryStep({
           {saveState === "unavailable" && (
             <Alert>
               <AlertDescription>
-                {signedIn
-                  ? t("summary.notConfigured")
-                  : t("summary.signInToSave")}
+                {/* Three different reasons there is no account to file this to,
+                    and which one it is decides what the learner can do about
+                    it — so they are not collapsed into one apology. */}
+                {ownerChanged
+                  ? t("summary.signedInSince")
+                  : signedIn
+                    ? t("summary.notConfigured")
+                    : t("summary.signInToSave")}
               </AlertDescription>
             </Alert>
           )}
@@ -644,7 +650,20 @@ export default function InteractiveLesson({
   // Progress is kept per learner as well as per lesson: a shared classroom
   // machine is the normal case here, and resuming into the answers of whoever
   // used the browser before you is worse than not resuming at all.
+  //
+  // `owner` is who is signed in *now*; `runOwner` is who this run-through
+  // started as, pinned when it began and used for everything it writes. The two
+  // differ only when the session changes with the walkthrough open — a sign-in
+  // in another tab, a sign-out — and a run belongs to the one person who started
+  // it. Following `owner` instead would file whatever is on screen into whoever
+  // just signed in: their browser record gets someone else's half-written
+  // answers, and Finish sends them to their account under their token.
   const owner = user?.id || "";
+  const [runOwner, setRunOwner] = useState(null);
+  // Not a rejection of the new session, just a refusal to file one person's work
+  // to another person's account. The run itself carries on, and its answers keep
+  // going to the record they started in.
+  const ownerChanged = runOwner !== null && runOwner !== owner;
 
   // Whether the reveal has anywhere to go, and the block behind each answer, so
   // the summary can reveal alongside a stored response (which carries a snapshot
@@ -680,12 +699,13 @@ export default function InteractiveLesson({
   // The token is the lesson, not the lesson and the learner: a session that
   // resolves late, or a sign-in in another tab, changes `owner` underneath an
   // open walkthrough, and answering that by wiping the screen and loading the
-  // other account's record would be indefensible. What is on screen carries on;
-  // from that point it is simply saved under the account now signed in.
+  // other account's record would be indefensible. What is on screen carries on,
+  // under the owner it started as — see `runOwner`.
   const runToken = useRef(null);
   useEffect(() => {
     if (!open) {
       runToken.current = null;
+      setRunOwner(null);
       return;
     }
     // Wait for the session first. A server-rendered link straight to /practice
@@ -712,6 +732,8 @@ export default function InteractiveLesson({
     setIndex(savedStep > 0 ? savedStep : 0);
     setAnswers(savedAnswers);
     setResumed(savedStep > 0 || Object.keys(savedAnswers).length > 0);
+    // Whose run this is, for as long as it lasts.
+    setRunOwner(owner);
     setPhase("running");
     setSaveState("idle");
     setSaveError("");
@@ -724,18 +746,19 @@ export default function InteractiveLesson({
   // briefly enough that closing a laptop mid-sentence keeps the sentence.
   // Moving between steps saves too: resuming to the wrong place is the other
   // half of what this is for.
-  // It waits for the session for the same reason the resume above does: writing
-  // the first keystrokes to the signed-out record and the rest to the account's
-  // would split one run-through across two.
+  // It writes to `runOwner`, not to whoever is signed in now, which is what
+  // keeps one run-through in one record: the first keystrokes and the last
+  // belong together even if the session changed in between, and they certainly
+  // don't belong to a second person who signed in halfway through.
   useEffect(() => {
-    if (!open || authLoading || phase !== "running") return;
+    if (!open || runOwner === null || phase !== "running") return;
     const timer = setTimeout(() => {
       setProgressStored(
-        writeProgress(lesson?.id, owner, { started, stepKey, answers }),
+        writeProgress(lesson?.id, runOwner, { started, stepKey, answers }),
       );
     }, 400);
     return () => clearTimeout(timer);
-  }, [open, authLoading, phase, lesson?.id, owner, started, stepKey, answers]);
+  }, [open, runOwner, phase, lesson?.id, started, stepKey, answers]);
 
   // Read the current step aloud when speech is on. Keyed on which step was last
   // spoken rather than on the effect's inputs: changing voice or pace mid-step
@@ -773,20 +796,32 @@ export default function InteractiveLesson({
   // the learner's account, and when they choose to throw it away — either by
   // starting again or by discarding on the way out.
   const forgetProgress = () => {
-    if (lesson?.id) clearInteractiveProgress(lesson.id, owner);
+    if (lesson?.id) clearInteractiveProgress(lesson.id, runOwner);
   };
 
   // Write out whatever hasn't been autosaved yet. The debounce above is still
   // pending when someone presses Esc mid-word, and its cleanup would drop it.
+  // The result is kept for the same reason the debounced write keeps it: this is
+  // usually the last write a run-through makes, and it is the one the quit
+  // confirmation is about to make a promise about.
   const flushProgress = () => {
-    if (phase !== "running" || authLoading) return;
-    writeProgress(lesson?.id, owner, { started, stepKey, answers });
+    if (phase !== "running" || runOwner === null) return;
+    setProgressStored(
+      writeProgress(lesson?.id, runOwner, { started, stepKey, answers }),
+    );
   };
 
   // Store the finished run-through. Called on reaching the summary, and again by
   // the retry button. Requires a signed-in session and a configured hub; without
   // either, the summary says so rather than failing.
   const save = async (payload) => {
+    // Whoever is signed in now is not who started this. Filing it would put one
+    // learner's answers in another's account, so it stays where it is — in the
+    // browser, under the owner who typed it, resumable by them.
+    if (ownerChanged) {
+      setSaveState("unavailable");
+      return;
+    }
     if (!hasApi() || !accessToken || !lesson?.id) {
       // Nothing to file it to, so the browser's copy is the only copy there is
       // and it stays. Reopening the lesson comes back to the last step with
@@ -986,6 +1021,7 @@ export default function InteractiveLesson({
                 error={saveError}
                 onRetry={() => save(responses)}
                 signedIn={Boolean(user)}
+                ownerChanged={ownerChanged}
                 showAnswers={showAnswers}
                 blockFor={(blockId) => questionBlocks.get(blockId)}
               />

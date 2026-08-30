@@ -51,7 +51,7 @@
     "title": "Leave the lesson?",
     "body": "Your answers are kept on this device, so you can open the lesson again and carry on from here.",
     "noStorageTitle": "Leave without saving?",
-    "noStorageBody": "This browser won’t let us keep your answers, so they can’t be picked up again — they’re only stored once you finish the lesson. Leaving now discards them.",
+    "noStorageBody": "This browser won’t let us keep your answers, so there’s nothing to come back to. Leaving now discards what you’ve typed.",
     "keepGoing": "Keep going",
     "leave": "Leave",
     "discard": "Discard answers"
@@ -66,6 +66,7 @@
     "retry": "Retry",
     "notConfigured": "The lesson hub is not configured, so your answers can’t be saved.",
     "signInToSave": "Sign in before you start to have your answers saved privately to your account.",
+    "signedInSince": "A different account signed in while you were working, so these answers aren’t filed to it. They’re still on this device, kept for whoever started this run-through.",
     "startAgain": "Start again",
     "done": "Done"
   },
