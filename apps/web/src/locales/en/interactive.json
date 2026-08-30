@@ -42,10 +42,18 @@
     "next": "Next",
     "finish": "Finish"
   },
+  "resume": {
+    "title": "Picked up where you left off",
+    "body": "Your answers from last time are still here, kept on this device. Carry on, or start the lesson again from the beginning.",
+    "startAgain": "Start again"
+  },
   "quit": {
-    "title": "Leave without saving?",
-    "body": "Your answers haven’t been saved yet — they’re only stored once you finish the lesson. Leaving now discards them.",
+    "title": "Leave the lesson?",
+    "body": "Your answers are kept on this device, so you can open the lesson again and carry on from here.",
+    "noStorageTitle": "Leave without saving?",
+    "noStorageBody": "This browser won’t let us keep your answers, so they can’t be picked up again — they’re only stored once you finish the lesson. Leaving now discards them.",
     "keepGoing": "Keep going",
+    "leave": "Leave",
     "discard": "Discard answers"
   },
   "summary": {

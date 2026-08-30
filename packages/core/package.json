@@ -19,6 +19,7 @@
     "./browser/imageFile": "./src/browser/imageFile.js",
     "./browser/imageRef": "./src/browser/imageRef.js",
     "./browser/imageStore": "./src/browser/imageStore.js",
+    "./browser/interactiveProgress": "./src/browser/interactiveProgress.js",
     "./browser/jsonExport": "./src/browser/jsonExport.js",
     "./browser/pdfExport": "./src/browser/pdfExport.js",
     "./browser/presence": "./src/browser/presence.js",

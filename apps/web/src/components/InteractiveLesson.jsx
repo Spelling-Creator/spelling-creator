@@ -19,10 +19,15 @@
 // own scale, from the same block shapes; only the *presentation* differs, never
 // the content.
 //
-// What the learner types is theirs. It is held in memory while they work and
-// sent once, at the end, to their own account (see core/lessonResponses.js and
-// the privacy note in the Worker's routes/lessonResponses.js). The lesson's
-// author never sees it.
+// What the learner types is theirs. The finished run-through is sent once, at
+// the end, to their own account (see core/lessonResponses.js and the privacy
+// note in the Worker's routes/lessonResponses.js). The lesson's author never
+// sees it.
+//
+// Until then it is also written to this browser as they type (see
+// core/browser/interactiveProgress.js), so a lesson closed half-way reopens
+// where it was left, answers and all. That local copy never leaves the device
+// and is dropped as soon as the run-through it belongs to is finished and filed.
 //
 // A question block carries the author's own answer, and the eye button in the
 // top bar reveals it — for whoever is running the lesson at the front of a room,
@@ -30,16 +35,12 @@
 // are walking a class towards. It starts off every time interactive mode opens,
 // so a learner's own run-through never begins with the answers on screen.
 //
-// Two things this deliberately does NOT do:
-//
-//   Mark answers. Revealing the author's answer is a presenter putting it on
-//   screen deliberately; it is never compared against what the learner typed and
-//   no verdict is ever drawn. Spelling lessons are about the learner producing
-//   the response, and a right/wrong verdict from a string comparison would be
-//   both wrong a lot of the time and the wrong shape of feedback.
-//
-//   Save partial work. Nothing is stored until the last step is done, so a
-//   half-finished run-through never shows up as a completed one.
+// One thing this deliberately does NOT do: mark answers. Revealing the author's
+// answer is a presenter putting it on screen deliberately; it is never compared
+// against what the learner typed and no verdict is ever drawn. Spelling lessons
+// are about the learner producing the response, and a right/wrong verdict from a
+// string comparison would be both wrong a lot of the time and the wrong shape of
+// feedback.
 //
 // Speech is optional and off until asked for; see lib/useSpeech.js.
 
@@ -52,6 +53,7 @@ import {
   CircleCheckIcon,
   EyeIcon,
   EyeOffIcon,
+  HistoryIcon,
   PlayIcon,
   RotateCcwIcon,
   SettingsIcon,
@@ -60,7 +62,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { Button } from "./ui/button.jsx";
-import { Alert, AlertDescription } from "./ui/alert.jsx";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert.jsx";
 import { Field, FieldLabel } from "./ui/field.jsx";
 import { Progress } from "./ui/progress.jsx";
 import { Skeleton } from "./ui/skeleton.jsx";
@@ -87,6 +89,11 @@ import {
   questionAnswer,
   stepSpeechText,
 } from "@spelling-creator/core/interactive";
+import {
+  clearInteractiveProgress,
+  loadInteractiveProgress,
+  saveInteractiveProgress,
+} from "@spelling-creator/core/browser/interactiveProgress";
 import { questionMeta } from "@spelling-creator/core/questions";
 import { saveLessonResponses } from "@spelling-creator/core/lessonResponses";
 import { hasApi } from "@spelling-creator/core/config";
@@ -302,6 +309,35 @@ function AnswerReveal({ block, className }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Shown on the step a resumed run-through picks up at, and only until the
+// learner moves on: it answers "why am I in the middle of this lesson?" once,
+// and the answer stops being interesting the moment they carry on. It carries
+// the way back out too — a shared classroom machine will hand someone a
+// half-finished lesson they don't want now and then, and starting over shouldn't
+// mean finishing first.
+function ResumeNotice({ onRestart }) {
+  const { t } = useTranslation("interactive");
+
+  return (
+    <Alert className="mb-6">
+      <HistoryIcon />
+      <AlertTitle>{t("resume.title")}</AlertTitle>
+      <AlertDescription>
+        <p>{t("resume.body")}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={onRestart}
+        >
+          <RotateCcwIcon data-icon="inline-start" />
+          {t("resume.startAgain")}
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -548,6 +584,21 @@ function SummaryStep({
   );
 }
 
+// Write (or drop) the unfinished run-through this browser is holding. Dropping
+// it once nothing has been done — step one, nothing typed — is what stops a
+// lesson someone opened and immediately closed from being offered back to them
+// as work in progress.
+//
+// Returns whether the browser actually kept it: a browser that refuses us
+// storage still gets a working walkthrough, and the only thing that changes is
+// what we promise on the way out.
+function writeProgress(lessonId, owner, { started, stepKey, answers }) {
+  if (!lessonId) return false;
+  return started
+    ? saveInteractiveProgress(lessonId, owner, { stepKey, answers })
+    : clearInteractiveProgress(lessonId, owner);
+}
+
 /**
  * The interactive-mode surface for one lesson.
  *
@@ -564,7 +615,7 @@ export default function InteractiveLesson({
   onSaved,
 }) {
   const { t } = useTranslation("interactive");
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, loading: authLoading } = useAuth();
   const speech = useSpeech();
 
   const steps = useMemo(
@@ -583,6 +634,17 @@ export default function InteractiveLesson({
   // The presenter's reveal — see the note at the top of this file for why it is
   // plain state rather than a remembered preference like the speech settings.
   const [showAnswers, setShowAnswers] = useState(false);
+  // Whether this run picked up an unfinished one, and whether this browser is
+  // actually able to hold on to it. The second is only ever false where storage
+  // is refused outright (private browsing, a full quota), and all it changes is
+  // what the walkthrough claims on the way out.
+  const [resumed, setResumed] = useState(false);
+  const [progressStored, setProgressStored] = useState(true);
+
+  // Progress is kept per learner as well as per lesson: a shared classroom
+  // machine is the normal case here, and resuming into the answers of whoever
+  // used the browser before you is worse than not resuming at all.
+  const owner = user?.id || "";
 
   // Whether the reveal has anywhere to go, and the block behind each answer, so
   // the summary can reveal alongside a stored response (which carries a snapshot
@@ -603,19 +665,77 @@ export default function InteractiveLesson({
   ).length;
   const isLastStep = index >= steps.length - 1;
   const dirty = Object.values(answers).some((answer) => answer.trim());
+  const stepKey = step?.key || "";
+  // Whether there is anything to come back to. Being past the first step counts
+  // on its own: a lesson with no questions is still somewhere you got to.
+  const started = index > 0 || dirty;
 
-  // Start clean every time it opens, so a second run-through never begins
-  // pre-filled with the first one's answers.
+  // Pick up where this learner left off, once per opening.
+  //
+  // Guarded by a token rather than a plain "have we started" flag because
+  // `steps` has to be in the dependencies — the lesson page re-fetches the
+  // lesson underneath us, which rebuilds the walkthrough — and re-running this
+  // mid-lesson would reset a run-through in progress to its stored state.
+  //
+  // The token is the lesson, not the lesson and the learner: a session that
+  // resolves late, or a sign-in in another tab, changes `owner` underneath an
+  // open walkthrough, and answering that by wiping the screen and loading the
+  // other account's record would be indefensible. What is on screen carries on;
+  // from that point it is simply saved under the account now signed in.
+  const runToken = useRef(null);
   useEffect(() => {
-    if (!open) return;
-    setIndex(0);
-    setAnswers({});
+    if (!open) {
+      runToken.current = null;
+      return;
+    }
+    // Wait for the session first. A server-rendered link straight to /practice
+    // mounts this before the session is restored from storage, and resuming as
+    // "signed out" there would hand a signed-in learner an empty lesson and then
+    // refuse to correct itself.
+    if (authLoading) return;
+    const token = lesson?.id || "";
+    if (runToken.current === token) return;
+    runToken.current = token;
+
+    const saved = loadInteractiveProgress(lesson?.id, owner);
+    // The step is found by key, not by number: a lesson edited between two
+    // sittings shifts every index after the edit, and coming back to the wrong
+    // question is the one thing resuming must not do. A step that has since been
+    // deleted resolves to nothing and the run starts at the top — with the
+    // answers still restored, since those are keyed by block id and survive a
+    // re-ordering intact.
+    const savedStep = saved
+      ? steps.findIndex((s) => s.key === saved.stepKey)
+      : -1;
+    const savedAnswers = saved?.answers || {};
+
+    setIndex(savedStep > 0 ? savedStep : 0);
+    setAnswers(savedAnswers);
+    setResumed(savedStep > 0 || Object.keys(savedAnswers).length > 0);
     setPhase("running");
     setSaveState("idle");
     setSaveError("");
     setShowAnswers(false);
+    setProgressStored(true);
     savedFingerprint.current = null;
-  }, [open]);
+  }, [open, authLoading, lesson?.id, owner, steps]);
+
+  // Autosave. Debounced so typing doesn't hit storage on every keystroke, but
+  // briefly enough that closing a laptop mid-sentence keeps the sentence.
+  // Moving between steps saves too: resuming to the wrong place is the other
+  // half of what this is for.
+  // It waits for the session for the same reason the resume above does: writing
+  // the first keystrokes to the signed-out record and the rest to the account's
+  // would split one run-through across two.
+  useEffect(() => {
+    if (!open || authLoading || phase !== "running") return;
+    const timer = setTimeout(() => {
+      setProgressStored(
+        writeProgress(lesson?.id, owner, { started, stepKey, answers }),
+      );
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [open, authLoading, phase, lesson?.id, owner, started, stepKey, answers]);
 
   // Read the current step aloud when speech is on. Keyed on which step was last
   // spoken rather than on the effect's inputs: changing voice or pace mid-step
@@ -649,11 +769,28 @@ export default function InteractiveLesson({
   // to try again.
   const savedFingerprint = useRef(null);
 
+  // Drop the browser's copy of the run-through. Called once it has been filed to
+  // the learner's account, and when they choose to throw it away — either by
+  // starting again or by discarding on the way out.
+  const forgetProgress = () => {
+    if (lesson?.id) clearInteractiveProgress(lesson.id, owner);
+  };
+
+  // Write out whatever hasn't been autosaved yet. The debounce above is still
+  // pending when someone presses Esc mid-word, and its cleanup would drop it.
+  const flushProgress = () => {
+    if (phase !== "running" || authLoading) return;
+    writeProgress(lesson?.id, owner, { started, stepKey, answers });
+  };
+
   // Store the finished run-through. Called on reaching the summary, and again by
   // the retry button. Requires a signed-in session and a configured hub; without
   // either, the summary says so rather than failing.
   const save = async (payload) => {
     if (!hasApi() || !accessToken || !lesson?.id) {
+      // Nothing to file it to, so the browser's copy is the only copy there is
+      // and it stays. Reopening the lesson comes back to the last step with
+      // everything typed still there, one press from this summary again.
       setSaveState("unavailable");
       return;
     }
@@ -663,6 +800,11 @@ export default function InteractiveLesson({
       await saveLessonResponses(lesson.id, payload, accessToken);
       savedFingerprint.current = JSON.stringify(payload);
       setSaveState("saved");
+      // Filed. It is a finished run-through now, not one in progress, and
+      // leaving it in the resume cache would offer the lesson back as unfinished
+      // work. A *failed* save deliberately leaves it, so closing the dialog and
+      // coming back is a way to try again rather than a way to lose it.
+      forgetProgress();
       onSaved?.();
     } catch (err) {
       setSaveState("error");
@@ -675,18 +817,27 @@ export default function InteractiveLesson({
     spokenKey.current = null;
     setPhase("summary");
     // A read-through of a lesson with no questions has nothing to store, and
-    // answers already stored unchanged have nothing to store again.
-    if (responses.length === 0) return;
-    if (savedFingerprint.current === JSON.stringify(responses)) return;
+    // answers already stored unchanged have nothing to store again. Either way
+    // the run-through is over, so there is nothing to come back to.
+    if (responses.length === 0) {
+      forgetProgress();
+      return;
+    }
+    if (savedFingerprint.current === JSON.stringify(responses)) {
+      forgetProgress();
+      return;
+    }
     save(responses);
   };
 
   const goNext = () => {
+    setResumed(false);
     if (isLastStep) finish();
     else setIndex((current) => current + 1);
   };
 
   const goBack = () => {
+    setResumed(false);
     if (phase === "summary") {
       setPhase("running");
       setIndex(steps.length - 1);
@@ -698,24 +849,41 @@ export default function InteractiveLesson({
   const restart = () => {
     setIndex(0);
     setAnswers({});
+    setResumed(false);
     setPhase("running");
     setSaveState("idle");
     setSaveError("");
+    setProgressStored(true);
     spokenKey.current = null;
     savedFingerprint.current = null;
+    forgetProgress();
   };
 
   const close = () => {
     speech.stop();
+    flushProgress();
     onOpenChange(false);
   };
 
-  // Leaving mid-run throws away answers that were never sent anywhere, so ask
-  // first. Once the summary is up there is nothing left to lose, so it closes
-  // straight away.
+  // Leaving with the browser's copy thrown away as well — the way out for
+  // someone who wants the lesson to start clean next time, and the reason the
+  // confirmation still has a destructive button on it.
+  const discardAndClose = () => {
+    speech.stop();
+    forgetProgress();
+    onOpenChange(false);
+  };
+
+  // Leaving mid-run no longer loses anything: the answers are already in this
+  // browser and the lesson reopens where it was left. The confirmation stays
+  // anyway, because that is exactly what it now exists to say — plus it is the
+  // one place to discard the work deliberately. Where storage was refused it
+  // reverts to the warning it used to be, which by then is the truth.
   const requestClose = () => {
-    if (phase === "running" && dirty) setPhase("quit");
-    else close();
+    if (phase === "running" && dirty) {
+      flushProgress();
+      setPhase("quit");
+    } else close();
   };
 
   const empty = steps.length === 0;
@@ -734,9 +902,9 @@ export default function InteractiveLesson({
         // theme values that tailwind-merge won't reconcile away, and left alone
         // they draw a rounded card outline around a full-bleed screen.)
         className="top-0 left-0 flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none! border-0 bg-background p-0 shadow-none! backdrop-blur-none sm:max-w-none"
-        // Esc and a stray click are the two easiest ways to lose a half-typed
+        // Esc and a stray click are the two easiest ways to leave a half-typed
         // run-through by accident, so both route through the same confirmation
-        // as the close button rather than discarding it outright.
+        // as the close button rather than dropping out of it silently.
         onEscapeKeyDown={(event) => {
           event.preventDefault();
           requestClose();
@@ -752,7 +920,9 @@ export default function InteractiveLesson({
               </DialogTitle>
               <p className="mt-0.5 truncate text-sm text-muted-foreground">
                 {phase === "quit"
-                  ? t("quit.title")
+                  ? progressStored
+                    ? t("quit.title")
+                    : t("quit.noStorageTitle")
                   : phase === "summary"
                     ? t("progress.finished")
                     : step?.sectionName || t("untitledSection")}
@@ -806,7 +976,9 @@ export default function InteractiveLesson({
             {empty ? (
               <p className="text-muted-foreground">{t("emptyLesson")}</p>
             ) : phase === "quit" ? (
-              <p className="text-muted-foreground">{t("quit.body")}</p>
+              <p className="text-muted-foreground">
+                {progressStored ? t("quit.body") : t("quit.noStorageBody")}
+              </p>
             ) : phase === "summary" ? (
               <SummaryStep
                 responses={responses}
@@ -817,20 +989,25 @@ export default function InteractiveLesson({
                 showAnswers={showAnswers}
                 blockFor={(blockId) => questionBlocks.get(blockId)}
               />
-            ) : step.kind === "content" ? (
-              <ContentStep step={step} speech={speech} />
             ) : (
-              <QuestionStep
-                step={step}
-                showAnswers={showAnswers}
-                value={answers[answerKey(step)] || ""}
-                onChange={(value) =>
-                  setAnswers((current) => ({
-                    ...current,
-                    [answerKey(step)]: value,
-                  }))
-                }
-              />
+              <>
+                {resumed && <ResumeNotice onRestart={restart} />}
+                {step.kind === "content" ? (
+                  <ContentStep step={step} speech={speech} />
+                ) : (
+                  <QuestionStep
+                    step={step}
+                    showAnswers={showAnswers}
+                    value={answers[answerKey(step)] || ""}
+                    onChange={(value) =>
+                      setAnswers((current) => ({
+                        ...current,
+                        [answerKey(step)]: value,
+                      }))
+                    }
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
@@ -846,9 +1023,22 @@ export default function InteractiveLesson({
                 <Button variant="outline" onClick={() => setPhase("running")}>
                   {t("quit.keepGoing")}
                 </Button>
-                <Button variant="destructive" onClick={close}>
-                  {t("quit.discard")}
-                </Button>
+                <div className="flex gap-2">
+                  {/* Only worth offering where there is something kept to throw
+                      away. With storage refused, leaving *is* discarding, and a
+                      second button saying so twice would be noise. */}
+                  {progressStored && (
+                    <Button variant="destructive" onClick={discardAndClose}>
+                      {t("quit.discard")}
+                    </Button>
+                  )}
+                  <Button
+                    variant={progressStored ? "default" : "destructive"}
+                    onClick={close}
+                  >
+                    {t("quit.leave")}
+                  </Button>
+                </div>
               </>
             ) : phase === "summary" ? (
               <>

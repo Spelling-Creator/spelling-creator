@@ -48,7 +48,7 @@ src/
     LiveField.jsx          debounced LiveInput/LiveTextarea (commit ~200ms after typing pauses, hold off remote updates while focused)
     LessonView.jsx        read-only renderer for the lesson page and the editor's preview mode (blocks straight to React, lazy images, drawn in the app's theme)
     LessonSummary.jsx     on-device AI summary card on the lesson page (hidden unless the browser supports it)
-    InteractiveLesson.jsx full-screen step-by-step walkthrough of a lesson, with a field per question and optional read-aloud (see interactive-mode.md)
+    InteractiveLesson.jsx full-screen step-by-step walkthrough of a lesson, with a field per question, autosaved progress you can come back to, and optional read-aloud (see interactive-mode.md)
     MyLessonAnswers.jsx   the reader's own saved answers on the lesson page — private to them, rendered for nobody else
     SectionCard.jsx       a named section with its content blocks + add buttons; measures the pointer against its own rows during a block drag, but the drag itself is owned by EditorPage (blocks can move between sections)
     ContentBlock.jsx      a single text, spelling, image, or question block; owns BLOCK_LAYOUT, the responsive content/controls split (see mobile-layout.md)
@@ -199,6 +199,7 @@ the MCP server cannot reach it by accident:
   imageRef              binary image-ref model (a block references its bytes)
   imageFile             read a File to bytes, measure it, opportunistically re-encode to WEBP
   storage               the lesson library: every lesson this device holds, which one is open, and the two migrations into it
+  interactiveProgress   the unfinished interactive run-through this device is holding (localStorage): resume, expiry, pruning
   docxExport            build the .docx (text, images, questions)
   docxImport            best-effort import of a .docx back into the lesson model
   pdfExport             docx -> html (mammoth) -> pdf (html2pdf.js) — the only non-Word use of the Word pipeline
