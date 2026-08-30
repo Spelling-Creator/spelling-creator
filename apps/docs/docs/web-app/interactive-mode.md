@@ -17,6 +17,10 @@ press a button. Closing it returns to the lesson. The component itself is still
 a dialog, deliberately: it is a focus mode with its own bottom bars and its own
 idea of the viewport, and the route only decides when it is open.
 
+You don't have to finish in one sitting: what you type is kept in your browser as
+you go, and the lesson reopens where you left it. See
+[Picking up where you left off](#picking-up-where-you-left-off).
+
 At the end you get a summary of everything you wrote, and — if you're signed in —
 it is saved **privately to your account**. Nobody else can read it, including the
 person who wrote the lesson. See [Privacy](#privacy-who-can-read-your-answers)
@@ -83,12 +87,88 @@ towards.
   background question, the working steps as well for a number question, and
   every accepted answer for a multiple-answer one. An open-ended question — which
   by design has no author's answer — says so rather than leaving a gap.
+- **Every answer gets a box of its own**, so a multiple-answer question shows
+  three answers as three things rather than as a bulleted list under one
+  heading. They're stacked as equals rather than numbered: any of them is a right
+  answer, and a list numbered 1, 2, 3 reads as an order to give them in. A number
+  question's _working_ is not one of these boxes — it's how you reach the answer,
+  not an answer, and it stays a numbered list below them.
+- **Clicking an answer puts it in your field.** It replaces what's there (a
+  multiple-answer question wants one of its accepted answers, not all of them run
+  together), then focuses the field with the caret at the end, since the point of
+  putting text there is usually to keep working on it. What lands in the field is
+  from then on your own answer: it counts as answered, it's kept by
+  [progress](#picking-up-where-you-left-off), and it's what gets filed at the end.
+  A shortcut through typing, not a verdict — see below.
 - The reveal also applies to the **end-of-lesson summary**, where the author's
   answer sits under the one you wrote. Useful for going back over the questions
-  as a class.
+  as a class. The boxes are read-only there: there is no field to fill on the
+  summary, so nothing there is clickable.
 - Answers are still **never spoken** — see [Reading aloud](#reading-aloud-text-to-speech).
 
 Showing an answer is not marking one; see below.
+
+## Picking up where you left off
+
+A lesson is twenty minutes of typing, and a bell goes, or a tab gets closed, or a
+laptop lid comes down. So the run-through you are in the middle of is **written
+to your browser as you work** — every answer and which step you were on — and
+opening the lesson again drops you back exactly there, with what you'd typed
+still in the fields. The lesson page's button says **Continue lesson** rather
+than **Start lesson** when there is something to come back to, and the step you
+resume at says so, with a **Start again** button beside it for when the thing
+waiting is somebody else's half-finished attempt.
+
+This is deliberately **not** the same mechanism as the saved run-throughs above,
+and the differences are the point:
+
+|              | Progress (unfinished)                                       | A saved run-through (finished) |
+| ------------ | ----------------------------------------------------------- | ------------------------------ |
+| Lives in     | this browser (`localStorage`)                               | your account, on the server    |
+| Needs        | nothing — signed out works too                              | a signed-in session            |
+| Travels      | no: this device only                                        | yes: any device you sign in on |
+| Kept until   | it is filed, you start again or discard it, or 90 days pass | you delete it                  |
+| Anyone else? | never sent anywhere at all                                  | only you can read it           |
+
+Consequences worth knowing:
+
+- Progress **does not follow you between devices**. Starting on a school desktop
+  and finishing on a phone still starts over. Syncing it would mean putting
+  half-written answers on the server, which is a much bigger promise than "your
+  tab remembers", and this feature isn't worth making it.
+- Records are kept **per signed-in learner as well as per lesson**. A shared
+  classroom machine is the normal case here, and resuming into whatever the
+  previous user typed would be worse than not resuming at all. Two learners who
+  are both **signed out** do share one record per lesson, because there is
+  nothing to tell them apart: the browser is the only identity on offer. That is
+  the same bargain as a half-filled form left in a shared browser, and it is why
+  a resumed run-through always says so and offers _Start again_ rather than
+  quietly continuing.
+- A run-through belongs to **whoever started it**. The signed-in account can
+  change with the walkthrough open — a sign-in in another tab, a sign-out — and
+  the run then carries on writing to the record it began in, rather than moving
+  one person's half-written answers into the account that just appeared.
+  Pressing **Finish** in that state doesn't file them either; the summary says
+  why, and the answers stay on the device for the learner they belong to. This is
+  why the copy has always said to sign in _before_ you start.
+- A browser keeps the 20 most recently touched lessons and forgets a run-through
+  nobody came back to within 90 days. Pruning is fine here in a way it explicitly
+  [isn't for saved run-throughs](#worker-endpoints): this is a resume cache, not
+  the only copy of anything you chose to keep.
+- **Closing mid-way no longer discards anything**, so the confirmation on the way
+  out now says that instead of warning about it — and carries a _Discard answers_
+  button for deliberately throwing the attempt away. Where the browser refuses us
+  storage (private browsing, a full quota) or has none at all, the old warning
+  comes back, because by then it is true again: every write reports whether it
+  landed, and the confirmation only promises what was actually kept.
+- The local copy is dropped **as soon as the run-through is filed** to your
+  account. A _failed_ save deliberately leaves it, so closing and coming back is
+  a way to try again rather than a way to lose the lot. Signed out — where saving
+  was never possible — it also stays, since it is the only copy there is.
+- Answers are keyed by **block id**, so a lesson edited between two sittings still
+  matches each answer to its question. The step you were on is remembered by key
+  rather than by number for the same reason; if that step has since been deleted
+  the lesson opens at the top, with the answers still restored.
 
 ## What it deliberately doesn't do
 
@@ -99,10 +179,16 @@ by side. Spelling is about the learner producing the response; a right/wrong
 verdict from a string comparison would be wrong a lot of the time and the wrong
 shape of feedback even when it wasn't.
 
-**It doesn't save partial work.** Answers are held in the browser while you work
-and sent once, when you finish. A half-finished run-through is never stored as a
-completed one — which is why closing mid-way asks before discarding what you've
-typed.
+Taking an author's answer into your field by
+[clicking it](#showing-the-answers-for-whoever-is-presenting) doesn't change
+that. It's a deliberate act on a panel you had to switch on, and all it does is
+save you typing: the answer that lands there is treated exactly like one you
+wrote yourself, and nothing anywhere notices where it came from.
+
+**It doesn't store a half-finished run-through as a completed one.** Progress is
+a browser-side scratchpad; nothing reaches `lesson_responses` until you press
+**Finish**, and the _Your answers_ panel only ever lists run-throughs that were
+finished.
 
 ## Privacy: who can read your answers
 
@@ -120,6 +206,11 @@ Only you.
 - Answers are **not** run through the profanity filter that
   [comments](./lesson-hub-and-accounts.md) go through. There's no audience to
   protect: nobody but their author ever reads them.
+- The in-progress copy described in
+  [Picking up where you left off](#picking-up-where-you-left-off) is narrower
+  still: it never leaves the device. There is no endpoint behind it, nothing to
+  scope by user id server-side, and no new way for anyone — author, moderator,
+  admin — to learn that a lesson was even opened.
 
 Your saved run-throughs appear in a **Your answers** panel on the lesson page,
 below the lesson itself and above the comments. It renders for you and nobody
@@ -217,11 +308,13 @@ The full schema, with the reasoning in comments, is `apps/api/schema.sql`.
 
 ## Where the code lives
 
-| File                                            | What it does                                                           |
-| ----------------------------------------------- | ---------------------------------------------------------------------- |
-| `packages/core/src/interactive.js`              | Turns a document into steps; the answer reveal; limits and validation. |
-| `packages/core/src/lessonResponses.js`          | Client for the three endpoints above.                                  |
-| `apps/api/src/routes/lessonResponses.js`        | The endpoints, and the privacy scoping.                                |
-| `apps/web/src/components/InteractiveLesson.jsx` | The full-screen walkthrough.                                           |
-| `apps/web/src/components/MyLessonAnswers.jsx`   | The private "Your answers" panel on the lesson page.                   |
-| `apps/web/src/lib/useSpeech.js`                 | Web Speech API wrapper, preferences, and the platform workarounds.     |
+| File                                               | What it does                                                                      |
+| -------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `packages/core/src/interactive.js`                 | Turns a document into steps; the answers the reveal shows; limits and validation. |
+| `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning.           |
+| `packages/core/src/lessonResponses.js`             | Client for the three endpoints above.                                             |
+| `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                           |
+| `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough.                                                      |
+| `apps/web/src/components/MyLessonAnswers.jsx`      | The private "Your answers" panel on the lesson page.                              |
+| `apps/web/src/pages/lesson/LessonLayout.jsx`       | Start vs. **Continue lesson** on the lesson page's button.                        |
+| `apps/web/src/lib/useSpeech.js`                    | Web Speech API wrapper, preferences, and the platform workarounds.                |

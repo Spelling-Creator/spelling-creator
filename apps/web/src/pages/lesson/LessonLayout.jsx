@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Link as RouterLink,
   Outlet,
+  useLocation,
   useNavigate,
   useOutletContext,
   useParams,
@@ -75,6 +76,7 @@ import {
   FORK_REQUEST_KEY,
 } from "@spelling-creator/core/lessons";
 import { isInteractivePlayable } from "@spelling-creator/core/interactive";
+import { hasInteractiveProgress } from "@spelling-creator/core/browser/interactiveProgress";
 import {
   setShadowban,
   banName,
@@ -125,6 +127,7 @@ export default function LessonLayout() {
     isAdmin,
   } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const origin = useSiteOrigin();
 
   // Present only on the very first render of a server-rendered page load: the
@@ -143,6 +146,17 @@ export default function LessonLayout() {
   // Bumped after a completed interactive run-through, which re-fetches the
   // reader's own saved answers on the overview tab.
   const [answersSaved, setAnswersSaved] = useState(0);
+
+  // Whether this browser is holding an unfinished run-through of this lesson
+  // (see core/browser/interactiveProgress.js), which turns "Start lesson" into
+  // "Continue lesson". Read in an effect rather than during render: the server
+  // has no localStorage, and a label that only exists on the client would be a
+  // hydration mismatch. Re-read on every move between the lesson's tabs, since
+  // leaving interactive mode is one of those.
+  const [resumable, setResumable] = useState(false);
+  useEffect(() => {
+    setResumable(hasInteractiveProgress(id, user?.id || ""));
+  }, [id, user?.id, pathname, answersSaved]);
 
   // Delete-confirmation dialog. The user must retype the lesson's title to
   // confirm, guarding against an accidental, irreversible delete. `deleteMode`
@@ -474,7 +488,9 @@ export default function LessonLayout() {
                 <RouterLink to="practice" className="no-underline">
                   <PlayIcon data-icon="inline-start" />
                   <span className="hidden sm:inline">
-                    {t("lessonPage.startInteractive")}
+                    {resumable
+                      ? t("lessonPage.continueInteractive")
+                      : t("lessonPage.startInteractive")}
                   </span>
                 </RouterLink>
               </Button>

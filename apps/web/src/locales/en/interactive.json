@@ -22,7 +22,9 @@
     "label": "Answer",
     "labelPlural": "Answers",
     "working": "Working",
-    "none": "This question has no set answer."
+    "none": "This question has no set answer.",
+    "use": "Put this in your answer",
+    "useThis": "Put “{{answer}}” in your answer"
   },
   "step": {
     "noQuestionText": "(no question text)",
@@ -42,10 +44,18 @@
     "next": "Next",
     "finish": "Finish"
   },
+  "resume": {
+    "title": "Picked up where you left off",
+    "body": "Your answers from last time are still here, kept on this device. Carry on, or start the lesson again from the beginning.",
+    "startAgain": "Start again"
+  },
   "quit": {
-    "title": "Leave without saving?",
-    "body": "Your answers haven’t been saved yet — they’re only stored once you finish the lesson. Leaving now discards them.",
+    "title": "Leave the lesson?",
+    "body": "Your answers are kept on this device, so you can open the lesson again and carry on from here.",
+    "noStorageTitle": "Leave without saving?",
+    "noStorageBody": "This browser won’t let us keep your answers, so there’s nothing to come back to. Leaving now discards what you’ve typed.",
     "keepGoing": "Keep going",
+    "leave": "Leave",
     "discard": "Discard answers"
   },
   "summary": {
@@ -58,6 +68,7 @@
     "retry": "Retry",
     "notConfigured": "The lesson hub is not configured, so your answers can’t be saved.",
     "signInToSave": "Sign in before you start to have your answers saved privately to your account.",
+    "signedInSince": "A different account signed in while you were working, so these answers aren’t filed to it. They’re still on this device, kept for whoever started this run-through.",
     "startAgain": "Start again",
     "done": "Done"
   },

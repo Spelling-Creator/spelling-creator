@@ -38,9 +38,10 @@ PDF printing.
   published already works — the walkthrough is derived from the document itself.
   What you type is saved **privately to your account** when you finish, readable
   by you and nobody else (not even the lesson's author), and any step can be read
-  aloud by the browser's own speech synthesis. Whoever is presenting can toggle
-  the author's answers on screen (see
-  [Interactive lesson mode](./interactive-mode.md)).
+  aloud by the browser's own speech synthesis. You needn't finish in one sitting:
+  an unfinished run-through is kept in the browser and the lesson reopens where
+  you left it. Whoever is presenting can toggle the author's answers on screen
+  (see [Interactive lesson mode](./interactive-mode.md)).
 - **Navigating a long lesson** - a finished lesson runs to ~37 screens on a
   desktop and ~54 on a phone, so each section's header is sticky (pinned below
   the app bar, naming the section you're in for as long as you're in it), every
