@@ -8,6 +8,7 @@ import {
   hasRevealableAnswers,
   isInteractivePlayable,
   questionAnswer,
+  revealedAnswers,
   stepSpeechText,
   validateResponses,
 } from "./interactive.js";
@@ -238,6 +239,54 @@ describe("questionAnswer", () => {
     ).toBeNull();
     expect(questionAnswer({ type: "text", text: "Not a question" })).toBeNull();
     expect(questionAnswer(null)).toBeNull();
+  });
+});
+
+describe("revealedAnswers", () => {
+  it("gives a one-answer question its single answer", () => {
+    expect(
+      revealedAnswers({
+        type: "question",
+        questionType: "single",
+        answer: " Italy ",
+      }),
+    ).toEqual(["Italy"]);
+  });
+
+  it("gives a multiple-answer question every accepted answer, in order", () => {
+    expect(
+      revealedAnswers({
+        type: "question",
+        questionType: "multiple",
+        answers: [{ text: "lava" }, { text: "  " }, { text: "magma" }],
+      }),
+    ).toEqual(["lava", "magma"]);
+  });
+
+  it("leaves a number question's working out of it", () => {
+    expect(
+      revealedAnswers({
+        type: "question",
+        questionType: "number",
+        answer: "12",
+        steps: [{ text: "4 × 3" }],
+      }),
+    ).toEqual(["12"]);
+  });
+
+  it("is empty when there is nothing to reveal", () => {
+    expect(revealedAnswers({ type: "question", questionType: "open" })).toEqual(
+      [],
+    );
+    // Working but no total: there is something to reveal, but no *answer*.
+    expect(
+      revealedAnswers({
+        type: "question",
+        questionType: "number",
+        steps: [{ text: "Count the syllables" }],
+      }),
+    ).toEqual([]);
+    expect(revealedAnswers(null)).toEqual([]);
   });
 });
 

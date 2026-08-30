@@ -22,7 +22,9 @@
     "label": "Answer",
     "labelPlural": "Answers",
     "working": "Working",
-    "none": "This question has no set answer."
+    "none": "This question has no set answer.",
+    "use": "Put this in your answer",
+    "useThis": "Put “{{answer}}” in your answer"
   },
   "step": {
     "noQuestionText": "(no question text)",

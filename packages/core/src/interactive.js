@@ -232,6 +232,30 @@ export function questionAnswer(block) {
 }
 
 /**
+ * The author's answers to one question as a flat list — one entry per answer the
+ * reveal puts on screen, in the order it shows them.
+ *
+ * The types differ in how many there can be, not in kind: a `single`, `number`
+ * or `background` question has one answer, a `multiple` one has an accepted
+ * answer per entry, and an open-ended question has none. Flattening that here
+ * rather than at the call site is what lets the reveal draw every answer the
+ * same way — one to a box, each its own thing to point at or click — instead of
+ * a value for one type and a bullet list for another.
+ *
+ * A number question's working is deliberately not in here. It is how you get to
+ * the answer, not an answer, and it is shown as working.
+ *
+ * @param {object} block  A question block.
+ * @returns {string[]}
+ */
+export function revealedAnswers(block) {
+  const revealed = questionAnswer(block);
+  if (!revealed) return [];
+  if (revealed.answers.length > 0) return revealed.answers;
+  return revealed.answer ? [revealed.answer] : [];
+}
+
+/**
  * Whether a walkthrough has any author's answer to reveal at all — i.e. whether
  * offering the reveal would lead anywhere. False for a lesson with no questions,
  * and for one whose questions are all open-ended or left unanswered.

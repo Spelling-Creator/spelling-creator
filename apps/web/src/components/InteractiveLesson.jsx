@@ -51,6 +51,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   CircleCheckIcon,
+  CornerDownLeftIcon,
   EyeIcon,
   EyeOffIcon,
   HistoryIcon,
@@ -87,6 +88,7 @@ import {
   collectResponses,
   hasRevealableAnswers,
   questionAnswer,
+  revealedAnswers,
   stepSpeechText,
 } from "@spelling-creator/core/interactive";
 import {
@@ -254,15 +256,61 @@ function AnswerToggle({ shown, onToggle }) {
   );
 }
 
+// One revealed answer, in a box of its own.
+//
+// A multiple-answer question used to reveal as a bulleted list under a single
+// heading, which is the one place the reveal read as prose rather than as
+// answers: three accepted answers are three separate things, and a `<li>` is a
+// poor thing to point at across a classroom and a worse one to click.
+//
+// Which is the other half of it. Given somewhere to put it — a question step has
+// a field, the end-of-lesson summary doesn't — the box becomes a button that
+// types that answer into the learner's own box. That is a shortcut through
+// typing, not a verdict on anything: nothing is compared, and what lands in the
+// field is thereafter the learner's own answer, saved like any other.
+function RevealedAnswer({ text, onUse }) {
+  const { t } = useTranslation("interactive");
+  const shell =
+    "rounded-panel border border-primary/40 bg-background px-4 py-2 text-lg font-medium";
+
+  if (!onUse) return <div className={shell}>{text}</div>;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={() => onUse(text)}
+          aria-label={t("answers.useThis", { answer: text })}
+          className={cn(
+            shell,
+            "flex w-full items-center justify-between gap-3 text-left transition-colors",
+            "hover:border-primary hover:bg-primary/10",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          )}
+        >
+          <span>{text}</span>
+          <CornerDownLeftIcon className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t("answers.use")}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 // The author's answer to one question, while the reveal is on. Framed and
 // labelled rather than dropped in under the prompt: this often goes up on a
 // projector next to the learner's own field, and which of the two is which has
 // to be obvious from the back of the room. A question with nothing to reveal
 // says so — an open-ended question has no set answer, and leaving a blank space
 // would read as the reveal being broken.
-function AnswerReveal({ block, className }) {
+//
+// `onUse` is what makes the answers clickable; it is absent wherever there is no
+// field to fill, which is what keeps the summary read-only.
+function AnswerReveal({ block, className, onUse }) {
   const { t } = useTranslation("interactive");
   const revealed = questionAnswer(block);
+  const answers = revealedAnswers(block);
 
   const label = (text) => (
     <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -280,22 +328,19 @@ function AnswerReveal({ block, className }) {
       {!revealed && (
         <p className="text-muted-foreground italic">{t("answers.none")}</p>
       )}
-      {revealed?.answer && (
+      {answers.length > 0 && (
         <div>
-          {label(t("answers.label"))}
-          <p className="mt-1 text-lg font-medium">{revealed.answer}</p>
-        </div>
-      )}
-      {revealed?.answers.length > 0 && (
-        <div>
-          {label(t("answers.labelPlural"))}
-          <ul className="mt-1 list-disc pl-5">
-            {revealed.answers.map((answer, index) => (
-              <li key={index} className="text-lg font-medium">
-                {answer}
-              </li>
+          {label(
+            answers.length > 1 ? t("answers.labelPlural") : t("answers.label"),
+          )}
+          {/* Any of them is a right answer, so they are stacked as equals rather
+              than numbered: a list numbered 1, 2, 3 reads as an order to give
+              them in, which is not what a multiple-answer question asks for. */}
+          <div className="mt-1.5 flex flex-col gap-2">
+            {answers.map((answer, index) => (
+              <RevealedAnswer key={index} text={answer} onUse={onUse} />
             ))}
-          </ul>
+          </div>
         </div>
       )}
       {revealed?.steps.length > 0 && (
@@ -449,11 +494,29 @@ function ContentStep({ step, speech }) {
 }
 
 // One question, with the field the learner types into — and, under it, the
-// author's answer while the presenter's reveal is on.
+// author's answer while the presenter's reveal is on. With the reveal on, each
+// answer down there can be clicked to put it in the field; see RevealedAnswer.
 function QuestionStep({ step, value, onChange, showAnswers }) {
   const { t } = useTranslation("interactive");
   const meta = questionMeta(step.block.questionType);
   const fieldId = `interactive-answer-${answerKey(step)}`;
+  const field = useRef(null);
+
+  // Taking an answer replaces what's in the field rather than adding to it: a
+  // multiple-answer question wants one of its accepted answers, not all of them
+  // run together. The field is then focused with the caret at the end, because
+  // the point of putting text there is usually to keep working on it — and
+  // because leaving focus on a button that has just changed a field somewhere
+  // else is a poor place to leave a keyboard user.
+  const useAnswer = (text) => {
+    onChange(text);
+    const input = field.current;
+    if (!input) return;
+    input.focus();
+    requestAnimationFrame(() =>
+      input.setSelectionRange(text.length, text.length),
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -474,6 +537,7 @@ function QuestionStep({ step, value, onChange, showAnswers }) {
         </FieldLabel>
         <Textarea
           id={fieldId}
+          ref={field}
           autoFocus
           value={value}
           maxLength={MAX_RESPONSE_LENGTH}
@@ -482,7 +546,7 @@ function QuestionStep({ step, value, onChange, showAnswers }) {
           onChange={(event) => onChange(event.target.value)}
         />
       </Field>
-      {showAnswers && <AnswerReveal block={step.block} />}
+      {showAnswers && <AnswerReveal block={step.block} onUse={useAnswer} />}
     </div>
   );
 }

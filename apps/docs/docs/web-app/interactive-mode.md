@@ -87,9 +87,23 @@ towards.
   background question, the working steps as well for a number question, and
   every accepted answer for a multiple-answer one. An open-ended question — which
   by design has no author's answer — says so rather than leaving a gap.
+- **Every answer gets a box of its own**, so a multiple-answer question shows
+  three answers as three things rather than as a bulleted list under one
+  heading. They're stacked as equals rather than numbered: any of them is a right
+  answer, and a list numbered 1, 2, 3 reads as an order to give them in. A number
+  question's _working_ is not one of these boxes — it's how you reach the answer,
+  not an answer, and it stays a numbered list below them.
+- **Clicking an answer puts it in your field.** It replaces what's there (a
+  multiple-answer question wants one of its accepted answers, not all of them run
+  together), then focuses the field with the caret at the end, since the point of
+  putting text there is usually to keep working on it. What lands in the field is
+  from then on your own answer: it counts as answered, it's kept by
+  [progress](#picking-up-where-you-left-off), and it's what gets filed at the end.
+  A shortcut through typing, not a verdict — see below.
 - The reveal also applies to the **end-of-lesson summary**, where the author's
   answer sits under the one you wrote. Useful for going back over the questions
-  as a class.
+  as a class. The boxes are read-only there: there is no field to fill on the
+  summary, so nothing there is clickable.
 - Answers are still **never spoken** — see [Reading aloud](#reading-aloud-text-to-speech).
 
 Showing an answer is not marking one; see below.
@@ -164,6 +178,12 @@ summary, and not with the reveal above turned on, which only puts the two side
 by side. Spelling is about the learner producing the response; a right/wrong
 verdict from a string comparison would be wrong a lot of the time and the wrong
 shape of feedback even when it wasn't.
+
+Taking an author's answer into your field by
+[clicking it](#showing-the-answers-for-whoever-is-presenting) doesn't change
+that. It's a deliberate act on a panel you had to switch on, and all it does is
+save you typing: the answer that lands there is treated exactly like one you
+wrote yourself, and nothing anywhere notices where it came from.
 
 **It doesn't store a half-finished run-through as a completed one.** Progress is
 a browser-side scratchpad; nothing reaches `lesson_responses` until you press
@@ -288,13 +308,13 @@ The full schema, with the reasoning in comments, is `apps/api/schema.sql`.
 
 ## Where the code lives
 
-| File                                               | What it does                                                            |
-| -------------------------------------------------- | ----------------------------------------------------------------------- |
-| `packages/core/src/interactive.js`                 | Turns a document into steps; the answer reveal; limits and validation.  |
-| `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning. |
-| `packages/core/src/lessonResponses.js`             | Client for the three endpoints above.                                   |
-| `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                 |
-| `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough.                                            |
-| `apps/web/src/components/MyLessonAnswers.jsx`      | The private "Your answers" panel on the lesson page.                    |
-| `apps/web/src/pages/lesson/LessonLayout.jsx`       | Start vs. **Continue lesson** on the lesson page's button.              |
-| `apps/web/src/lib/useSpeech.js`                    | Web Speech API wrapper, preferences, and the platform workarounds.      |
+| File                                               | What it does                                                                      |
+| -------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `packages/core/src/interactive.js`                 | Turns a document into steps; the answers the reveal shows; limits and validation. |
+| `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning.           |
+| `packages/core/src/lessonResponses.js`             | Client for the three endpoints above.                                             |
+| `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                           |
+| `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough.                                                      |
+| `apps/web/src/components/MyLessonAnswers.jsx`      | The private "Your answers" panel on the lesson page.                              |
+| `apps/web/src/pages/lesson/LessonLayout.jsx`       | Start vs. **Continue lesson** on the lesson page's button.                        |
+| `apps/web/src/lib/useSpeech.js`                    | Web Speech API wrapper, preferences, and the platform workarounds.                |
