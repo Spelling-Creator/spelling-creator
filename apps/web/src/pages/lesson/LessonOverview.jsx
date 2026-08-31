@@ -57,10 +57,10 @@ export default function LessonOverview() {
         <LessonSummary doc={lesson.doc} />
 
         {/* LessonView draws the lesson in the app's theme, light or dark, the
-            same way interactive mode does — the panel frame around it makes it
-            read as a page floating on the app's background. The printout look
-            lives in the docx/PDF export, not here. */}
-        <div className="overflow-hidden rounded-panel border border-border bg-card shadow-(--shadow-panel)">
+            same way interactive mode does — the bordered frame around it makes
+            it read as a document set into the page rather than as more page.
+            The printout look lives in the docx/PDF export, not here. */}
+        <div className="overflow-hidden rounded-panel border border-border bg-card">
           <LessonView doc={lesson.doc} />
         </div>
 

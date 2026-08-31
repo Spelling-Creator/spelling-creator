@@ -54,7 +54,7 @@ function formatDate(value) {
 // A titled card wrapper shared by every section.
 function Section({ title, children }) {
   return (
-    <div className="rounded-panel border border-border bg-card p-5 text-card-foreground shadow-(--shadow-panel)">
+    <div className="rounded-panel border border-border bg-card p-5 text-card-foreground">
       <h2 className="mb-3 text-lg font-semibold">{title}</h2>
       {children}
     </div>

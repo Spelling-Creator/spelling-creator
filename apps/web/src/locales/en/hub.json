@@ -23,6 +23,11 @@
     "sectionCount_one": "{{count}} section",
     "sectionCount_other": "{{count}} sections"
   },
+  "list": {
+    "publishedHeading": "Published lessons",
+    "count_one": "{{count}} lesson",
+    "count_other": "{{count}} lessons"
+  },
   "toolbar": {
     "description": "Browse lessons shared by the community. Open one to preview it.",
     "feedTooltip": "Subscribe to the latest lessons (RSS)",

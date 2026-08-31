@@ -160,7 +160,7 @@ export default function LoginPage() {
       {/* The card is narrow — a couple of fields — but the column it sits in is
           the app's, not a width of this page's own. */}
       <PageBody width="reading" className="pt-12">
-        <div className="mx-auto max-w-sm rounded-panel border border-border bg-card p-8 text-card-foreground shadow-(--shadow-panel)">
+        <div className="mx-auto max-w-sm rounded-panel border border-border bg-card p-8 text-card-foreground">
           {!enabled ? (
             <Alert>
               <AlertDescription>{t("notConfigured.message")}</AlertDescription>

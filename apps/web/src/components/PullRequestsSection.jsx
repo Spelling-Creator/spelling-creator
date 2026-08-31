@@ -154,6 +154,11 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
 
   const open = pulls.filter((p) => p.status === "open");
   const resolved = pulls.filter((p) => p.status !== "open");
+  // Split out for the header strip's counts. `resolved` still drives the
+  // ordering below — merged and closed proposals sit together under the open
+  // ones, in the order the server sent them.
+  const merged = pulls.filter((p) => p.status === "merged");
+  const closed = pulls.filter((p) => p.status === "closed");
 
   // Stacked under a lesson, most lessons have never had a proposal, so this
   // section usually resolves to nothing at all — and it's rendered on a
@@ -180,7 +185,7 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
     const closing = closingIds.has(pull.id);
 
     return (
-      <div key={pull.id} className="flex items-start gap-3 py-3">
+      <div key={pull.id} className="flex items-start gap-3 px-4 py-3">
         <Avatar className="shrink-0">
           <AvatarFallback>{initial(pull.author)}</AvatarFallback>
         </Avatar>
@@ -196,14 +201,26 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
             ) : (
               <span className="text-sm font-semibold">{pull.title}</span>
             )}
+            {/* Solid, not a tinted outline: a proposal's state is the first
+                thing you need off this row, and a filled pill reads at a
+                glance down a column of them where a 10%-tint outline doesn't.
+
+                The colours follow the convention every repo host uses, which
+                is the point of the redesign — green is open, and the brand
+                indigo is reserved for merged, the outcome the whole flow is
+                aimed at. (They used to be the other way round.) Closed stays
+                grey rather than the red a repo host would use: closing a
+                proposal here is a routine outcome, not a failure, and nobody
+                using this should have to know GitHub's colour vocabulary to
+                read it as one. */}
             <Badge
-              variant="outline"
               className={cn(
-                "gap-1",
+                "gap-1 border-transparent",
+                isOpen && "bg-success text-success-foreground",
                 pull.status === "merged" &&
-                  "border-success/40 bg-success/10 text-success",
-                pull.status === "closed" && "text-muted-foreground",
-                isOpen && "border-primary/40 bg-primary/10 text-primary",
+                  "bg-primary text-primary-foreground",
+                pull.status === "closed" &&
+                  "bg-secondary text-secondary-foreground",
               )}
             >
               {pull.status === "merged" ? (
@@ -295,7 +312,11 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
   const body = (
     <section>
       <h2 className="text-lg font-semibold">
-        {t("pulls.heading", { count: open.length })}
+        {/* No count in the heading any more — the box's header strip below
+            carries it, and states it more fully (open, merged and closed
+            rather than only open). Two counts of the same thing a line apart
+            just invites the reader to check whether they agree. */}
+        {t("pulls.heading")}
       </h2>
 
       {error ? (
@@ -307,9 +328,37 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
           {t("pulls.emptyState")}
         </p>
       ) : (
-        <div className="mt-1 flex flex-col divide-y divide-border">
-          {open.map(row)}
-          {resolved.map(row)}
+        // A bordered box with a header strip, rather than rows floating on the
+        // page. The strip is what the redesign buys: it gives the list an edge
+        // to start and stop at, and it is somewhere to put the counts — which
+        // is the question you actually arrive with ("is anything waiting on
+        // me?") and which the rows themselves can only answer by being counted.
+        //
+        // Only non-empty states are listed, and open leads whether or not it
+        // has any: "0 open" is a useful answer, "0 merged" is noise.
+        <div className="mt-3 overflow-hidden rounded-panel border border-border bg-card">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border bg-surface-muted px-4 py-2.5 text-sm">
+            <span className="flex items-center gap-1.5 font-semibold">
+              <GitPullRequestIcon className="size-4 text-success" />
+              {t("pulls.counts.open", { count: open.length })}
+            </span>
+            {merged.length > 0 && (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <GitMergeIcon className="size-4" />
+                {t("pulls.counts.merged", { count: merged.length })}
+              </span>
+            )}
+            {closed.length > 0 && (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <GitPullRequestClosedIcon className="size-4" />
+                {t("pulls.counts.closed", { count: closed.length })}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col divide-y divide-border">
+            {open.map(row)}
+            {resolved.map(row)}
+          </div>
         </div>
       )}
     </section>

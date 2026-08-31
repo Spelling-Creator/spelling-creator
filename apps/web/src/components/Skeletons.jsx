@@ -8,28 +8,35 @@
 
 import { Skeleton } from "./ui/skeleton.jsx";
 
-// A single lesson card placeholder, matching the hub/profile card: a title line and
-// a short meta line inside an outlined card.
-function LessonCardSkeleton() {
+// A single lesson row placeholder, matching a row in the hub/profile listing: the
+// leading file icon, a title line, and a short meta line under it.
+function LessonRowSkeleton() {
   return (
-    <div className="h-full rounded-md border border-border p-4">
-      <Skeleton className="h-5 w-3/4" />
-      <Skeleton className="mt-2 h-4 w-[45%]" />
-      <Skeleton className="mt-3 h-4 w-[55%]" />
+    <div className="flex items-start gap-3 px-4 py-3">
+      <Skeleton className="mt-0.5 size-4 shrink-0 rounded-sm" />
+      <div className="flex-1">
+        <Skeleton className="h-4 w-[55%]" />
+        <Skeleton className="mt-2 h-3 w-[35%]" />
+      </div>
     </div>
   );
 }
 
 /**
- * A responsive grid of placeholder lesson cards, matching the hub and profile
- * listings (1 col / 2 col sm+ / 3 col md+). Used while the real lessons load.
+ * A placeholder lesson listing: the bordered box the hub and profile draw their
+ * lessons in, with divided rows inside it. Was a 3-across grid of cards, and
+ * changed with the listings themselves — a skeleton whose shape doesn't match
+ * what lands is worse than none, since the layout jumps at the moment the
+ * content arrives.
  */
-export function LessonGridSkeleton({ count = 6 }) {
+export function LessonListSkeleton({ count = 6 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-      {Array.from({ length: count }, (_, i) => (
-        <LessonCardSkeleton key={i} />
-      ))}
+    <div className="overflow-hidden rounded-panel border border-border bg-card">
+      <div className="flex flex-col divide-y divide-border">
+        {Array.from({ length: count }, (_, i) => (
+          <LessonRowSkeleton key={i} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -87,7 +94,7 @@ export function CommentsSkeleton({ count = 3 }) {
 // hydrated sections don't shift the layout when they replace it.
 function SectionSkeleton() {
   return (
-    <div className="rounded-panel border border-border bg-card p-4 shadow-(--shadow-panel)">
+    <div className="rounded-panel border border-border bg-card p-4">
       <div className="mb-4 flex items-center gap-2">
         <Skeleton className="size-[30px] shrink-0 rounded-full" />
         <Skeleton className="h-5 w-[40%]" />

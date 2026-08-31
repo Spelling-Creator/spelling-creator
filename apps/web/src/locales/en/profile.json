@@ -25,6 +25,8 @@
     "editBioTooltip": "Edit bio",
     "addBioButton": "Add a bio",
     "publishedLessonsHeading": "Published lessons",
+    "lessonCount_one": "{{count}} lesson",
+    "lessonCount_other": "{{count}} lessons",
     "noLessonsYet": "{{name}} hasn’t published any lessons yet.",
     "untitledLesson": "Untitled Lesson",
     "sectionCount_one": "{{count}} section",

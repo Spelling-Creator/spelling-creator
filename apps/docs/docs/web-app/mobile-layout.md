@@ -151,11 +151,12 @@ phone, opened from `PageBar`'s toggle. Two consequences worth knowing:
   and can stay put; a sheet covers the page you just navigated to. `AppSidebar`
   binds that to its header and content regions only — toggling the theme or
   opening the account menu isn't navigation and shouldn't dismiss the panel.
-- **The sheet carries the glass treatment; the docked sidebar doesn't need it.**
-  `--sidebar` is translucent, which is right beside the page (only the
-  background is behind it) and unreadable over it. The mobile branch of
-  `ui/sidebar.jsx` adds `backdrop-blur-(--glass-blur)` and the panel shadow, the
-  same as `Dialog`, `Popover` and `DropdownMenu`.
+- **The sheet carries a shadow; the docked sidebar doesn't need one.**
+  `--sidebar` is opaque, so a sheet over the page is readable on its own — what
+  it still needs is to look like it is _above_ the page rather than part of it.
+  The mobile branch of `ui/sidebar.jsx` adds `shadow-(--shadow-panel)` for that,
+  the same as `Dialog`, `Popover` and `DropdownMenu`. Docked, the sidebar sits
+  beside the page and a border does the whole job.
 
 This also retired a duplication that used to run through every page: the old
 header couldn't fit text buttons on a narrow screen, so most controls existed

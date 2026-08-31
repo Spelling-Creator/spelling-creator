@@ -240,7 +240,7 @@ function LandingView() {
           ))}
         </div>
 
-        <div className="mt-16 rounded-panel border border-border bg-card p-8 text-center text-card-foreground shadow-(--shadow-panel) md:mt-24 md:p-12">
+        <div className="mt-16 rounded-panel border border-border bg-card p-8 text-center text-card-foreground md:mt-24 md:p-12">
           <h2 className="mb-1.5 font-serif text-2xl font-semibold md:text-3xl">
             {t("marketing.cta.title")}
           </h2>
@@ -299,7 +299,7 @@ function FeedList({ entries, emptyText }) {
 // A titled dashboard panel shared by every section below.
 function DashboardPanel({ icon: Icon, title, children }) {
   return (
-    <div className="rounded-panel border border-border bg-card p-4 text-card-foreground shadow-(--shadow-panel) md:p-6">
+    <div className="rounded-panel border border-border bg-card p-4 text-card-foreground md:p-6">
       <div className="mb-3 flex items-center gap-2">
         <Icon className="size-4 text-primary" />
         <h2 className="text-lg font-semibold">{title}</h2>
@@ -373,7 +373,7 @@ function DashboardView() {
           until its data arrives, so panels don't jump in as a spinner clears. */}
       <div className="flex flex-col gap-4">
         {/* Latest lessons + your activity, together in one section. */}
-        <div className="rounded-panel border border-border bg-card p-4 text-card-foreground shadow-(--shadow-panel) md:p-6">
+        <div className="rounded-panel border border-border bg-card p-4 text-card-foreground md:p-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
             <div>
               <div className="mb-2 flex items-center gap-2">

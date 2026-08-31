@@ -205,7 +205,7 @@ export default function MyLessonAnswers({ lessonId, refreshToken = 0 }) {
   if (!loading && !error && responses.length === 0) return null;
 
   return (
-    <section className="rounded-panel border border-border bg-card p-4 shadow-(--shadow-panel)">
+    <section className="rounded-panel border border-border bg-card p-4">
       <div className="mb-1 flex items-center gap-2">
         <h2 className="text-lg font-semibold">{t("saved.heading")}</h2>
         <LockIcon className="size-4 text-muted-foreground" />

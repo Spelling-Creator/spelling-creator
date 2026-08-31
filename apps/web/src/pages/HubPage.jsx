@@ -9,7 +9,9 @@ import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
+  BookMarkedIcon,
   CloudIcon,
+  FileTextIcon,
   PencilIcon,
   RefreshCwIcon,
   RssIcon,
@@ -40,7 +42,7 @@ import {
   lessonsFeedUrl,
   EDIT_REQUEST_KEY,
 } from "@spelling-creator/core/lessons";
-import { LessonGridSkeleton } from "../components/Skeletons.jsx";
+import { LessonListSkeleton } from "../components/Skeletons.jsx";
 import {
   buildLessonIndex,
   searchLessons,
@@ -60,16 +62,68 @@ function formatDate(value) {
   });
 }
 
-// A published/draft lesson card: the whole thing links to the lesson, with
-// the owner's edit/delete controls layered on top as siblings (not nested
-// inside the link — an <a> can't contain interactive descendants).
-function LessonCard({ lesson, draft, editable, onEdit, onDelete }) {
-  const navigate = useNavigate();
+// One lesson in a listing: an icon saying what it is, the title as the link,
+// a meta line, and the owner's edit/delete controls at the end of the row.
+//
+// This was a card in a three-across grid, and the row is not only a denser
+// shape — it's a simpler one. The card made the *whole tile* the link, which
+// meant nothing interactive could be nested inside it: the author's name had to
+// be a `role="link"` span faking a link with its own click and keydown handlers
+// and a stopPropagation to keep the card from navigating too, and the owner's
+// buttons had to be absolutely positioned over the top as siblings. With only
+// the title as the link, the author is a plain <RouterLink> and the buttons are
+// just the end of a flex row — no fake links, no overlay, and the two
+// destinations a lesson row offers are both real, focusable anchors.
+function LessonRow({ lesson, draft, editable, onEdit, onDelete }) {
   const { t } = useTranslation("hub");
   return (
-    <div className="relative h-full rounded-md border border-border">
+    <div className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
+      {draft ? (
+        <CloudIcon className="mt-0.5 size-4 shrink-0 text-focus" />
+      ) : (
+        <FileTextIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <RouterLink
+            to={`/hub/${lesson.id}`}
+            className="truncate text-sm font-semibold text-foreground no-underline hover:underline"
+          >
+            {lesson.title || t("card.untitledLesson")}
+          </RouterLink>
+          {draft && (
+            <Badge
+              variant="outline"
+              className="border-focus/40 bg-focus/10 text-focus"
+            >
+              {t("card.draftBadge")}
+            </Badge>
+          )}
+        </div>
+
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {!draft &&
+            (lesson.authorId ? (
+              <RouterLink
+                to={`/users/${lesson.authorId}`}
+                className="text-inherit no-underline hover:underline"
+              >
+                {lesson.author || t("card.anonymousAuthor")}
+              </RouterLink>
+            ) : (
+              lesson.author || t("card.anonymousAuthor")
+            ))}
+          {!draft && " · "}
+          {typeof lesson.sectionCount === "number"
+            ? t("card.sectionCount", { count: lesson.sectionCount })
+            : ""}
+          {lesson.createdAt ? ` · ${formatDate(lesson.createdAt)}` : ""}
+        </p>
+      </div>
+
       {editable && (
-        <div className="absolute top-1 right-1 z-10 flex gap-0.5">
+        <div className="flex shrink-0 gap-0.5">
           <IconActionButton
             tooltip={
               draft ? t("card.editDraftTooltip") : t("card.editLessonTooltip")
@@ -78,7 +132,6 @@ function LessonCard({ lesson, draft, editable, onEdit, onDelete }) {
               draft ? t("card.editDraftAria") : t("card.editLessonAria")
             }
             onClick={(e) => onEdit(e, lesson)}
-            className="bg-card hover:bg-accent"
           >
             <PencilIcon />
           </IconActionButton>
@@ -93,62 +146,11 @@ function LessonCard({ lesson, draft, editable, onEdit, onDelete }) {
             }
             onClick={(e) => onDelete(e, lesson)}
             destructive
-            className="bg-card hover:bg-destructive/10"
           >
             <Trash2Icon />
           </IconActionButton>
         </div>
       )}
-      <RouterLink
-        to={`/hub/${lesson.id}`}
-        className="flex h-full flex-col rounded-md p-4 no-underline transition-colors hover:bg-accent"
-      >
-        {draft && (
-          <Badge variant="outline" className="mb-2 w-fit gap-1">
-            <CloudIcon />
-            {t("card.draftBadge")}
-          </Badge>
-        )}
-        <h3 className="truncate pr-8 text-base font-semibold text-foreground">
-          {lesson.title || t("card.untitledLesson")}
-        </h3>
-        {!draft && (
-          <p className="text-sm text-muted-foreground">
-            {lesson.authorId ? (
-              // The whole card is already a link, so the author can't be a
-              // nested <a>. Use a clickable span that navigates to the
-              // profile and stops the card's own navigation.
-              <span
-                role="link"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate(`/users/${lesson.authorId}`);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigate(`/users/${lesson.authorId}`);
-                  }
-                }}
-                className="cursor-pointer hover:underline"
-              >
-                {lesson.author || t("card.anonymousAuthor")}
-              </span>
-            ) : (
-              lesson.author || t("card.anonymousAuthor")
-            )}
-          </p>
-        )}
-        <p className="mt-1 text-xs text-muted-foreground">
-          {typeof lesson.sectionCount === "number"
-            ? t("card.sectionCount", { count: lesson.sectionCount })
-            : ""}
-          {lesson.createdAt ? ` · ${formatDate(lesson.createdAt)}` : ""}
-        </p>
-      </RouterLink>
     </div>
   );
 }
@@ -370,29 +372,38 @@ export default function HubPage() {
           )}
         </div>
 
-        {hasApi() && drafts.length > 0 && (
-          <div className="mb-8">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <CloudIcon className="size-4 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">{t("drafts.heading")}</h2>
-              <p className="text-sm text-muted-foreground">
-                {t("drafts.description")}
-              </p>
+        {hasApi() &&
+          drafts.length > 0 && (
+            // The heading moved inside the box, onto a tinted strip, and it is
+            // the pattern every listing on the page now follows: the box has an
+            // edge, and the strip says what is in it and how much. Stacked
+            // headings floating above borderless grids were exactly what stopped
+            // scaling once the hub held more than a screenful.
+            <div className="mb-6 overflow-hidden rounded-panel border border-border bg-card">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-muted px-4 py-2.5">
+                <CloudIcon className="size-4 shrink-0 text-focus" />
+                <h2 className="text-sm font-semibold">{t("drafts.heading")}</h2>
+                <span className="text-xs text-muted-foreground">
+                  {t("list.count", { count: drafts.length })}
+                </span>
+                <p className="w-full text-xs text-muted-foreground sm:w-auto">
+                  {t("drafts.description")}
+                </p>
+              </div>
+              <div className="flex flex-col divide-y divide-border">
+                {drafts.map((lesson) => (
+                  <LessonRow
+                    key={lesson.id}
+                    lesson={lesson}
+                    draft
+                    editable
+                    onEdit={editLesson}
+                    onDelete={askDelete}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {drafts.map((lesson) => (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  draft
-                  editable
-                  onEdit={editLesson}
-                  onDelete={askDelete}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+          )}
 
         {hasApi() && !loading && !error && lessons.length > 0 && (
           <Field className="mb-4">
@@ -443,7 +454,7 @@ export default function HubPage() {
           </Alert>
         )}
 
-        {hasApi() && loading && <LessonGridSkeleton />}
+        {hasApi() && loading && <LessonListSkeleton />}
 
         {hasApi() && !loading && !error && lessons.length === 0 && (
           <div className="rounded-md border border-dashed border-border p-12 text-center">
@@ -474,18 +485,32 @@ export default function HubPage() {
           )}
 
         {hasApi() && !loading && !error && visibleLessons.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            {visibleLessons.map((lesson) => (
-              <LessonCard
-                key={lesson.id}
-                lesson={lesson}
-                editable={Boolean(
-                  user && lesson.authorId && lesson.authorId === user.id,
-                )}
-                onEdit={editLesson}
-                onDelete={askDelete}
-              />
-            ))}
+          <div className="overflow-hidden rounded-panel border border-border bg-card">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-muted px-4 py-2.5">
+              <BookMarkedIcon className="size-4 shrink-0 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">
+                {t("list.publishedHeading")}
+              </h2>
+              {/* The count is of what's on screen, so it stays true while a
+                  search is narrowing the list rather than reporting a total
+                  nobody can see. */}
+              <span className="text-xs text-muted-foreground">
+                {t("list.count", { count: visibleLessons.length })}
+              </span>
+            </div>
+            <div className="flex flex-col divide-y divide-border">
+              {visibleLessons.map((lesson) => (
+                <LessonRow
+                  key={lesson.id}
+                  lesson={lesson}
+                  editable={Boolean(
+                    user && lesson.authorId && lesson.authorId === user.id,
+                  )}
+                  onEdit={editLesson}
+                  onDelete={askDelete}
+                />
+              ))}
+            </div>
           </div>
         )}
       </PageBody>

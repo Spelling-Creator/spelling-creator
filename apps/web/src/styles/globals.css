@@ -47,6 +47,18 @@
   --radius-tile: var(--radius-tile);
   --radius-pill: var(--radius-pill);
 
+  /* Semantic surface roles for the bordered-box layout — see the theme blocks
+     below for what they resolve to.
+
+     --color-surface-muted is the tint a box header sits on (the strip carrying
+     a section's name and its counters), and it is deliberately its own token
+     rather than a reuse of --muted: --muted is a *content* surface (a code
+     block, the collab chat's message well, an avatar fallback), and the two
+     drifted apart the moment cards went opaque. Sharing one token meant a
+     panel header and the code block inside it were the same colour, which is
+     exactly the flattening the bordered layout is meant to fix. */
+  --color-surface-muted: var(--surface-muted);
+
   /* Public Sans (400/500/600) for body/UI text — the default everywhere, via
      the `body` rule below. Fraunces (600) is a deliberately separate
      `font-serif` opt-in for display/marketing headings (HomePage's hero and
@@ -154,9 +166,15 @@
      attribute the browser doesn't otherwise know maps to a color scheme. */
   color-scheme: light;
 
-  --radius: 0.875rem; /* 14px, --radius-card from the mockup */
-  --radius-panel: 1.25rem; /* 20px */
-  --radius-tile: 0.5rem; /* 8px */
+  /* One radius family, and a much firmer one than the mockup's. The app used to
+     step 8px → 14px → 20px as a surface got larger, which reads as softness at
+     the size of a button and as an unfinished edge at the size of a panel — and
+     it made a card nested in a panel visibly step against its parent's corner.
+     Everything a border is drawn around now shares 8px; only the pill is
+     special, because a pill is a shape rather than a radius. */
+  --radius: 0.5rem; /* 8px */
+  --radius-panel: 0.5rem; /* 8px — same as --radius, see above */
+  --radius-tile: 0.375rem; /* 6px */
   --radius-pill: 999px;
 
   /* AppHeader's height, published as a token so anything that has to sit clear
@@ -171,24 +189,40 @@
   --header-row-h: 4rem;
   --header-h: calc(var(--header-row-h) + env(safe-area-inset-top));
 
-  --background: #dee3f3;
+  /* THE LIGHT PALETTE. Three surfaces, in the order the eye should read them:
+     the page is a tinted well (--background), content boxes are white on top of
+     it (--card), and the app's chrome — sidebar and top bar — is white too,
+     separated from the well by a border rather than by a tint.
+
+     Every one of these used to be translucent, and that is the change. --border
+     was white at 85% *on* a white card, which is not an edge at all: nothing on
+     a busy page had a boundary, and the only thing separating two surfaces was
+     a drop shadow. Opaque surfaces with a real border is what lets a list of
+     sixty lessons stay legible, and it is most of what the redesign is.
+
+     The identity tokens below the surfaces — --primary and the semantic
+     accents — are untouched. This is the same app in the same colours, with
+     edges. */
+  --background: #f3f5fc;
   --foreground: #1e2138;
-  --card: rgba(255, 255, 255, 0.72);
+  --card: #ffffff;
   --card-foreground: #1e2138;
-  --popover: rgba(255, 255, 255, 0.86);
+  --popover: #ffffff;
   --popover-foreground: #1e2138;
   --primary: #4f5fd9;
   --primary-foreground: #f2f3ff;
-  --secondary: rgba(255, 255, 255, 0.86);
+  --secondary: #e9edfa;
   --secondary-foreground: #1e2138;
-  --muted: rgba(255, 255, 255, 0.86);
+  --muted: #f1f3fc;
   --muted-foreground: #585d80;
-  --accent: rgba(79, 95, 217, 0.12);
+  --accent: #eceffc;
   --accent-foreground: #4f5fd9;
   --destructive: #d94b64;
   --destructive-foreground: #f2f3ff;
-  --border: rgba(255, 255, 255, 0.85);
-  --input: rgba(30, 33, 56, 0.09);
+  --border: #d5daed;
+  /* Stronger than --border on purpose: a field has to look like something you
+     can type into while sitting on the same white card as everything else. */
+  --input: #c6cde6;
   --ring: #4f5fd9;
 
   --success: #2f9e6e;
@@ -198,20 +232,29 @@
   --focus: #b9791f;
   --focus-foreground: #1e2138;
 
-  --glass-blur: 18px;
-  --glass-border-outer: rgba(30, 33, 56, 0.09);
-  --shadow-panel:
-    0 24px 48px -24px rgba(30, 34, 70, 0.32), 0 2px 8px rgba(30, 34, 70, 0.06);
-  --shadow-tile:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(30, 34, 70, 0.14);
+  --surface-muted: #eff2fb;
 
-  --sidebar: rgba(255, 255, 255, 0.62);
+  /* Kept its name, narrowed its job. This used to sit under every card on the
+     page, doing the separating that --border couldn't. Now it belongs only to
+     things that genuinely float above the page — dialogs, popovers, menus,
+     toasts, the collab chat — so it is a shorter, tighter shadow rather than a
+     48px lift. Anything in the page's own flow gets a border and nothing else.
+
+     --glass-blur and --glass-border-outer used to live here too. Both are gone:
+     with opaque surfaces the blur was compositing a layer per overlay to filter
+     a background nobody could see through, and the outer 1px ring existed only
+     to give a translucent panel an edge that --border now draws itself.
+     --shadow-tile went with them — it was already unreferenced. */
+  --shadow-panel:
+    0 8px 24px -6px rgba(30, 34, 70, 0.18), 0 2px 6px rgba(30, 34, 70, 0.08);
+
+  --sidebar: #ffffff;
   --sidebar-foreground: #1e2138;
   --sidebar-primary: #4f5fd9;
   --sidebar-primary-foreground: #f2f3ff;
-  --sidebar-accent: rgba(79, 95, 217, 0.12);
+  --sidebar-accent: #eceffc;
   --sidebar-accent-foreground: #4f5fd9;
-  --sidebar-border: rgba(30, 33, 56, 0.09);
+  --sidebar-border: #d5daed;
   --sidebar-ring: #4f5fd9;
 }
 
@@ -219,24 +262,33 @@
   :root {
     color-scheme: dark;
 
-    --background: #12131f;
+    /* THE DARK PALETTE — the same three surfaces as light, and the same reason
+       for each. The page well is the darkest thing on screen, content boxes are
+       lifted above it, and the chrome sits between the two so the sidebar reads
+       as the frame rather than as another panel.
+
+       Dark is where the old translucency hurt most: --card at 58% over a
+       gradient meant a card's colour depended on what happened to be behind it,
+       so two identical panels on the same page were different greys. These are
+       flat values, and a panel is now the same panel wherever it lands. */
+    --background: #0c0d16;
     --foreground: #eef0fb;
-    --card: rgba(35, 38, 61, 0.58);
+    --card: #161829;
     --card-foreground: #eef0fb;
-    --popover: rgba(40, 43, 68, 0.74);
+    --popover: #1b1e31;
     --popover-foreground: #eef0fb;
     --primary: #5b64dd;
     --primary-foreground: #f4f5ff;
-    --secondary: rgba(40, 43, 68, 0.74);
+    --secondary: #232741;
     --secondary-foreground: #eef0fb;
-    --muted: rgba(40, 43, 68, 0.74);
+    --muted: #1a1c2d;
     --muted-foreground: #aeb3d1;
-    --accent: rgba(91, 100, 221, 0.16);
+    --accent: #222541;
     --accent-foreground: #8891f2;
     --destructive: #f0788d;
     --destructive-foreground: #14162a;
-    --border: rgba(255, 255, 255, 0.1);
-    --input: rgba(255, 255, 255, 0.12);
+    --border: #2c3050;
+    --input: #3a3f66;
     --ring: #5b64dd;
 
     --success: #57cd99;
@@ -246,19 +298,18 @@
     --focus: #e3b567;
     --focus-foreground: #14162a;
 
-    --glass-border-outer: rgba(0, 0, 0, 0.45);
-    --shadow-panel:
-      0 28px 60px -22px rgba(0, 0, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.4);
-    --shadow-tile:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --surface-muted: #1c1f33;
 
-    --sidebar: rgba(35, 38, 61, 0.58);
+    --shadow-panel:
+      0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
+
+    --sidebar: #12131f;
     --sidebar-foreground: #eef0fb;
     --sidebar-primary: #5b64dd;
     --sidebar-primary-foreground: #f4f5ff;
-    --sidebar-accent: rgba(91, 100, 221, 0.16);
+    --sidebar-accent: #222541;
     --sidebar-accent-foreground: #8891f2;
-    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-border: #2c3050;
     --sidebar-ring: #5b64dd;
   }
 }
@@ -266,24 +317,27 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --background: #12131f;
+  /* Same values as the prefers-color-scheme block above — see the commentary
+     there. Restated rather than shared because this one has to win against a
+     light OS preference, which a single combined selector can't do. */
+  --background: #0c0d16;
   --foreground: #eef0fb;
-  --card: rgba(35, 38, 61, 0.58);
+  --card: #161829;
   --card-foreground: #eef0fb;
-  --popover: rgba(40, 43, 68, 0.74);
+  --popover: #1b1e31;
   --popover-foreground: #eef0fb;
   --primary: #5b64dd;
   --primary-foreground: #f4f5ff;
-  --secondary: rgba(40, 43, 68, 0.74);
+  --secondary: #232741;
   --secondary-foreground: #eef0fb;
-  --muted: rgba(40, 43, 68, 0.74);
+  --muted: #1a1c2d;
   --muted-foreground: #aeb3d1;
-  --accent: rgba(91, 100, 221, 0.16);
+  --accent: #222541;
   --accent-foreground: #8891f2;
   --destructive: #f0788d;
   --destructive-foreground: #14162a;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.12);
+  --border: #2c3050;
+  --input: #3a3f66;
   --ring: #5b64dd;
 
   --success: #57cd99;
@@ -293,43 +347,44 @@
   --focus: #e3b567;
   --focus-foreground: #14162a;
 
-  --glass-border-outer: rgba(0, 0, 0, 0.45);
-  --shadow-panel:
-    0 28px 60px -22px rgba(0, 0, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.4);
-  --shadow-tile:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --surface-muted: #1c1f33;
 
-  --sidebar: rgba(35, 38, 61, 0.58);
+  --shadow-panel:
+    0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
+
+  --sidebar: #12131f;
   --sidebar-foreground: #eef0fb;
   --sidebar-primary: #5b64dd;
   --sidebar-primary-foreground: #f4f5ff;
-  --sidebar-accent: rgba(91, 100, 221, 0.16);
+  --sidebar-accent: #222541;
   --sidebar-accent-foreground: #8891f2;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-border: #2c3050;
   --sidebar-ring: #5b64dd;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --background: #dee3f3;
+  /* Same values as the :root block — see the commentary there. Restated so an
+     explicit light choice wins against a dark OS preference. */
+  --background: #f3f5fc;
   --foreground: #1e2138;
-  --card: rgba(255, 255, 255, 0.72);
+  --card: #ffffff;
   --card-foreground: #1e2138;
-  --popover: rgba(255, 255, 255, 0.86);
+  --popover: #ffffff;
   --popover-foreground: #1e2138;
   --primary: #4f5fd9;
   --primary-foreground: #f2f3ff;
-  --secondary: rgba(255, 255, 255, 0.86);
+  --secondary: #e9edfa;
   --secondary-foreground: #1e2138;
-  --muted: rgba(255, 255, 255, 0.86);
+  --muted: #f1f3fc;
   --muted-foreground: #585d80;
-  --accent: rgba(79, 95, 217, 0.12);
+  --accent: #eceffc;
   --accent-foreground: #4f5fd9;
   --destructive: #d94b64;
   --destructive-foreground: #f2f3ff;
-  --border: rgba(255, 255, 255, 0.85);
-  --input: rgba(30, 33, 56, 0.09);
+  --border: #d5daed;
+  --input: #c6cde6;
   --ring: #4f5fd9;
 
   --success: #2f9e6e;
@@ -339,20 +394,18 @@
   --focus: #b9791f;
   --focus-foreground: #1e2138;
 
-  --glass-blur: 18px;
-  --glass-border-outer: rgba(30, 33, 56, 0.09);
-  --shadow-panel:
-    0 24px 48px -24px rgba(30, 34, 70, 0.32), 0 2px 8px rgba(30, 34, 70, 0.06);
-  --shadow-tile:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(30, 34, 70, 0.14);
+  --surface-muted: #eff2fb;
 
-  --sidebar: rgba(255, 255, 255, 0.62);
+  --shadow-panel:
+    0 8px 24px -6px rgba(30, 34, 70, 0.18), 0 2px 6px rgba(30, 34, 70, 0.08);
+
+  --sidebar: #ffffff;
   --sidebar-foreground: #1e2138;
   --sidebar-primary: #4f5fd9;
   --sidebar-primary-foreground: #f2f3ff;
-  --sidebar-accent: rgba(79, 95, 217, 0.12);
+  --sidebar-accent: #eceffc;
   --sidebar-accent-foreground: #4f5fd9;
-  --sidebar-border: rgba(30, 33, 56, 0.09);
+  --sidebar-border: #d5daed;
   --sidebar-ring: #4f5fd9;
 }
 

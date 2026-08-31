@@ -116,7 +116,7 @@ export default function OAuthAuthorizePage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-4">
       <DocumentMeta title={t("pageTitle")} />
-      <div className="w-full max-w-sm rounded-panel border border-border bg-card p-8 text-card-foreground shadow-(--shadow-panel)">
+      <div className="w-full max-w-sm rounded-panel border border-border bg-card p-8 text-card-foreground">
         {!enabled ? (
           <Alert>
             <AlertDescription>
