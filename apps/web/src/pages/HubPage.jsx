@@ -405,7 +405,12 @@ export default function HubPage() {
             </div>
           )}
 
-        {hasApi() && !loading && !error && lessons.length > 0 && (
+        {/* Present while loading too, disabled — not gated on `!loading`.
+            There is nothing to search yet, but the field is 52px of layout and
+            appearing only once the fetch lands pushed the whole listing down
+            at the moment the content arrived. That is the same shift the
+            listing's skeleton exists to prevent, and the larger half of it. */}
+        {hasApi() && !error && (loading || lessons.length > 0) && (
           <Field className="mb-4">
             <FieldLabel htmlFor="hub-search" className="sr-only">
               {t("search.label")}
@@ -417,6 +422,7 @@ export default function HubPage() {
                 placeholder={t("search.placeholder")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                disabled={loading}
                 className="pl-9 pr-9"
               />
               {query && (

@@ -10,13 +10,17 @@ import { Skeleton } from "./ui/skeleton.jsx";
 
 // A single lesson row placeholder, matching a row in the hub/profile listing: the
 // leading file icon, a title line, and a short meta line under it.
+//
+// The heights are the real row's, not approximations of it: `h-5` is the 20px
+// line box of the title's `text-sm`, `h-4` the 16px of the meta line's
+// `text-xs`, and `mt-0.5` the gap between them. Same `px-4 py-3` as the row.
 function LessonRowSkeleton() {
   return (
     <div className="flex items-start gap-3 px-4 py-3">
       <Skeleton className="mt-0.5 size-4 shrink-0 rounded-sm" />
       <div className="flex-1">
-        <Skeleton className="h-4 w-[55%]" />
-        <Skeleton className="mt-2 h-3 w-[35%]" />
+        <Skeleton className="h-5 w-[55%]" />
+        <Skeleton className="mt-0.5 h-4 w-[35%]" />
       </div>
     </div>
   );
@@ -24,14 +28,25 @@ function LessonRowSkeleton() {
 
 /**
  * A placeholder lesson listing: the bordered box the hub and profile draw their
- * lessons in, with divided rows inside it. Was a 3-across grid of cards, and
- * changed with the listings themselves — a skeleton whose shape doesn't match
- * what lands is worse than none, since the layout jumps at the moment the
- * content arrives.
+ * lessons in, header strip and all, with divided rows inside it. Was a 3-across
+ * grid of cards, and changed with the listings themselves — a skeleton whose
+ * shape doesn't match what lands is worse than none, since the layout jumps at
+ * the moment the content arrives.
+ *
+ * The strip is placeholdered rather than skipped for exactly that reason: every
+ * listing that shows this has one, so leaving it out would insert ~41px above
+ * the rows the instant the fetch landed and push the whole list down.
  */
 export function LessonListSkeleton({ count = 6 }) {
   return (
     <div className="overflow-hidden rounded-panel border border-border bg-card">
+      {/* Mirrors the real strip's metrics: `px-4 py-2.5` around a 20px `text-sm`
+          heading, so this is 41px with its border, the same as the one that
+          replaces it. */}
+      <div className="flex items-center gap-3 border-b border-border bg-surface-muted px-4 py-2.5">
+        <Skeleton className="size-4 shrink-0 rounded-sm" />
+        <Skeleton className="h-5 w-36" />
+      </div>
       <div className="flex flex-col divide-y divide-border">
         {Array.from({ length: count }, (_, i) => (
           <LessonRowSkeleton key={i} />
