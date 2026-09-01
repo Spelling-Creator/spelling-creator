@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import {
+  FileTextIcon,
   HistoryIcon,
   PencilIcon,
   RssIcon,
@@ -38,7 +39,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "../components/ui/popover.jsx";
-import { LessonGridSkeleton } from "../components/Skeletons.jsx";
+import { LessonListSkeleton } from "../components/Skeletons.jsx";
 import { richTextToLine } from "@spelling-creator/core/richText";
 import {
   fetchUserProfile,
@@ -225,7 +226,7 @@ export default function ProfilePage() {
                 <Skeleton className="mt-2 h-4 w-[60%]" />
               </div>
             </div>
-            <LessonGridSkeleton count={3} />
+            <LessonListSkeleton count={3} />
           </>
         ) : error ? (
           <Alert variant="destructive">
@@ -427,36 +428,58 @@ export default function ProfilePage() {
               ) : null}
             </div>
 
-            <h2 className="mb-3 text-lg font-semibold">
-              {t("profilePage.publishedLessonsHeading")}
-            </h2>
             {lessons.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {t("profilePage.noLessonsYet", { name: displayName })}
-              </p>
+              <>
+                <h2 className="mb-3 text-lg font-semibold">
+                  {t("profilePage.publishedLessonsHeading")}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {t("profilePage.noLessonsYet", { name: displayName })}
+                </p>
+              </>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                {lessons.map((lesson) => (
-                  <RouterLink
-                    key={lesson.id}
-                    to={`/hub/${lesson.id}`}
-                    className="rounded-md border border-border p-4 no-underline transition-colors hover:bg-accent"
-                  >
-                    <h3 className="truncate text-base font-semibold text-foreground">
-                      {lesson.title || t("profilePage.untitledLesson")}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {typeof lesson.sectionCount === "number"
-                        ? t("profilePage.sectionCount", {
-                            count: lesson.sectionCount,
-                          })
-                        : ""}
-                      {lesson.createdAt
-                        ? ` · ${formatDate(lesson.createdAt)}`
-                        : ""}
-                    </p>
-                  </RouterLink>
-                ))}
+              // The same bordered box the hub draws its listings in, heading
+              // and count on the strip — a profile's lessons and the hub's are
+              // the same thing seen from two places, and they were drifting
+              // into two different shapes.
+              <div className="overflow-hidden rounded-panel border border-border bg-card">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-muted px-4 py-2.5">
+                  <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">
+                    {t("profilePage.publishedLessonsHeading")}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    {t("profilePage.lessonCount", { count: lessons.length })}
+                  </span>
+                </div>
+                <div className="flex flex-col divide-y divide-border">
+                  {lessons.map((lesson) => (
+                    <div
+                      key={lesson.id}
+                      className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-accent/50"
+                    >
+                      <FileTextIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <RouterLink
+                          to={`/hub/${lesson.id}`}
+                          className="truncate text-sm font-semibold text-foreground no-underline hover:underline"
+                        >
+                          {lesson.title || t("profilePage.untitledLesson")}
+                        </RouterLink>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {typeof lesson.sectionCount === "number"
+                            ? t("profilePage.sectionCount", {
+                                count: lesson.sectionCount,
+                              })
+                            : ""}
+                          {lesson.createdAt
+                            ? ` · ${formatDate(lesson.createdAt)}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>

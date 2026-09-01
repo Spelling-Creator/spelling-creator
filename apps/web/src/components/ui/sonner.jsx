@@ -32,7 +32,7 @@ const Toaster = ({ ...props }) => {
         // is small and text-dense.
         classNames: {
           toast:
-            "rounded-panel! border! bg-popover! text-popover-foreground! shadow-[var(--shadow-panel),0_0_0_1px_var(--glass-border-outer)]! backdrop-blur-(--glass-blur)! backdrop-saturate-[1.4]!",
+            "rounded-panel! border! bg-popover! text-popover-foreground! shadow-(--shadow-panel)!",
           description: "text-muted-foreground!",
           actionButton:
             "bg-primary! text-primary-foreground! hover:bg-primary/90!",

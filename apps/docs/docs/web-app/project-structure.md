@@ -9,7 +9,7 @@ src/
   App.jsx                 route table (editor / hub / lesson / profile / login / moderation); the editor, moderation, login and OAuth routes are lazy (see pages-and-routing.md)
   main.jsx                React entry: ColorSchemeProvider + BrowserRouter + SsrProvider + AuthProvider + DisplayNameGate + Toaster + ServiceWorkerPrompt; hydrates a server-rendered page, mounts a plain one
   entry-server.jsx        the same tree built for the Worker (see server-rendering.md) — kept structurally in step with main.jsx
-  styles/globals.css      Tailwind v4 + shadcn/ui design tokens (light/dark palettes, glass-surface shadows/blur), plus the `mb-safe` utility (see mobile-layout.md)
+  styles/globals.css      Tailwind v4 + shadcn/ui design tokens (light/dark palettes, opaque surfaces and the border/radius scale), plus the `mb-safe` utility (see mobile-layout.md)
   locales/en/*.json      one JSON file per i18next namespace (see internationalization.md)
   pages/
     EditorPage.jsx        the lesson builder (toolbar, section list, + button, publish, collaborate) — and the owner of which of this device's lessons is open

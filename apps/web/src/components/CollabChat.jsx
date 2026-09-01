@@ -124,7 +124,7 @@ export default function CollabChat({ collab }) {
   //
   // From `sm` up it goes back to the original floating corner panel.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex h-[60dvh] max-h-[70dvh] flex-col overflow-hidden rounded-t-panel border border-b-0 border-border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-[var(--shadow-panel),0_0_0_1px_var(--glass-border-outer)] backdrop-blur-(--glass-blur) backdrop-saturate-[1.4] sm:inset-x-auto sm:bottom-4 sm:left-4 sm:h-[420px] sm:max-h-[calc(100dvh-32px)] sm:w-80 sm:rounded-panel sm:border-b sm:pb-0">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex h-[60dvh] max-h-[70dvh] flex-col overflow-hidden rounded-t-panel border border-b-0 border-border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-(--shadow-panel) sm:inset-x-auto sm:bottom-4 sm:left-4 sm:h-[420px] sm:max-h-[calc(100dvh-32px)] sm:w-80 sm:rounded-panel sm:border-b sm:pb-0">
       {/* Header */}
       <div className="flex items-center gap-2 bg-primary px-3 py-2 text-primary-foreground">
         <MessageCircleIcon className="size-4" />

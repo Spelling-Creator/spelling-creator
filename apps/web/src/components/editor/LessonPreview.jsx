@@ -52,7 +52,7 @@ export default function LessonPreview({ doc, onExit }) {
 
       {/* LessonView draws the lesson in the current theme; the wrapper supplies
           only the panel frame. */}
-      <div className="rounded-panel border border-border bg-card shadow-(--shadow-panel)">
+      <div className="rounded-panel border border-border bg-card">
         <LessonView doc={doc} />
       </div>
     </>

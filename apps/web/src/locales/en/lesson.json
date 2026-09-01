@@ -98,12 +98,19 @@
     "idleNotice": "The first summary downloads your browser’s on-device model, which can take a while. Nothing is sent to a server."
   },
   "pulls": {
-    "heading_one": "Proposed changes ({{count}} open)",
-    "heading_other": "Proposed changes ({{count}} open)",
+    "heading": "Proposed changes",
     "status": {
       "open": "Open",
       "merged": "Merged",
       "closed": "Closed"
+    },
+    "counts": {
+      "open_one": "{{count}} open",
+      "open_other": "{{count}} open",
+      "merged_one": "{{count}} merged",
+      "merged_other": "{{count}} merged",
+      "closed_one": "{{count}} closed",
+      "closed_other": "{{count}} closed"
     },
     "notUploaded": "Not finished uploading",
     "anonymous": "Anonymous",

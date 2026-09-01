@@ -64,14 +64,17 @@ const DialogContent = forwardRef(function DialogContent(
         ref={ref}
         data-slot="dialog-content"
         className={cn(
-          // The approved design mockup's ".glass" surface — bg-card (translucent),
-          // backdrop-blur + saturate, --radius-panel, and a two-layer shadow
-          // (the panel shadow plus a crisp 1px outer ring). text-foreground is
-          // explicit (vanilla shadcn relies on a global `body { color:
-          // var(--foreground) }` for this, deliberately deferred to the
-          // migration's cleanup phase — see the comment at the bottom of
-          // styles/globals.css).
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-panel border bg-card text-foreground p-6 shadow-[var(--shadow-panel),0_0_0_1px_var(--glass-border-outer)] backdrop-blur-(--glass-blur) backdrop-saturate-[1.4] duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          // An opaque overlay surface: bg-card, a real border, and the panel
+          // shadow — which now means "this floats above the page" rather than
+          // "this is a card", since nothing in the page's own flow carries it
+          // any more. This used to be the design mockup's ".glass" surface
+          // (translucent card, backdrop-blur + saturate, and a second 1px outer
+          // ring in the shadow to give the translucency an edge); all three
+          // went when the surfaces went opaque. text-foreground is explicit
+          // (vanilla shadcn relies on a global `body { color: var(--foreground)
+          // }` for this, deliberately deferred to the migration's cleanup phase
+          // — see the comment at the bottom of styles/globals.css).
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-panel border bg-card text-foreground p-6 shadow-(--shadow-panel) duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className,
         )}
         {...props}

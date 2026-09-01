@@ -35,7 +35,12 @@ export default function PageBar({ crumbs = [], children }) {
     // pt-safe keeps the contents clear of the iOS status bar when the app runs
     // installed, where the page reaches the very top of the screen. It resolves
     // to 0 in a browser tab — see globals.css.
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 pt-safe backdrop-blur-(--glass-blur) backdrop-saturate-[1.4]">
+    // bg-card, and opaque: this bar is the app's chrome, so it takes the same
+    // white as the sidebar beside it and the page's tinted well starts below
+    // it. It used to be bg-background/80 over a backdrop-blur, which was the
+    // only way a translucent bar could stay readable with content scrolling
+    // under it — an opaque one needs neither.
+    <header className="sticky top-0 z-40 border-b border-border bg-card pt-safe">
       <div className="flex h-(--header-row-h) items-center gap-1 px-3 sm:px-4">
         <SidebarTrigger className="shrink-0" />
         <Separator

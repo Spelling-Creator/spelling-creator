@@ -35,7 +35,11 @@ export default function LessonTabs({ playable }) {
   const { t } = useTranslation("lesson");
 
   return (
-    <div className="sticky top-(--header-h) z-30 mt-4 border-b border-border bg-background/80 backdrop-blur-(--glass-blur)">
+    // Opaque bg-background rather than a blurred bg-background/80: the tabs
+    // pin under PageBar and lesson content scrolls beneath them, which is
+    // exactly the case translucency handled badly and a flat colour handles for
+    // free.
+    <div className="sticky top-(--header-h) z-30 mt-4 border-b border-border bg-background">
       {/* Full-bleed underline, column-aligned links: the border runs the width
           of the page, the tabs line up with the lesson beneath them. */}
       <nav

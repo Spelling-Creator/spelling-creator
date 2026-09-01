@@ -53,10 +53,17 @@ Two details make it work:
   programmatically.
 - **The row bleeds out of the card's padding.** It lives inside `SectionCard`'s
   `p-4`, so it carries `-mx-4 -mt-4 px-4 pt-4` to reach the card's edges;
-  otherwise blocks would scroll visibly through the gap beside it. `bg-card` is
-  translucent by design, so it also takes `backdrop-blur-(--glass-blur)` — the
-  same glass treatment as `PageBar`, for the same reason. `z-30` keeps it
-  under the app bar's `z-40`.
+  otherwise blocks would scroll visibly through the gap beside it. It takes
+  `bg-surface-muted` rather than the card's own `bg-card`, which is what makes
+  it read as the card's **header strip** — a tinted bar naming the section —
+  instead of a row of content that happens to be pinned. (It used to be
+  `bg-card` plus `backdrop-blur-(--glass-blur)`, because `--card` was
+  translucent and content would otherwise show through the pinned row. Both went
+  when the surfaces went opaque.) `z-30` keeps it under the app bar's `z-40`.
+- **`SectionCard` must not set `overflow-hidden`.** However much the strip's
+  rounded top corners invite it, it would make the card the nearest scroll
+  container and this header would stop sticking. The strip rounds its own
+  corners with `rounded-t-panel` instead.
 
 Nothing between the header and `<body>` sets `overflow` to anything but
 `visible`, which is the usual thing that silently breaks `position: sticky`. Keep

@@ -171,6 +171,10 @@ export default defineConfig({
           },
           { text: "Project structure", link: "/web-app/project-structure" },
           {
+            text: "Design system (surfaces, borders, boxes)",
+            link: "/web-app/design-system",
+          },
+          {
             text: "Mobile layout & touch targets",
             link: "/web-app/mobile-layout",
           },

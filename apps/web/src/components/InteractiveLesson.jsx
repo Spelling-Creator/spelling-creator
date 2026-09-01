@@ -1000,7 +1000,7 @@ export default function InteractiveLesson({
         // DialogContent's own radius and its two-layer glass shadow are custom
         // theme values that tailwind-merge won't reconcile away, and left alone
         // they draw a rounded card outline around a full-bleed screen.)
-        className="top-0 left-0 flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none! border-0 bg-background p-0 shadow-none! backdrop-blur-none sm:max-w-none"
+        className="top-0 left-0 flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none! border-0 bg-background p-0 shadow-none! sm:max-w-none"
         // Esc and a stray click are the two easiest ways to leave a half-typed
         // run-through by accident, so both route through the same confirmation
         // as the close button rather than dropping out of it silently.

@@ -633,7 +633,11 @@ function SectionCard({
     <div
       ref={cardRef}
       data-section-id={section.id}
-      className="scroll-mt-(--header-h) rounded-panel border border-border bg-card text-card-foreground shadow-(--shadow-panel)"
+      // No overflow-hidden here, however much the header strip's corners want
+      // it: it would make this card the nearest scroll container and the sticky
+      // section header below would stop sticking. The strip rounds its own top
+      // corners instead.
+      className="scroll-mt-(--header-h) rounded-panel border border-border bg-card text-card-foreground"
     >
       <div
         className="p-4"
@@ -649,12 +653,16 @@ function SectionCard({
             pixels.
 
             The negative margins bleed the row out to the card's edges so the
-            pinned background covers blocks passing underneath (the card's own
-            bg-card is translucent, hence the backdrop blur as well — same glass
-            treatment as AppHeader). z-30 stays below the app bar's z-40. The
-            border-b replaces what used to be a separate <hr>, so the divider
-            travels with the header and it reads as a bar rather than a row
-            floating over the content.
+            pinned background covers blocks passing underneath. It takes
+            --surface-muted rather than the card's own white: this is the card's
+            header strip, and tinting it is what separates "which section am I
+            in" from the section's contents at a glance. (It used to be bg-card
+            plus a backdrop blur, because the card underneath was translucent
+            and an untinted pinned row would otherwise have let content show
+            through it. Both went with the glass.) z-30 stays below the app
+            bar's z-40. The border-b replaces what used to be a separate <hr>,
+            so the divider travels with the header and it reads as a bar rather
+            than a row floating over the content.
 
             Only the *identity* — number, name, size — is in here. The move and
             delete buttons wrap onto a second row on a phone (see below), and
@@ -662,7 +670,7 @@ function SectionCard({
             screen, on top of the app bar's own 64px. Knowing which section
             you're in is worth permanent screen space; three buttons you go
             looking for when you want them is not. */}
-        <div className="sticky top-(--header-h) z-30 -mx-4 -mt-4 mb-3 flex items-center gap-2 rounded-t-panel border-b border-border bg-card px-4 pt-4 pb-3 backdrop-blur-(--glass-blur)">
+        <div className="sticky top-(--header-h) z-30 -mx-4 -mt-4 mb-3 flex items-center gap-2 rounded-t-panel border-b border-border bg-surface-muted px-4 pt-4 pb-3">
           <IconActionButton
             tooltip={
               collapsed

@@ -2756,7 +2756,7 @@ export default function EditorPage() {
             <LessonPreview doc={doc} onExit={togglePreview} />
           ) : (
             <>
-              <div className="rounded-panel border border-border bg-card p-4 text-card-foreground shadow-(--shadow-panel) sm:p-6">
+              <div className="rounded-panel border border-border bg-card p-4 text-card-foreground sm:p-6">
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   {t("documentPanel.titleLabel")}
                 </p>

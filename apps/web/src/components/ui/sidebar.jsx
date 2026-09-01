@@ -199,7 +199,7 @@ function Sidebar({
           // background behind it) and unreadable for this one, which slides
           // *over* the page: without the blur, the lesson underneath shows
           // straight through the nav.
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground shadow-[var(--shadow-panel),0_0_0_1px_var(--glass-border-outer)] backdrop-blur-(--glass-blur) backdrop-saturate-[1.4] [&>button]:hidden"
+          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground shadow-(--shadow-panel) [&>button]:hidden"
           style={{
             "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
           }}
