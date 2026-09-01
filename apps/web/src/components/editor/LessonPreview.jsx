@@ -4,11 +4,10 @@
 // It is only the column's *contents*. The page wrapper, the section outline and
 // the column itself stay in EditorPage and are the same elements in both modes,
 // which is the point — an earlier version of this had preview build its own
-// wrapper and column beside the editing one, and the two immediately disagreed:
-// the copy here was left unconstrained where the editing column caps at
-// max-w-6xl, so on a page column past ~1400px toggling preview silently made
-// the lesson wider than the thing it was previewing. Two class strings meant to
-// stay equal will not stay equal. One element can't drift from itself.
+// wrapper and column beside the editing one, and the two immediately disagreed
+// about their width, so on a page column past ~1400px toggling preview silently
+// made the lesson wider than the thing it was previewing. Two class strings
+// meant to stay equal will not stay equal. One element can't drift from itself.
 //
 // No outline of its own for the same reason (EditorPage passes `readOnly` to the
 // one that is already there), and nothing here is editable: no drag handles, no

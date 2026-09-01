@@ -2700,11 +2700,11 @@ export default function EditorPage() {
           same outline and the same column, holding different contents — so the
           two modes cannot disagree about their bounds, and toggling swaps what
           is in the page rather than rebuilding the page around you. (They did
-          disagree, briefly: preview built a column of its own without the
-          editing column's max-w-6xl, and past ~1400px of page column it drew
-          the lesson wider than the editor it was standing in for. Two class
-          strings meant to stay equal do not stay equal; one element cannot
-          drift from itself.)
+          disagree, briefly: preview built a column of its own with a different
+          width cap from the editing column's, and past ~1400px of page column
+          it drew the lesson wider than the editor it was standing in for. Two
+          class strings meant to stay equal do not stay equal; one element
+          cannot drift from itself.)
 
           "Room" is measured against AppShell's @container/page, not the
           viewport, and that distinction is what lets the editor use the same
@@ -2716,8 +2716,17 @@ export default function EditorPage() {
           the room at the price of the app having two different sidebars.
 
           `items-start` so each pane scrolls with the page and the sticky
-          columns inside them can pin. */}
-      <div className="mx-auto flex w-full max-w-[110rem] items-start gap-6 px-4 pt-6 pb-16">
+          columns inside them can pin.
+
+          No max-width, and that is the whole of it: the editor fills the page
+          column at every size. It used to stop at 110rem, which on anything
+          wider than about a 1600px window left the working surface stranded in
+          the middle of the screen with empty page either side of it — you had
+          made the window bigger and the editor had not got bigger. The reading
+          argument for a width cap (PageBody's `reading`, 48rem) is about lines
+          of prose someone reads straight through; it is not about a form, which
+          is what this is. */}
+      <div className="flex w-full items-start gap-6 px-4 pt-6 pb-16">
         {/* One outline, both modes. `readOnly` drops collapse-all and
             add-section; what is left navigates the preview unchanged, because
             LessonView anchors its sections with the same data-section-id the
@@ -2736,22 +2745,26 @@ export default function EditorPage() {
             widest child, and one long unbroken word in a lesson would push the
             column wider than the page instead of wrapping.
 
-            max-w-6xl, not the `reading` 48rem this used to sit at. That width
-            is right for prose someone reads straight through, and PAGE_WIDTHS
-            still holds it for exactly that; a section card is not prose. It is
-            a form — a header row of controls, a drag handle, a move-up and a
-            move-down, an image beside its caption, a question beside its answer
-            — and every one of those was wrapping to a second line inside 48rem
-            while the page had a spare 600px on either side of it. The document
-            gets the room now that nothing is holding it back, and the outer
-            110rem still stops it running edge to edge on a very wide monitor.
+            flex-1 and nothing else. The document takes whatever the outline
+            leaves, which is the only description of this column that stays true
+            as the window and the sidebar change. It has been through two
+            narrower ideas, and both showed up as empty page:
 
-            mx-auto at every width, now that nothing sits to the right of it.
-            The column used to be pinned left from 52rem
-            (`@min-[52rem]/page:mx-0`) so it and the old preview pane sat side
-            by side; with the pane gone that rule would strand the document
-            against the outline with a growing empty margin beside it. */}
-        <div className="mx-auto min-w-0 max-w-6xl flex-1">
+              - `reading` (48rem), inherited from the rest of the app. A section
+                card is not prose — it is a form, with a header row of controls,
+                a drag handle, a move-up and a move-down, an image beside its
+                caption, a question beside its answer — and every one of those
+                wrapped to a second line inside 48rem while the page had a spare
+                600px either side of it.
+              - `max-w-6xl` with `mx-auto` (72rem, centred). Better, and still a
+                fixed number: past ~90rem of page column the document stopped
+                growing and started drifting away from the outline instead,
+                opening a gap on its left and a margin on its right that got
+                wider the bigger you made the window.
+
+            Prose inside preview is LessonView's business to set — this column
+            is a bound, not a measure. */}
+        <div className="min-w-0 flex-1">
           {previewing ? (
             <LessonPreview doc={doc} onExit={togglePreview} />
           ) : (
