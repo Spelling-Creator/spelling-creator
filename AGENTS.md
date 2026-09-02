@@ -29,6 +29,9 @@ Don't skip this. If you must, use `pnpm exec` or `pnpm dlx`, not `npx`.
 
 Always update the docs if necessary when changing or adding code. If the docs already contain outdated information, expand your scope to cover that info too.
 
+## Outdated packages
+PLEASE, PLEASE do not use a package that is old or deprecated. EVEN IF IT IS "INDUSTRY STANDARD" THAT DOES NOT MEAN IT IS GOOD!!! USE THE BEST PACKAGE AND LATEST VERSION LIKE A NORMAL PERSON WOULD!
+
 ## Try to avoid spinners
 
 When applicable, try to use `shadcn` skeletons instead of spinners.
