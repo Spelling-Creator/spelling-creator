@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "spelling-creator-hub",
   "display_name": "Spelling Creator Hub",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Author and publish spelling lessons to the Spelling Creator hub from your AI assistant.",
   "long_description": "Connects your AI assistant to the Spelling Creator hub so it can compose and publish spelling lessons for you. You describe the lesson; the assistant builds it (reading passages with ALL-CAPS spelling words, explicit word lists, and quiz questions) and saves it to the hub through the same API the web app uses — with all the usual validation and author attribution. Lessons default to private drafts; publish them when you're ready. Requires a Supabase refresh token (run the bundled `login` helper, or copy one from the web app) and a display name set on your account.",
   "author": {
@@ -87,6 +87,18 @@
     {
       "name": "list_lesson_proposals",
       "description": "List the proposals against a lesson, and whether yours have been merged."
+    },
+    {
+      "name": "review_proposal",
+      "description": "Read what a proposal would change to a lesson, shown as a diff with merge and decline where the client can render one."
+    },
+    {
+      "name": "merge_proposal",
+      "description": "Merge a proposal into the lesson it targets — your decision, taken by clicking Merge in the proposal view."
+    },
+    {
+      "name": "decline_proposal",
+      "description": "Close a proposal without merging it — your decision, taken by clicking Decline in the proposal view."
     },
     {
       "name": "get_lesson",

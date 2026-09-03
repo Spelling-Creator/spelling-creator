@@ -130,6 +130,13 @@ reviewer's credentials, which needs the editor's repository. Reading needs none 
 it. What changed is that nobody has to start a merge to find out whether they want
 one.
 
+There is now a second place a proposal can be read and settled, on the same terms:
+`review_proposal` over [MCP](/mcp-server/tools#reading-a-proposal) renders the same
+diff inside an assistant's conversation, with merge and decline on it for the
+reviewer. It computes the merge base the same way, and it hands conflicts back
+here — a block both sides rewrote wants the editor's merge dialog and two versions
+side by side, not a button.
+
 The git engine is ~200 KB and is fetched on demand when this page opens, so the
 proposal's title, author and note render first and the diff arrives after. If it
 can't be read at all, the page says so and the rest of it still works.
@@ -199,7 +206,8 @@ changes in it, let me read the diff before it lands._ Two things use that:
 - An **AI assistant over MCP** acts as the account it's signed in with, so
   changes it proposes to your lesson arrive from your own id. Holding them in the
   review queue is the entire point — the lesson is untouched until you read the
-  diff and merge it. See [MCP tools](/mcp-server/tools).
+  diff and merge it, here or in the conversation itself. See
+  [MCP tools](/mcp-server/tools).
 - **"Fork into a new lesson"** in the editor gives a human the same route for
   work they want to look over before committing to it.
 
@@ -309,7 +317,7 @@ frontend can surface `res.text()` directly.
 | `apps/api/src/lib/lessonGit.js`                    | R2 key layout (`git/pulls/<id>/pack`) and the sweeps that delete it                       |
 | `@spelling-creator/core/pulls`                     | The browser client, and the shared length limits                                          |
 | `@spelling-creator/core/browser/git/sync`          | `submitPullRequest` (propose), `prepareProposalReview` (read), `preparePullMerge` (merge) |
-| `apps/mcp/src/git.js`                              | The same two steps for an AI assistant — fork, then propose                               |
+| `apps/mcp/src/git.js`                              | The same steps for an AI assistant — fork, propose, and review or merge over MCP          |
 | `apps/web/src/components/ProposeChangesDialog.jsx` | The submission form                                                                       |
 | `apps/web/src/pages/lesson/LessonProposals.jsx`    | The Proposals tab                                                                         |
 | `apps/web/src/pages/lesson/LessonProposal.jsx`     | One proposal: its changes, its mergeability, and the hand-off into the editor             |

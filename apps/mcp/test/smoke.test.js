@@ -367,14 +367,20 @@ test("the MCP server exposes the full tool set", async () => {
     "add_image",
     "create_lesson",
     "create_lesson_file",
+    // The reviewer's two, which only a view calls (`visibility: ["app"]`). They
+    // are still registered tools and still listed here: the metadata says who
+    // may call them, and a host that reads it keeps them away from the model.
+    "decline_proposal",
     "delete_lesson",
     "fork_lesson",
     "get_lesson",
     "list_hub_lessons",
     "list_lesson_proposals",
     "list_my_lessons",
+    "merge_proposal",
     "patch_lesson",
     "propose_changes",
+    "review_proposal",
     "search_images",
     "set_lesson_published",
     "update_lesson",

@@ -23,7 +23,7 @@ const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(pkgRoot, "views");
 const outDir = join(pkgRoot, "src", "views");
 
-const VIEWS = ["imagePicker"];
+const VIEWS = ["imagePicker", "proposalDiff"];
 const MARKER = "<!-- BUNDLE -->";
 
 const GENERATED_BANNER =

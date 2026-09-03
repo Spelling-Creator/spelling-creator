@@ -26,9 +26,16 @@ the conversation the lesson is being written in.
 
 ## Where this stands
 
-`search_images` ships a view: the candidates come back as a picker instead of a text
-list, and choosing one calls `add_image` directly. Everything else is text-only and
-works exactly as documented in [Tools](./tools.md). See
+Two tools ship a view:
+
+- **`search_images`** — the candidates come back as a picker instead of a text list, and
+  choosing one calls `add_image` directly.
+- **`review_proposal`** — a proposal's diff, with **Merge** and **Decline** on it for the
+  lesson's reviewer. See [The proposal view](#the-proposal-view), which is the more
+  interesting of the two: it is where a view changes what is _possible_ rather than only
+  what things look like.
+
+Everything else is text-only and works exactly as documented in [Tools](./tools.md). See
 [The rest of the surface](#the-rest-of-the-surface) for what's next and why.
 
 Nothing here is required. A host that doesn't do MCP Apps — Claude Code in a terminal,
@@ -37,7 +44,7 @@ say — never reads the `ui://` resource and gets the same text result it always
 unconditionally rather than branching on the capability. The text path stays the
 contract; views are an enhancement on top of it.
 
-What a tool **says** does branch, in exactly one place, and it's worth knowing why. See
+What a tool **says** does branch, and it's worth knowing why. See
 [Say the right thing to each client](#say-the-right-thing-to-each-client).
 
 ## How it fits together
@@ -64,9 +71,12 @@ sandboxed frame on an opaque origin. But the MCP connection it hangs off is alre
 authenticated ([remote mode](./remote-mode.md)'s OAuth grant, or the stdio server's
 token), so a `tools/call` from the view runs as the same user with the same validation
 and attribution as one from the model. Nothing new to authorise, and no second auth path
-to keep safe. The picker calls the ordinary `add_image` this way; a tool that existed
-only to serve a view could go further and declare `visibility: ["app"]`, which hides it
-from the model altogether so it never takes up room in the context.
+to keep safe. The picker calls the ordinary `add_image` this way. A tool that exists
+only to serve a view can go further and declare `visibility: ["app"]`, which hides it from
+the model altogether so it never takes up room in the context — which is what
+`merge_proposal` and `decline_proposal` do, and the reason the reviewer's decision can be
+offered in the conversation without being handed to the assistant. See
+[Who may call what](#who-may-call-what).
 
 Proxying is a capability the host declares (`serverTools`), though, and a view has to read
 it rather than assume it — the picker checks before it offers a button that would place an
@@ -120,9 +130,70 @@ Three things about the shape of that, all learned the hard way:
   "renders" to a host that doesn't ends the turn waiting for a click on a picker nobody
   drew, and nothing will ever arrive — the conversation just stops, with no clue why.
 
-The same applies to any future view: what the model is told has to match what the user can
-already see, or the two race. Registration stays unconditional — the branch belongs in the
-words, not in the wiring.
+`review_proposal` does the same thing one step further on, and it is the same sentence in
+both directions: rendered, the diff is on screen with both decisions on it, so the result
+tells the assistant to stop — and specifically not to send the user to the web app for
+something the buttons already do. Text-only, relaying the diff and handing over the URL is
+the only thing that _can_ happen, so that is what it asks for.
+
+The rule generalises: what the model is told has to match what the user can already see, or
+the two race. Registration stays unconditional — the branch belongs in the words, not in
+the wiring.
+
+## The proposal view
+
+The picker replaced a list of prose descriptions with the pictures they described — a
+better way to do something the assistant could already do. The proposal view is a
+different kind of change: it moves a decision that was **only** available in another tab
+into the conversation, without moving it to the model.
+
+`propose_changes` hands over a URL, tells the assistant to stop, and offers polling as the
+way to find out what the human decided. `review_proposal` renders the diff instead, with
+Merge and Decline on it, and the reviewer settles it where they are reading it.
+
+### Who may call what
+
+Merging has always been the reviewer's decision, and the reason was never that the server
+couldn't do it — it is that an assistant merging on their behalf settles somebody else's
+lesson. So the view gets the buttons and the model does not:
+
+```js
+_meta: {
+  ui: {
+    visibility: ["app"];
+  }
+}
+```
+
+A host that reads that keeps `merge_proposal` and `decline_proposal` out of the model's
+tool list altogether — they never take up room in its context — and proxies them only for
+the view. That is the case
+[`visibility`](https://modelcontextprotocol.io/extensions/apps/overview) exists for, and
+this server's first use of it.
+
+Not every host honours it, so both tools also check `rendersViews()` for themselves. If no
+view was ever drawn, nobody can have pressed anything, and the call can only be the model
+deciding something that isn't its decision — so it's refused, with the proposal's URL,
+which is where every merge happened until this view existed. That leaves one gap worth
+naming: a host that renders views **and** ignores `visibility` could still let a model call
+them. Nothing in the protocol distinguishes a proxied click from a model's own call, so the
+mitigation there is the wording of the tool descriptions rather than a check.
+
+### What a click actually does
+
+The view calls tools; the tools do the work, server-side, over the same authenticated
+connection (see [Tools](./tools.md#deciding-a-proposal-in-the-conversation) for the
+sequence, and why the hub accepts no other order). Two boundaries are deliberate:
+
+- **Conflicts stop here.** A block both sides have rewritten needs a human looking at two
+  versions, and the web app has that dialog. The view names the contested blocks and
+  offers to open it rather than growing a second conflict UI into a card that also must
+  not scroll.
+- **The diff shows the shape of the change, not its full text** — one line per operation,
+  in the same words the merge commit will carry, matching `ChangeSummary.jsx` on the web
+  app's own proposal page. A proposal that read differently in the two places would be
+  worse than no summary at all. Long lists are truncated with a count; nothing inside the
+  card scrolls, because on mobile a vertical drag there belongs to the conversation.
 
 ## Writing a view
 
@@ -171,25 +242,46 @@ while loading — the same rule the [web app](/web-app/overview) follows.
 ## Trying one without a host
 
 A view can't be exercised from the test suite — that needs something to render it. So
-`test/views.test.js` covers the half that a connection can see, through an in-memory MCP
-client: that the `ui://` resource is listed and readable, under the mime type hosts look
-for, self-contained, carrying the origin and the CSP entry, with the tool's `_meta`
-pointing at it. That's the wiring a host silently refuses to render without, and all of it
-is checkable without ever rendering anything.
+`test/views.test.js` (the picker) and `test/proposalView.test.js` (the proposal diff) cover
+the half that a connection can see, through an in-memory MCP client: that the `ui://`
+resource is listed and readable, under the mime type hosts look for, self-contained,
+carrying the origin and the CSP entry, with the tool's `_meta` pointing at it. That's the
+wiring a host silently refuses to render without, and all of it is checkable without ever
+rendering anything.
 
 The capability branch is checkable there too, and is: a client that declares
 `io.modelcontextprotocol/ui` gets the hands-off result, a plain one still gets "choose the
 best `ref`". Both are only what a `tools/call` returns, so neither needs a renderer.
 
-The view's own behaviour — that it draws the candidates, that a click calls `add_image`
-with the right arguments, that it degrades when the host won't proxy that call — is
-checked by hand against a host. The two ways to get one:
+The proposal view's tests go further, because what its buttons call is not a rendering
+concern at all: they build real packfiles for a lesson and a fork of it — as
+`packages/core/src/git/review.test.js` does — so the ancestry the diff and the merge base
+depend on is real ancestry. That's what pins down the things a stub would hide: that the
+diff is taken from the merge base, that a merge pushes, saves and records in that order and
+with a compare-and-swap, that it carries the lesson's saved document forward rather than
+the doc at its stored tip, that a conflicted merge writes nothing anywhere, and that both
+app-only tools refuse a client that never drew the view.
+
+A view's own behaviour — that it draws what it was sent, that a click calls the right tool
+with the right arguments, that it degrades when the host won't proxy that call — is checked
+by hand against a host. The two ways to get one:
 
 - **A stub host.** A page that iframes the built HTML, answers `ui/initialize` with a
   `hostContext`, then sends the tool result as a `ui/notifications/tool-result`
   notification is enough to render the view and watch the `tools/call` it sends back. Fast
   to throw together, and it will catch the things that actually break — a corrupted
   bundle, a card that wraps, a click that sends the wrong arguments.
+  `AppBridge` from `@modelcontextprotocol/ext-apps/app-bridge` is the host half, over a
+  `PostMessageTransport` built on `iframe.contentWindow`; with `null` for the MCP client,
+  register your own `CallToolRequestSchema` handler and log what arrives. Two ordering
+  traps, both of which look exactly like a broken view:
+  - **Connect the bridge before the view's script runs**, i.e. leave the iframe blank and
+    set `src` afterwards. The transport only starts listening at `connect()`, and the
+    `ui/initialize` the view sends on load is otherwise dropped — leaving it waiting
+    forever on a response, with nothing drawn and nothing logged.
+  - **Send the tool result on the `initialized` notification**, not straight after setting
+    `src`. A notification posted into a frame whose script hasn't run yet goes nowhere,
+    and the view then renders its skeleton and stops.
 - **A real one.** The [ext-apps repo](https://github.com/modelcontextprotocol/ext-apps)
   ships `examples/basic-host`, and Claude Desktop renders a local stdio server directly
   (or a remote one through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote)).
@@ -197,19 +289,31 @@ checked by hand against a host. The two ways to get one:
 ## The rest of the surface
 
 `search_images` went first because it is the interaction chat is worst at: picking a
-photograph from prose descriptions of photographs. The rest, roughly in order of how much
-a view would buy:
+photograph from prose descriptions of photographs. The proposal diff went second because
+it was the one whose text version a view could delete outright. The rest, roughly in order
+of how much a view would buy:
 
-| Tool                                        | View                                                              |
-| ------------------------------------------- | ----------------------------------------------------------------- |
-| `propose_changes` / `list_lesson_proposals` | The diff, with merge and decline in place                         |
-| `create_lesson` / `patch_lesson`            | The lesson as the maker lays it out, with its validation findings |
-| `list_my_lessons` / `list_hub_lessons`      | A browsable card list rather than a text table                    |
+| Tool                                      | View                                                           |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| `list_my_lessons` / `list_hub_lessons`    | A browsable card list rather than a text table                 |
+| `validate_lesson`                         | Findings grouped per section, clickable to the offending block |
+| `create_lesson` / `patch_lesson`          | The lesson as the maker lays it out                            |
+| `join_collab_session` / `read_collab_doc` | The live document, its participants and its chat               |
 
-The proposals one is the most interesting, because the text version has a shape a view
-would delete outright: `propose_changes` today hands over a URL, tells the assistant to
-stop, and offers polling as the way to find out what the human decided. A view is that
-whole exchange, in the conversation, resolved by a click.
+The lesson browser is the cheapest of these: every action it needs is already a tool
+(`get_lesson` to open, `set_lesson_published` to toggle, `ui/open-link` to hand off to the
+maker), so it is a rendering job and nothing else.
+
+`validate_lesson`'s is worth noting for how it differs from the two that ship: the audience
+inverts. Validation is a tool the **model** uses while composing, so a view there is for
+the human watching rather than for anyone choosing — which means no
+[capability branch](#say-the-right-thing-to-each-client) at all, since nothing about what
+the model should do next changes.
+
+A collaboration view is the only one on the list that would need no new server surface
+whatsoever, and it is missing from this table's earlier versions: the
+[live session](./live-sessions.md) tools already hold the document, the participants and
+the chat between calls.
 
 ## Alternatives considered
 

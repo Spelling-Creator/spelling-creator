@@ -28,6 +28,7 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 
 import imagePickerHtml from "#image-picker-html";
+import proposalDiffHtml from "#proposal-diff-html";
 import { sha256Hex } from "./images.js";
 
 // Versioned: hosts cache a `ui://` resource independently of this server, and a
@@ -35,6 +36,7 @@ import { sha256Hex } from "./images.js";
 // view's shape changes and serve the old URI alongside it, rather than editing
 // what an existing conversation already rendered.
 export const IMAGE_PICKER_URI = "ui://spelling-creator/image-picker-1.html";
+export const PROPOSAL_DIFF_URI = "ui://spelling-creator/proposal-diff-1.html";
 
 // Commons thumbnails. A view may load nothing the server hasn't declared, so
 // without this the picker renders as a row of broken images.
@@ -65,6 +67,14 @@ export async function appDomain(mcpUrl) {
  * model cannot see — so the same words make the assistant race ahead and add an
  * image itself, and the picker it just talked over becomes a list of things the
  * user is too late to want. The rendered path has to be told to stop instead.
+ *
+ * It has a second job, for the tools only a view is supposed to call
+ * (merge_proposal, decline_proposal — `visibility: ["app"]`). A host that never
+ * drew the view cannot have had a button pressed in it, so a call arriving from
+ * one can only be the model on a host that ignored the visibility metadata, and
+ * those tools refuse it. `false` is the safe answer there too, by luck rather
+ * than design: the cost of being wrong is a merge the reviewer has to do in the
+ * web app instead, which is where it happened until now anyway.
  *
  * Only known once the client has initialised, and only as truthfully as the
  * client declares it — so when the answer is less than certain, it is `false`.
@@ -120,6 +130,38 @@ export function registerViews(server, config) {
               // The cards carry their own frames; a host border around them
               // would just be a box inside a box.
               prefersBorder: false,
+            },
+          },
+        },
+      ],
+    }),
+  );
+
+  registerAppResource(
+    server,
+    "Proposal diff",
+    PROPOSAL_DIFF_URI,
+    {
+      description:
+        "The proposal shown with review_proposal: what it changes, and — for the lesson's reviewer — merge and " +
+        "decline in place.",
+      mimeType: RESOURCE_MIME_TYPE,
+    },
+    async () => ({
+      contents: [
+        {
+          uri: PROPOSAL_DIFF_URI,
+          mimeType: RESOURCE_MIME_TYPE,
+          text: proposalDiffHtml,
+          _meta: {
+            ui: {
+              domain: await appDomain(`${config.apiUrl}/mcp`),
+              // Text and its own controls only — no image, no font, nothing
+              // fetched at all, so there is no origin to allow.
+              csp: {},
+              // One panel of prose and buttons, which reads as a card and wants
+              // the host's frame around it (unlike the picker's own cards).
+              prefersBorder: true,
             },
           },
         },
