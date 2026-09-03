@@ -19,7 +19,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // A denylist rather than an allowlist: adding a page to App.jsx shouldn't
 // require a matching edit here, and the failure mode is the gentler one — an
 // unlisted SPA route falls through to the network, which online still lands on
-// index.html via the Worker's single-page-application fallback.
+// index.html via the Worker's frontend fall-through
+// (apps/api/src/routes/spa.js). Note that *that* file does need the matching
+// edit: a route it doesn't know is still served the shell and still renders,
+// but with a 404 status.
 const WORKER_PATHS = [
   // The server-rendered routes (apps/api/src/routes/ssr.js). These have to be
   // here or the service worker answers the navigation from its precached shell

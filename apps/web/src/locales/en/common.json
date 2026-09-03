@@ -59,6 +59,13 @@
     "charCountHint": "{{min}}–{{max}} characters.",
     "saveError": "Could not save your display name."
   },
+  "notFound": {
+    "title": "Page not found",
+    "heading": "There's nothing at this address",
+    "description": "The link may be mistyped, or the lesson it pointed at may have been deleted or made private.",
+    "goHome": "Go to the home page",
+    "browseHub": "Browse the lesson hub"
+  },
   "starRating": {
     "defaultAriaLabel": "rating",
     "ratingSummary": "{{label}}: {{display}} out of {{max}}",

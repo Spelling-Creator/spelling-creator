@@ -2,10 +2,14 @@
 //
 // The Worker serves the built SPA (and the docs site inside it) from an asset
 // bundle uploaded alongside the code, reached through `env.ASSETS.fetch(request)`
-// with `not_found_handling: "single-page-application"` — which is what makes a
-// deep link like /hub/abc return index.html for the router to pick up. This is
-// the same contract over a directory on disk, so `handleFrontend` and the SSR
-// path (which fetches /index.html through it) work unchanged.
+// with `not_found_handling: "none"`. This is the same contract over a directory
+// on disk, so `handleFrontend` and the SSR path (which fetches /index.html
+// through it) work unchanged.
+//
+// Note what this deliberately does *not* do: substitute index.html for a path
+// with no file behind it. A deep link like /hub/abc does still resolve to the
+// shell — but that decision belongs to routes/spa.js, which knows the app's route
+// table and can tell /hub/abc from /nonsense. Here, missing is missing.
 //
 // A production deployment will usually put a reverse proxy in front of this and
 // let it serve the directory directly, which is faster and handles ranges and
@@ -159,21 +163,14 @@ export function assetServer(directory) {
 			// The docs site is built with VitePress's `cleanUrls`, so /docs/intro is
 			// really intro.html. Cloudflare resolves that with its default
 			// `auto-trailing-slash` asset handling; this is the same rule. Without it
-			// every docs page would fall through to the SPA shell below and render
-			// the app's 404 instead.
+			// every docs page would be a 404 that routes/spa.js then answers with the
+			// app's own not-found page.
 			const asHtml = await respond(request, `${target}.html`, 200);
 			if (asHtml) return asHtml;
 
-			// Anything that looks like a file — /assets/app-abc123.js, a missing
-			// image — is a genuine 404. Falling back to index.html for those would
-			// hand a broken script tag an HTML document, and the failure surfaces as
-			// a baffling syntax error rather than a missing file.
-			if (extname(url.pathname)) return new Response('Not found.', { status: 404 });
-
-			// Everything else is a client-side route: serve the SPA shell with a 200,
-			// the same as the Worker's `not_found_handling: single-page-application`.
-			const shell = await respond(request, join(root, 'index.html'), 200);
-			return shell || new Response('Not found.', { status: 404 });
+			// Nothing here. Whether that means "client-side route" or "no such page"
+			// is routes/spa.js's call, not this layer's.
+			return new Response('Not found.', { status: 404 });
 		},
 	};
 }

@@ -23,8 +23,11 @@ are all the same lesson, so one `fetchLesson` serves all of them and the tab
 decides what to draw with it. `LESSON_PATH` names those five forms rather than
 matching any extra segment, so it and the SPA's route table agree about what a
 lesson URL is: a wildcard let `/hub/:id/anything` through, costing a lesson
-fetch and a full render to produce a page the client redirects away from.
-Adding a tab means editing both.
+fetch and a full render to produce a page that isn't one. Adding a tab means
+editing both. The pattern itself lives in `apps/api/src/routes/spa.js` — the
+Worker's route table, shared so that the code deciding a path is a lesson and
+the code deciding it is [a page at all](./pages-and-routing.md#unknown-paths)
+cannot disagree.
 `LessonLayout` seeds its state from that payload and the tab reads it through
 `useLesson()`, so no tab fetches the lesson a second time.
 
@@ -60,6 +63,7 @@ Both are dashboard content, so hydrating them is correct.
 apps/web/src/entry-server.jsx     the app, built for workerd (`pnpm build:ssr` -> dist-ssr/)
 apps/web/src/lib/ssr.jsx          the client/server handoff (SsrProvider, useServerData)
 apps/api/src/routes/ssr.js        the Worker route: match, fetch, render, splice
+apps/api/src/routes/spa.js        the route table, and the asset/shell/404 fall-through
 ```
 
 1. `handleFrontend` (`apps/api/src/routes/render.js`) asks `shouldServerRender`.
@@ -77,6 +81,13 @@ apps/api/src/routes/ssr.js        the Worker route: match, fetch, render, splice
 **Failure is always soft.** A failed data fetch, a render error, a missing
 server bundle — each falls through to the static shell, which is what the app
 served before any of this existed.
+
+One consequence is worth knowing: a lesson that genuinely does not exist takes
+that same path, because a 404 from the API and a timeout reaching it arrive here
+as the same thrown error. So `/hub/<deleted-id>` is still answered `200` with the
+shell, and the app reports the miss after it hydrates — unlike a path that isn't
+a route at all, which the Worker 404s outright
+([Unknown paths](./pages-and-routing.md#unknown-paths)).
 
 ## Page metadata
 

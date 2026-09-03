@@ -325,6 +325,14 @@ it _can_ run alone, but Caddy or nginx will do it better — ranges, compression
 and a real response cache, which is the one platform service this host
 deliberately implements as a no-op. Terminate TLS there too.
 
+If you do let the proxy serve `apps/web/dist`, send everything it has no file
+for to the app rather than reaching for the usual SPA rule
+(`try_files $uri /index.html`). The app knows its own route table and answers a
+path that isn't a route with a real `404`; a blanket `index.html` fallback in
+front of it puts that back to a `200`, which is a
+[soft 404](../web-app/pages-and-routing.md#unknown-paths) on every dead link and
+every probe for a well-known URI.
+
 **It is stateless.** Run as many processes as you like behind the proxy; nothing
 is held in memory between requests.
 

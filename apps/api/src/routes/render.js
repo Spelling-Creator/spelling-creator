@@ -15,6 +15,7 @@ import puppeteer from '@cloudflare/puppeteer';
 import { textResponse } from '../lib/http.js';
 import { responseCache } from '../platform/index.js';
 import { serverRender, shouldServerRender } from './ssr.js';
+import { serveApp } from './spa.js';
 
 // User-Agents of crawlers/scrapers worth prerendering for: search engines and
 // the link-preview bots used by social/chat platforms.
@@ -179,8 +180,8 @@ export async function ogImage(request, env, ctx, url) {
 //   2. Prerender it with headless Chromium, for crawlers only, on the routes
 //      SSR doesn't cover — today that's "/" and nothing else, since the rest
 //      are auth-gated pages no crawler has any business indexing.
-//   3. Hand back the static asset (env.ASSETS resolves SPA routes to index.html
-//      via not_found_handling).
+//   3. Hand back the static asset, the SPA shell for a client-side route, or a
+//      real 404 for a path that is neither (routes/spa.js).
 export async function handleFrontend(request, env, ctx, url) {
 	if (shouldServerRender(request, url)) {
 		const rendered = await serverRender(request, env, ctx, url);
@@ -189,5 +190,5 @@ export async function handleFrontend(request, env, ctx, url) {
 	if (env.BROWSER && shouldPrerender(request, url)) {
 		return prerender(request, env, ctx, url);
 	}
-	return env.ASSETS.fetch(request);
+	return serveApp(request, env, url);
 }

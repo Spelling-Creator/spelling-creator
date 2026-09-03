@@ -84,9 +84,13 @@ Nothing is lost offline, since all three need the network for their data anyway.
 It's a **denylist rather than an allowlist** on purpose. Adding a page to
 `App.jsx` shouldn't require a matching edit to the build config, and the failure
 mode is the gentler one: an unlisted route falls through to the network, which
-online still lands on `index.html` via the Worker's `single-page-application`
-asset fallback. An over-broad allowlist, by contrast, would have the service
-worker confidently answer `/docs/intro` with the React app.
+online still lands on `index.html` via the Worker's frontend fall-through
+(`apps/api/src/routes/spa.js`). An over-broad allowlist, by contrast, would have
+the service worker confidently answer `/docs/intro` with the React app.
+
+That fall-through _does_ need the matching edit, and for a different reason —
+it is what decides whether a path is [a page or a 404](./pages-and-routing.md#unknown-paths).
+A route it doesn't know still renders; it just carries the wrong status.
 
 ### Runtime caching
 

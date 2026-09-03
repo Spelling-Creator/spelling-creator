@@ -28,29 +28,19 @@ import { fetchUserProfile } from '@spelling-creator/core/users';
 // them in that order.
 import { render } from '../../../web/dist-ssr/entry-server.js';
 
-const HUB_PATH = /^\/hub\/?$/;
-// A lesson and its tabs: /hub/:id, /hub/:id/history, /hub/:id/proposals/:prId,
-// and so on. They are all views of one lesson, and one fetch serves every one
-// of them — the tab decides what to draw with it.
+// The three public read routes, taken from the app's route table in routes/spa.js
+// rather than restated here — one description of what a lesson URL looks like,
+// shared by the code that renders one and the code that decides it is a page at
+// all.
 //
-// Matching the tabs is not optional. The service worker's navigateFallback
-// denylist excludes the whole of /hub/* from the precached shell (WORKER_PATHS
-// in apps/web/vite.config.js), on the grounds that the Worker answers those
-// paths itself. If this regex stopped at /hub/:id, a tab would be excluded from
-// the shell *and* unmatched here: online it would fall through to the SPA
-// shell and still work, but offline — where there is no Worker to fall through
-// to — it would fail outright. The two lists have to agree.
-//
-// The tabs are named rather than matched as "any extra segment", so this and
-// src/App.jsx's route table agree about what a lesson URL is. A wildcard let
-// /hub/:id/anything through, which cost a lesson fetch and a full render to
-// produce a page the client immediately redirects away from — and made a typo
-// indistinguishable from a route while reading either file. Adding a tab means
-// editing this list; that is the intended amount of friction.
-// `proposals` is the only tab with a child of its own (/proposals/:prId).
-const LESSON_TABS = 'practice|discussion|history|proposals(?:/[^/]+)?';
-const LESSON_PATH = new RegExp(`^/hub/([^/]+)(?:/(?:${LESSON_TABS}))?/?$`);
-const PROFILE_PATH = /^\/users\/([^/]+)\/?$/;
+// Matching a lesson's *tabs* is not optional. The service worker's
+// navigateFallback denylist excludes the whole of /hub/* from the precached shell
+// (WORKER_PATHS in apps/web/vite.config.js), on the grounds that the Worker
+// answers those paths itself. If LESSON_PATH stopped at /hub/:id, a tab would be
+// excluded from the shell *and* unmatched here: online it would fall through to
+// the SPA shell and still work, but offline — where there is no Worker to fall
+// through to — it would fail outright. The two lists have to agree.
+import { HUB_PATH, LESSON_PATH, PROFILE_PATH } from './spa.js';
 
 /**
  * Which page (if any) this request should be server-rendered as.

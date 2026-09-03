@@ -21,12 +21,13 @@ import { serve } from '@hono/node-server';
 
 import { createApp, registerFrontend } from '../app.js';
 import { serverRender, shouldServerRender } from '../routes/ssr.js';
+import { serveApp } from '../routes/spa.js';
 import { assetServer } from './assets.js';
 import { nodePlatform } from './platform.js';
 
 /**
  * The frontend fall-through for this host: server-render the public read routes,
- * and otherwise hand back the static asset.
+ * and otherwise serve the built app — asset, shell, or 404 (routes/spa.js).
  *
  * Deliberately not the Worker's `handleFrontend`, which is the same two steps
  * with headless-Chromium prerendering between them — importing it would pull
@@ -39,7 +40,7 @@ async function frontend(request, env, ctx, url) {
 		const rendered = await serverRender(request, env, ctx, url);
 		if (rendered) return rendered;
 	}
-	return await env.ASSETS.fetch(request);
+	return await serveApp(request, env, url);
 }
 
 /**

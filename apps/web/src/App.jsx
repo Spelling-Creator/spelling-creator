@@ -35,8 +35,9 @@
 // RichTextInput on the public lesson page, so it is not editor-only.
 
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import AppShell from "./components/layout/AppShell.jsx";
+import NotFoundPage from "./pages/NotFoundPage.jsx";
 import { SectionsSkeleton } from "./components/Skeletons.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import HubPage from "./pages/HubPage.jsx";
@@ -95,8 +96,13 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           {/* Trailing * so EditorShell can own the routes below it. */}
           <Route path="/editor/*" element={<EditorShell />} />
-          {/* Unknown paths fall back to the homepage. */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* An unknown path is a 404, not a detour to the homepage — and the
+              host says so too: apps/api/src/routes/spa.js holds the same route
+              table and serves this shell with a 404 status for anything not in
+              it. Keep the two in step (as ssr.js and vite.config.js's
+              WORKER_PATHS already are); a route missing there still renders,
+              it just carries the wrong status. */}
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
 
         {/* Outside the shell — see the note at the top of this file. */}

@@ -7,7 +7,7 @@ title: Pages & routing
 The app is a single-page app with real-path client-side routes (served by
 `BrowserRouter`, not hash routes). Every page has a genuine URL like `/hub/:id`,
 which is what lets the Worker recognise a route it can [render server-side](./server-rendering.md),
-and it serves `index.html` for unknown paths so deep links resolve.
+and serve `index.html` for it so a deep link resolves before the router has run.
 
 ## One shell
 
@@ -113,9 +113,52 @@ are the same window, and only one of them has room for an outline.
 | `/login`                   | **Sign in**             | Magic-link sign-in / account status.                                                                                                                                                                  |
 | `/moderation`              | **Moderation**          | Moderator/admin queue for reviewing reported content (gated to mods/admins).                                                                                                                          |
 
-Unknown paths redirect to the home page (`/`). An unknown `/editor/<something>`
-does not: the editor treats a panel name it doesn't recognise as "no panel
-open", so a stale link shows the editor rather than bouncing you out of it.
+### Unknown paths
+
+An unknown path is a **404** — status and page both. `NotFoundPage` renders in
+the usual chrome and offers the home page and the hub; it replaced a
+`<Navigate to="/">` that quietly turned every dead link into the homepage,
+telling nobody anything had gone wrong.
+
+The status matters as much as the page, and it is the host's to send. The
+Worker's `apps/api/src/routes/spa.js` holds **the same route table** and decides
+what a path gets:
+
+| Path                             | Answer                               |
+| :------------------------------- | :----------------------------------- |
+| A file in the build              | The file                             |
+| A route in the table             | `index.html`, `200`                  |
+| Anything else, no extension      | `index.html`, `404` — `NotFoundPage` |
+| Anything else, with an extension | `text/plain`, `404`                  |
+| A missing `/docs/…` page         | VitePress's own 404 page, `404`      |
+
+Before this, the host answered every unmatched path with `index.html` and a
+`200` (Cloudflare's `not_found_handling: "single-page-application"`). That is a
+**soft 404** — a page insisting it exists — which is how a crawler ends up
+indexing an unlimited supply of junk URLs, and it also meant a client probing
+`/.well-known/anything.json` got a successful response containing an HTML
+document. `not_found_handling` is now `"none"`, and the decision is made in code
+that knows the routes.
+
+So **the table in `spa.js` has to stay in step with `App.jsx`** — the same
+standing obligation `ssr.js` and `WORKER_PATHS` already carry. The failure mode
+is deliberately mild: a route added to `App.jsx` and forgotten there is still
+served the shell and still renders correctly, it just carries a `404` status.
+
+One caveat when you go looking for that status in a browser: a returning visitor
+with the [service worker](./pwa-and-offline.md) installed is answered from the
+precached shell — a `200` — without the Worker being asked at all. The page is
+the same; only the status differs, and the audience the status is for (crawlers)
+does not run service workers. Test it with a hard reload or a private window.
+
+Two things are deliberately **not** 404s:
+
+- **An unknown `/editor/<something>`.** The editor treats a panel name it
+  doesn't recognise as "no panel open", so a stale link shows the editor rather
+  than bouncing you out of it. `/editor/*` is a wildcard in both route tables.
+- **A lesson that doesn't exist.** `/hub/<deleted-id>` _is_ a route, so it is
+  served `200` and the app reports the miss once it has tried to fetch —
+  see [Server rendering](./server-rendering.md).
 
 `EditorShell` mounts no chrome — `AppShell` is already above it — and exists
 only to hold the chunk boundary and the editor's own nested routes.

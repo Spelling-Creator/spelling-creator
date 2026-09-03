@@ -30,11 +30,18 @@
 	// Serve the built web SPA as static assets. The Worker runs first on every
 	// request (run_worker_first) so it can intercept crawler navigations and
 	// return a prerendered snapshot; everything else falls through to env.ASSETS.
-	// not_found_handling serves index.html for client-side (BrowserRouter) routes.
+	//
+	// not_found_handling is "none" — deliberately *not* "single-page-application".
+	// The SPA fallback served index.html with a 200 for every path with no file
+	// behind it, which resolved deep links and, in the same stroke, answered
+	// /nonsense and /.well-known/anything.json with a successful HTML document.
+	// Client-side (BrowserRouter) routes are still served the shell; that decision
+	// now lives in src/routes/spa.js, which holds the app's route table and can
+	// tell a page from a typo. Anything unrecognised gets a real 404.
 	"assets": {
 		"directory": "../web/dist",
 		"binding": "ASSETS",
-		"not_found_handling": "single-page-application",
+		"not_found_handling": "none",
 		"run_worker_first": true,
 	},
 

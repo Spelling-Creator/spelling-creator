@@ -67,17 +67,14 @@ describe('assetServer', () => {
 		expect(res.headers.get('content-type')).toContain('text/html');
 	});
 
-	it('serves the SPA shell for a client-side route', async () => {
-		const res = await get('/hub/some-lesson-id');
-		expect(res.status).toBe(200);
-		expect(await res.text()).toContain('shell');
-	});
-
-	it('404s a missing file rather than handing it the shell', async () => {
-		// A broken script tag given an HTML document surfaces as a baffling syntax
-		// error instead of a missing file.
-		const res = await get('/assets/gone-000000.js');
-		expect(res.status).toBe(404);
+	it('404s anything it has no file for, shell substitution included', async () => {
+		// Deliberately *not* index.html for /hub/some-lesson-id: telling a
+		// client-side route from a typo needs the app's route table, which lives in
+		// routes/spa.js. This layer only knows what is on disk.
+		expect((await get('/hub/some-lesson-id')).status).toBe(404);
+		// And a broken script tag given an HTML document surfaces as a baffling
+		// syntax error instead of a missing file.
+		expect((await get('/assets/gone-000000.js')).status).toBe(404);
 	});
 
 	it('resolves a clean docs URL to its .html file', async () => {
@@ -89,9 +86,9 @@ describe('assetServer', () => {
 	it('refuses to escape the asset directory', async () => {
 		// The encoded spelling is the one that matters. A literal `/../..` never
 		// reaches the server as traversal — the URL parser collapses it, so that
-		// request arrives as an ordinary path and correctly gets the SPA shell.
-		// Percent-encoded, it only becomes traversal after decoding, which is why
-		// the containment check has to happen on the decoded path.
+		// request arrives as an ordinary path. Percent-encoded, it only becomes
+		// traversal after decoding, which is why the containment check has to
+		// happen on the decoded path.
 		expect((await get('/..%2f..%2f..%2fetc%2fpasswd')).status).toBe(404);
 		expect((await get('/%2e%2e%2f%2e%2e%2fpackage.json')).status).toBe(404);
 	});
@@ -224,9 +221,26 @@ describe('createHandler', () => {
 	it('does not serve the Cloudflare-only routes', async () => {
 		// Live collaboration is a Durable Object. Rather than 500 halfway through a
 		// WebSocket upgrade, the route simply is not registered — so this falls to
-		// the SPA catch-all, which is a page saying the app exists.
+		// the frontend catch-all, which does not recognise it as a page either.
 		const res = await handler(new Request('https://host.test/collab/abc'));
-		expect(res.status).toBe(200);
+		expect(res.status).toBe(404);
+	});
+
+	it('404s an unknown page, and serves the shell to render it', async () => {
+		// A soft 404 — an unknown path answered 200 with an HTML document — is how
+		// a crawler ends up indexing an infinite supply of junk URLs. The body is
+		// still the shell, so App.jsx's own not-found page renders inside it.
+		const res = await handler(new Request('https://host.test/nonsense'));
+		expect(res.status).toBe(404);
 		expect(await res.text()).toContain('shell');
+	});
+
+	it('404s a well-known URI it does not serve, without handing back HTML', async () => {
+		// The case that motivated all this: a client probing for
+		// /.well-known/ai-catalog.json got 200 and an HTML document, which is a
+		// successful response containing entirely the wrong thing.
+		const res = await handler(new Request('https://host.test/.well-known/ai-catalog.json'));
+		expect(res.status).toBe(404);
+		expect(res.headers.get('content-type')).toContain('text/plain');
 	});
 });
