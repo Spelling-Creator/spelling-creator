@@ -235,6 +235,14 @@ relaying the diff and handing over the URL is all that can happen.
 
 What a merge does, in this order, because the hub accepts no other:
 
+0. **Re-read the lesson and stop if it moved.** The push below is conditional on the tip
+   that was read, which catches anyone who saved the ordinary way — the editor pushes
+   history first and the row second. The row itself has no such guard: `PUT /lessons/:id`
+   takes the document it is given. So a write that moved the row _without_ moving history
+   (an edit whose own history push failed leaves exactly that) would be overwritten by the
+   merged document. Re-reading at the last moment doesn't make the write atomic, but it
+   means a race ends with nothing done rather than with somebody's save reverted. Giving
+   the row a real precondition would change the Worker's contract for every writer.
 1. **Push the merged history.** A three-way merge of the lesson's saved document and the
    proposal's, joined by a commit with two parents. If the lesson has moved on underneath,
    the push is refused rather than overwriting it, and the proposal stays open.
@@ -250,7 +258,8 @@ saying it was merged from the proposal view rather than in the web app.
 human with the two versions side by side, and the web app has the dialog for it. Rather
 than guess — or build a second conflict UI into an inline card — `merge_proposal` refuses,
 names the contested blocks, and gives the proposal's URL. The lesson is untouched when it
-does.
+does — as it is for each of the three ways a merge declines to happen: a conflict, a
+proposal resolved while it was on screen, and a lesson saved under it.
 
 Declining drops the proposal's changes, keeps its row and title so the conversation stays
 visible, and notifies its author — exactly as declining in the web app does.

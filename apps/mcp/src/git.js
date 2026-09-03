@@ -43,6 +43,7 @@ import {
   describeOp,
   describeOps,
   diffDocs,
+  sameValue,
   summaryOf,
 } from "@spelling-creator/core/git/ops";
 import {
@@ -651,7 +652,12 @@ export async function reviewProposal(api, { lessonId, pullId }) {
   // The lesson's own history, so there is something to compare against. A lesson
   // with none (one written before version history) still gets a diff below —
   // just against its current document, which reads as "all of this is new".
-  const lessonPack = await api.fetchLessonPack(lessonId).catch(() => null);
+  //
+  // A failure to read it is not that, though, and isn't caught: fetchLessonPack
+  // returns null only for a lesson that genuinely has no pack. Treating a 500 or
+  // a dropped connection as "no history" would draw a reviewer a diff claiming
+  // the proposal adds the entire lesson, which is worse than an error message.
+  const lessonPack = await api.fetchLessonPack(lessonId);
   if (lessonPack) {
     await fetchRemotePack({ ...ctx, ...lessonPack, ref: ORIGIN_REF });
   }
@@ -769,11 +775,17 @@ function tally(ops) {
  * lesson is untouched when it does.
  *
  * @returns {Promise<object>} `{ merged: true, ... }`, or `{ merged: false }`
- *          with a `reason` of "gone" or "conflicts" — outcomes a reviewer needs
- *          reported, not raised. Anything genuinely wrong throws.
+ *          with a `reason` of "gone", "conflicts" or "moved" — outcomes a
+ *          reviewer needs reported, not raised. Each of the three leaves the
+ *          lesson exactly as it was. Anything genuinely wrong throws.
  */
 export async function mergeProposal(api, { lessonId, pullId, title, client }) {
-  const lessonPack = await api.fetchLessonPack(lessonId).catch(() => null);
+  // Not caught: fetchLessonPack already answers null for a lesson that has no
+  // stored history (a 404), and every other failure is a real one. Flattening
+  // those to null would say "this lesson has no history" about a lesson whose
+  // history merely couldn't be read — and this would then seed a fresh root
+  // history and merge against ancestry the lesson doesn't have.
+  const lessonPack = await api.fetchLessonPack(lessonId);
   const lesson = await api.getLesson(lessonId);
   const current = stripLocalFields(lesson.doc || {});
 
@@ -839,6 +851,27 @@ export async function mergeProposal(api, { lessonId, pullId, title, client }) {
         // Two parents, because that is what happened: two histories joined.
         parents: [ours, theirs],
       });
+
+  // ---- The row has no compare-and-swap, so check it by hand ----------------
+  //
+  // The history push below is conditional on the tip we read (see `expected`),
+  // which catches anyone who saved the ordinary way: the browser editor pushes
+  // history first and the row second, so a save that raced us is refused there
+  // and nothing is written. The lesson's ROW has no such guard — PUT /lessons/:id
+  // takes the document it is given (apps/api/src/routes/lessons.js) — so a write
+  // that moved the row WITHOUT moving history would be silently overwritten by
+  // the merged document below. That is a narrow window, but a real one: an edit
+  // whose own history push failed leaves exactly that state.
+  //
+  // Re-reading here doesn't make the write atomic — nothing available can — but
+  // it moves the check to the last moment before anything is written, so a race
+  // ends with nothing done rather than with somebody's save reverted. Giving the
+  // row a real precondition means changing the Worker's contract for every
+  // writer, which is a bigger decision than this view.
+  const latest = await api.getLesson(lessonId);
+  if (!sameValue(stripLocalFields(latest.doc || {}), current)) {
+    return { merged: false, reason: "moved" };
+  }
 
   const packed = await packRepo(ctx);
   if (packed.head !== lessonPack?.head) {

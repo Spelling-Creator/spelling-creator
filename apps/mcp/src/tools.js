@@ -1386,17 +1386,22 @@ export function registerTools(server, ctx) {
       const review = await reviewProposal(api, { lessonId, pullId: pull.id });
       const url = proposalUrl(lessonId, pull.id);
 
-      // A proposal keeps its row after it is resolved but not its changes, so
-      // there is a real difference between "declined" and "gone", and only the
-      // row can tell them apart. Either way there is no diff to draw.
+      // No pack, which is two quite different situations and only the row can
+      // tell them apart: a resolved proposal (closing one drops what it
+      // proposed), or one still open whose changes never finished uploading.
+      // Reporting the second as "closed" would tell the user their proposal was
+      // rejected when nobody has looked at it — so the row decides the wording.
       if (!review) {
         const settled = {
           lessonId,
           proposal: null,
           url,
           note:
-            `Proposal ${pull.id} carries no changes any more — it was ${pull.status === "merged" ? "merged" : "closed"}, ` +
-            "and closing one drops what it proposed. Nothing to review.",
+            pull.status === "open"
+              ? `Proposal ${pull.id} is still open but its changes never finished uploading, so there is nothing ` +
+                "to review yet. Whoever opened it should propose again; nothing is wrong with the lesson."
+              : `Proposal ${pull.id} carries no changes any more — it was ${pull.status === "merged" ? "merged" : "closed"}, ` +
+                "and closing one drops what it proposed. Nothing to review.",
         };
         return { ...text(settled), structuredContent: settled };
       }
@@ -1513,6 +1518,13 @@ export function registerTools(server, ctx) {
         throw new Error(
           "That proposal's changes are no longer stored — it was resolved while it was on screen. Nothing was " +
             "merged, and the lesson is unchanged.",
+        );
+      }
+      if (outcome.reason === "moved") {
+        throw new Error(
+          "The lesson was saved by someone else while this merge was being prepared, so merging now would have " +
+            "written over what they saved. Nothing was merged and the lesson is unchanged — call review_proposal " +
+            "again to see the proposal against the lesson as it now stands.",
         );
       }
       if (outcome.reason === "conflicts") {

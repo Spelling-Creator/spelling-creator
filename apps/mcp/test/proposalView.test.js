@@ -257,7 +257,7 @@ test("mergeable says what the buttons need, and canReview gates it", async () =>
 });
 
 test("merging pushes the history, saves the lesson, then records the merge", async () => {
-  const { api, calls } = await hub();
+  const { api, calls, lessonPack } = await hub();
   const client = await connected(api, RENDERS_VIEWS);
 
   const res = await client.callTool({
@@ -281,8 +281,11 @@ test("merging pushes the history, saves the lesson, then records the merge", asy
   assert.equal(saved.sections[0].blocks[1].text, "SECOND, corrected");
 
   // A compare-and-swap against the tip we read, so a save that lands in between
-  // is refused rather than overwritten.
-  assert.equal(calls.pushed[0].parent, (await hub()).lessonPack.head);
+  // is refused rather than overwritten. Against THIS hub's pack: a second hub()
+  // builds its own commits, and they only carry the same oids while the two are
+  // made in the same second — an assertion that passes on the clock is worse
+  // than none.
+  assert.equal(calls.pushed[0].parent, lessonPack.head);
 });
 
 test("a merge takes the lesson's row with it, not just the commit it had", async () => {
@@ -306,6 +309,82 @@ test("a merge takes the lesson's row with it, not just the commit it had", async
     "FIRST, saved but never committed",
   );
   assert.equal(saved.sections[0].blocks[1].text, "SECOND, corrected");
+});
+
+test("a merge refuses when the lesson was saved under it, writing nothing", async () => {
+  // PUT /lessons/:id has no compare-and-swap, and a save that moved the row
+  // without moving its history slips past the push's. So the row is re-read at
+  // the last moment: here it changes between the merge being prepared and being
+  // written, which has to end with nothing done rather than with that save
+  // reverted by the merged document.
+  const { api, calls } = await hub();
+  const first = api.getLesson;
+  let reads = 0;
+  api.getLesson = async (...args) => {
+    const lesson = await first(...args);
+    reads += 1;
+    // Every read after the one the merge is based on sees somebody else's save.
+    return reads === 1
+      ? lesson
+      : { ...lesson, doc: doc("first", "SECOND, saved by the author") };
+  };
+
+  const res = await (
+    await connected(api, RENDERS_VIEWS)
+  ).callTool({
+    name: "merge_proposal",
+    arguments: { lessonId: "L1", pullId: "P1" },
+  });
+
+  assert.equal(res.isError, true);
+  assert.match(res.content[0].text, /saved by someone else/);
+  assert.deepEqual(calls.pushed, []);
+  assert.deepEqual(calls.updated, []);
+  assert.deepEqual(calls.merged, []);
+});
+
+test("a history that can't be read is an error, not a lesson without one", async () => {
+  // fetchLessonPack answers null only for a lesson that genuinely has no pack.
+  // Flattening a failure into that would tell a reviewer the proposal adds the
+  // whole lesson — and would let a merge build a root history of its own.
+  const { api, calls } = await hub();
+  api.fetchLessonPack = async () => {
+    throw new Error("Could not download the history.");
+  };
+  const client = await connected(api, RENDERS_VIEWS);
+
+  const read = await review(client);
+  assert.equal(read.isError, true);
+  assert.match(read.content[0].text, /Could not download the history/);
+
+  const merge = await client.callTool({
+    name: "merge_proposal",
+    arguments: { lessonId: "L1", pullId: "P1" },
+  });
+  assert.equal(merge.isError, true);
+  assert.deepEqual(calls.pushed, []);
+  assert.deepEqual(calls.merged, []);
+});
+
+test("an open proposal that never uploaded reads as unready, not as declined", async () => {
+  // Same "no pack" shape as a resolved proposal, and the opposite meaning:
+  // telling someone their proposal was closed when nobody has looked at it is
+  // the one wrong answer here.
+  const { api } = await hub();
+  api.listPulls = async () => ({
+    pulls: [{ ...PULL, ready: false }],
+    canReview: true,
+  });
+  api.fetchPullPack = async () => null;
+
+  const res = await review(await connected(api), {
+    lessonId: "L1",
+    pullId: "P1",
+  });
+  assert.equal(res.isError, undefined);
+  assert.equal(res.structuredContent.proposal, null);
+  assert.match(res.structuredContent.note, /never finished uploading/);
+  assert.doesNotMatch(res.structuredContent.note, /closed|merged/);
 });
 
 test("a conflicted merge changes nothing and says where to settle it", async () => {
