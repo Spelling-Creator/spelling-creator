@@ -1,5 +1,7 @@
 // Version history for an AI assistant: committing its edits, forking a lesson,
-// and proposing changes back.
+// proposing changes back — and, at the other end, reading a proposal and
+// merging it when the reviewer says so (see reviewProposal and mergeProposal,
+// which are the proposal view's half of this file).
 //
 // This is the assistant's version of what the editor does in the browser (see
 // packages/core/src/browser/git/sync.js, which is the same flow bound to
@@ -31,8 +33,12 @@
 // That diff is the thing being reviewed, and it's exact; the shared ancestry is
 // what makes it a true three-way merge rather than a guess.
 
-import { stripLocalFields } from "@spelling-creator/core/git/doc";
+import {
+  preserveLocalFields,
+  stripLocalFields,
+} from "@spelling-creator/core/git/doc";
 import { memRepo } from "@spelling-creator/core/git/memfs";
+import { mergeDocs } from "@spelling-creator/core/git/merge";
 import {
   describeOp,
   describeOps,
@@ -48,11 +54,13 @@ import {
 } from "@spelling-creator/core/git/pack";
 import { DEFAULT_BRANCH } from "@spelling-creator/core/git/refs";
 import {
+  ORIGIN_REF,
   UPSTREAM_REF,
   authorFrom,
   commitDoc,
   headOid,
   pendingOps,
+  pullRef,
   readDocAt,
 } from "@spelling-creator/core/git/repo";
 import { PULL_BODY_MAX, PULL_TITLE_MAX } from "@spelling-creator/core/pulls";
@@ -100,6 +108,24 @@ function assistantNote(client, verb) {
   return named
     ? `${verb} by an AI assistant via ${named} (Spelling Creator MCP).`
     : `${verb} by an AI assistant via the Spelling Creator MCP server.`;
+}
+
+/**
+ * The same provenance line for the one thing here an assistant does *not* do.
+ *
+ * A merge lands in the lesson's history under the reviewer's own name, and it
+ * should: they decided it. But the commit still wants to say where the decision
+ * was made, because "merged in the web app" and "merged by clicking Merge in an
+ * assistant's proposal view" are different enough that a reader looking for the
+ * review later should be able to tell which happened. The distinction from
+ * assistantNote is deliberate — claiming an assistant merged this would be
+ * false, and it is exactly the claim the proposal view exists to avoid making.
+ */
+function reviewerNote(client) {
+  const named = clamp(client, CLIENT_NAME_MAX);
+  return named
+    ? `Merged by the reviewer from the proposal view in ${named} (Spelling Creator MCP).`
+    : "Merged by the reviewer from the Spelling Creator MCP proposal view.";
 }
 
 /** The proposal's body, with a note saying which assistant wrote it. */
@@ -591,6 +617,258 @@ async function proposedOps(ctx, doc) {
     ours && theirs ? await mergeBase({ ...ctx, ours, theirs }) : null;
   const baseDoc = base ? await readDocAt({ ...ctx, oid: base }) : null;
   return diffDocs(baseDoc, doc);
+}
+
+/**
+ * Read a proposal without merging it: what it changes, and whether it would go
+ * in cleanly.
+ *
+ * This is the server-side twin of prepareProposalReview (core/browser/git/sync.js),
+ * which the proposal page in the web app draws from. The two answer the same two
+ * questions off the same objects, and the only difference is where the repository
+ * lives — LightningFS there, memory here. It is worth saying why they are not one
+ * function: that one is bound to the browser's filesystem through repoCtx, and the
+ * three calls it makes (fetchRemotePack, mergeBase, readDocAt) are the platform-
+ * neutral ones this uses directly. Keeping the answers identical matters more than
+ * sharing the wrapper, so review.test.js in core pins the shape both rely on.
+ *
+ * Nothing is written anywhere: no commit, no push, no branch moved. A reviewer
+ * reading a proposal has not yet decided anything, and this must not act as
+ * though they have.
+ *
+ * `ops` is the diff against the **merge base** rather than against the lesson's
+ * tip — that is what the proposal is asking for, and the difference is not
+ * cosmetic: compared against the tip, every change the lesson's own author has
+ * made since the fork left shows up as though the proposer had made it.
+ *
+ * @returns {Promise<null | object>} null when the proposal's changes are no
+ *          longer stored, which is what a resolved proposal looks like — its
+ *          pack is dropped when it closes. Anything else throws.
+ */
+export async function reviewProposal(api, { lessonId, pullId }) {
+  const ctx = memRepo();
+
+  // The lesson's own history, so there is something to compare against. A lesson
+  // with none (one written before version history) still gets a diff below —
+  // just against its current document, which reads as "all of this is new".
+  const lessonPack = await api.fetchLessonPack(lessonId).catch(() => null);
+  if (lessonPack) {
+    await fetchRemotePack({ ...ctx, ...lessonPack, ref: ORIGIN_REF });
+  }
+
+  const pack = await api.fetchPullPack(lessonId, pullId);
+  if (!pack) return null;
+  await fetchRemotePack({ ...ctx, ...pack, ref: pullRef(pullId) });
+
+  const theirs = pack.head;
+  const ours = lessonPack?.head || null;
+
+  const base = ours ? await mergeBase({ ...ctx, ours, theirs }) : null;
+  // Already landed: every commit the proposal carries is in the lesson's
+  // history, so there is nothing left to merge — it went in some other way, or
+  // it never diverged.
+  const contained = ours
+    ? await contains({ ...ctx, oid: ours, ancestor: theirs })
+    : false;
+
+  const [baseDoc, theirDoc] = await Promise.all([
+    base ? readDocAt({ ...ctx, oid: base }) : Promise.resolve(null),
+    readDocAt({ ...ctx, oid: theirs }),
+  ]);
+
+  // Our side is the lesson's ROW, not the doc at its stored tip — the two can
+  // differ (an edit whose history push failed), and this is where the difference
+  // would be felt: mergeProposal merges the row, so judging conflicts against
+  // the tip could show a reviewer a live Merge button on a proposal that then
+  // refuses. The web app can afford that split because its two answers come from
+  // two different pages; here they are one card, and it has to be right.
+  const lesson = await api.getLesson(lessonId);
+  const current = stripLocalFields(lesson.doc || {});
+
+  const ops = diffDocs(baseDoc || current, theirDoc);
+  const merged = mergeDocs(baseDoc, current, theirDoc);
+
+  return {
+    // Both shapes, because two different readers want them: `changes` is the
+    // wording the commit this becomes will carry (and what the web app's
+    // proposal page renders), `counts` is the tally the view chips.
+    changes: ops.map(describeOp),
+    counts: tally(ops),
+    conflicts: briefConflicts(merged.conflicts),
+    auto: merged.auto,
+    base,
+    ours,
+    theirs,
+    contained,
+    hasLesson: Boolean(ours),
+  };
+}
+
+/**
+ * A conflict as a reader needs it: which block, and which fields are contested.
+ * The versions themselves are left out on purpose — resolving one means seeing
+ * both side by side, which is the web app's dialog, and half of one here would
+ * only invite deciding without looking.
+ */
+function briefConflicts(conflicts) {
+  return (conflicts || []).map((c) => ({
+    blockId: c.blockId,
+    kind: c.kind,
+    fields: (c.fields || []).map((f) => f.field || f),
+  }));
+}
+
+/**
+ * The counts a change is badged with: "3 added · 1 changed".
+ *
+ * Blocks only. Section and title operations are deliberately not tallied — they
+ * are structure, they appear in the `changes` lines, and a chip reading "1
+ * changed" for a renamed section beside "1 changed" for a rewritten question
+ * would flatten a distinction that matters. Kept in step with ChangeSummary.jsx,
+ * which does the same arithmetic for the web app's own proposal page.
+ */
+function tally(ops) {
+  const counts = { added: 0, changed: 0, removed: 0, moved: 0 };
+  for (const op of ops) {
+    if (op.op === "block.add") counts.added++;
+    else if (op.op === "block.edit") counts.changed++;
+    else if (op.op === "block.remove") counts.removed++;
+    else if (op.op === "block.move") counts.moved++;
+  }
+  return counts;
+}
+
+/**
+ * Merge a proposal into the lesson it targets, and record it as merged.
+ *
+ * ---- Why this exists at all --------------------------------------------------
+ *
+ * Merging has always been the web app's job, and the reason was never that the
+ * server couldn't do it: it is that the decision is the reviewer's, and an
+ * assistant that merged on their behalf would be settling somebody else's
+ * lesson. That reason survives here untouched. What changed is only *where the
+ * reviewer can click* — the proposal view renders the diff in the conversation,
+ * so the same human decision can be taken there instead of in another tab. The
+ * tools that call this are `visibility: ["app"]` and refuse a host that never
+ * drew the view; see registerTools.
+ *
+ * ---- The order is not a convention -----------------------------------------
+ *
+ * Push the merged history, save the lesson's document, then record the merge.
+ * The Worker refuses to mark a proposal merged unless the merge commit is what
+ * the lesson's stored history already points at (see mergePull in
+ * apps/api/src/routes/pulls.js), so any other order simply fails. If the lesson
+ * has moved on underneath us the push is refused rather than overwriting it, and
+ * the proposal stays open for whoever pushed to merge it themselves.
+ *
+ * ---- Conflicts are not merged here ------------------------------------------
+ *
+ * A contested block is a question for a human with the two versions in front of
+ * them, and the web app has the dialog for it. Rather than guess — or invent a
+ * second conflict UI in an inline card — this refuses and says where to go. The
+ * lesson is untouched when it does.
+ *
+ * @returns {Promise<object>} `{ merged: true, ... }`, or `{ merged: false }`
+ *          with a `reason` of "gone" or "conflicts" — outcomes a reviewer needs
+ *          reported, not raised. Anything genuinely wrong throws.
+ */
+export async function mergeProposal(api, { lessonId, pullId, title, client }) {
+  const lessonPack = await api.fetchLessonPack(lessonId).catch(() => null);
+  const lesson = await api.getLesson(lessonId);
+  const current = stripLocalFields(lesson.doc || {});
+
+  const pack = await api.fetchPullPack(lessonId, pullId);
+  if (!pack) return { merged: false, reason: "gone" };
+
+  const ctx = lessonPack ? await cloneRepo(lessonPack) : memRepo();
+  const author = await commitAuthor(api);
+
+  // The lesson's row can be ahead of its history — an edit whose history push
+  // failed, or one made over MCP before edits were committed. Commit that drift
+  // first, on its own, exactly as recordLessonHistory does: merging from the
+  // stored tip while the row holds newer content would write the merge result
+  // over that content and quietly revert it.
+  await commitDoc({
+    ...ctx,
+    doc: current,
+    author,
+    message: lessonPack
+      ? "Record the lesson as it was last saved\n\nBrings the history up to the lesson's stored document, which had changes no commit accounted for.\n"
+      : "Record the lesson as it was last saved\n\nThis lesson had no stored history, so its existing content starts one.\n",
+  });
+
+  await fetchRemotePack({ ...ctx, ...pack, ref: pullRef(pullId) });
+
+  const ours = await headOid(ctx);
+  const theirs = pack.head;
+  const base = await mergeBase({ ...ctx, ours, theirs });
+  const [baseDoc, theirDoc] = await Promise.all([
+    base ? readDocAt({ ...ctx, oid: base }) : Promise.resolve(null),
+    readDocAt({ ...ctx, oid: theirs }),
+  ]);
+
+  const merged = mergeDocs(baseDoc, current, theirDoc);
+  if (merged.conflicts.length) {
+    return {
+      merged: false,
+      reason: "conflicts",
+      conflicts: briefConflicts(merged.conflicts),
+    };
+  }
+
+  // Local-only fields belong to the lesson they were named on and never travel
+  // in a pack (core/git/doc.js), so the merged document has to take them back
+  // from the lesson's own — a merge must not drop its trusted-collaborator list.
+  const doc = preserveLocalFields(merged.doc, lesson.doc || {});
+  const ops = diffDocs(current, doc);
+
+  // Already contained: our history holds every commit the proposal has, so there
+  // is no join to record and a merge commit would put a decision in the timeline
+  // that nobody made. It still gets marked merged below — that is the true
+  // status — against whatever the lesson's tip is.
+  const commit = (await contains({ ...ctx, oid: ours, ancestor: theirs }))
+    ? null
+    : await commitDoc({
+        ...ctx,
+        doc,
+        author,
+        message:
+          `Merge "${clamp(title || "proposed changes", 60)}"\n\n` +
+          (ops.length ? `${ops.map(describeOp).join("\n")}\n\n` : "") +
+          `${reviewerNote(client)}\n`,
+        // Two parents, because that is what happened: two histories joined.
+        parents: [ours, theirs],
+      });
+
+  const packed = await packRepo(ctx);
+  if (packed.head !== lessonPack?.head) {
+    await api.pushLessonPack(lessonId, {
+      packfile: packed.packfile,
+      head: packed.head,
+      parent: lessonPack?.head || null,
+      refs: packed.refs,
+      expected: believedRefs(lessonPack),
+    });
+  }
+
+  // The row, now that the history behind it is real. Skipped when the merge
+  // changed nothing about the document (the contained case), so landing a
+  // proposal that is already in cannot bump the lesson's saved timestamp.
+  if (ops.length) {
+    await api.updateLesson(lessonId, { title: lesson.title, doc });
+  }
+
+  const mergeCommit = await headOid(ctx);
+  const pull = await api.mergePull(lessonId, pullId, mergeCommit);
+
+  return {
+    merged: true,
+    pull,
+    commit: mergeCommit,
+    commitCreated: Boolean(commit),
+    changes: ops.map(describeOp),
+    auto: merged.auto,
+  };
 }
 
 /**

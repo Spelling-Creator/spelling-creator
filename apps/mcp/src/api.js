@@ -234,8 +234,9 @@ export function createApi(config, auth) {
     // ---- Version history and proposals -------------------------------------
     //
     // A lesson's history is a git repository, and it travels as a packfile (see
-    // packages/core/src/git/). These four are what forking and proposing need:
-    // read a lesson's history, write a fork's, and open a proposal carrying it.
+    // packages/core/src/git/). These are what forking, proposing and reviewing
+    // need: read a lesson's history, write a fork's, open a proposal carrying
+    // it, and read that proposal back to diff or merge it.
     // Unlike the browser's equivalents (core/git/remote.js, core/pulls.js) these
     // always send the caller's token — a fork starts life as a private draft, so
     // its own history is not a public read.
@@ -313,6 +314,33 @@ export function createApi(config, auth) {
         pullsUrl(lessonId, `/${encodeURIComponent(pullId)}/pack`),
         { packfile, head },
         "Could not upload the proposed changes.",
+      );
+      return data.pull || null;
+    },
+
+    /**
+     * Download a proposal's packed changes, or null when there are none stored
+     * — which is what a resolved proposal looks like: closing one drops its pack
+     * (see closePull in the Worker). So null means "already settled", not a
+     * failure, and a reviewer reading one has to be told that rather than shown
+     * an error.
+     */
+    async fetchPullPack(lessonId, pullId) {
+      return getPack(pullsUrl(lessonId, `/${encodeURIComponent(pullId)}/pack`));
+    },
+
+    /**
+     * Record a proposal as merged. `mergeCommit` must be what the lesson's
+     * stored history already points at: the Worker checks, and refuses when it
+     * doesn't, because a proposal marked merged whose changes are in no
+     * published commit is a lie the reviewer can't see. So the history is pushed
+     * and the lesson saved *before* this is called — see mergeProposal in
+     * pulls.js, which is the only caller and does them in that order.
+     */
+    async mergePull(lessonId, pullId, mergeCommit) {
+      const data = await call(
+        pullsUrl(lessonId, `/${encodeURIComponent(pullId)}/merge`),
+        { method: "POST", body: { mergeCommit } },
       );
       return data.pull || null;
     },

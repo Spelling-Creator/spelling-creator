@@ -15,6 +15,9 @@ title: Tools
 | `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                    |
 | `propose_changes`       | Offer a fork's changes back to the original, for a human to review and merge.                   |
 | `list_lesson_proposals` | List the proposals against a lesson, and whether yours have been resolved.                      |
+| `review_proposal`       | Read what a proposal changes — as a diff with merge and decline, where a client can show one.   |
+| `merge_proposal`        | Merge a proposal (the reviewer's own click in that view — not the assistant's to call).         |
+| `decline_proposal`      | Close a proposal without merging it (likewise the reviewer's own click).                        |
 | `get_lesson`            | Fetch one lesson with its full content (read before editing / as a template).                   |
 | `list_my_lessons`       | List your own lessons (drafts + published).                                                     |
 | `list_hub_lessons`      | Browse published lessons for inspiration / de-duplication.                                      |
@@ -164,13 +167,93 @@ Some mechanics worth knowing:
   already stored, so forking is cheap.
 - **Forks are private drafts** and count against the draft cap, so `delete_lesson` the
   fork once its proposal has been resolved.
-- **Merging is not an MCP tool.** It happens in the web app, under the reviewer's own
-  credentials, because it is theirs to decide. `list_lesson_proposals` is how the
-  assistant finds out what they decided.
+- **Merging is never the assistant's.** It is the reviewer's decision, taken in the web
+  app or by clicking Merge in `review_proposal`'s view — see
+  [Deciding a proposal in the conversation](#deciding-a-proposal-in-the-conversation).
+  There is no path by which the assistant settles one itself; `list_lesson_proposals` is
+  how it finds out what the reviewer decided.
 
 Because the assistant acts as the account it's signed in with, a proposal against your
 _own_ lesson is opened by _you_ — so its body carries a note saying an assistant wrote
 it, and the notification you get reads "Changes are waiting for your review".
+
+## Reading a proposal
+
+`list_lesson_proposals` gives titles and status and nothing about the contents.
+**`review_proposal`** is what reads one: the block-by-block diff, a tally of it, and
+whether it would merge cleanly.
+
+```text
+review_proposal({ lessonId })            -> the newest open proposal's diff
+review_proposal({ lessonId, pullId })    -> a particular one
+```
+
+It writes nothing at all — no merge, no commit, no status change — and works on every
+client, text or rendered.
+
+Two things about what it computes are worth stating, because getting either wrong
+misleads a reviewer rather than failing:
+
+- **The diff is measured from the merge base**, the commit the proposal and the lesson
+  last shared — that is what the proposal is _asking for_. Measured against the lesson's
+  current tip instead, every change the lesson's own author made since the fork left
+  would appear in it, reversed, as though the proposer wanted them undone.
+- **Conflicts are judged against the lesson's saved document**, not against the doc at
+  its stored git tip. Those can differ (an edit whose history push failed), and this is
+  the tool where the difference is felt: `merge_proposal` merges the saved document, so
+  judging conflicts against the tip could offer a live Merge button on a proposal that
+  then refuses.
+
+`conflicts` names the blocks both sides have rewritten. Those are the ones a merge cannot
+decide on its own, and they're why `mergeable` in the result can be false while the diff
+reads perfectly well.
+
+## Deciding a proposal in the conversation
+
+Reading a proposal is the assistant's job. Deciding one is the reviewer's, and it used to
+mean leaving the conversation: `propose_changes` hands over a URL, and finding out what
+happened meant asking or polling.
+
+On a client that renders [interactive views](./interactive-views.md), `review_proposal`'s
+diff arrives with **Merge** and **Decline** on it, and the same human decision is taken in
+place. Nothing about who decides has changed — only where they can click.
+
+That is enforced rather than asked for. `merge_proposal` and `decline_proposal` are
+declared `visibility: ["app"]`: a host that reads that keeps them out of the model's
+tool list entirely, so the only thing that can call them is a button on the card. For a
+host that ignores it, both tools check for themselves whether a view was ever drawn —
+where none was, nobody pressed anything, and the call is refused with a pointer to the
+proposal's `url`. Their descriptions say the same in plain words, since a model that can
+see them is exactly the case the metadata failed to cover.
+
+**The assistant is told to stop when the diff is showing**, the same way it is for the
+[image picker](#letting-the-user-pick-the-picture) and for the same reason: the result
+leads with an instruction to end the turn — don't merge it, don't decline it, and don't
+send them to the web app for something the buttons already do — with the payload behind
+it. On a text-only client the result says the opposite thing, because there the assistant
+relaying the diff and handing over the URL is all that can happen.
+
+What a merge does, in this order, because the hub accepts no other:
+
+1. **Push the merged history.** A three-way merge of the lesson's saved document and the
+   proposal's, joined by a commit with two parents. If the lesson has moved on underneath,
+   the push is refused rather than overwriting it, and the proposal stays open.
+2. **Save the merged document** to the lesson.
+3. **Record the proposal as merged.** The hub refuses this unless the merge commit is what
+   the lesson's stored history already points at — so the first two steps are not
+   bookkeeping around the third, they are what makes it true.
+
+The merge commit lands under the reviewer's own name, since they decided it, with a note
+saying it was merged from the proposal view rather than in the web app.
+
+**Conflicts are not merged here.** A block both sides have rewritten is a question for a
+human with the two versions side by side, and the web app has the dialog for it. Rather
+than guess — or build a second conflict UI into an inline card — `merge_proposal` refuses,
+names the contested blocks, and gives the proposal's URL. The lesson is untouched when it
+does.
+
+Declining drops the proposal's changes, keeps its row and title so the conversation stays
+visible, and notifies its author — exactly as declining in the web app does.
 
 ## Editing a lesson: patch vs. replace
 

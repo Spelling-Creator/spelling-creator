@@ -1,0 +1,284 @@
+<!doctype html>
+<!--
+  Source markup for the review_proposal view (see ../scripts/build-views.mjs,
+  which inlines the bundled script where the BUNDLE comment is and writes the
+  result to src/views/proposalDiff.html). Edit this file, not the built one.
+
+  Same rules as imagePicker.html, and for the same reasons: every colour, size
+  and radius comes from a host style variable so the panel follows the host's
+  theme, each with a local --fb-* fallback in both light and dark so a host that
+  reports a theme without sending variables is still readable.
+
+  One difference worth knowing about: there is no inner scroller anywhere here.
+  A vertical drag inside an inline view belongs to the conversation behind it, so
+  a long change list is truncated with a "+ n more" line rather than boxed into
+  something that scrolls (the picker gets away with a rail because that scrolls
+  horizontally).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal diff</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+
+        --fb-text: #141413;
+        --fb-text-secondary: #3d3d3a;
+        --fb-text-tertiary: #73726c;
+        --fb-text-inverse: #ffffff;
+        --fb-text-disabled: rgba(20, 20, 19, 0.5);
+        --fb-text-danger: #7f2c28;
+        --fb-text-success: #437426;
+        --fb-card: #f5f4ed;
+        --fb-well: #faf9f5;
+        --fb-inverse: #141413;
+        --fb-disabled: rgba(255, 255, 255, 0.5);
+        --fb-border: rgba(31, 30, 29, 0.15);
+        --fb-ring: rgba(20, 20, 19, 0.7);
+      }
+
+      /* Dark, both ways a host can ask for it. */
+      :root[data-theme="dark"],
+      :root:not([data-theme="light"]) {
+        --fb-text: #faf9f5;
+        --fb-text-secondary: #c2c0b6;
+        --fb-text-tertiary: #9c9a92;
+        --fb-text-inverse: #141413;
+        --fb-text-disabled: rgba(250, 249, 245, 0.5);
+        --fb-text-danger: #ee8884;
+        --fb-text-success: #599130;
+        --fb-card: #262624;
+        --fb-well: #141413;
+        --fb-inverse: #faf9f5;
+        --fb-disabled: rgba(48, 48, 46, 0.5);
+        --fb-border: rgba(222, 220, 209, 0.15);
+        --fb-ring: rgba(250, 249, 245, 0.7);
+      }
+
+      /* …but only follow the system when the host hasn't said. The rule above is
+         written as :not([data-theme="light"]) so an explicit light theme wins;
+         this media query is what keeps the unstated case in step with the OS. */
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --fb-text: #141413;
+          --fb-text-secondary: #3d3d3a;
+          --fb-text-tertiary: #73726c;
+          --fb-text-inverse: #ffffff;
+          --fb-text-disabled: rgba(20, 20, 19, 0.5);
+          --fb-text-danger: #7f2c28;
+          --fb-text-success: #437426;
+          --fb-card: #f5f4ed;
+          --fb-well: #faf9f5;
+          --fb-inverse: #141413;
+          --fb-disabled: rgba(255, 255, 255, 0.5);
+          --fb-border: rgba(31, 30, 29, 0.15);
+          --fb-ring: rgba(20, 20, 19, 0.7);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans, system-ui, sans-serif);
+        font-size: var(--font-text-sm-size, 14px);
+        line-height: var(--font-text-sm-line-height, 1.4);
+        color: var(--color-text-primary, var(--fb-text));
+        background: transparent;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .title {
+        font-size: var(--font-text-md-size, 15px);
+        font-weight: var(--font-weight-semibold, 600);
+      }
+
+      .byline {
+        font-size: var(--font-text-xs-size, 12px);
+        color: var(--color-text-tertiary, var(--fb-text-tertiary));
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .chip {
+        padding: 1px 8px;
+        font-size: var(--font-text-xs-size, 12px);
+        border: var(--border-width-regular, 0.5px) solid
+          var(--color-border-tertiary, var(--fb-border));
+        border-radius: var(--border-radius-sm, 6px);
+        color: var(--color-text-secondary, var(--fb-text-secondary));
+      }
+
+      .chip.added {
+        color: var(--color-text-success, var(--fb-text-success));
+      }
+
+      .chip.removed {
+        color: var(--color-text-danger, var(--fb-text-danger));
+      }
+
+      /* The diff itself: one line per operation, in the same words the commit it
+         becomes will carry (describeOp) — a proposal that read differently from
+         the commit would be worse than no summary at all. */
+      .changes {
+        margin: 0;
+        padding: 8px 10px 8px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        border-radius: var(--border-radius-md, 8px);
+        background: var(--color-background-secondary, var(--fb-card));
+        color: var(--color-text-secondary, var(--fb-text-secondary));
+      }
+
+      .changes li {
+        list-style: disc;
+      }
+
+      .more {
+        font-size: var(--font-text-xs-size, 12px);
+        color: var(--color-text-tertiary, var(--fb-text-tertiary));
+        list-style: none;
+        margin-left: -12px;
+      }
+
+      .note {
+        padding: 8px 10px;
+        border-radius: var(--border-radius-md, 8px);
+        background: var(--color-background-tertiary, var(--fb-well));
+        border: var(--border-width-regular, 0.5px) solid
+          var(--color-border-tertiary, var(--fb-border));
+        color: var(--color-text-secondary, var(--fb-text-secondary));
+      }
+
+      .note.warn {
+        color: var(--color-text-danger, var(--fb-text-danger));
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      button {
+        font: inherit;
+        cursor: pointer;
+        white-space: nowrap;
+        border-radius: var(--border-radius-sm, 6px);
+        border: var(--border-width-regular, 0.5px) solid transparent;
+        padding: 6px 12px;
+        min-height: 32px;
+      }
+
+      /* Touch: on phones the host renders this in a WebView, where anything
+         under ~44pt is a mis-tap waiting to happen. */
+      @media (pointer: coarse) {
+        button {
+          min-height: 44px;
+        }
+      }
+
+      button:focus-visible {
+        outline: 2px solid var(--color-ring-primary, var(--fb-ring));
+        outline-offset: 1px;
+      }
+
+      .primary {
+        background: var(--color-background-inverse, var(--fb-inverse));
+        color: var(--color-text-inverse, var(--fb-text-inverse));
+        font-weight: var(--font-weight-semibold, 600);
+      }
+
+      .secondary {
+        background: transparent;
+        color: var(--color-text-secondary, var(--fb-text-secondary));
+        border-color: var(--color-border-tertiary, var(--fb-border));
+      }
+
+      .danger {
+        background: transparent;
+        color: var(--color-text-danger, var(--fb-text-danger));
+        border-color: var(--color-border-tertiary, var(--fb-border));
+      }
+
+      button[disabled] {
+        cursor: default;
+        background: var(--color-background-disabled, var(--fb-disabled));
+        color: var(--color-text-disabled, var(--fb-text-disabled));
+        border-color: var(--color-border-tertiary, var(--fb-border));
+      }
+
+      .status {
+        min-height: 18px;
+        font-size: var(--font-text-xs-size, 12px);
+        color: var(--color-text-secondary, var(--fb-text-secondary));
+      }
+
+      .status.error {
+        color: var(--color-text-danger, var(--fb-text-danger));
+      }
+
+      .status.done {
+        color: var(--color-text-success, var(--fb-text-success));
+      }
+
+      /* Skeletons, not spinners — the same rule the web app follows. */
+      .skeleton .line {
+        height: 10px;
+        border-radius: var(--border-radius-xs, 4px);
+        background: var(--color-background-tertiary, var(--fb-well));
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+
+      .skeleton .line.title {
+        height: 14px;
+        width: 55%;
+      }
+
+      .skeleton .line.short {
+        width: 35%;
+      }
+
+      .skeleton .line.medium {
+        width: 75%;
+      }
+
+      @keyframes pulse {
+        50% {
+          opacity: 0.55;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .skeleton .line {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel" id="panel">
+      <div class="skeleton" id="skeleton">
+        <div class="line title"></div>
+        <div class="line short" style="margin-top: 8px"></div>
+        <div class="line medium" style="margin-top: 12px"></div>
+        <div class="line medium" style="margin-top: 6px"></div>
+      </div>
+    </main>
+    <!-- BUNDLE -->
+  </body>
+</html>

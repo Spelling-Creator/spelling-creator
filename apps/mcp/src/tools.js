@@ -13,11 +13,22 @@
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { buildDoc, buildLessonFile, QUESTION_TYPES } from "./doc.js";
-import { forkLesson, proposeChanges, recordLessonHistory } from "./git.js";
+import {
+  forkLesson,
+  mergeProposal,
+  proposeChanges,
+  recordLessonHistory,
+  reviewProposal,
+} from "./git.js";
 import { applyPatch, findBlock } from "./patch.js";
 import { searchWikimediaImages, resolveWikimediaImage } from "./wikimedia.js";
 import { LESSON_STANDARDS } from "./standards.js";
-import { IMAGE_PICKER_URI, registerViews, rendersViews } from "./views.js";
+import {
+  IMAGE_PICKER_URI,
+  PROPOSAL_DIFF_URI,
+  registerViews,
+  rendersViews,
+} from "./views.js";
 import { registerCollabTools } from "./collabTools.js";
 import {
   formatFindings,
@@ -290,6 +301,21 @@ const PICKER_IS_THE_USERS =
   "picker. End your turn now — a short line inviting them to pick is all that's wanted, and choosing on their " +
   "behalf wastes the search. When they click you will be told which file it was: either that it is already in " +
   "the lesson (don't add it again) or which `ref` to use with add_image.";
+
+// The same two-paths problem as the picker, one step further on: a proposal read
+// in a text client is a diff the assistant relays and a link it hands over,
+// because merging has always been the reviewer's to do elsewhere. Rendered, the
+// diff and both decisions are already in front of them.
+const REVIEW_IS_THE_REVIEWERS =
+  "This proposal is on screen with Merge and Decline, and the decision is the USER's. STOP HERE: don't merge it, " +
+  "don't decline it, and don't send them to the web app to do either — the buttons are right there. End your turn " +
+  "now; a line saying what it changes is welcome, telling them what to do with it is not. You'll be told which " +
+  "way they went when they click.";
+
+const REVIEW_IS_YOURS_TO_RELAY =
+  "Relay what this changes and give the user the `url`. Merging and declining are the reviewer's decision and " +
+  "happen in the web app — don't attempt either, and don't poll for the outcome; ask the user, or call " +
+  "list_lesson_proposals again when they say they've dealt with it.";
 
 // Render a value as a text content result (the MCP content shape).
 function text(value) {
@@ -1174,9 +1200,10 @@ export function registerTools(server, ctx) {
         "Offer the changes you made to a fork back to the lesson it came from, as a proposal a human reviews. " +
         "Call this after fork_lesson and after editing the fork.\n\n" +
         "Nothing is written to the target lesson: the proposal is a snapshot of your fork, and the lesson's author " +
-        "(or a trusted collaborator) merges it from the web app, block by block, or declines it. Tell the user the " +
-        "returned `url` — that is the page where they read the diff and decide. Their answer is theirs to give: " +
-        "don't tell them it is done, and don't try to merge it yourself.\n\n" +
+        "(or a trusted collaborator) merges it, block by block, or declines it. Tell the user the returned `url`, " +
+        "which is the page where they read the diff and decide — or, if the lesson is theirs and this client can " +
+        "show it, call review_proposal so they can decide without leaving the conversation. Their answer is theirs " +
+        "to give: don't tell them it is done, and don't try to merge it yourself.\n\n" +
         "The proposal carries the fork's history — a version per edit you made to it — against the commit the fork " +
         "and the lesson last shared, so the reviewer reads your work as a sequence rather than as one lump. Still " +
         "finish the change before calling this: a proposal is somebody's queue, not a draft.\n\n" +
@@ -1246,6 +1273,14 @@ export function registerTools(server, ctx) {
             : "Proposal opened. Nothing has changed in the lesson itself.") +
           " Give the user the `url` so they can read the diff and merge or decline it. Poll " +
           "list_lesson_proposals if you need to know what they decided." +
+          // Only worth saying where the view would actually be drawn — and only
+          // as a possibility, because the reviewer is usually somebody else: an
+          // assistant proposes to a lesson it forked, and this user is the
+          // reviewer only when the lesson was theirs to begin with.
+          (rendersViews(server)
+            ? " If the target lesson is this user's own, review_proposal shows them the diff here with Merge and " +
+              "Decline on it, so they can settle it without opening the web app."
+            : "") +
           // The proposal is complete either way — its changes are stored with it.
           // This only means the fork's own history didn't catch up.
           (historyPushed
@@ -1262,8 +1297,10 @@ export function registerTools(server, ctx) {
       title: "List a lesson's proposals",
       description:
         "List the proposals against a lesson, newest first — use this to check whether one you opened has been " +
-        "merged, declined (status 'closed'), or is still waiting. `canReview` says whether you may merge them " +
-        "yourself; merging is done in the web app, not over MCP, because it is the human's decision.",
+        "merged, declined (status 'closed'), or is still waiting. `canReview` says whether the reviewer here may " +
+        "resolve them. To see what one actually changes, call review_proposal.\n\n" +
+        "Merging is never yours to do: it is the reviewer's decision, taken in the web app or by clicking Merge in " +
+        "review_proposal's view where the client draws it.",
       inputSchema: {
         lessonId: z
           .string()
@@ -1279,6 +1316,259 @@ export function registerTools(server, ctx) {
           url: proposalUrl(lessonId, pull.id),
         })),
       });
+    }),
+  );
+
+  // ---- Reviewing a proposal -----------------------------------------------
+  //
+  // The other end of propose_changes, and the one place in this server where a
+  // view changes what is possible rather than just what it looks like.
+  //
+  // Reading a proposal is the assistant's job and always was — review_proposal
+  // answers it on every client, text or not. Deciding one is the reviewer's, and
+  // that has meant leaving the conversation: propose_changes hands over a URL and
+  // offers polling as the way to learn what happened. Where the view renders,
+  // the diff arrives with Merge and Decline on it and the same human decision is
+  // taken in place.
+  //
+  // So merge_proposal and decline_proposal are `visibility: ["app"]`: the model
+  // is not shown them and cannot call them, and the only thing that can is a
+  // button on the card. That preserves the rule exactly as it stood — see
+  // reviewerOnly() for what happens on a host that ignores the metadata.
+  registerAppTool(
+    server,
+    "review_proposal",
+    {
+      title: "Read a proposal's changes",
+      description:
+        "Read what a proposal would change to a lesson, WITHOUT merging or declining it: the block-by-block diff " +
+        "against the commit the proposal and the lesson diverged at, a tally of it, and whether it would go in " +
+        "cleanly or has blocks both sides have edited (`conflicts`).\n\n" +
+        "This is the tool for 'what's in that proposal?' — list_lesson_proposals gives you titles and status, and " +
+        "nothing about the content. Pass `lessonId` alone to read the newest open one, or `pullId` for a " +
+        "particular proposal (ids come from list_lesson_proposals).\n\n" +
+        "WHO DECIDES DEPENDS ON THE CLIENT, AND THE RESULT SAYS WHICH — read its `note` first and follow it. Where " +
+        "the diff can be shown, it comes with Merge and Decline and the user resolves it there: stop, and don't " +
+        "tell them to go to the web app. On a text-only client, relay the diff and hand over the `url`. Either " +
+        "way the decision is the reviewer's — you never merge one yourself.\n\n" +
+        "Nothing is written: no merge, no commit, no status change. Reading a proposal costs the lesson nothing.",
+      inputSchema: {
+        lessonId: z
+          .string()
+          .describe("The lesson the proposal was made against."),
+        pullId: z
+          .string()
+          .optional()
+          .describe(
+            "Which proposal, from list_lesson_proposals. Omit for the newest one still open and reviewable — " +
+              "which is what 'read the proposal' almost always means.",
+          ),
+      },
+      _meta: { ui: { resourceUri: PROPOSAL_DIFF_URI } },
+    },
+    tool(async ({ lessonId, pullId }) => {
+      const { pulls, canReview } = await api.listPulls(lessonId);
+
+      const pull = pullId
+        ? pulls.find((p) => p.id === pullId)
+        : pulls.find((p) => p.status === "open" && p.ready);
+      if (!pull) {
+        throw new Error(
+          pullId
+            ? `Lesson ${lessonId} has no proposal ${pullId}. Call list_lesson_proposals to see which it has.`
+            : `Lesson ${lessonId} has no open proposal to review.` +
+                (pulls.length
+                  ? ` It has ${pulls.length} resolved one${pulls.length === 1 ? "" : "s"} — pass its \`pullId\` to read one of those.`
+                  : ""),
+        );
+      }
+
+      const review = await reviewProposal(api, { lessonId, pullId: pull.id });
+      const url = proposalUrl(lessonId, pull.id);
+
+      // A proposal keeps its row after it is resolved but not its changes, so
+      // there is a real difference between "declined" and "gone", and only the
+      // row can tell them apart. Either way there is no diff to draw.
+      if (!review) {
+        const settled = {
+          lessonId,
+          proposal: null,
+          url,
+          note:
+            `Proposal ${pull.id} carries no changes any more — it was ${pull.status === "merged" ? "merged" : "closed"}, ` +
+            "and closing one drops what it proposed. Nothing to review.",
+        };
+        return { ...text(settled), structuredContent: settled };
+      }
+
+      const rendered = rendersViews(server);
+      const result = {
+        lessonId,
+        proposal: {
+          id: pull.id,
+          title: pull.title,
+          body: pull.body,
+          author: pull.author,
+          status: pull.status,
+          ready: pull.ready,
+          revision: pull.revision,
+          sourceLessonId: pull.sourceLessonId,
+          createdAt: pull.createdAt,
+          updatedAt: pull.updatedAt,
+        },
+        url,
+        canReview,
+        // What the buttons ask before they light up, worked out here so the view
+        // and the model are never told two different things about the same
+        // proposal. `contained` is still mergeable: it lands as a record.
+        mergeable:
+          canReview &&
+          pull.status === "open" &&
+          pull.ready &&
+          review.conflicts.length === 0,
+        ...review,
+        note: rendered ? REVIEW_IS_THE_REVIEWERS : REVIEW_IS_YOURS_TO_RELAY,
+      };
+
+      if (!rendered) return { ...text(result), structuredContent: result };
+      // Ahead of the diff, not after it: a diff reads as something to act on,
+      // and the model meets the instruction not to first.
+      return {
+        content: [
+          { type: "text", text: REVIEW_IS_THE_REVIEWERS },
+          { type: "text", text: JSON.stringify(result, null, 2) },
+        ],
+        structuredContent: result,
+      };
+    }),
+  );
+
+  /**
+   * Guard the two tools only a view is supposed to call.
+   *
+   * `visibility: ["app"]` is what keeps them out of the model's hands, and on a
+   * host that honours it this never fires. Not every host does, and there the
+   * model can see a Merge button as a tool like any other — so the tools check
+   * for themselves whether a view was ever drawn. It wasn't, nobody clicked
+   * anything, and the call is the model deciding something that is not its
+   * decision to make.
+   *
+   * Refusing is safe in a way the picker's equivalent is not: the reviewer is
+   * sent to the web app, which is exactly where every merge happened until this
+   * view existed. The residual gap is a host that renders views AND ignores
+   * visibility, where a determined model could still call these — the honest
+   * mitigation for that is the wording above and in the descriptions, not a
+   * check the protocol doesn't support.
+   */
+  const reviewerOnly = (what) => {
+    if (rendersViews(server)) return;
+    throw new Error(
+      `Merging and declining are the reviewer's decision, not yours — ${what} is not something to do on their ` +
+        "behalf. This client cannot show them the proposal, so there is no view they could have decided in: give " +
+        "them the proposal's `url` from review_proposal and let them do it in the web app.",
+    );
+  };
+
+  registerAppTool(
+    server,
+    "merge_proposal",
+    {
+      title: "Merge a proposal",
+      description:
+        "Merge a proposal into the lesson it targets — the Merge button in review_proposal's view, and the " +
+        "reviewer's decision alone. NOT FOR YOU TO CALL: if the user asks you to merge something, point them at " +
+        "the Merge button or the proposal's `url`. Refuses a client that cannot show them the diff.",
+      inputSchema: {
+        lessonId: z.string().describe("The lesson the proposal targets."),
+        pullId: z.string().describe("The proposal to merge."),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    tool(async ({ lessonId, pullId }) => {
+      reviewerOnly("merging a proposal");
+
+      const { pulls, canReview } = await api.listPulls(lessonId);
+      const pull = pulls.find((p) => p.id === pullId);
+      if (!pull)
+        throw new Error(`Lesson ${lessonId} has no proposal ${pullId}.`);
+      // The Worker re-checks this on the merge itself; checking here is what
+      // lets the answer be a sentence rather than a 403 from three calls in.
+      if (!canReview) {
+        throw new Error(
+          "Only this lesson's author or a trusted collaborator can merge a proposal against it.",
+        );
+      }
+      if (pull.status !== "open") {
+        throw new Error(`That proposal is already ${pull.status}.`);
+      }
+
+      const outcome = await mergeProposal(api, {
+        lessonId,
+        pullId,
+        title: pull.title,
+        client: clientName(),
+      });
+
+      if (outcome.reason === "gone") {
+        throw new Error(
+          "That proposal's changes are no longer stored — it was resolved while it was on screen. Nothing was " +
+            "merged, and the lesson is unchanged.",
+        );
+      }
+      if (outcome.reason === "conflicts") {
+        const n = outcome.conflicts.length;
+        throw new Error(
+          `${n} block${n === 1 ? "" : "s"} ${n === 1 ? "has" : "have"} been changed both in the lesson and in this ` +
+            "proposal, so merging means choosing between two versions of it — which the web app does block by " +
+            `block: ${proposalUrl(lessonId, pullId)}. Nothing was merged and the lesson is unchanged. ` +
+            `Contested: ${outcome.conflicts.map((c) => c.blockId).join(", ")}.`,
+        );
+      }
+
+      const message = outcome.commitCreated
+        ? `Merged into the lesson${outcome.changes.length ? ` — ${outcome.changes.length} change${outcome.changes.length === 1 ? "" : "s"}` : ""}.`
+        : "Recorded as merged; everything it proposed was already in the lesson.";
+      const result = {
+        ok: true,
+        message,
+        lessonId,
+        pullId,
+        commit: outcome.commit,
+        changes: outcome.changes,
+        url: hubUrl(lessonId),
+      };
+      return { ...text(result), structuredContent: result };
+    }),
+  );
+
+  registerAppTool(
+    server,
+    "decline_proposal",
+    {
+      title: "Decline a proposal",
+      description:
+        "Close a proposal without merging it — the Decline button in review_proposal's view, and the reviewer's " +
+        "decision alone. NOT FOR YOU TO CALL: if the user wants one declined, point them at the button or the " +
+        "proposal's `url`. Its changes are dropped; the proposal's row and title stay, and its author is told. " +
+        "Refuses a client that cannot show them the diff.",
+      inputSchema: {
+        lessonId: z.string().describe("The lesson the proposal targets."),
+        pullId: z.string().describe("The proposal to decline."),
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    tool(async ({ lessonId, pullId }) => {
+      reviewerOnly("declining a proposal");
+
+      const pull = await api.closePull(lessonId, pullId);
+      const result = {
+        ok: true,
+        message: "Declined. Its changes are gone.",
+        lessonId,
+        pullId,
+        status: pull?.status || "closed",
+      };
+      return { ...text(result), structuredContent: result };
     }),
   );
 
