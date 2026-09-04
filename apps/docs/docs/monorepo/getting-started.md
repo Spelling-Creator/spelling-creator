@@ -191,3 +191,27 @@ copy of the first), so bumping any of them requires regenerating the matching
 `patches/*.patch` by hand. See
 [the note on the `agents` dependency](../mcp-server/remote-mode.md#a-note-on-the-agents-dependency)
 for why the patches exist and how to verify a regenerated one.
+
+### Security overrides
+
+Most Dependabot security alerts here name a package nobody depends on directly —
+`undici` inside miniflare, `qs` inside the express that the MCP SDK pulls in,
+`tmp` four levels under `@anthropic-ai/mcpb`. Dependabot cannot open a PR for
+those, because the fix is not a range this repo controls.
+
+`overrides` in `pnpm-workspace.yaml` is where they get pinned forward. Every
+entry there is a transitive dependency held on a vulnerable version by a parent's
+range, and each one is annotated with the advisory it answers and the path it
+arrives by. Keep two rules when adding one:
+
+- **Stay inside the parent's major**, or find evidence the parent already works
+  with the newer version — the `sharp` and `esbuild` pins are justified by
+  current Cloudflare tooling shipping exactly those versions.
+- **Delete the entry once it is redundant.** An override outlives its advisory
+  and then silently holds a package _back_. After a dependency bump, drop the
+  entry, run `pnpm install`, and check whether the tree resolves to something
+  already fixed.
+
+`pnpm -r test`, `pnpm build` and `pnpm --filter @spelling-creator/api bundle`
+between them exercise every package the overrides touch, so an override that
+breaks its parent fails locally rather than in a deploy.

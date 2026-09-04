@@ -16,6 +16,27 @@ allowBuilds:
   "@tsparticles/engine": false
   core-js-pure: true
 
+# Transitive dependencies held back on vulnerable versions by their parents.
+# Each override stays inside the parent's major, so it is a drop-in bump.
+# Drop an entry once every dependent resolves to a fixed version on its own.
+overrides:
+  # GHSA advisories on undici < 7.29.0, reached through miniflare/wrangler.
+  undici: "^7.29.0"
+  # ws < 8.21.0 DoS, reached through miniflare/wrangler.
+  ws: "^8.21.3"
+  # qs < 6.16.0 prototype pollution, reached through express via the MCP SDK.
+  qs: "^6.16.0"
+  # fast-uri < 3.1.6 ReDoS, reached through ajv.
+  fast-uri: "^3.1.6"
+  # sharp < 0.35.0 and esbuild < 0.28.1, reached through the wrangler 4.72
+  # that @cloudflare/vitest-pool-workers 0.12 pins. Current Cloudflare tooling
+  # ships exactly these versions, so the bump matches what it expects.
+  sharp: "^0.35.4"
+  esbuild: "^0.28.1"
+  # tmp < 0.2.6 symlink escape, reached through external-editor's "^0.0.33".
+  # 0.2 keeps the fileSync/removeCallback API external-editor uses.
+  tmp: "^0.2.7"
+
 patchedDependencies:
   "@cfworker/json-schema@4.1.1": patches/@cfworker__json-schema@4.1.1.patch
   "@modelcontextprotocol/client@2.0.0": patches/@modelcontextprotocol__client@2.0.0.patch
