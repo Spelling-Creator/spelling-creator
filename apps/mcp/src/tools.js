@@ -46,17 +46,36 @@ import {
 const blockSchema = z
   .object({
     type: z
-      .enum(["text", "spelling", "question", "image"])
+      .enum(["text", "spelling", "question", "image", "vakt"])
       .describe(
         "text = a paragraph of lesson prose (put any words you're teaching the spelling of in ALL CAPS); " +
           "spelling = an explicit list of spelling words; question = a quiz question; " +
-          "image = a picture (don't write these by hand — add them with the add_image tool, which uploads the bytes).",
+          "image = a picture (don't write these by hand — add them with the add_image tool, which uploads the bytes); " +
+          "vakt = a regulation activity (a movement or sensory break). VAKT blocks are OPTIONAL and OFF by " +
+          "default: add them only when the user asks for them. When they are wanted, a section gets one and it " +
+          "goes LAST, after that section's questions.",
       ),
     text: z
       .string()
       .optional()
       .describe(
-        'For type "text": the paragraph. ALL-CAPS words are highlighted as spelling words.',
+        'For type "text": the paragraph. ALL-CAPS words are highlighted as spelling words. ' +
+          'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
+          'Write the activity ALONE — the "VAKT:" label is added when the lesson is rendered.',
+      ),
+    links: z
+      .array(
+        z.object({
+          url: z.string().describe("An http:// or https:// address."),
+          label: z
+            .string()
+            .optional()
+            .describe("The text shown for the link. Defaults to the address."),
+        }),
+      )
+      .optional()
+      .describe(
+        'For type "vakt": optional links that go with the activity — a video to play, a song, a printable.',
       ),
     words: z
       .array(z.string())
@@ -134,8 +153,8 @@ const blockSchema = z
       })
       .optional()
       .describe(
-        'For type "image": the stored bytes reference produced by add_image. Pass existing ' +
-          "image blocks through unchanged when editing a lesson; never invent a hash.",
+        'For type "image" (and optionally "vakt"): the stored bytes reference produced by add_image. Pass ' +
+          "existing image blocks through unchanged when editing a lesson; never invent a hash.",
       ),
     width: z.number().optional().describe('For type "image": pixel width.'),
     height: z.number().optional().describe('For type "image": pixel height.'),
@@ -876,7 +895,8 @@ export function registerTools(server, ctx) {
         "(generating all ids) and saves it. Defaults to a private DRAFT — set published: true to share it on the " +
         "public hub. Returns the new lesson id and its hub URL.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), " +
-        "spelling (an explicit word list), question (number/single/multiple/open/background), and image.\n\n" +
+        "spelling (an explicit word list), question (number/single/multiple/open/background), image, and vakt " +
+        "(a regulation activity — OPTIONAL, only when the user asks for them, and last in its section).\n\n" +
         "DEFAULT STRUCTURE (unless the user asks otherwise): 6 sections; each section is [image?] + 2 text " +
         "paragraphs + 4 spelling words + 15 questions, and ENDS with those question blocks about that section. " +
         "Put questions after EVERY section — do NOT gather them into a single quiz section at the end. Honour the " +
@@ -954,7 +974,8 @@ export function registerTools(server, ctx) {
         "document”). Use this when you can't (or don't want to) publish to the hub; use create_lesson when you " +
         "want it saved to the cloud directly.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), spelling (an " +
-        "explicit word list), question (number/single/multiple/open/background), and image. DEFAULT STRUCTURE " +
+        "explicit word list), question (number/single/multiple/open/background), image, and vakt (a regulation " +
+        "activity — OPTIONAL, only when the user asks for them, and last in its section). DEFAULT STRUCTURE " +
         "(unless asked otherwise): 6 sections; each is [image?] + 2 text paragraphs + 4 spelling words + 15 " +
         "questions, and ENDS with those question blocks about that section. Same full authoring standard as " +
         "create_lesson (question order/counts, spelling-word rules, math/steps conventions, image placement) — " +

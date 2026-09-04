@@ -385,6 +385,12 @@ A lesson is **sections** of **blocks**. Block types:
   freely-licensed Wikimedia Commons image, then `add_image` with its `ref` to download
   the bytes, store them, and insert the block. The licence attribution is set as the
   caption automatically.
+- **`vakt`** — a regulation activity: `{ "type": "vakt", "text": "Bob likes to do jumping
+jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pairs) and an
+  `image` from `add_image`. Write the activity **alone** — the `VAKT:` label is added when
+  the lesson is rendered. These are **optional and off by default**: only add them when the
+  user asks. When they do, a section gets one and it goes **last**, after that section's
+  questions. See [VAKT activities](/web-app/vakt-activities).
 
 ## Placing an image
 

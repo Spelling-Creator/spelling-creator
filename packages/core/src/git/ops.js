@@ -210,6 +210,7 @@ const TYPE_LABEL = {
   image: ["image", "images"],
   spelling: ["spelling list", "spelling lists"],
   question: ["question", "questions"],
+  vakt: ["VAKT activity", "VAKT activities"],
 };
 
 function label(type, count) {

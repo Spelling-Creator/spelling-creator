@@ -206,6 +206,22 @@ whatever you pick, so a large original is not a problem. Some clients show the s
 candidates to the user as pictures; when the result says so, the choice is theirs — stop and
 wait for it rather than adding one yourself.
 
+## VAKT activities
+
+OPTIONAL, and OFF by default. A `vakt` block is a regulation activity — a movement or sensory
+break addressed to whoever is running the lesson, never a question and never answered: "VAKT: Bob
+likes to do jumping jacks. Let's do 3 of those." Write the activity alone in "text"; the "VAKT:"
+label is added when the lesson is rendered.
+
+Do NOT add them to a lesson unless the user asks for them. When the user does want them, put the
+activity LAST — after that section's 15 questions, at the very end of the section. One per section
+is usually enough; the rule that is checked is the placement, not the count.
+
+Keep the activity concrete and doable in the room: a named number of a named movement, a
+breathing or pressure exercise, something to hold or press. Name the speller when the user has
+told you who the lesson is for, as in the example above. A block may also carry "links" (a video
+to play, a song, a printable) and an "image" from add_image, both optional.
+
 ## Branding
 
 None. Do not add any brand name, byline, or footer to a generated lesson unless the user
@@ -258,8 +274,8 @@ section with no questions at all, a section whose 15 questions differ in type or
 list above, pink questions that don't read as 4 tight + 3 extended, a multi-word orange answer, an
 orange question with fewer than 2 or more than 4 answers, an orange prompt that doesn't blank out
 the list it is asking about, a section without exactly 4 spelling words, a word problem with no
-steps, a pink prompt that names another question's recall answer, and a spelling word that is also
-ALL-CAPS vocabulary in the same section.
+steps, a pink prompt that names another question's recall answer, a spelling word that is also
+ALL-CAPS vocabulary in the same section, and a VAKT activity that isn't last in its section.
 
 If the user deliberately wants a lesson the standard forbids — a 3-section lesson, questions in a
 different order — pass "skipValidation": true, which turns the errors off. Don't reach for it to

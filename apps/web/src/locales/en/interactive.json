@@ -32,7 +32,8 @@
     "answerPlaceholder": "Type your answer…",
     "imageAlt": "lesson image",
     "spellingWords": "Spelling words",
-    "speakWord": "Read “{{word}}” aloud"
+    "speakWord": "Read “{{word}}” aloud",
+    "vaktLabel": "VAKT activity"
   },
   "progress": {
     "finished": "Finished",

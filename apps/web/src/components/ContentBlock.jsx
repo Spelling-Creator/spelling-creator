@@ -10,6 +10,8 @@ import {
   AlignRightIcon,
   ArrowLeftRightIcon,
   WandSparklesIcon,
+  ImageIcon,
+  LinkIcon,
 } from "lucide-react";
 import { Button } from "./ui/button.jsx";
 import { Badge } from "./ui/badge.jsx";
@@ -35,6 +37,11 @@ import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import { questionMeta } from "@spelling-creator/core/questions";
 import { SPELLING_COLOR } from "@spelling-creator/core/spelling";
+import {
+  VAKT_COLOR,
+  VAKT_LABEL,
+  createVaktLink,
+} from "@spelling-creator/core/vakt";
 
 // Every block is content + a stack of controls (drag/move/delete, plus a couple
 // of block-specific extras). On a wide screen those controls sit in a fixed
@@ -139,6 +146,18 @@ function ContentBlock({
         isLast={isLast}
         capitalizedWords={capitalizedWords}
         dragHandle={dragHandle}
+      />
+    );
+  }
+
+  if (block.type === "vakt") {
+    return (
+      <VaktBlock
+        block={block}
+        onChange={onChange}
+        controls={controls}
+        onReplaceFile={onReplaceImageFile}
+        onReplaceSearch={onReplaceImageSearch}
       />
     );
   }
@@ -344,6 +363,260 @@ function ImageBlock({
               data-collab-field={`block:${block.id}:caption`}
             />
           </Field>
+        </div>
+        {controls}
+      </div>
+    </div>
+  );
+}
+
+// A VAKT activity — a regulation break, not a question. The editor mirrors what
+// the block prints: a red-edged card whose text is prefixed with "VAKT:", plus
+// the two optional extras an activity can carry, a picture and a set of links.
+//
+// The "VAKT:" label is rendered here rather than typed into the field. It is
+// added by every renderer (see core/vakt.js), so having the author type it too
+// would either double it up or make the stored text depend on whether they
+// remembered — and this way it can be translated on screen while the printed
+// lesson keeps its canonical form.
+function VaktBlock({
+  block,
+  onChange,
+  controls,
+  onReplaceFile = null,
+  onReplaceSearch = null,
+}) {
+  const { t } = useTranslation("editorSections");
+  const src = useImageSrc(block);
+  const fileRef = useRef(null);
+  const links = block.links || [];
+  const hasImage = Boolean(block.image || block.src);
+  const canPickImage = Boolean(onReplaceFile || onReplaceSearch);
+
+  const onPickImage = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (file) onReplaceFile?.(file);
+  };
+
+  // Drop the picture and everything that described it, so a block that no longer
+  // has an image doesn't keep a stale caption or aspect ratio around.
+  const removeImage = () => {
+    const { image, src: legacySrc, width, height, caption, ...rest } = block;
+    void image;
+    void legacySrc;
+    void width;
+    void height;
+    void caption;
+    onChange(rest);
+  };
+
+  const setLink = (id, patch) =>
+    onChange({
+      ...block,
+      links: links.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+    });
+
+  const addLink = () =>
+    onChange({ ...block, links: [...links, createVaktLink(newId)] });
+
+  const removeLink = (id) =>
+    onChange({ ...block, links: links.filter((l) => l.id !== id) });
+
+  const preview = fitWithin(block.width, block.height, 240);
+
+  return (
+    <div
+      className="rounded-md border border-border bg-card p-4 text-card-foreground"
+      style={{ borderLeftWidth: 5, borderLeftColor: VAKT_COLOR }}
+    >
+      <div className={BLOCK_LAYOUT}>
+        <div className="min-w-0 grow">
+          <Badge
+            style={{ backgroundColor: VAKT_COLOR, color: "#fff" }}
+            className="mb-3"
+          >
+            {t("contentBlock.vakt.badge")}
+          </Badge>
+
+          <Field>
+            <FieldLabel htmlFor={`${block.id}-vakt`}>
+              {t("contentBlock.vakt.label")}
+            </FieldLabel>
+            {/* The label sits beside the field, in the block's own red, so what
+                you're writing reads the way it will print. */}
+            <div className="flex items-start gap-2">
+              <span
+                className="mt-2 shrink-0 text-sm font-bold"
+                style={{ color: VAKT_COLOR }}
+                aria-hidden="true"
+              >
+                {VAKT_LABEL}
+              </span>
+              <LiveTextarea
+                id={`${block.id}-vakt`}
+                placeholder={t("contentBlock.vakt.placeholder")}
+                value={block.text || ""}
+                onCommit={(text) => onChange({ ...block, text })}
+                data-collab-field={`block:${block.id}:text`}
+                className="min-h-9"
+              />
+            </div>
+          </Field>
+
+          {hasImage && (
+            <div className="mt-3">
+              {src ? (
+                <img
+                  src={src}
+                  alt={block.caption || t("contentBlock.vakt.imageAlt")}
+                  className="block max-w-full rounded-md border border-border"
+                  style={{ width: preview.width, height: "auto" }}
+                />
+              ) : (
+                <div
+                  className="rounded-md border border-border bg-muted"
+                  style={{
+                    width: preview.width,
+                    maxWidth: "100%",
+                    height: preview.height,
+                  }}
+                />
+              )}
+              <Field className="mt-2">
+                <FieldLabel htmlFor={`${block.id}-vakt-caption`}>
+                  {t("contentBlock.vakt.captionLabel")}
+                </FieldLabel>
+                <LiveInput
+                  id={`${block.id}-vakt-caption`}
+                  value={block.caption || ""}
+                  onCommit={(caption) => onChange({ ...block, caption })}
+                  data-collab-field={`block:${block.id}:caption`}
+                />
+              </Field>
+            </div>
+          )}
+
+          {links.length > 0 && (
+            <div className="mt-3 flex flex-col gap-2">
+              {links.map((link, i) => (
+                // Label and address on one row: a link with no label prints as
+                // its bare address, so the label is genuinely optional and the
+                // narrower field is the one that may be left empty.
+                <div key={link.id} className="flex items-center gap-1">
+                  <LiveInput
+                    aria-label={t("contentBlock.vakt.linkLabelAriaLabel", {
+                      number: i + 1,
+                    })}
+                    placeholder={t("contentBlock.vakt.linkLabelPlaceholder")}
+                    value={link.label || ""}
+                    onCommit={(label) => setLink(link.id, { label })}
+                    data-collab-field={`block:${block.id}:link:${link.id}:label`}
+                    className="sm:max-w-[200px]"
+                  />
+                  <LiveInput
+                    type="url"
+                    inputMode="url"
+                    aria-label={t("contentBlock.vakt.linkUrlAriaLabel", {
+                      number: i + 1,
+                    })}
+                    placeholder={t("contentBlock.vakt.linkUrlPlaceholder")}
+                    value={link.url || ""}
+                    onCommit={(url) => setLink(link.id, { url })}
+                    data-collab-field={`block:${block.id}:link:${link.id}:url`}
+                  />
+                  <IconActionButton
+                    tooltip={t("contentBlock.vakt.removeLink")}
+                    onClick={() => removeLink(link.id)}
+                  >
+                    <Trash2Icon />
+                  </IconActionButton>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                {t("contentBlock.vakt.linksHelp")}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addLink}
+              className={TOUCH_SM_BUTTON}
+            >
+              <LinkIcon data-icon="inline-start" />
+              {t("contentBlock.vakt.addLink")}
+            </Button>
+            {canPickImage && (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={TOUCH_SM_BUTTON}
+                    >
+                      <ImageIcon data-icon="inline-start" />
+                      {hasImage
+                        ? t("contentBlock.vakt.replaceImage")
+                        : t("contentBlock.vakt.addImage")}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {onReplaceFile && (
+                      <DropdownMenuItem
+                        onSelect={() => fileRef.current?.click()}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span>
+                            {t("contentBlock.image.uploadFile.label")}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {t("contentBlock.vakt.uploadFileDescription")}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    )}
+                    {onReplaceSearch && (
+                      <DropdownMenuItem onSelect={() => onReplaceSearch()}>
+                        <div className="flex flex-col gap-0.5">
+                          <span>
+                            {t("contentBlock.image.searchOnline.label")}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {t("contentBlock.vakt.searchOnlineDescription")}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={onPickImage}
+                />
+              </>
+            )}
+            {hasImage && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={removeImage}
+                className={TOUCH_SM_BUTTON}
+              >
+                <Trash2Icon data-icon="inline-start" />
+                {t("contentBlock.vakt.removeImage")}
+              </Button>
+            )}
+          </div>
         </div>
         {controls}
       </div>

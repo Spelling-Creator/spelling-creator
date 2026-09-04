@@ -16,6 +16,8 @@
 //
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
+import { VAKT_LABEL, vaktText } from "../vakt.js";
+
 /**
  * The summary shapes the spec defines, in the order the UI offers them.
  * "key-points" (a bulleted list) is the default: it's the most useful read for a
@@ -208,6 +210,11 @@ export function lessonSummaryText(doc) {
           .map((word) => (word.text || "").trim())
           .filter(Boolean);
         if (words.length) parts.push(`Spelling words: ${words.join(", ")}`);
+      } else if (block.type === "vakt") {
+        // The activity, not its links: a summary wants the prose, and a URL
+        // read by a language model is bulk with no meaning in it.
+        const activity = vaktText(block);
+        if (activity) parts.push(`${VAKT_LABEL} ${activity}`);
       }
     }
   }

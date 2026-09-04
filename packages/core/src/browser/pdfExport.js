@@ -10,9 +10,7 @@ import html2pdf from "html2pdf.js";
 import mammoth from "mammoth";
 import { Packer } from "docx";
 import { buildDocument } from "./docxExport.js";
-import { fitWithin, imageSizeScale } from "../image.js";
 import {
-  DOCX_MAX_IMAGE_WIDTH,
   LEGEND_SEPARATOR,
   QUESTION_LINE_CLASS,
   QUESTION_LINE_STYLE_NAME,
@@ -28,6 +26,7 @@ import {
   questionStyleClass,
   questionStyleMap,
 } from "../questions.js";
+import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.js";
 
 // Text destined for an HTML string we build ourselves. The PDF container is
 // filled with innerHTML, so anything interpolated into it has to arrive as text.
@@ -39,32 +38,30 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
-// The image blocks of a lesson, in document order — the same order mammoth emits
-// their <img> tags, so we can match each tag to its block by position.
-function orderedImageBlocks(doc) {
-  return doc.sections
-    .flatMap((s) => s.blocks)
-    .filter((b) => b.type === "image" && (b.image || b.src));
-}
-
 // mammoth converts each image to a natural-size <img> in its own <p> and drops the
 // block's picked size + alignment (and the caption's alignment). Re-apply both by
 // wrapping each image — and its caption, if any — in a fixed-width <figure>:
 //
-//   - The figure's width is the SAME px size the docx uses (fitWithin against
-//     DOCX_MAX_IMAGE_WIDTH × the picked scale), so the image is identical in the
-//     PDF and the published view — not stretched to the container.
+//   - The figure's width is the SAME px size the docx used — not recomputed
+//     here, but reported by buildDocument as it embedded each picture — so the
+//     image is identical in the PDF and in the Word file, not stretched to the
+//     container.
 //   - max-width:100% lets it shrink on a narrow page; the image fills the figure.
 //   - The figure is aligned via auto side-margins (it's block-level with a set
 //     width), and the caption lives inside it, so the caption always tracks the
 //     image instead of floating left across the full width.
 //
-// The caption is taken from the block itself and escaped, NOT copied out of
-// mammoth's HTML: the text is ours either way, and reading it from the model
-// means nothing that came back through the converter is re-inserted as markup.
-// buildDocument only emits a caption paragraph when the block has a caption, so
-// the trailing paragraph is consumed only then and following content is left
-// untouched otherwise.
+// `embedded` is what the exporter ACTUALLY put in the document, not every block
+// that holds a picture — the two differ, and the difference matters. An image
+// whose bytes can't be fetched is written as "[image could not be embedded]"
+// text and produces no <img> at all, so listing it here would frame the next
+// real image with the wrong width and alignment and shift every image after it.
+//
+// The caption is taken from that list and escaped, NOT copied out of mammoth's
+// HTML: the text is ours either way, and taking it from the model means nothing
+// that came back through the converter is re-inserted as markup. buildDocument
+// emits a caption paragraph only for a picture that has one, so the trailing
+// paragraph is consumed only then and following content is left untouched.
 //
 // That optional trailing paragraph must not be an image paragraph. `replace`
 // resumes scanning after the whole match, so a swallowed `<p><img></p>` is
@@ -72,22 +69,15 @@ function orderedImageBlocks(doc) {
 // second would keep mammoth's natural size, lose its alignment and caption, and
 // throw the block pairing off by one for every image after it. The lookahead
 // leaves an image paragraph for the next iteration to claim.
-function layoutImageFigures(html, doc) {
-  const imageBlocks = orderedImageBlocks(doc);
+function layoutImageFigures(html, embedded) {
   let index = 0;
   return html.replace(
     /<p>\s*(<img\b[^>]*>)\s*<\/p>(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?/g,
     (match, imgTag, trailingParagraph) => {
-      const block = imageBlocks[index++];
-      if (!block) return match;
+      const picture = embedded[index++];
+      if (!picture) return match;
 
-      const scale = imageSizeScale(block.size);
-      const { width } = fitWithin(
-        block.width,
-        block.height,
-        DOCX_MAX_IMAGE_WIDTH * scale,
-      );
-      const align = block.align || "center";
+      const { width, align, caption: captionText } = picture;
       const figMargin =
         align === "left"
           ? "16px auto 16px 0"
@@ -98,10 +88,10 @@ function layoutImageFigures(html, doc) {
       // Strip mammoth's own width/height/style so the figure controls the size.
       const img = imgTag.replace(/\s(?:width|height|style)="[^"]*"/g, "");
 
-      const hasCaption = Boolean(block.caption);
+      const hasCaption = Boolean(captionText);
       const caption = hasCaption
         ? `<figcaption style="text-align:center;font-style:italic;color:#555;font-size:12px;margin-top:6px;">${escapeHtml(
-            block.caption,
+            captionText,
           )}</figcaption>`
         : "";
       const figure = `<figure style="display:block;width:${Math.round(
@@ -121,6 +111,7 @@ function layoutImageFigures(html, doc) {
 // those styles onto classes here lets PRINT_STYLES put the formatting back.
 const STYLE_MAP = [
   ...questionStyleMap(),
+  ...vaktStyleMap(),
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
   `p[style-name='${QUESTION_LINE_STYLE_NAME}'] => p.${QUESTION_LINE_CLASS}:fresh`,
@@ -129,7 +120,10 @@ const STYLE_MAP = [
 // Build the docx in memory and convert it to HTML with mammoth, so the PDF
 // matches what the docx export produces. Returns an HTML string.
 async function docToHtml(doc, meta) {
-  const document = await buildDocument(doc, meta);
+  // Filled in as the document is built, with one entry per picture that really
+  // made it in — see layoutImageFigures for why "really" is load-bearing.
+  const embedded = [];
+  const document = await buildDocument(doc, meta, embedded);
   const blob = await Packer.toBlob(document);
   const arrayBuffer = await blob.arrayBuffer();
   // mammoth inlines images as base64 data URIs by default; layoutImageFigures then
@@ -138,7 +132,7 @@ async function docToHtml(doc, meta) {
     { arrayBuffer },
     { styleMap: STYLE_MAP },
   );
-  return layoutImageFigures(html, doc);
+  return layoutImageFigures(html, embedded);
 }
 
 // Print styles applied to the mammoth-generated HTML before rendering to PDF.
@@ -178,6 +172,7 @@ const PRINT_STYLES = `
     (type) =>
       `.s2c-pdf-root .${questionStyleClass(type.key)} { color: ${type.color}; }`,
   ).join("\n  ")}
+  .s2c-pdf-root .${VAKT_STYLE_CLASS} { color: ${VAKT_COLOR}; }
 `;
 
 // Page geometry, shared by the html2pdf options and the footer drawing below.

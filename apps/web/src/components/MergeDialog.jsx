@@ -72,6 +72,7 @@ function blockLabel(block, t) {
     });
   }
   if (block.type === "spelling") return t("mergeDialog.blockLabel.spelling");
+  if (block.type === "vakt") return t("mergeDialog.blockLabel.vakt");
   if (block.type === "image") return t("mergeDialog.blockLabel.image");
   return t("mergeDialog.blockLabel.text");
 }

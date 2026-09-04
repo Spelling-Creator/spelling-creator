@@ -125,6 +125,7 @@ export default defineConfig({
           },
           { text: "Server rendering", link: "/web-app/server-rendering" },
           { text: "Question blocks", link: "/web-app/question-blocks" },
+          { text: "VAKT activities", link: "/web-app/vakt-activities" },
           { text: "AI text suggestions", link: "/web-app/ai-text-suggestions" },
           {
             text: "AI question suggestions",

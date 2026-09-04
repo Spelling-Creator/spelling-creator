@@ -62,6 +62,7 @@
     "./spellingWords": "./src/spellingWords.js",
     "./username": "./src/username.js",
     "./users": "./src/users.js",
+    "./vakt": "./src/vakt.js",
     "./wikimedia": "./src/wikimedia.js",
     "./ydoc": "./src/ydoc.js"
   },

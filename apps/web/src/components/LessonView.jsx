@@ -31,6 +31,13 @@ import {
   SPELLING_COLOR,
   SPELLING_WORD_SEPARATOR,
 } from "@spelling-creator/core/spelling";
+import {
+  VAKT_COLOR,
+  VAKT_IMAGE_ALIGN,
+  VAKT_IMAGE_SIZE,
+  vaktLinks,
+  vaktText,
+} from "@spelling-creator/core/vakt";
 
 // The document's own typography, in theme colours: same sizes and spacing the
 // docx uses, so the page keeps its shape, with the paper colours and the Word
@@ -67,6 +74,20 @@ const LESSON_STYLES = `
   }
   .s2c-lesson-root p { margin: 0 0 6px; }
   .s2c-lesson-root .s2c-spelling { margin-top: 14px; }
+  .s2c-lesson-root .s2c-vakt { margin: 14px 0; }
+  /* Indented and unbulleted, matching the indent the docx gives each link
+     paragraph. Stated rather than inherited: Tailwind's preflight already
+     strips list markers, and this rule is what keeps the look deliberate. */
+  .s2c-lesson-root .s2c-vakt-links {
+    margin: 0 0 6px;
+    padding-left: 24px;
+    list-style: none;
+    font-size: 13px;
+  }
+  .s2c-lesson-root .s2c-vakt-links a {
+    color: var(--primary);
+    text-underline-offset: 2px;
+  }
   .s2c-lesson-root figure { margin: 0; }
   .s2c-lesson-root img {
     display: block;
@@ -202,12 +223,62 @@ function SpellingBlock({ block }) {
   );
 }
 
+// A VAKT activity: the label and the activity itself in red — the whole line,
+// not just the label, since a regulation break is an instruction to whoever is
+// running the lesson rather than one more prompt in the colour-coded run — then
+// its picture and its links underneath. This matches what the export prints.
+function VaktBlock({ block }) {
+  const { t } = useTranslation("lesson");
+  const text = vaktText(block);
+  const links = vaktLinks(block);
+  const hasImage = Boolean(block.image || block.src);
+
+  return (
+    <div className="s2c-vakt">
+      <p>
+        <strong className="s2c-label" style={{ "--s2c-label": VAKT_COLOR }}>
+          {t("lessonView.vaktLabel")}
+        </strong>{" "}
+        <span className="s2c-label" style={{ "--s2c-label": VAKT_COLOR }}>
+          {text || <em>{t("lessonView.noVaktActivity")}</em>}
+        </span>
+      </p>
+
+      {hasImage && (
+        // A VAKT picture illustrates the action rather than carrying the
+        // lesson's content, so it prints at the fixed VAKT size and centred —
+        // the block has no size or alignment controls of its own.
+        <ImageBlock
+          block={{
+            ...block,
+            size: VAKT_IMAGE_SIZE,
+            align: VAKT_IMAGE_ALIGN,
+          }}
+        />
+      )}
+
+      {links.length > 0 && (
+        <ul className="s2c-vakt-links">
+          {links.map((link) => (
+            <li key={link.id}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.label || link.url}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function Block({ block }) {
   if (block.type === "text") return <TextBlock block={block} />;
   if (block.type === "image" && (block.image || block.src))
     return <ImageBlock block={block} />;
   if (block.type === "question") return <QuestionBlock block={block} />;
   if (block.type === "spelling") return <SpellingBlock block={block} />;
+  if (block.type === "vakt") return <VaktBlock block={block} />;
   return null;
 }
 
@@ -262,6 +333,9 @@ export function lessonPlainText(doc) {
           .map((w) => (w.text || "").trim())
           .filter(Boolean);
         if (words.length) parts.push(words.join(", "));
+      } else if (block.type === "vakt") {
+        const activity = vaktText(block);
+        if (activity) parts.push(activity);
       }
     }
   }

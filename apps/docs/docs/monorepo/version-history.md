@@ -19,7 +19,7 @@ like this:
 
 ```
 lesson.json            { title, ageRange, sections: [{ id, name, blocks: ["<blockId>", ...] }] }
-blocks/<blockId>.json  { id, type: "text" | "spelling" | "question" | "image", ... }
+blocks/<blockId>.json  { id, type: "text" | "spelling" | "question" | "image" | "vakt", ... }
 ```
 
 `lesson.json` is a **manifest**: it holds the structure — which sections exist,

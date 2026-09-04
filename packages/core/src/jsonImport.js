@@ -9,6 +9,8 @@ import { newId } from "./id.js";
 import { QUESTION_TYPES } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
+import { isSafeLink } from "./richText.js";
+import { vaktHasContent, vaktText } from "./vakt.js";
 
 // Thrown when a file is readable but not a usable lesson. EditorPage surfaces
 // the message and refuses to load it — same contract as DocxImportError.
@@ -129,6 +131,9 @@ function normalizeBlock(block) {
     case "question":
       return normalizeQuestion(block);
 
+    case "vakt":
+      return normalizeVakt(block);
+
     case "image": {
       // Preserve image blocks verbatim (binary ref / src / dimensions) and just
       // ensure the editor's required framing fields exist.
@@ -145,6 +150,51 @@ function normalizeBlock(block) {
     default:
       return null;
   }
+}
+
+// A VAKT activity: the text (with any label the author typed in front of it
+// stripped, so nothing ends up doubly prefixed), its links, and an optional
+// image carried verbatim the way an image block's is. Dropped entirely when it
+// holds nothing at all — a blank red card is noise in an imported lesson.
+function normalizeVakt(block) {
+  const links = (Array.isArray(block.links) ? block.links : [])
+    .map(normalizeVaktLink)
+    .filter(Boolean);
+  const normalized = {
+    id: keepId(block.id),
+    type: "vakt",
+    text: vaktText(block),
+    links,
+  };
+  // Both representations of a picture, for the same reason the image block
+  // tolerates both: a hash ref is what a stored lesson carries, and an inline
+  // `src` data URL is what one still carries between a DOCX import and the
+  // convertDocImages pass that turns it into a ref. Dropping `src` here would
+  // silently lose the picture — and, for a block that had nothing else, the
+  // whole block.
+  if (block.image || block.src) {
+    if (block.image) normalized.image = block.image;
+    if (block.src) normalized.src = block.src;
+    if (block.width != null) normalized.width = block.width;
+    if (block.height != null) normalized.height = block.height;
+    if (typeof block.caption === "string") normalized.caption = block.caption;
+  }
+  return vaktHasContent(normalized) ? normalized : null;
+}
+
+// A { id, label, url } link row. A bare string is accepted as a URL with no
+// label, so a hand-written file can use the simpler form. Rows whose destination
+// isn't a real, safe link are dropped rather than imported unusable.
+function normalizeVaktLink(link) {
+  const raw = typeof link === "string" ? { url: link } : link;
+  if (!raw || typeof raw !== "object") return null;
+  const url = typeof raw.url === "string" ? raw.url.trim() : "";
+  if (!isSafeLink(url)) return null;
+  return {
+    id: keepId(raw.id),
+    label: typeof raw.label === "string" ? raw.label.trim() : "",
+    url,
+  };
 }
 
 function normalizeQuestion(block) {

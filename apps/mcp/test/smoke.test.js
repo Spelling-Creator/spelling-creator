@@ -1271,3 +1271,127 @@ test("add_image refuses a file no rendering brings under the upload limit", asyn
     globalThis.fetch = realFetch;
   }
 });
+
+test("buildDoc builds a VAKT activity, its links and its picture", () => {
+  const doc = buildDoc({
+    title: "Volcanoes",
+    sections: [
+      {
+        name: "Reading",
+        blocks: [
+          {
+            type: "vakt",
+            // A model that writes the label anyway must not produce
+            // "VAKT: VAKT: …" — the label is added when the lesson is rendered.
+            text: "VAKT: Bob likes to do jumping jacks. Let's do 3 of those.",
+            links: [
+              { url: " https://example.org/clip ", label: " Clip " },
+              { url: "https://example.org/song" },
+            ],
+            image: { hash: "abc", mime: "image/png", ext: "png" },
+            width: 100,
+            height: 50,
+            caption: "Jumping jacks",
+          },
+        ],
+      },
+    ],
+  });
+
+  const [block] = doc.sections[0].blocks;
+  assert.equal(block.type, "vakt");
+  assert.equal(
+    block.text,
+    "Bob likes to do jumping jacks. Let's do 3 of those.",
+  );
+  assert.deepEqual(
+    block.links.map((l) => [l.label, l.url]),
+    [
+      ["Clip", "https://example.org/clip"],
+      ["", "https://example.org/song"],
+    ],
+  );
+  assert.ok(block.links.every((l) => l.id));
+  assert.deepEqual(block.image, {
+    hash: "abc",
+    mime: "image/png",
+    ext: "png",
+  });
+  assert.equal(block.caption, "Jumping jacks");
+});
+
+test("buildDoc requires a VAKT activity, whatever else the block carries", () => {
+  const vakt = (block) => () =>
+    buildDoc({ title: "x", sections: [{ name: "s", blocks: [block] }] });
+
+  assert.throws(
+    vakt({ type: "vakt", text: "  " }),
+    /non-empty "text" activity/,
+  );
+
+  // The label alone is not an activity. It has to be stripped BEFORE the check,
+  // or this passes and then normalises away to an empty red card.
+  assert.throws(
+    vakt({ type: "vakt", text: "VAKT:" }),
+    /non-empty "text" activity/,
+  );
+
+  // Neither optional extra can stand in for the activity: a picture alone
+  // doesn't tell anyone what to do.
+  assert.throws(
+    vakt({ type: "vakt", image: { hash: "abc", mime: "image/png" } }),
+    /non-empty "text" activity/,
+  );
+  assert.throws(
+    vakt({ type: "vakt", links: [{ url: "https://example.org" }] }),
+    /non-empty "text" activity/,
+  );
+});
+
+test("buildDoc accepts the same links the rest of the app does", () => {
+  const links = buildDoc({
+    title: "x",
+    sections: [
+      {
+        name: "s",
+        blocks: [
+          {
+            type: "vakt",
+            text: "Do 3 wall pushes",
+            // mailto is a legitimate destination, and isSafeLink — which the
+            // editor and every renderer use — allows it. A stricter http-only
+            // rule here would reject a block the schema says is fine.
+            links: [
+              { url: "https://example.org" },
+              { url: "mailto:teacher@example.org" },
+            ],
+          },
+        ],
+      },
+    ],
+  }).sections[0].blocks[0].links;
+  assert.deepEqual(
+    links.map((l) => l.url),
+    ["https://example.org", "mailto:teacher@example.org"],
+  );
+
+  assert.throws(
+    () =>
+      buildDoc({
+        title: "x",
+        sections: [
+          {
+            name: "s",
+            blocks: [
+              {
+                type: "vakt",
+                text: "Do 3 wall pushes",
+                links: [{ url: "javascript:alert(1)" }],
+              },
+            ],
+          },
+        ],
+      }),
+    /VAKT link 1 needs a "url"/,
+  );
+});

@@ -25,9 +25,16 @@
 // are shared with the Worker so the browser and server agree on what a valid
 // submission is.
 
+import { vaktText } from "./vakt.js";
+
 // Block types that make up a section's material, in the order the document has
 // them. Everything that isn't a question block and isn't unknown to us.
-const CONTENT_BLOCK_TYPES = new Set(["text", "image", "spelling"]);
+//
+// VAKT activities are in here rather than being steps of their own: a regulation
+// break is something whoever is running the lesson does with the speller, not
+// something the speller answers, so it belongs with the section's material and
+// must not be counted by the progress bar.
+const CONTENT_BLOCK_TYPES = new Set(["text", "image", "spelling", "vakt"]);
 
 /** The longest single typed answer we accept. Long enough for an essay-style
  * open-ended response, short enough that a submission can't be a payload. */
@@ -177,6 +184,11 @@ export function stepSpeechText(step) {
         .map((word) => (word.text || "").trim())
         .filter(Boolean);
       if (words.length) lines.push(words.join(", "));
+    } else if (block.type === "vakt") {
+      // The activity itself, without the "VAKT:" label and without its links:
+      // the label is a marker for the eye and a read-out URL is unusable.
+      const text = vaktText(block);
+      if (text) lines.push(text);
     }
   }
 

@@ -32,6 +32,8 @@ editor:
 - **Spelling words on one running line**, `Spell: FIRST SECOND THIRD`.
 - **A footer on every page**: the copyright line above a legend naming each
   question type in its own colour, which is what makes the colour coding legible.
+  [VAKT activities](./vakt-activities.md) are deliberately not in the legend —
+  they aren't questions, and their `VAKT:` label already names them.
 - **A page number** in the top right corner.
 
 `lessonTitleLines` and `lessonCopyright` in
@@ -88,8 +90,9 @@ surfaces that show one — the public lesson page and the editor's preview mode 
 exactly as [interactive mode](./interactive-mode.md#what-it-looks-like) does.
 It keeps the export's measurements (the `fitWithin` image maths against
 `DOCX_MAX_IMAGE_WIDTH`, the spacing) and its block layout — no section headings,
-a question's answer inline after its coloured prompt, spelling words on one line
-— so a lesson keeps the shape it will print in; only the colours and the typeface
+a question's answer inline after its coloured prompt, spelling words on one line,
+a [VAKT activity](./vakt-activities.md) in red under its `VAKT:` label — so a
+lesson keeps the shape it will print in; only the colours and the typeface
 are the theme's. What it does _not_ copy is the paper furniture: the title
 block's by-line, the page numbers and the footer legend belong to the printed
 sheet, and the app already shows the author and the legend in its own chrome.

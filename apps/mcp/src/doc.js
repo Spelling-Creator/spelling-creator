@@ -2,15 +2,18 @@
 // the tools accept. The Worker stores `doc` verbatim and the web editor renders
 // it, so the shapes here must match the editor's exactly. They are kept in sync
 // with:
-//   • apps/web/src/lib/questions.js  (question block shapes, the five types)
-//   • apps/web/src/lib/spelling.js   (spelling block shape)
-//   • apps/web/src/lib/id.js         (id generation)
+//   • packages/core/src/questions.js  (question block shapes, the six types)
+//   • packages/core/src/spelling.js   (spelling block shape)
+//   • packages/core/src/vakt.js       (VAKT activity block shape)
+//   • packages/core/src/id.js         (id generation)
 //
 // The canonical doc is:
 //   { title, sections: [ { id, name, blocks: [ Block, ... ] } ] }
 // Blocks carry a stable `id`; we generate every id here so callers (and the AI
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
+
+import { isSafeLink } from "@spelling-creator/core/richText";
 
 import { extFromMime } from "./images.js";
 
@@ -63,11 +66,71 @@ export function buildBlock(block, where) {
     case "image":
       return buildImageBlock(block, where);
 
+    case "vakt":
+      return buildVaktBlock(block, where);
+
     default:
       throw new Error(
-        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image.`,
+        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image, vakt.`,
       );
   }
+}
+
+// A VAKT block — a regulation activity, never a question. Input is deliberately
+// simpler than the stored shape: the text is the activity alone (the "VAKT:"
+// label is added by whatever renders it, so writing one here would double it up)
+// and links are `{ url, label? }` objects that get ids here.
+function buildVaktBlock(block, where) {
+  // Strip the label BEFORE deciding whether there is an activity here, or a
+  // block whose whole text is "VAKT:" passes the check and then normalises away
+  // to nothing — an empty red card in the finished lesson.
+  const text = (typeof block.text === "string" ? block.text : "")
+    .trim()
+    .replace(/^VAKT\s*:\s*/i, "")
+    .trim();
+
+  const rawLinks = Array.isArray(block.links) ? block.links : [];
+  const links = rawLinks.map((link, i) => {
+    const url = typeof link?.url === "string" ? link.url.trim() : "";
+    // The same rule the editor and the renderers apply (core/vakt.js), rather
+    // than a stricter http-only one: mailto is a legitimate destination for a
+    // VAKT link, and a tool that refused one would contradict both the schema
+    // and every other path a VAKT block can be written through.
+    if (!isSafeLink(url)) {
+      throw new Error(
+        `${where}: VAKT link ${i + 1} needs a "url" that is an http://, https:// or mailto: address.`,
+      );
+    }
+    return {
+      id: newId(),
+      label: typeof link.label === "string" ? link.label.trim() : "",
+      url,
+    };
+  });
+
+  // The activity is what a VAKT block IS: an instruction to whoever is running
+  // the lesson. Links and images are optional extras that go with it, so
+  // neither can stand in for it — a picture alone doesn't say what to do.
+  if (!text) {
+    throw new Error(
+      `${where}: a VAKT block needs a non-empty "text" activity — the thing to do, e.g. ` +
+        `"Bob likes to do jumping jacks. Let's do 3 of those." ("links" and "image" are optional extras.)`,
+    );
+  }
+
+  const out = { id: newId(), type: "vakt", text, links };
+
+  // The picture, in exactly an image block's shape and produced the same way —
+  // by add_image, never by hand.
+  if (block.image) {
+    const image = buildImageBlock(block, where);
+    out.image = image.image;
+    if (image.width != null) out.width = image.width;
+    if (image.height != null) out.height = image.height;
+    if (image.caption != null) out.caption = image.caption;
+  }
+
+  return out;
 }
 
 function buildQuestionBlock(block, where) {

@@ -44,6 +44,7 @@
     "blockLabel": {
       "question": "{{type}} question",
       "spelling": "spelling list",
+      "vakt": "VAKT activity",
       "image": "image",
       "text": "text block",
       "default": "block"

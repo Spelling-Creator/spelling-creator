@@ -906,6 +906,29 @@ export function validateLesson(doc) {
     });
   }
 
+  // VAKT activities are optional and only added when the user asks for them, so
+  // there is nothing to check about whether a section has one. Where a section
+  // does, the standard puts it last — after the questions — because it is what
+  // the speller does once that section's work is finished, not an interruption
+  // partway through it. Only ever a warning: it's a placement convention, and a
+  // user who wants a break mid-section is entitled to one.
+  for (const ctx of context) {
+    const misplaced = ctx.blocks.findIndex(
+      (block, i) =>
+        block?.type === "vakt" &&
+        ctx.blocks.slice(i + 1).some((after) => after?.type !== "vakt"),
+    );
+    if (misplaced !== -1) {
+      warn(
+        "W_VAKT_NOT_LAST",
+        ctx.id,
+        ctx.number,
+        `${ctx.label} has a VAKT activity at block ${misplaced + 1}, with other content after it. ` +
+          "A VAKT activity goes last in its section, after that section's questions.",
+      );
+    }
+  }
+
   if (sections.length !== SECTION_COUNT) {
     warn(
       "W_SECTION_COUNT",

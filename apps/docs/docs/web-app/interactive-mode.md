@@ -45,13 +45,13 @@ playable, and a lesson stays exactly as printable as it was.
 
 The rules that turn a document into steps:
 
-| In the document                             | Becomes                                                                 |
-| ------------------------------------------- | ----------------------------------------------------------------------- |
-| A section's text, image and spelling blocks | One **content step**, holding them together in document order.          |
-| Each question block                         | One **question step**, with a text field, after that section's content. |
-| A section with only questions               | No content step — it opens straight on its first question.              |
-| A section with nothing in it                | Nothing.                                                                |
-| A lesson with no questions at all           | A read-through: every content step, no answer fields, nothing saved.    |
+| In the document                                   | Becomes                                                                 |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| A section's text, image, spelling and VAKT blocks | One **content step**, holding them together in document order.          |
+| Each question block                               | One **question step**, with a text field, after that section's content. |
+| A section with only questions                     | No content step — it opens straight on its first question.              |
+| A section with nothing in it                      | Nothing.                                                                |
+| A lesson with no questions at all                 | A read-through: every content step, no answer fields, nothing saved.    |
 
 Questions are numbered from 1 within each section, matching the editor's `Q7`
 numbering (see [Navigating large lessons](./navigating-large-lessons.md#question-numbering)).
@@ -64,7 +64,9 @@ reproducing the white sheet the [DOCX/PDF export](./export-pipeline.md)
 produces. What's different here is the _scale_: a surface you read and answer on
 for twenty minutes gets its own treatment, so the blocks are re-rendered — prose
 at reading size, images framed in the app's border and radius, spelling words as
-cards you could read across a room. Only the presentation differs; the content
+cards you could read across a room, and a
+[VAKT activity](./vakt-activities.md) set apart as a red-edged card so whoever is
+presenting spots it mid-passage and stops. Only the presentation differs; the content
 is the same blocks.
 
 A progress bar across the top counts the steps and how many questions you've

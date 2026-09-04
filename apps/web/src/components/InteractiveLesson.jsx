@@ -97,6 +97,7 @@ import {
   saveInteractiveProgress,
 } from "@spelling-creator/core/browser/interactiveProgress";
 import { questionMeta } from "@spelling-creator/core/questions";
+import { VAKT_COLOR, vaktLinks, vaktText } from "@spelling-creator/core/vakt";
 import { saveLessonResponses } from "@spelling-creator/core/lessonResponses";
 import { hasApi } from "@spelling-creator/core/config";
 import { cn } from "../lib/utils.js";
@@ -474,6 +475,67 @@ function SpellingBlock({ block, speech }) {
   );
 }
 
+// A VAKT activity — a regulation break, not a question, so it appears with the
+// section's material rather than as a step of its own and is never counted by the
+// progress bar. It's addressed to whoever is running the lesson, which is why it
+// is set apart as a red-edged card instead of running on with the prose: the
+// person presenting has to spot it mid-passage and stop.
+function VaktBlock({ block }) {
+  const { t } = useTranslation("interactive");
+  const text = vaktText(block);
+  const links = vaktLinks(block);
+  const src = useImageSrc(block);
+  const hasImage = Boolean(block.image || block.src);
+  const { width, height } = fitWithin(block.width, block.height, 1000);
+
+  return (
+    <div
+      className="mb-4 rounded-panel border border-border bg-muted/40 p-4 last:mb-0"
+      style={{ borderLeftWidth: 5, borderLeftColor: VAKT_COLOR }}
+    >
+      <p className="mb-2 text-sm font-semibold tracking-wide uppercase">
+        <span style={{ color: VAKT_COLOR }}>{t("step.vaktLabel")}</span>
+      </p>
+      {text && <p className="text-lg leading-relaxed">{text}</p>}
+
+      {hasImage &&
+        (src ? (
+          <img
+            src={src}
+            alt={block.caption || t("step.imageAlt")}
+            width={Math.round(width)}
+            height={Math.round(height)}
+            loading="lazy"
+            decoding="async"
+            className="mt-3 max-h-[40vh] w-auto max-w-full rounded-panel border border-border object-contain"
+          />
+        ) : (
+          <Skeleton
+            className="mt-3 w-full rounded-panel"
+            style={{ aspectRatio: `${width} / ${height}` }}
+          />
+        ))}
+
+      {links.length > 0 && (
+        <ul className="mt-3 flex list-none flex-col gap-1 p-0 text-sm">
+          {links.map((link) => (
+            <li key={link.id}>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-4"
+              >
+                {link.label || link.url}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // A section's material for one step.
 function ContentStep({ step, speech }) {
   return (
@@ -487,6 +549,7 @@ function ContentStep({ step, speech }) {
         if (block.type === "spelling") {
           return <SpellingBlock key={key} block={block} speech={speech} />;
         }
+        if (block.type === "vakt") return <VaktBlock key={key} block={block} />;
         return null;
       })}
     </div>
