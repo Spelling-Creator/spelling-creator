@@ -1320,15 +1320,61 @@ test("buildDoc builds a VAKT activity, its links and its picture", () => {
   assert.equal(block.caption, "Jumping jacks");
 });
 
-test("buildDoc rejects a VAKT block with nothing in it or a bad link", () => {
+test("buildDoc requires a VAKT activity, whatever else the block carries", () => {
+  const vakt = (block) => () =>
+    buildDoc({ title: "x", sections: [{ name: "s", blocks: [block] }] });
+
   assert.throws(
-    () =>
-      buildDoc({
-        title: "x",
-        sections: [{ name: "s", blocks: [{ type: "vakt", text: "  " }] }],
-      }),
-    /VAKT block needs a "text" activity/,
+    vakt({ type: "vakt", text: "  " }),
+    /non-empty "text" activity/,
   );
+
+  // The label alone is not an activity. It has to be stripped BEFORE the check,
+  // or this passes and then normalises away to an empty red card.
+  assert.throws(
+    vakt({ type: "vakt", text: "VAKT:" }),
+    /non-empty "text" activity/,
+  );
+
+  // Neither optional extra can stand in for the activity: a picture alone
+  // doesn't tell anyone what to do.
+  assert.throws(
+    vakt({ type: "vakt", image: { hash: "abc", mime: "image/png" } }),
+    /non-empty "text" activity/,
+  );
+  assert.throws(
+    vakt({ type: "vakt", links: [{ url: "https://example.org" }] }),
+    /non-empty "text" activity/,
+  );
+});
+
+test("buildDoc accepts the same links the rest of the app does", () => {
+  const links = buildDoc({
+    title: "x",
+    sections: [
+      {
+        name: "s",
+        blocks: [
+          {
+            type: "vakt",
+            text: "Do 3 wall pushes",
+            // mailto is a legitimate destination, and isSafeLink — which the
+            // editor and every renderer use — allows it. A stricter http-only
+            // rule here would reject a block the schema says is fine.
+            links: [
+              { url: "https://example.org" },
+              { url: "mailto:teacher@example.org" },
+            ],
+          },
+        ],
+      },
+    ],
+  }).sections[0].blocks[0].links;
+  assert.deepEqual(
+    links.map((l) => l.url),
+    ["https://example.org", "mailto:teacher@example.org"],
+  );
+
   assert.throws(
     () =>
       buildDoc({

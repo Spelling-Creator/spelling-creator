@@ -184,6 +184,34 @@ describe("importing a VAKT block from a lesson file", () => {
     expect(block.caption).toBe("A wall push");
   });
 
+  it("keeps a picture that is still a legacy inline src", () => {
+    // A DOCX import produces `src` and only becomes a hash ref once
+    // convertDocImages has run, so a file written in between carries one.
+    // Dropping it would lose the picture — and, here, the whole block with it.
+    const { sections } = normalizeLessonFile({
+      title: "Volcanoes",
+      sections: [
+        {
+          id: "s1",
+          name: "One",
+          blocks: [
+            {
+              id: "b1",
+              type: "vakt",
+              text: "",
+              src: "data:image/png;base64,iVBORw0KGgo=",
+              width: 10,
+              height: 10,
+            },
+          ],
+        },
+      ],
+    });
+    expect(sections[0].blocks[0].src).toBe(
+      "data:image/png;base64,iVBORw0KGgo=",
+    );
+  });
+
   it("drops a block that holds nothing at all", () => {
     // A section left with no blocks is dropped by the importer, so an otherwise
     // empty lesson file is rejected rather than opening a blank red card.

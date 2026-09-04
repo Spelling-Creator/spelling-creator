@@ -59,10 +59,10 @@ Two optional extras, both off by default:
   controls of its own. A VAKT picture illustrates the action rather than carrying
   the lesson's content, so that's one fewer decision on a block whose whole point
   is to be quick to write.
-- **Links.** Each is a `{ label, url }` pair — a video to play, a song, a
-  printable. On screen they're real links, opening in a new tab. On paper, where
+- **Links.** Each is a `{ url, label? }` pair — a video to play, a song, a
+  printable. The label is optional; a link without one shows its address. On screen they're real links, opening in a new tab. On paper, where
   a link can't be clicked, each prints as `Label — https://address` so the
-  address itself is readable; a link with no label is just its address.
+  address itself is readable.
 
 Only `http:`, `https:` and `mailto:` links are kept. That's the same rule the
 comment and bio sanitizers enforce (see [Rich text](./rich-text.md)) — a lesson's
@@ -73,12 +73,12 @@ progress never destroys what's in the field.
 
 ## Round trips
 
-| Path                   | What survives                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| **Export/Import JSON** | Everything — this is the lossless round trip.                                        |
-| **Export DOCX**        | The red (via a Word character style), the picture, and the links as real hyperlinks. |
-| **Print PDF**          | The red, via that same character style — see below.                                  |
-| **Import DOCX**        | The activity, its picture and its links, read back off the `VAKT:` label.            |
+| Path                   | What survives                                                                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Export/Import JSON** | Every supported field, unchanged — the closest thing to a lossless round trip. The importer still drops an unsafe link and a block with no activity in it at all. |
+| **Export DOCX**        | The red (via a Word character style), the picture, and the links as real hyperlinks.                                                                              |
+| **Print PDF**          | The red, via that same character style — see below.                                                                                                               |
+| **Import DOCX**        | The activity, its picture and its links, read back off the `VAKT:` label.                                                                                         |
 
 The Word character style (`S2C VAKT`) exists for the same reason the question
 ones do: mammoth drops run colours, so the PDF path — which renders the docx as

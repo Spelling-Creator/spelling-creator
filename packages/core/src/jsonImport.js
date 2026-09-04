@@ -166,8 +166,15 @@ function normalizeVakt(block) {
     text: vaktText(block),
     links,
   };
-  if (block.image) {
-    normalized.image = block.image;
+  // Both representations of a picture, for the same reason the image block
+  // tolerates both: a hash ref is what a stored lesson carries, and an inline
+  // `src` data URL is what one still carries between a DOCX import and the
+  // convertDocImages pass that turns it into a ref. Dropping `src` here would
+  // silently lose the picture — and, for a block that had nothing else, the
+  // whole block.
+  if (block.image || block.src) {
+    if (block.image) normalized.image = block.image;
+    if (block.src) normalized.src = block.src;
     if (block.width != null) normalized.width = block.width;
     if (block.height != null) normalized.height = block.height;
     if (typeof block.caption === "string") normalized.caption = block.caption;

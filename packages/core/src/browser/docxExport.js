@@ -94,9 +94,17 @@ function textBlockParagraphs(block) {
   );
 }
 
-async function imageBlockParagraphs(block) {
+// `embedded` is an optional out-parameter: every picture that actually makes it
+// into the document appends its framing to it, in document order. The PDF path
+// pairs mammoth's `<img>` tags with these by position, and mammoth emits a tag
+// only for an image the document really carries — so an image whose bytes could
+// not be fetched (the catch below, which writes text instead) must NOT be in
+// this list, or every image after it in the lesson is framed with the wrong
+// block's width and alignment.
+async function imageBlockParagraphs(block, embedded) {
   const paragraphs = [];
   const alignment = imageAlignment(block);
+  const align = block.align || "center";
   try {
     const { bytes, ext } = await getImageBytes(block);
     const { width, height } = fitWithin(
@@ -117,6 +125,10 @@ async function imageBlockParagraphs(block) {
         ],
       }),
     );
+    // The width the docx itself used, rather than the inputs to re-derive it
+    // from: the PDF then matches the Word file by construction instead of by
+    // two copies of the same arithmetic agreeing.
+    embedded?.push({ width, align, caption: block.caption || "" });
   } catch {
     paragraphs.push(
       new Paragraph({
@@ -232,7 +244,7 @@ function spellingBlockParagraphs(block) {
 // just the label — a regulation break is an instruction to whoever is running
 // the lesson, not one more prompt in the colour-coded run above it, and it has
 // to be findable at a glance on a page of black body text.
-async function vaktBlockParagraphs(block) {
+async function vaktBlockParagraphs(block, embedded) {
   const text = vaktText(block);
   const paragraphs = [
     new Paragraph({
@@ -265,11 +277,10 @@ async function vaktBlockParagraphs(block) {
   // aspect-ratio fit) is exactly an image block's, hence the reuse.
   if (block.image || block.src) {
     paragraphs.push(
-      ...(await imageBlockParagraphs({
-        ...block,
-        size: VAKT_IMAGE_SIZE,
-        align: VAKT_IMAGE_ALIGN,
-      })),
+      ...(await imageBlockParagraphs(
+        { ...block, size: VAKT_IMAGE_SIZE, align: VAKT_IMAGE_ALIGN },
+        embedded,
+      )),
     );
   }
 
@@ -302,19 +313,19 @@ async function vaktBlockParagraphs(block) {
 
 // A section's blocks, with no heading of its own. Section names are an
 // organising device inside the editor; a printed lesson runs straight through.
-async function sectionParagraphs(section) {
+async function sectionParagraphs(section, embedded) {
   const paragraphs = [];
   for (const block of section.blocks) {
     if (block.type === "text") {
       paragraphs.push(...textBlockParagraphs(block));
     } else if (block.type === "image" && (block.image || block.src)) {
-      paragraphs.push(...(await imageBlockParagraphs(block)));
+      paragraphs.push(...(await imageBlockParagraphs(block, embedded)));
     } else if (block.type === "question") {
       paragraphs.push(...questionBlockParagraphs(block));
     } else if (block.type === "spelling") {
       paragraphs.push(...spellingBlockParagraphs(block));
     } else if (block.type === "vakt") {
-      paragraphs.push(...(await vaktBlockParagraphs(block)));
+      paragraphs.push(...(await vaktBlockParagraphs(block, embedded)));
     }
   }
   return paragraphs;
@@ -429,12 +440,17 @@ function colourCharacterStyles() {
  * @param {{author?: string, published?: string|number|Date}} [meta]
  *   who the lesson is by and when it was published — used for the by-line and
  *   the footer's copyright line. Both lines are omitted when not supplied.
+ * @param {Array<{width: number, align: string, caption: string}>} [embedded]
+ *   an out-parameter the PDF path passes in: each picture this document really
+ *   ends up carrying appends its framing, in document order, so the converted
+ *   HTML's `<img>` tags can be matched to them one for one. See pdfExport.js.
+ *   Omit it (the DOCX download does) and nothing is collected.
  */
-export async function buildDocument(doc, meta = {}) {
+export async function buildDocument(doc, meta = {}, embedded = undefined) {
   const children = titleParagraphs(doc, meta);
 
   for (const section of doc.sections) {
-    children.push(...(await sectionParagraphs(section)));
+    children.push(...(await sectionParagraphs(section, embedded)));
   }
 
   return new Document({

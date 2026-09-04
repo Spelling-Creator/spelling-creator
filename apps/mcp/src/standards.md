@@ -213,8 +213,9 @@ break addressed to whoever is running the lesson, never a question and never ans
 likes to do jumping jacks. Let's do 3 of those." Write the activity alone in "text"; the "VAKT:"
 label is added when the lesson is rendered.
 
-Do NOT add them to a lesson unless the user asks for them. When the user does want them, give each
-section ONE, and put it LAST — after that section's 15 questions, at the very end of the section.
+Do NOT add them to a lesson unless the user asks for them. When the user does want them, put the
+activity LAST — after that section's 15 questions, at the very end of the section. One per section
+is usually enough; the rule that is checked is the placement, not the count.
 
 Keep the activity concrete and doable in the room: a named number of a named movement, a
 breathing or pressure exercise, something to hold or press. Name the speller when the user has

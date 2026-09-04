@@ -13,6 +13,8 @@
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
+import { isSafeLink } from "@spelling-creator/core/richText";
+
 import { extFromMime } from "./images.js";
 
 export function newId() {
@@ -79,13 +81,24 @@ export function buildBlock(block, where) {
 // label is added by whatever renders it, so writing one here would double it up)
 // and links are `{ url, label? }` objects that get ids here.
 function buildVaktBlock(block, where) {
-  const text = typeof block.text === "string" ? block.text.trim() : "";
+  // Strip the label BEFORE deciding whether there is an activity here, or a
+  // block whose whole text is "VAKT:" passes the check and then normalises away
+  // to nothing — an empty red card in the finished lesson.
+  const text = (typeof block.text === "string" ? block.text : "")
+    .trim()
+    .replace(/^VAKT\s*:\s*/i, "")
+    .trim();
+
   const rawLinks = Array.isArray(block.links) ? block.links : [];
   const links = rawLinks.map((link, i) => {
     const url = typeof link?.url === "string" ? link.url.trim() : "";
-    if (!/^https?:\/\//i.test(url)) {
+    // The same rule the editor and the renderers apply (core/vakt.js), rather
+    // than a stricter http-only one: mailto is a legitimate destination for a
+    // VAKT link, and a tool that refused one would contradict both the schema
+    // and every other path a VAKT block can be written through.
+    if (!isSafeLink(url)) {
       throw new Error(
-        `${where}: VAKT link ${i + 1} needs a "url" starting with http:// or https://.`,
+        `${where}: VAKT link ${i + 1} needs a "url" that is an http://, https:// or mailto: address.`,
       );
     }
     return {
@@ -95,19 +108,17 @@ function buildVaktBlock(block, where) {
     };
   });
 
-  if (!text && links.length === 0 && !block.image) {
+  // The activity is what a VAKT block IS: an instruction to whoever is running
+  // the lesson. Links and images are optional extras that go with it, so
+  // neither can stand in for it — a picture alone doesn't say what to do.
+  if (!text) {
     throw new Error(
-      `${where}: a VAKT block needs a "text" activity (and may also carry "links" or an "image").`,
+      `${where}: a VAKT block needs a non-empty "text" activity — the thing to do, e.g. ` +
+        `"Bob likes to do jumping jacks. Let's do 3 of those." ("links" and "image" are optional extras.)`,
     );
   }
 
-  const out = {
-    id: newId(),
-    type: "vakt",
-    // A model that writes the label anyway shouldn't produce "VAKT: VAKT: …".
-    text: text.replace(/^VAKT\s*:\s*/i, ""),
-    links,
-  };
+  const out = { id: newId(), type: "vakt", text, links };
 
   // The picture, in exactly an image block's shape and produced the same way —
   // by add_image, never by hand.
