@@ -18,7 +18,7 @@
 		"start:node": "node src/node/server.js"
 	},
 	"dependencies": {
-		"@cloudflare/puppeteer": "^1.3.0",
+		"@cloudflare/puppeteer": "^1.4.0",
 		"@cloudflare/workers-oauth-provider": "^0.10.3",
 		"@hono/node-server": "^2.1.1",
 		"@jsquash/jpeg": "^1.6.0",
@@ -34,8 +34,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.12.4",
-		"vitest": "~3.2.4",
-		"wrangler": "^4.95.0"
+		"vitest": "~3.2.7",
+		"wrangler": "^4.128.0"
 	},
 	"packageManager": "pnpm@11.25.0"
 }
