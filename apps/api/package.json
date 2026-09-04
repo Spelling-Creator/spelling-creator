@@ -33,7 +33,7 @@
 		"yjs": "^13.6.32"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.12.4",
+		"@cloudflare/vitest-pool-workers": "^0.22.0",
 		"vitest": "~3.2.7",
 		"wrangler": "^4.128.0"
 	},
