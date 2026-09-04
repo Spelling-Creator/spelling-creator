@@ -19,6 +19,12 @@ allowBuilds:
 # Transitive dependencies held back on vulnerable versions by their parents.
 # Each override stays inside the parent's major, so it is a drop-in bump.
 # Drop an entry once every dependent resolves to a fixed version on its own.
+#
+# These are deliberately floors, not pins — an override says "no older than the
+# fixed version", and pnpm-lock.yaml is what pins the exact one. Pinning here
+# instead would freeze each package on a version that can itself pick up an
+# advisory later, and would override direct dependants downwards: apps/mcp asks
+# for esbuild ^0.28.2, so an exact 0.28.1 would drag it below its own range.
 overrides:
   # GHSA advisories on undici < 7.29.0, reached through miniflare/wrangler.
   undici: "^7.29.0"

@@ -212,6 +212,14 @@ arrives by. Keep two rules when adding one:
   entry, run `pnpm install`, and check whether the tree resolves to something
   already fixed.
 
+Write them as ranges, not exact versions. An override is a floor — "no older
+than the fixed version" — and `pnpm-lock.yaml` is what pins the exact one that
+gets installed, so a re-resolution shows up as a lockfile diff to review rather
+than something happening behind your back. Pinning in `overrides` instead would
+freeze each package on a version that can pick up an advisory of its own later,
+and it overrides direct dependants _downwards_ too: `apps/mcp` asks for esbuild
+`^0.28.2`, so an exact `0.28.1` here would drag it below its own declared range.
+
 `pnpm -r test`, `pnpm build` and `pnpm --filter @spelling-creator/api bundle`
 between them exercise every package the overrides touch, so an override that
 breaks its parent fails locally rather than in a deploy.
