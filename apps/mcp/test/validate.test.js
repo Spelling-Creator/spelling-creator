@@ -911,3 +911,27 @@ test("rich-text passages are flattened before grounding", () => {
   });
   assert.deepEqual(codes(errors), []);
 });
+
+test("a VAKT activity is silent at the end of its section and flagged anywhere else", () => {
+  const activity = {
+    type: "vakt",
+    text: "Bob likes to do jumping jacks. Let's do 3 of those.",
+  };
+
+  // Last in the section — where the standard puts one — says nothing at all.
+  // VAKT activities are opt-in, so a lesson without them is never flagged either;
+  // the clean-lesson test above is what covers that.
+  const last = check((input) => {
+    input.sections[0].blocks.push(structuredClone(activity));
+  });
+  assert.deepEqual(codes(last.errors), []);
+  assert.deepEqual(codes(last.warnings), []);
+
+  // Wedged in before the questions, it is a warning and never an error: it is a
+  // placement convention, and a user who wants a break mid-section may have one.
+  const middle = check((input) => {
+    input.sections[0].blocks.splice(2, 0, structuredClone(activity));
+  });
+  assert.deepEqual(codes(middle.errors), []);
+  assert.deepEqual(codes(middle.warnings), ["W_VAKT_NOT_LAST"]);
+});

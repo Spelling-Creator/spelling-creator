@@ -8,7 +8,7 @@ Press **AI question** on any section to open a dialog that suggests a structured
 question block. It uses the same Turnstile-verified Worker as the text
 suggester, just in a different mode. The flow:
 
-1. Pick a question type (the same five types as the **Add question** menu).
+1. Pick a question type (the same six types as the **Add question** menu).
 2. The section title is used as the subject; the section's existing text is sent
    as context so the question is answerable from the lesson.
 3. Turnstile verifies the request, then the verified token, subject, type, and

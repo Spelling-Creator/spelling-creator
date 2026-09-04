@@ -28,6 +28,13 @@ import {
   questionStyleClass,
   questionStyleMap,
 } from "../questions.js";
+import {
+  VAKT_COLOR,
+  VAKT_IMAGE_ALIGN,
+  VAKT_IMAGE_SIZE,
+  VAKT_STYLE_CLASS,
+  vaktStyleMap,
+} from "../vakt.js";
 
 // Text destined for an HTML string we build ourselves. The PDF container is
 // filled with innerHTML, so anything interpolated into it has to arrive as text.
@@ -39,12 +46,30 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
-// The image blocks of a lesson, in document order — the same order mammoth emits
-// their <img> tags, so we can match each tag to its block by position.
+// Every picture in a lesson, in document order — the same order mammoth emits
+// the <img> tags in, so each tag can be matched to its block by position.
+//
+// Image blocks aren't the only source: a VAKT activity can carry one too. It has
+// no size or alignment of its own, so it is reported with the fixed VAKT framing
+// the docx exporter printed it at, and everything downstream can treat the list
+// as uniform. Missing them here would throw the pairing off by one for every
+// image after the first VAKT picture in a lesson.
 function orderedImageBlocks(doc) {
-  return doc.sections
-    .flatMap((s) => s.blocks)
-    .filter((b) => b.type === "image" && (b.image || b.src));
+  const blocks = [];
+  for (const section of doc.sections) {
+    for (const block of section.blocks || []) {
+      if (block.type === "image" && (block.image || block.src)) {
+        blocks.push(block);
+      } else if (block.type === "vakt" && (block.image || block.src)) {
+        blocks.push({
+          ...block,
+          size: VAKT_IMAGE_SIZE,
+          align: VAKT_IMAGE_ALIGN,
+        });
+      }
+    }
+  }
+  return blocks;
 }
 
 // mammoth converts each image to a natural-size <img> in its own <p> and drops the
@@ -121,6 +146,7 @@ function layoutImageFigures(html, doc) {
 // those styles onto classes here lets PRINT_STYLES put the formatting back.
 const STYLE_MAP = [
   ...questionStyleMap(),
+  ...vaktStyleMap(),
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
   `p[style-name='${QUESTION_LINE_STYLE_NAME}'] => p.${QUESTION_LINE_CLASS}:fresh`,
@@ -178,6 +204,7 @@ const PRINT_STYLES = `
     (type) =>
       `.s2c-pdf-root .${questionStyleClass(type.key)} { color: ${type.color}; }`,
   ).join("\n  ")}
+  .s2c-pdf-root .${VAKT_STYLE_CLASS} { color: ${VAKT_COLOR}; }
 `;
 
 // Page geometry, shared by the html2pdf options and the footer drawing below.

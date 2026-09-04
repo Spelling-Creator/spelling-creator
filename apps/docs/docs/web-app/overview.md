@@ -21,7 +21,11 @@ PDF printing.
 - **Text and image blocks** inside any section. Add, caption, reorder, or delete them.
 - **Search images** - find free Pixabay images from within a section and insert
   one with a click (see [Search images](./search-images.md)).
-- **Question blocks** - add structured questions in five types (see [Question blocks](./question-blocks.md)).
+- **Question blocks** - add structured questions in six types (see [Question blocks](./question-blocks.md)).
+- **VAKT activities** - drop a regulation break into a section: a red, labelled
+  "VAKT: …" activity a speller does rather than answers, optionally with a
+  picture and links. It's a content block, not a question — it's never scored and
+  never counted by interactive mode (see [VAKT activities](./vakt-activities.md)).
 - **AI text suggestions** - generate a block of lesson text from a section's
   title with one click (see [AI text suggestions](./ai-text-suggestions.md)).
 - **AI question suggestions** - generate a structured question of any type from

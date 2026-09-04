@@ -139,10 +139,14 @@ export async function getImageBytes(block) {
   return { bytes, mime, ext: ref.ext || extFromMime(mime) };
 }
 
-// Convert any image blocks that still carry an inline `src` data URL into binary
+// Convert any block that still carries an inline `src` data URL into binary
 // blobs stored in IndexedDB, replacing `src` with an { image } hash ref. Returns
 // the same doc when nothing needed converting, or a new doc otherwise (so React
 // state updates only when something actually changed).
+//
+// Image blocks are the usual source, but a VAKT activity can hold a picture in
+// the same shape, and a freshly DOCX-imported one arrives with mammoth's base64
+// `src` exactly as an image block does.
 export async function convertDocImages(doc) {
   if (!doc || !Array.isArray(doc.sections)) return doc;
   let changed = false;
@@ -150,7 +154,9 @@ export async function convertDocImages(doc) {
     doc.sections.map(async (section) => {
       const blocks = await Promise.all(
         (section.blocks || []).map(async (block) => {
-          if (block.type !== "image" || !block.src || block.image) return block;
+          const carriesPicture =
+            block.type === "image" || block.type === "vakt";
+          if (!carriesPicture || !block.src || block.image) return block;
           try {
             const { bytes, mime } = decodeDataUrl(block.src);
             const image = await storeImageBytes(bytes, mime);

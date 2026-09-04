@@ -1271,3 +1271,81 @@ test("add_image refuses a file no rendering brings under the upload limit", asyn
     globalThis.fetch = realFetch;
   }
 });
+
+test("buildDoc builds a VAKT activity, its links and its picture", () => {
+  const doc = buildDoc({
+    title: "Volcanoes",
+    sections: [
+      {
+        name: "Reading",
+        blocks: [
+          {
+            type: "vakt",
+            // A model that writes the label anyway must not produce
+            // "VAKT: VAKT: …" — the label is added when the lesson is rendered.
+            text: "VAKT: Bob likes to do jumping jacks. Let's do 3 of those.",
+            links: [
+              { url: " https://example.org/clip ", label: " Clip " },
+              { url: "https://example.org/song" },
+            ],
+            image: { hash: "abc", mime: "image/png", ext: "png" },
+            width: 100,
+            height: 50,
+            caption: "Jumping jacks",
+          },
+        ],
+      },
+    ],
+  });
+
+  const [block] = doc.sections[0].blocks;
+  assert.equal(block.type, "vakt");
+  assert.equal(
+    block.text,
+    "Bob likes to do jumping jacks. Let's do 3 of those.",
+  );
+  assert.deepEqual(
+    block.links.map((l) => [l.label, l.url]),
+    [
+      ["Clip", "https://example.org/clip"],
+      ["", "https://example.org/song"],
+    ],
+  );
+  assert.ok(block.links.every((l) => l.id));
+  assert.deepEqual(block.image, {
+    hash: "abc",
+    mime: "image/png",
+    ext: "png",
+  });
+  assert.equal(block.caption, "Jumping jacks");
+});
+
+test("buildDoc rejects a VAKT block with nothing in it or a bad link", () => {
+  assert.throws(
+    () =>
+      buildDoc({
+        title: "x",
+        sections: [{ name: "s", blocks: [{ type: "vakt", text: "  " }] }],
+      }),
+    /VAKT block needs a "text" activity/,
+  );
+  assert.throws(
+    () =>
+      buildDoc({
+        title: "x",
+        sections: [
+          {
+            name: "s",
+            blocks: [
+              {
+                type: "vakt",
+                text: "Do 3 wall pushes",
+                links: [{ url: "javascript:alert(1)" }],
+              },
+            ],
+          },
+        ],
+      }),
+    /VAKT link 1 needs a "url"/,
+  );
+});

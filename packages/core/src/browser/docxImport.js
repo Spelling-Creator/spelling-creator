@@ -24,6 +24,8 @@ import {
   questionStyleMap,
 } from "../questions.js";
 import { SPELLING_LABEL } from "../spelling.js";
+import { isSafeLink } from "../richText.js";
+import { VAKT_LABEL, VAKT_LINK_JOINER, vaktHasContent } from "../vakt.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "../image.js";
 import { convertDocImages, resolveImageSrc } from "./imageRef.js";
 
@@ -185,7 +187,8 @@ function parseHtmlToDoc(html, fileName) {
       sections.length === 0 &&
       isBoldOnly(el) &&
       !matchQuestion(el) &&
-      !isSpellingHeading(text)
+      !isSpellingHeading(text) &&
+      !isVaktHeading(text)
     ) {
       title = text;
       continue;
@@ -194,6 +197,14 @@ function parseHtmlToDoc(html, fileName) {
     if (isSpellingHeading(text)) {
       ensureSection();
       const { block, next } = readSpelling(nodes, i);
+      current.blocks.push(block);
+      i = next;
+      continue;
+    }
+
+    if (isVaktHeading(text)) {
+      ensureSection();
+      const { block, next } = readVakt(nodes, i);
       current.blocks.push(block);
       i = next;
       continue;
@@ -364,6 +375,75 @@ function readSpelling(nodes, i) {
   return { block, next: last };
 }
 
+// A VAKT activity is recognised by its label rather than by a character style.
+// The style is there (the exporter writes one so the red survives to the PDF),
+// but the label is in the visible text either way, which means a lesson typed by
+// hand in Word imports just as well as one this app printed.
+function isVaktHeading(text) {
+  return text.toLowerCase().startsWith(VAKT_LABEL.toLowerCase());
+}
+
+// Build a VAKT block from its label paragraph, then greedily consume what the
+// exporter writes underneath it: the activity's picture (with the italic caption
+// that may follow), and one paragraph per link. Returns { block, next } where
+// `next` is the index of the last node consumed.
+function readVakt(nodes, i) {
+  const heading = nodes[i].textContent.trim();
+  const text = heading.slice(VAKT_LABEL.length).trim();
+  const block = {
+    id: newId(),
+    type: "vakt",
+    // "(no activity yet)" is the exporter's own placeholder for an activity the
+    // author never filled in — importing it as the text would turn the
+    // placeholder into content.
+    text: /^\(no activity yet\)$/i.test(text) ? "" : text,
+    links: [],
+  };
+  let last = i;
+  let k = i + 1;
+
+  const img = nodes[k]?.querySelector?.("img");
+  if (img?.getAttribute("src")) {
+    const caption = italicOnlyText(nodes[k + 1]);
+    block.src = img.getAttribute("src");
+    block.width = 0; // filled in by measureImages()
+    block.height = 0;
+    if (caption) {
+      block.caption = caption;
+      k += 1;
+    }
+    last = k;
+    k += 1;
+  }
+
+  // Each link printed as its own paragraph, "Label — https://…" (or the bare
+  // address when it had no label). Anything that isn't a link ends the block.
+  while (k < nodes.length) {
+    const el = nodes[k];
+    if (el.tagName.toLowerCase() !== "p") break;
+    const link = parseVaktLink(el.textContent.trim());
+    if (!link) break;
+    block.links.push(link);
+    last = k;
+    k += 1;
+  }
+
+  return { block, next: last };
+}
+
+// Read one printed link line back into a { id, label, url } row. The joiner is
+// searched for from the right, so a label that happens to contain one survives.
+function parseVaktLink(text) {
+  if (!text) return null;
+  const at = text.lastIndexOf(VAKT_LINK_JOINER);
+  const label = at === -1 ? "" : text.slice(0, at).trim();
+  const url = (
+    at === -1 ? text : text.slice(at + VAKT_LINK_JOINER.length)
+  ).trim();
+  if (!isSafeLink(url) || /\s/.test(url)) return null;
+  return { id: newId(), label, url };
+}
+
 function imageBlock(img, caption) {
   return {
     id: newId(),
@@ -403,6 +483,7 @@ function blockHasContent(block) {
   if (block.type === "spelling") {
     return (block.words || []).some((w) => w.text.trim());
   }
+  if (block.type === "vakt") return vaktHasContent(block);
   return false;
 }
 
@@ -412,7 +493,10 @@ function blockHasContent(block) {
 async function measureImages(doc) {
   const images = doc.sections
     .flatMap((s) => s.blocks)
-    .filter((b) => b.type === "image" && (b.image || b.src));
+    .filter(
+      (b) =>
+        (b.type === "image" || b.type === "vakt") && Boolean(b.image || b.src),
+    );
   await Promise.all(
     images.map(
       (block) =>

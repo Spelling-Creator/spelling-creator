@@ -13,6 +13,7 @@ import {
   SearchIcon,
   CircleHelpIcon,
   SpellCheckIcon,
+  ActivityIcon,
   SparklesIcon,
   Trash2Icon,
   ArrowUpIcon,
@@ -49,6 +50,7 @@ import {
   buildQuestionBlock,
 } from "@spelling-creator/core/questions";
 import { createSpellingBlock } from "@spelling-creator/core/spelling";
+import { createVaktBlock } from "@spelling-creator/core/vakt";
 
 // The add-block toolbar's buttons are `size="sm"` — 32px tall, under the touch
 // target minimum, and there are six of them wrapping across a phone screen.
@@ -192,6 +194,10 @@ function SectionCard({
 
   const addSpellingBlock = () => {
     insertBlocks([createSpellingBlock(newId)]);
+  };
+
+  const addVaktBlock = () => {
+    insertBlocks([createVaktBlock(newId)]);
   };
 
   const addSuggestedQuestionBlock = (questionType, data) => {
@@ -422,6 +428,15 @@ function SectionCard({
     [onBlockDragLeave, cancelSpring],
   );
 
+  // Whether the image search dialog is swapping a picture out or picking a first
+  // one. An image block always has one already; a VAKT block uses the same
+  // targeted path to pick its first, and calling that a replacement would be a
+  // lie. Null replaceTarget means the dialog is adding a new image block.
+  const replacingExistingImage = Boolean(
+    replaceTarget &&
+    section.blocks.some((b) => b.id === replaceTarget && (b.image || b.src)),
+  );
+
   // Where the "add block" toolbar sits: directly under the block being edited,
   // or — when nothing is active (or the active block was deleted/lives in
   // another section) — at the bottom of the section.
@@ -503,6 +518,15 @@ function SectionCard({
       >
         <SpellCheckIcon data-icon="inline-start" />
         {t("sectionCard.toolbar.spellingWords")}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={addVaktBlock}
+        className={TOUCH_SM_BUTTON}
+      >
+        <ActivityIcon data-icon="inline-start" />
+        {t("sectionCard.toolbar.addVakt")}
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -589,7 +613,7 @@ function SectionCard({
     acc[b.type] = (acc[b.type] || 0) + 1;
     return acc;
   }, {});
-  const summary = ["text", "image", "spelling", "question"]
+  const summary = ["text", "image", "spelling", "question", "vakt"]
     .filter((type) => counts[type])
     .map((type) =>
       t(`sectionCard.collapsedSummary.${type}`, { count: counts[type] }),
@@ -840,7 +864,7 @@ function SectionCard({
 
         <ImageSearchDialog
           open={imageSearchOpen}
-          replacing={Boolean(replaceTarget)}
+          replacing={replacingExistingImage}
           onInsert={addSearchedImage}
           onClose={() => {
             setImageSearchOpen(false);

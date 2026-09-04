@@ -4,7 +4,8 @@ title: Question blocks
 
 # Question blocks
 
-Each section can hold **question blocks** alongside text and images. Pick a type
+Each section can hold **question blocks** alongside text, images, spelling lists
+and [VAKT activities](./vakt-activities.md). Pick a type
 from the **Add question** menu; every type is colour-coded so it's easy to scan
 the lesson at a glance. The types, their shape, and their colours live in one
 place, `packages/core/src/questions.js`, so the editor and both exporters stay in sync.

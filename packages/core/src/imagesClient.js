@@ -15,11 +15,19 @@ const known = new Set();
 
 // Every distinct image hash referenced by the doc. Legacy `src` blocks must be
 // converted to refs (convertDocImages) before calling this.
+//
+// Image blocks aren't the only thing holding a picture: a VAKT activity can carry
+// one too, in the same `{ image: { hash } }` shape. Missing those here would save
+// a lesson whose activity image exists only in the author's own IndexedDB, so it
+// would show for them and be a broken frame for everyone else.
 export function collectImageHashes(doc) {
   const hashes = new Set();
   for (const section of doc?.sections || []) {
     for (const block of section.blocks || []) {
-      if (block.type === "image" && block.image?.hash) {
+      if (
+        (block.type === "image" || block.type === "vakt") &&
+        block.image?.hash
+      ) {
         hashes.add(block.image.hash);
       }
     }

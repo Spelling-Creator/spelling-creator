@@ -2,9 +2,10 @@
 // the tools accept. The Worker stores `doc` verbatim and the web editor renders
 // it, so the shapes here must match the editor's exactly. They are kept in sync
 // with:
-//   • apps/web/src/lib/questions.js  (question block shapes, the five types)
-//   • apps/web/src/lib/spelling.js   (spelling block shape)
-//   • apps/web/src/lib/id.js         (id generation)
+//   • packages/core/src/questions.js  (question block shapes, the six types)
+//   • packages/core/src/spelling.js   (spelling block shape)
+//   • packages/core/src/vakt.js       (VAKT activity block shape)
+//   • packages/core/src/id.js         (id generation)
 //
 // The canonical doc is:
 //   { title, sections: [ { id, name, blocks: [ Block, ... ] } ] }
@@ -63,11 +64,62 @@ export function buildBlock(block, where) {
     case "image":
       return buildImageBlock(block, where);
 
+    case "vakt":
+      return buildVaktBlock(block, where);
+
     default:
       throw new Error(
-        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image.`,
+        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image, vakt.`,
       );
   }
+}
+
+// A VAKT block — a regulation activity, never a question. Input is deliberately
+// simpler than the stored shape: the text is the activity alone (the "VAKT:"
+// label is added by whatever renders it, so writing one here would double it up)
+// and links are `{ url, label? }` objects that get ids here.
+function buildVaktBlock(block, where) {
+  const text = typeof block.text === "string" ? block.text.trim() : "";
+  const rawLinks = Array.isArray(block.links) ? block.links : [];
+  const links = rawLinks.map((link, i) => {
+    const url = typeof link?.url === "string" ? link.url.trim() : "";
+    if (!/^https?:\/\//i.test(url)) {
+      throw new Error(
+        `${where}: VAKT link ${i + 1} needs a "url" starting with http:// or https://.`,
+      );
+    }
+    return {
+      id: newId(),
+      label: typeof link.label === "string" ? link.label.trim() : "",
+      url,
+    };
+  });
+
+  if (!text && links.length === 0 && !block.image) {
+    throw new Error(
+      `${where}: a VAKT block needs a "text" activity (and may also carry "links" or an "image").`,
+    );
+  }
+
+  const out = {
+    id: newId(),
+    type: "vakt",
+    // A model that writes the label anyway shouldn't produce "VAKT: VAKT: …".
+    text: text.replace(/^VAKT\s*:\s*/i, ""),
+    links,
+  };
+
+  // The picture, in exactly an image block's shape and produced the same way —
+  // by add_image, never by hand.
+  if (block.image) {
+    const image = buildImageBlock(block, where);
+    out.image = image.image;
+    if (image.width != null) out.width = image.width;
+    if (image.height != null) out.height = image.height;
+    if (image.caption != null) out.caption = image.caption;
+  }
+
+  return out;
 }
 
 function buildQuestionBlock(block, where) {

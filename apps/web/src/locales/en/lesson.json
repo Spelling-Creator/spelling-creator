@@ -79,7 +79,9 @@
     "noQuestionText": "(no question text)",
     "spellingWordsLabel": "Spell:",
     "noSpellingWords": "(no spelling words yet)",
-    "imageAlt": "lesson image"
+    "imageAlt": "lesson image",
+    "vaktLabel": "VAKT:",
+    "noVaktActivity": "(no activity yet)"
   },
   "lessonSummary": {
     "heading": "Summary",

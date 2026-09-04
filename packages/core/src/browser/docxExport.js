@@ -15,6 +15,7 @@ import {
   Paragraph,
   TextRun,
   ImageRun,
+  ExternalHyperlink,
   HeadingLevel,
   AlignmentType,
   Header,
@@ -47,6 +48,17 @@ import {
   SPELLING_LABEL,
   SPELLING_WORD_SEPARATOR,
 } from "../spelling.js";
+import {
+  VAKT_COLOR,
+  VAKT_IMAGE_ALIGN,
+  VAKT_IMAGE_SIZE,
+  VAKT_LABEL,
+  VAKT_STYLE_ID,
+  VAKT_STYLE_NAME,
+  vaktLinkText,
+  vaktLinks,
+  vaktText,
+} from "../vakt.js";
 
 // Re-exported for callers that already reach for it here. New code that wants
 // only the constant should import ../lessonLayout.js directly — this module
@@ -215,6 +227,79 @@ function spellingBlockParagraphs(block) {
   ];
 }
 
+// A VAKT activity: the "VAKT:" label and the activity itself, all in red, then
+// its picture and its links underneath. The whole line is coloured rather than
+// just the label — a regulation break is an instruction to whoever is running
+// the lesson, not one more prompt in the colour-coded run above it, and it has
+// to be findable at a glance on a page of black body text.
+async function vaktBlockParagraphs(block) {
+  const text = vaktText(block);
+  const paragraphs = [
+    new Paragraph({
+      spacing: { before: 160, after: 60 },
+      children: [
+        // Same trick as a question prompt: the named character style is what
+        // carries the colour through mammoth to the PDF, the explicit colour is
+        // what Word itself renders.
+        new TextRun({
+          text: `${VAKT_LABEL} `,
+          bold: true,
+          style: VAKT_STYLE_ID,
+          color: hex(VAKT_COLOR),
+          size: BODY_SIZE,
+        }),
+        new TextRun({
+          text: text || "(no activity yet)",
+          italics: !text,
+          style: VAKT_STYLE_ID,
+          color: hex(VAKT_COLOR),
+          size: BODY_SIZE,
+        }),
+      ],
+    }),
+  ];
+
+  // A VAKT image illustrates the action rather than carrying the lesson, so it
+  // prints centred at the fixed VAKT size — the block has no size or alignment
+  // controls of its own. Everything else about it (the bytes, the caption, the
+  // aspect-ratio fit) is exactly an image block's, hence the reuse.
+  if (block.image || block.src) {
+    paragraphs.push(
+      ...(await imageBlockParagraphs({
+        ...block,
+        size: VAKT_IMAGE_SIZE,
+        align: VAKT_IMAGE_ALIGN,
+      })),
+    );
+  }
+
+  // Links print as one indented line each, address and all: on paper a link is
+  // read and typed rather than clicked, so the label alone would be a dead end.
+  // They are still real hyperlinks in the Word file, for whoever opens it there.
+  for (const link of vaktLinks(block)) {
+    paragraphs.push(
+      new Paragraph({
+        spacing: { after: 40 },
+        indent: { left: 360 },
+        children: [
+          new ExternalHyperlink({
+            link: link.url,
+            children: [
+              new TextRun({
+                text: vaktLinkText(link),
+                style: "Hyperlink",
+                size: BODY_SIZE,
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+  }
+
+  return paragraphs;
+}
+
 // A section's blocks, with no heading of its own. Section names are an
 // organising device inside the editor; a printed lesson runs straight through.
 async function sectionParagraphs(section) {
@@ -228,6 +313,8 @@ async function sectionParagraphs(section) {
       paragraphs.push(...questionBlockParagraphs(block));
     } else if (block.type === "spelling") {
       paragraphs.push(...spellingBlockParagraphs(block));
+    } else if (block.type === "vakt") {
+      paragraphs.push(...(await vaktBlockParagraphs(block)));
     }
   }
   return paragraphs;
@@ -312,16 +399,26 @@ function pageHeader() {
   });
 }
 
-// One Word character style per question type, so the type survives the round
-// trip through mammoth (see questions.js for why this exists).
-function questionCharacterStyles() {
-  return QUESTION_TYPE_LIST.map((type) => ({
-    id: questionStyleId(type.key),
-    name: questionStyleName(type.key),
-    basedOn: "DefaultParagraphFont",
-    quickFormat: false,
-    run: { color: hex(type.color) },
-  }));
+// One Word character style per question type, plus one for VAKT activities, so
+// the colour coding survives the round trip through mammoth (see questions.js
+// for why these exist at all).
+function colourCharacterStyles() {
+  return [
+    ...QUESTION_TYPE_LIST.map((type) => ({
+      id: questionStyleId(type.key),
+      name: questionStyleName(type.key),
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+      run: { color: hex(type.color) },
+    })),
+    {
+      id: VAKT_STYLE_ID,
+      name: VAKT_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+      run: { color: hex(VAKT_COLOR) },
+    },
+  ];
 }
 
 /**
@@ -364,7 +461,7 @@ export async function buildDocument(doc, meta = {}) {
           quickFormat: false,
         },
       ],
-      characterStyles: questionCharacterStyles(),
+      characterStyles: colourCharacterStyles(),
     },
     sections: [
       {

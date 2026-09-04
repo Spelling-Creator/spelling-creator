@@ -14,7 +14,9 @@
       "spelling_one": "{{count}} spelling list",
       "spelling_other": "{{count}} spelling lists",
       "question_one": "{{count}} question",
-      "question_other": "{{count}} questions"
+      "question_other": "{{count}} questions",
+      "vakt_one": "{{count}} VAKT activity",
+      "vakt_other": "{{count}} VAKT activities"
     },
     "moveUp": "Move section up",
     "moveDown": "Move section down",
@@ -39,7 +41,8 @@
       "aiQuestion": {
         "label": "Question",
         "description": "Generate a question with AI"
-      }
+      },
+      "addVakt": "VAKT activity"
     },
     "errors": {
       "addImageFailed": "Failed to add image.",
@@ -95,6 +98,25 @@
       "removeAnswer": "Remove answer",
       "addAnswer": "Add answer",
       "answersHelp": "Type every accepted answer. The student only needs to give one of them to be correct."
+    },
+    "vakt": {
+      "badge": "VAKT activity",
+      "label": "Activity",
+      "placeholder": "Bob likes to do jumping jacks. Let’s do 3 of those.",
+      "imageAlt": "VAKT activity image",
+      "captionLabel": "Caption (optional)",
+      "addImage": "Add image",
+      "replaceImage": "Replace image",
+      "removeImage": "Remove image",
+      "addLink": "Add link",
+      "removeLink": "Remove link",
+      "linkLabelPlaceholder": "Link text (optional)",
+      "linkUrlPlaceholder": "https://…",
+      "linkLabelAriaLabel": "Link {{number}} text",
+      "linkUrlAriaLabel": "Link {{number}} address",
+      "linksHelp": "Links open in a new tab. A link with no text shows its address.",
+      "uploadFileDescription": "Use a picture from your device",
+      "searchOnlineDescription": "Find one on Pixabay or Wikimedia"
     }
   }
 }
