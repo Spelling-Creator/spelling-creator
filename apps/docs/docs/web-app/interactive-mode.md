@@ -63,7 +63,9 @@ dark — as is the lesson page below it, which follows the theme too rather than
 reproducing the white sheet the [DOCX/PDF export](./export-pipeline.md)
 produces. What's different here is the _scale_: a surface you read and answer on
 for twenty minutes gets its own treatment, so the blocks are re-rendered — prose
-at reading size, images framed in the app's border and radius, spelling words as
+at reading size, images framed in the app's border and radius and sized by the
+reading column rather than by the size and alignment they carry (so a picture
+fills the width on a phone), spelling words as
 cards you could read across a room, and a
 [VAKT activity](./vakt-activities.md) set apart as a red-edged card so whoever is
 presenting spots it mid-passage and stops. Only the presentation differs; the content

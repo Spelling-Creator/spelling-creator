@@ -28,6 +28,7 @@ import IconActionButton from "./IconActionButton.jsx";
 import {
   fitWithin,
   imageSizeScale,
+  IMAGE_ALIGNS,
   IMAGE_SIZES,
   DEFAULT_IMAGE_SIZE,
   DEFAULT_IMAGE_ALIGN,
@@ -193,6 +194,19 @@ function ContentBlock({
   );
 }
 
+// How each alignment is offered: its icon and its label, keyed by the value it
+// writes. A record rather than three hand-written items, so the toggles are
+// driven by the same IMAGE_ALIGNS the importers and the MCP server validate
+// against — the way the size toggles are driven by IMAGE_SIZES — and the editor
+// can't end up offering a different set from the one that's accepted. The
+// translation keys are written out in full rather than built from the value, so
+// they can still be found by searching for them.
+const ALIGN_CONTROLS = {
+  left: { Icon: AlignLeftIcon, labelKey: "contentBlock.image.alignLeft" },
+  center: { Icon: AlignCenterIcon, labelKey: "contentBlock.image.alignCenter" },
+  right: { Icon: AlignRightIcon, labelKey: "contentBlock.image.alignRight" },
+};
+
 // The alignment and size toggles that frame a picture. Shared by the image block
 // and the VAKT activity's optional picture: the two differ in what they default
 // to (see core/vakt.js), not in what an author can pick, so they offer the same
@@ -209,24 +223,18 @@ function ImageFramingControls({ align, size, onChange }) {
         aria-label={t("contentBlock.image.alignmentAriaLabel")}
         className={TOUCH_TOGGLES}
       >
-        <ToggleGroupItem
-          value="left"
-          aria-label={t("contentBlock.image.alignLeft")}
-        >
-          <AlignLeftIcon />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="center"
-          aria-label={t("contentBlock.image.alignCenter")}
-        >
-          <AlignCenterIcon />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="right"
-          aria-label={t("contentBlock.image.alignRight")}
-        >
-          <AlignRightIcon />
-        </ToggleGroupItem>
+        {IMAGE_ALIGNS.map((value) => {
+          // An alignment core has gained but this file hasn't been given an icon
+          // for yet: leave it out rather than crash the editor over it.
+          const control = ALIGN_CONTROLS[value];
+          if (!control) return null;
+          const { Icon, labelKey } = control;
+          return (
+            <ToggleGroupItem key={value} value={value} aria-label={t(labelKey)}>
+              <Icon />
+            </ToggleGroupItem>
+          );
+        })}
       </ToggleGroup>
       <ToggleGroup
         type="single"

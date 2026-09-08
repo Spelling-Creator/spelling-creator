@@ -67,6 +67,11 @@ Two optional extras, both off by default:
   `size` or `align` is missing or unrecognised falls back to the VAKT defaults,
   not to an image block's full width.
 
+  Framing describes the **lesson page** — the editor, the read-only view, and
+  what's printed. [Interactive mode](./interactive-mode.md) ignores it, for a
+  VAKT picture and an image block alike: there a picture is sized by the reading
+  column so it fills the width on a phone, which is the point of that view.
+
 - **Links.** Each is a `{ url, label? }` pair — a video to play, a song, a
   printable. The label is optional; a link without one shows its address. On screen they're real links, opening in a new tab. On paper, where
   a link can't be clicked, each prints as `Label — https://address` so the
@@ -81,12 +86,12 @@ progress never destroys what's in the field.
 
 ## Round trips
 
-| Path                   | What survives                                                                                                                                                                                                                                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Export/Import JSON** | Every supported field, unchanged — the closest thing to a lossless round trip. The importer still drops an unsafe link and a block with no activity in it at all.                                                                                                                                           |
-| **Export DOCX**        | The red (via a Word character style), the picture at its own size and alignment, and the links as real hyperlinks.                                                                                                                                                                                          |
-| **Print PDF**          | The red, via that same character style — see below.                                                                                                                                                                                                                                                         |
-| **Import DOCX**        | The activity, its picture and its links, read back off the `VAKT:` label. The picture's framing comes back at the VAKT defaults — as an image block's does, and for the same reason: mammoth gives us no paragraph alignment, and a printed width can't be told apart from a picture that was simply small. |
+| Path                   | What survives                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Export/Import JSON** | Every supported field, unchanged — the closest thing to a lossless round trip. The importer still drops an unsafe link and a block with no activity in it at all.                                                                                                                                                                                                                                        |
+| **Export DOCX**        | The red (via a Word character style), the picture at its own size and alignment, and the links as real hyperlinks.                                                                                                                                                                                                                                                                                       |
+| **Print PDF**          | The red, via that same character style — see below.                                                                                                                                                                                                                                                                                                                                                      |
+| **Import DOCX**        | The activity, its picture and its links, read back off the `VAKT:` label. The picture's framing is **not** recovered: it comes back at the VAKT defaults, medium and centred. An image block's is lost the same way — each lands on its own defaults — and for the same reason: mammoth hands back no paragraph alignment, and a printed width can't be told apart from a picture that was simply small. |
 
 The Word character style (`S2C VAKT`) exists for the same reason the question
 ones do: mammoth drops run colours, so the PDF path — which renders the docx as
