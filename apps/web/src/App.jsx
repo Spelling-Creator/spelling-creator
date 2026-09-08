@@ -23,9 +23,9 @@
 //   "/" is the landing page — the most common entry point, and not worth a
 //   chunk request.
 //
-//   Lazy — "/hub/:id/history", "/editor", "/moderation", "/login" and
-//   "/oauth/authorize". None is server-rendered and none is reachable without a
-//   deliberate click. History is the only reader-facing page that needs
+//   Lazy — "/hub/:id/history", "/editor", "/moderation", "/settings", "/login"
+//   and "/oauth/authorize". None is server-rendered and none is reachable
+//   without a deliberate click. History is the only reader-facing page that needs
 //   isomorphic-git and LightningFS (~200 KB). The editor is the one that really
 //   matters: ~6,000 lines and the only owner of Yjs, lib0 and the collaboration
 //   client, none of which anyone reading a lesson should be downloading —
@@ -53,6 +53,7 @@ const LessonHistory = lazy(() => import("./pages/lesson/LessonHistory.jsx"));
 const EditorShell = lazy(() => import("./components/layout/EditorShell.jsx"));
 const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
 const ModerationPage = lazy(() => import("./pages/ModerationPage.jsx"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
 const OAuthAuthorizePage = lazy(() => import("./pages/OAuthAuthorizePage.jsx"));
 
 // Shown while a lazy route's chunk is in flight. A skeleton, not a spinner, per
@@ -93,6 +94,9 @@ export default function App() {
           </Route>
           <Route path="/users/:id" element={<ProfilePage />} />
           <Route path="/moderation" element={<ModerationPage />} />
+          {/* Deliberately not gated on a session: three of its four sections are
+              this-browser preferences that work signed out. */}
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />
           {/* Trailing * so EditorShell can own the routes below it. */}
           <Route path="/editor/*" element={<EditorShell />} />

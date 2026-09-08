@@ -112,6 +112,7 @@ are the same window, and only one of them has room for an outline.
 | `/users/:id`               | **User profile**        | A user's public profile — bio, follower/following counts, a Follow button, and published lessons.                                                                                                     |
 | `/login`                   | **Sign in**             | Magic-link sign-in / account status.                                                                                                                                                                  |
 | `/moderation`              | **Moderation**          | Moderator/admin queue for reviewing reported content (gated to mods/admins).                                                                                                                          |
+| `/settings`                | **Settings**            | Appearance (light/dark/system), display language, [read-aloud](./interactive-mode.md) preferences, this device's lessons, and the account's display name and bio. Works signed out.                   |
 
 ### Unknown paths
 

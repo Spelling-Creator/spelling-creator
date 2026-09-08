@@ -49,6 +49,7 @@ const LESSON_PATH = new RegExp(`^/hub/([^/]+)(?:/(?:${LESSON_TABS}))?/?$`);
 const PROFILE_PATH = /^\/users\/([^/]+)\/?$/;
 
 const MODERATION_PATH = /^\/moderation\/?$/;
+const SETTINGS_PATH = /^\/settings\/?$/;
 const LOGIN_PATH = /^\/login\/?$/;
 // `<Route path="/editor/*">` — EditorShell owns everything below it, and treats a
 // panel name it doesn't recognise as "no panel open" rather than as a 404. That
@@ -58,7 +59,17 @@ const EDITOR_PATH = /^\/editor(\/|$)/;
 // The MCP consent screen — the one route outside AppShell.
 const OAUTH_AUTHORIZE_PATH = /^\/oauth\/authorize\/?$/;
 
-const APP_PATHS = [HOME_PATH, HUB_PATH, LESSON_PATH, PROFILE_PATH, MODERATION_PATH, LOGIN_PATH, EDITOR_PATH, OAUTH_AUTHORIZE_PATH];
+const APP_PATHS = [
+	HOME_PATH,
+	HUB_PATH,
+	LESSON_PATH,
+	PROFILE_PATH,
+	MODERATION_PATH,
+	SETTINGS_PATH,
+	LOGIN_PATH,
+	EDITOR_PATH,
+	OAUTH_AUTHORIZE_PATH,
+];
 
 export { HUB_PATH, LESSON_PATH, PROFILE_PATH };
 

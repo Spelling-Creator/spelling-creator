@@ -102,7 +102,8 @@ import { saveLessonResponses } from "@spelling-creator/core/lessonResponses";
 import { hasApi } from "@spelling-creator/core/config";
 import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
-import { SPEECH_RATES, useSpeech } from "../lib/useSpeech.js";
+import { SPEECH_RATES } from "../lib/speechPrefs.js";
+import { useSpeech } from "../lib/useSpeech.js";
 import { useAuth } from "../lib/auth.jsx";
 
 // The speaker toggle, a replay button, and a popover for voice and pace. Renders

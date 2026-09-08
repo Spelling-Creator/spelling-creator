@@ -34,6 +34,7 @@ import {
   LogOutIcon,
   MoonIcon,
   PlusIcon,
+  SettingsIcon,
   ShieldIcon,
   SpellCheckIcon,
   SunIcon,
@@ -256,6 +257,14 @@ export default function AppSidebar() {
                   label={t("nav.moderation")}
                 />
               )}
+              {/* Last, and ungated: most of what's on that page is this
+                  browser's preferences rather than an account's, so it has to
+                  be reachable signed out. */}
+              <NavItem
+                to="/settings"
+                icon={SettingsIcon}
+                label={t("nav.settings")}
+              />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -407,6 +416,15 @@ export default function AppSidebar() {
                   <DropdownMenuItem onClick={() => setNameDialogOpen(true)}>
                     <IdCardIcon />
                     {t("nav.editDisplayName")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      closeOnMobile();
+                      navigate("/settings");
+                    }}
+                  >
+                    <SettingsIcon />
+                    {t("nav.settings")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>

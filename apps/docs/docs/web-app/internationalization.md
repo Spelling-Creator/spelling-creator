@@ -11,12 +11,12 @@ app is fully wired for more.
 
 ## The pieces
 
-| File                                                                                              | Role                                                                                          |
-| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `src/lib/i18n.js`                                                                                 | i18next setup: registers every namespace's English resources, `fallbackLng`, `supportedLngs`. |
-| `src/lib/languages.js`                                                                            | `LANGUAGES` registry for a future language switcher; today lists only English.                |
-| `src/locales/<lng>/*.json`                                                                        | One JSON file per namespace, per language. Only `en/` exists today.                           |
-| [`i18next-browser-languagedetector`](https://github.com/i18next/i18next-browser-languageDetector) | Picks the visitor's language from `localStorage` then the browser, falling back to English.   |
+| File                                                                                              | Role                                                                                                                |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/i18n.js`                                                                                 | i18next setup: registers every namespace's English resources, `fallbackLng`, `supportedLngs`.                       |
+| `src/lib/languages.js`                                                                            | `LANGUAGES` registry backing the switcher on the [settings page](./pages-and-routing.md); today lists only English. |
+| `src/locales/<lng>/*.json`                                                                        | One JSON file per namespace, per language. Only `en/` exists today.                                                 |
+| [`i18next-browser-languagedetector`](https://github.com/i18next/i18next-browser-languageDetector) | Picks the visitor's language from `localStorage` then the browser, falling back to English.                         |
 
 `main.jsx` imports `./lib/i18n.js` once, before `App` renders, so every component can
 call `useTranslation()` immediately.
@@ -38,6 +38,7 @@ area without wading through the whole app:
 | `moderation`     | `ModerationPage`                                                                                                                                  |
 | `oauth`          | `OAuthAuthorizePage`                                                                                                                              |
 | `profile`        | `ProfilePage`, `BioDialog`, `FollowListDialog`                                                                                                    |
+| `settings`       | `SettingsPage`                                                                                                                                    |
 | `editor`         | `EditorPage`, `SectionOutline`                                                                                                                    |
 | `editorSections` | `SectionCard`, `ContentBlock`, `LiveField`                                                                                                        |
 | `editorTools`    | `HistoryDialog` (incl. its `timeAgo` helper), `MergeDialog`, `ImageSearchDialog`                                                                  |
@@ -91,4 +92,15 @@ Not every string in a migrated file goes through `t()`. Left as-is, deliberately
    `resources`, and add its code to `supportedLngs`.
 3. Add `{ code: "<lng>", label: "..." }` to `LANGUAGES` in `src/lib/languages.js`.
 
-No component changes are needed — every string already resolves through `t()`.
+No component changes are needed — every string already resolves through `t()`, and the
+switcher renders whatever `LANGUAGES` holds.
+
+## The switcher
+
+The **Language** section of the [settings page](./pages-and-routing.md) reads
+`LANGUAGES` and calls `i18n.changeLanguage()`. While the registry holds a single entry
+the control is disabled and says so, rather than offering a choice that isn't one — a
+second entry turns it into a real select with no code change.
+
+The choice persists itself: the language detector is configured with
+`caches: ["localStorage"]`, so nothing in the page has to store it.
