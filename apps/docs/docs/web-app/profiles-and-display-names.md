@@ -14,7 +14,8 @@ author or commenter is named.
 The first time a signed-in user reaches the app they're asked to pick a display
 name before they can use it. `DisplayNameGate.jsx` enforces this (wrapping the
 whole app in `main.jsx`), and `DisplayNameDialog.jsx` is the picker; a user can
-change their name later from the account menu.
+change their name later from the account menu or the
+[settings page](./pages-and-routing.md).
 
 The name is **not** a database column — it's stored in the Supabase user's
 `user_metadata.display_name`. The browser can't write metadata directly; it calls
@@ -26,7 +27,8 @@ for fast listing, changing your name also backfills it onto your existing rows.
 ## Bios
 
 A bio is a short "about me" shown on your profile page. It's edited in
-`BioDialog.jsx` and saved with `POST /profile/bio`, which sanitizes it, caps the
+`BioDialog.jsx` — opened from your own profile or from the
+[settings page](./pages-and-routing.md) — and saved with `POST /profile/bio`, which sanitizes it, caps the
 length, runs a profanity check (rejecting with `422` if it fails), and — like the
 display name — stores it in `user_metadata.bio` via the Admin API. An empty bio
 clears it. Bio is profile-only (never denormalised onto rows).

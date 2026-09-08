@@ -1,0 +1,57 @@
+{
+  "title": "Settings",
+  "subtitle": "How the app looks and sounds on this device, and what other people see of you.",
+  "appearance": {
+    "title": "Appearance",
+    "themeLabel": "Theme",
+    "themeDescription": "“System” follows whatever your device is set to, and changes with it.",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "title": "Language",
+    "label": "Display language",
+    "description": "The language the app's own wording is shown in. A lesson is always shown in the language it was written in.",
+    "onlyOne": "English is the only language available so far."
+  },
+  "speech": {
+    "title": "Reading aloud",
+    "description": "Used by practice mode to read each step out. Everything is spoken by your own device — no lesson text is sent anywhere.",
+    "enabledLabel": "Read steps aloud",
+    "on": "On",
+    "off": "Off",
+    "voice": "Voice",
+    "defaultVoice": "Browser default",
+    "pace": "Pace",
+    "paceOption_one": "Normal speed",
+    "paceOption_other": "{{rate}} times normal speed"
+  },
+  "device": {
+    "title": "This device",
+    "installLabel": "Install the app",
+    "installDescription": "Keep Spelling Creator in your dock or on your home screen, and open lessons you've saved without a connection.",
+    "install": "Install app",
+    "lessonsLabel": "Lessons on this device",
+    "lessonsDescription": "Lessons are drafted in this browser and stay here until you publish them. This is where you switch between them, rename one, or delete one.",
+    "manageLessons": "Manage lessons"
+  },
+  "account": {
+    "title": "Account",
+    "displayName": "Display name",
+    "displayNameDescription": "The name shown to other people, in place of your email.",
+    "displayNameNotSet": "Not chosen yet",
+    "bio": "Bio",
+    "bioDescription": "A short “about me” on your public profile.",
+    "bioEmpty": "You haven't written one yet.",
+    "email": "Email",
+    "emailDescription": "How you sign in. Never shown to other people.",
+    "change": "Change",
+    "edit": "Edit",
+    "viewProfile": "View public profile",
+    "signOut": "Sign out",
+    "signedOutTitle": "Not signed in",
+    "signedOutDescription": "Sign in to publish lessons, comment on other people's, and set up a profile. Everything above works signed out.",
+    "signIn": "Sign in"
+  }
+}

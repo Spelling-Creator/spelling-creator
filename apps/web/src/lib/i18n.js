@@ -22,6 +22,7 @@ import enModeration from "../locales/en/moderation.json";
 import enOauth from "../locales/en/oauth.json";
 import enProfile from "../locales/en/profile.json";
 import enRichText from "../locales/en/richText.json";
+import enSettings from "../locales/en/settings.json";
 
 export const defaultNS = "common";
 
@@ -37,6 +38,7 @@ export const namespaces = [
   "moderation",
   "oauth",
   "profile",
+  "settings",
   "editor",
   "editorSections",
   "editorTools",
@@ -56,6 +58,7 @@ export const resources = {
     moderation: enModeration,
     oauth: enOauth,
     profile: enProfile,
+    settings: enSettings,
     editor: enEditor,
     editorSections: enEditorSections,
     editorTools: enEditorTools,

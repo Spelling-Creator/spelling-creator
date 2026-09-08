@@ -17,6 +17,7 @@ src/
     ProfilePage.jsx       a user's public profile: bio + their published lessons
     LoginPage.jsx         magic-link sign-in / account status
     ModerationPage.jsx    moderator/admin queue for reported content
+    SettingsPage.jsx      appearance, language, read-aloud, this device's lessons, account — see pages-and-routing.md
     lesson/               one lesson (/hub/:id) and its tabs — see pages-and-routing.md
       LessonLayout.jsx    owns the fetch, the identity header and every whole-lesson action; tabs read it via useLesson()
       LessonTabs.jsx      the tab bar — NavLinks to real routes, not a Tabs widget
@@ -70,7 +71,7 @@ src/
     ui/textarea.jsx        Textarea, which grows to fit its text (see "Auto-growing text fields"); hence `resize-none`, and never a scrollbar
   lib/
     i18n.js                react-i18next setup: registers every namespace's resources, fallback/supported languages
-    languages.js           LANGUAGES registry for a future language switcher (English only today)
+    languages.js           LANGUAGES registry backing the settings page's language switcher (English only today)
     colorScheme.jsx        ColorSchemeProvider + useColorScheme (light/dark/system, persisted, applied as data-theme on <html>)
     useLiveField.js        shared debounce/commit buffering behind LiveField.jsx
     collab.js             useCollaboration hook (one WebSocket to the CollabRoom Durable Object; doc sync, cursors, chat)
@@ -83,7 +84,8 @@ src/
       engine.js, load.js  the docx/PDF/import pipeline, behind one dynamic import (keeps ~390 KB gzipped off every page that never exports; preview doesn't need it)
       useLessonGit.js     the editor's controller: setup, periodic commits, history, restore
     useImageSrc.js        resolves an image ref to a displayable src
-    useSpeech.js          Web Speech API text-to-speech for interactive mode (capability probe, voice/pace preferences, Chromium's utterance-length and cancel quirks)
+    speechPrefs.js        the read-aloud preferences (on/off, voice, pace) and the browser's voice list, shared by interactive mode and the settings page
+    useSpeech.js          Web Speech API text-to-speech for interactive mode (speaking, queueing and Chromium's utterance-length and cancel quirks; preferences come from speechPrefs.js)
     auth.jsx              AuthProvider + useAuth (session, magic link, sign out)
     seo.jsx               <DocumentMeta> / <JsonLd> — React 19 hoists these into <head>, which is what makes them work under SSR
     ssr.jsx               the client/server handoff: SsrProvider, useServerData, useSiteOrigin

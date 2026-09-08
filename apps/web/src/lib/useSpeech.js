@@ -7,11 +7,8 @@
 // than assumed: where it's missing the hook reports `supported: false` and the
 // UI hides the controls entirely instead of offering a button that can't work.
 //
-// Three quirks of the platform shape this file:
-//
-//   Voices load late. `getVoices()` returns [] on first call in most browsers
-//   and fills in asynchronously, announced by a `voiceschanged` event. So the
-//   list is state, populated from both.
+// Two quirks of the platform shape this file (a third — voices loading late —
+// belongs to the voice list, and is handled in lib/speechPrefs.js):
 //
 //   Long utterances get cut off. Chromium stops speaking after ~15 seconds of a
 //   single utterance. Splitting the text into sentence-sized chunks and queueing
@@ -23,40 +20,17 @@
 //   cancel.
 //
 // The user's preferences (on/off, voice, rate) are persisted, so someone who
-// needs speech doesn't re-enable it on every lesson.
+// needs speech doesn't re-enable it on every lesson. They live in
+// lib/speechPrefs.js, alongside the voice list, because the settings page sets
+// the same three without ever wanting anything below.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-const ENABLED_KEY = "spelling-creator:tts-enabled";
-const VOICE_KEY = "spelling-creator:tts-voice";
-const RATE_KEY = "spelling-creator:tts-rate";
-
-/** Speaking rates offered in the UI. 1 is the browser's normal pace. */
-export const SPEECH_RATES = [0.7, 0.85, 1, 1.25, 1.5];
-export const DEFAULT_SPEECH_RATE = 1;
+import { useSpeechPrefs, useSpeechVoices } from "./speechPrefs.js";
 
 // Longest chunk we hand to a single utterance. Short enough to stay clear of
 // Chromium's ~15s cutoff at the slowest rate we offer, long enough that a normal
 // sentence is spoken as one unit with its natural intonation.
 const MAX_CHUNK = 180;
-
-function readStored(key, fallback) {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored === null ? fallback : stored;
-  } catch {
-    // localStorage unavailable (private browsing, etc.) — use the default.
-    return fallback;
-  }
-}
-
-function writeStored(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Not being able to remember the preference is not worth failing over.
-  }
-}
 
 /**
  * Split text into utterance-sized chunks: first by line (the caller composes one
@@ -118,17 +92,19 @@ export function chunkForSpeech(text) {
  * }}
  */
 export function useSpeech() {
-  // Probed in an effect, not at render: the server has no `window`, and a
-  // hydrating client has to render the same markup the server sent.
-  const [supported, setSupported] = useState(false);
-  const [voices, setVoices] = useState([]);
+  // Both probed/adopted in effects rather than at render: the server has no
+  // `window`, and a hydrating client has to render the same markup the server
+  // sent. See lib/speechPrefs.js.
+  const { supported, voices } = useSpeechVoices();
+  const {
+    enabled,
+    setEnabled: persistEnabled,
+    voiceURI,
+    setVoiceURI,
+    rate,
+    setRate,
+  } = useSpeechPrefs();
   const [speaking, setSpeaking] = useState(false);
-
-  // Preferences also start at their defaults and adopt the stored values after
-  // mount, for the same hydration reason.
-  const [enabled, setEnabledState] = useState(false);
-  const [voiceURI, setVoiceURIState] = useState("");
-  const [rate, setRateState] = useState(DEFAULT_SPEECH_RATE);
 
   // The utterances we queued, so `stop()` can tell "the user cancelled" apart
   // from "it finished on its own" — a cancel fires `onend` for every queued
@@ -138,20 +114,9 @@ export function useSpeech() {
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis)
       return undefined;
-    setSupported(true);
-
-    setEnabledState(readStored(ENABLED_KEY, "") === "true");
-    setVoiceURIState(readStored(VOICE_KEY, ""));
-    const storedRate = Number(readStored(RATE_KEY, ""));
-    if (SPEECH_RATES.includes(storedRate)) setRateState(storedRate);
-
     const synth = window.speechSynthesis;
-    const readVoices = () => setVoices(synth.getVoices() || []);
-    readVoices();
-    synth.addEventListener("voiceschanged", readVoices);
 
     return () => {
-      synth.removeEventListener("voiceschanged", readVoices);
       // Leaving the page mid-sentence should not leave a voice talking over
       // whatever the user does next: speechSynthesis is global to the tab and
       // outlives this component. The generation bump is what makes the cancel
@@ -163,25 +128,20 @@ export function useSpeech() {
     };
   }, []);
 
-  const setEnabled = useCallback((next) => {
-    setEnabledState(next);
-    writeStored(ENABLED_KEY, next ? "true" : "false");
-    if (!next && typeof window !== "undefined" && window.speechSynthesis) {
-      generation.current += 1;
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-    }
-  }, []);
-
-  const setVoiceURI = useCallback((next) => {
-    setVoiceURIState(next);
-    writeStored(VOICE_KEY, next);
-  }, []);
-
-  const setRate = useCallback((next) => {
-    setRateState(next);
-    writeStored(RATE_KEY, String(next));
-  }, []);
+  // Turning speech off has to silence what is already in the queue, not just
+  // stop the next step from speaking — which is the one thing the bare
+  // preference setter can't do, and the reason it's wrapped here.
+  const setEnabled = useCallback(
+    (next) => {
+      persistEnabled(next);
+      if (!next && typeof window !== "undefined" && window.speechSynthesis) {
+        generation.current += 1;
+        window.speechSynthesis.cancel();
+        setSpeaking(false);
+      }
+    },
+    [persistEnabled],
+  );
 
   const stop = useCallback(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;

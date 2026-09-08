@@ -258,14 +258,22 @@ working it out. Revealing it on screen is a deliberate act; speaking it would be
 a side effect of one.
 
 Your choice of on/off, voice and pace is remembered in `localStorage`, so someone
-who needs speech doesn't re-enable it on every lesson. On a browser with no
-speech synthesis the controls aren't rendered at all, rather than offering a
-button that can't work.
+who needs speech doesn't re-enable it on every lesson. The same three settings
+appear under **Reading aloud** on the [settings page](./pages-and-routing.md),
+for anyone who would rather set them up before starting a lesson than from the
+popover mid-walkthrough; both read and write the same keys through
+`apps/web/src/lib/speechPrefs.js`. A change made in one reaches the other the
+next time it's opened, not while both are on screen.
 
-Three platform quirks are handled in `apps/web/src/lib/useSpeech.js`: voices load
-asynchronously (`voiceschanged`), Chromium cuts off a single utterance after
-about 15 seconds (so text is split into sentence-sized chunks and queued), and
-`cancel()` isn't synchronous (so a new utterance is deferred a tick after one).
+On a browser with no speech synthesis neither the controls nor the settings
+section is rendered at all, rather than offering a button that can't work.
+
+Three platform quirks are handled between the two files. `speechPrefs.js` takes
+the one that belongs to the voice list: voices load asynchronously, announced by
+`voiceschanged`. `useSpeech.js` takes the two that belong to speaking — Chromium
+cuts off a single utterance after about 15 seconds (so text is split into
+sentence-sized chunks and queued), and `cancel()` isn't synchronous (so a new
+utterance is deferred a tick after one).
 
 ## Worker endpoints
 
