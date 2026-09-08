@@ -27,9 +27,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
-    env:
-      CI: true
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -45,8 +42,11 @@ jobs:
           node-version: 26
           cache: pnpm
 
+      # --frozen-lockfile is what pnpm already does under CI, but spelling it out
+      # keeps the guarantee in this file rather than in an environment default: a
+      # deploy must never resolve a lockfile that disagrees with the manifests.
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Debug env
         run: |

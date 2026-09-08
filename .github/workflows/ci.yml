@@ -22,9 +22,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
-    env:
-      CI: true
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -40,9 +37,10 @@ jobs:
           node-version: 26
           cache: pnpm
 
-      # --frozen-lockfile (unlike deploy.yml's plain install) fails rather than
-      # silently resolving a lockfile that doesn't match the manifests, which is
-      # exactly the drift a PR should be caught on.
+      # --frozen-lockfile fails rather than resolving a lockfile that doesn't
+      # match the manifests, which is exactly the drift a PR should be caught on.
+      # deploy.yml passes it too; both state it explicitly instead of leaning on
+      # pnpm's CI default.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
