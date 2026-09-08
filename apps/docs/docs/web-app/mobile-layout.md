@@ -68,9 +68,9 @@ minimums, and they sit in rows of three to five with 4px between them.
 - Inline `size="sm"` buttons use the `TOUCH_SM_BUTTON` constant
   (`h-10 sm:pointer-fine:h-8`), defined in both `ContentBlock.jsx` and
   `SectionCard.jsx`.
-- `ToggleGroup` passes no sizing down to its items, so the image block's
-  alignment/size toggles use `TOUCH_TOGGLES`, which reaches them by their
-  `data-slot`.
+- `ToggleGroup` passes no sizing down to its items, so the alignment/size toggles
+  an image block and a [VAKT activity](./vakt-activities.md)'s picture share use
+  `TOUCH_TOGGLES`, which reaches them by their `data-slot`.
 
 **The shrink is gated on the pointer, not only on the width.** A tablet is
 `sm` and up and still driven by a finger, so keying off the breakpoint alone

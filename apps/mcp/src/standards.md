@@ -256,7 +256,10 @@ is usually enough; the rule that is checked is the placement, not the count.
 Keep the activity concrete and doable in the room: a named number of a named movement, a
 breathing or pressure exercise, something to hold or press. Name the speller when the user has
 told you who the lesson is for, as in the example above. A block may also carry "links" (a video
-to play, a song, a printable) and an "image" from add_image, both optional.
+to play, a song, a printable) and an "image" from add_image, both optional. A VAKT picture takes
+the same "size" and "align" an image block does; leave them off unless the user asks for
+something particular, since the default (medium, centred) suits a picture that illustrates the
+action rather than carrying the lesson.
 
 ## Branding
 

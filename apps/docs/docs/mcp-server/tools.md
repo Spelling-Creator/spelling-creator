@@ -391,10 +391,12 @@ A lesson is **sections** of **blocks**. Block types:
   caption automatically.
 - **`vakt`** — a regulation activity: `{ "type": "vakt", "text": "Bob likes to do jumping
 jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pairs) and an
-  `image` from `add_image`. Write the activity **alone** — the `VAKT:` label is added when
-  the lesson is rendered. These are **optional and off by default**: only add them when the
-  user asks. When they do, a section gets one and it goes **last**, after that section's
-  questions. See [VAKT activities](/web-app/vakt-activities).
+  `image` from `add_image` — which takes the same optional `size` and `align` an image block
+  does, defaulting to medium and centred rather than full width. Write the activity
+  **alone** — the `VAKT:` label is added when the lesson is rendered. These are **optional
+  and off by default**: only add them when the user asks. When they do, a section gets one
+  and it goes **last**, after that section's questions. See
+  [VAKT activities](/web-app/vakt-activities).
 
 ## Placing an image
 

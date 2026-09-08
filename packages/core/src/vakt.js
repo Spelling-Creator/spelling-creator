@@ -18,9 +18,11 @@
 //   links  optional outward links: a video to play, a printable, a song. Held as
 //          { id, label, url } rows so each has a stable React/collab key.
 //   image  an optional picture, referenced by content hash exactly as an image
-//          block's is, so it resolves, uploads and exports through the same path.
+//          block's is, so it resolves, uploads and exports through the same path,
+//          and framed by the same optional `size` / `align` pair.
 
 import { isSafeLink } from "./richText.js";
+import { IMAGE_ALIGNS, IMAGE_SIZES } from "./image.js";
 
 // The accent colour: a bright, unambiguous red — the one colour the question
 // types and the teal spelling block deliberately leave free, so a regulation
@@ -46,13 +48,56 @@ const LEADING_LABEL = /^\s*VAKT\s*:\s*/i;
 // and the address itself has to be readable.
 export const VAKT_LINK_JOINER = " — ";
 
-// The default display size for a VAKT block's image. VAKT images illustrate an
-// action ("this is what a wall push looks like") rather than carrying the
-// lesson's content, so they print at half width and centred, with no size or
-// alignment controls of their own — one less decision on a block whose whole
-// point is to be quick to write.
-export const VAKT_IMAGE_SIZE = "medium";
-export const VAKT_IMAGE_ALIGN = "center";
+// Where a VAKT block's image starts when the author hasn't framed it. VAKT
+// images illustrate an action ("this is what a wall push looks like") rather
+// than carrying the lesson's content, so they default smaller than an image
+// block's full width — but they are framed with the same `size` and `align`
+// fields, and the block offers the same controls, so an activity whose picture
+// has to be read from across the room can have one.
+export const VAKT_DEFAULT_IMAGE_SIZE = "medium";
+export const VAKT_DEFAULT_IMAGE_ALIGN = "center";
+
+/**
+ * The size key a VAKT picture is drawn at. Anything unrecognised falls back to
+ * the VAKT default rather than to `imageSizeScale`'s full width: a block that
+ * never had a size, or whose size arrived corrupted, should look the way VAKT
+ * pictures have always looked, not jump to the largest one.
+ * @param {object} block
+ * @returns {string}
+ */
+export function vaktImageSize(block) {
+  const size = block?.size;
+  return IMAGE_SIZES.some((s) => s.key === size)
+    ? size
+    : VAKT_DEFAULT_IMAGE_SIZE;
+}
+
+/**
+ * Where a VAKT picture sits, defaulting the same way.
+ * @param {object} block
+ * @returns {string}
+ */
+export function vaktImageAlign(block) {
+  return IMAGE_ALIGNS.includes(block?.align)
+    ? block.align
+    : VAKT_DEFAULT_IMAGE_ALIGN;
+}
+
+/**
+ * A VAKT block seen as an image block: the picture plus the framing the
+ * renderers want, with the VAKT defaults filled in. Every renderer draws a VAKT
+ * picture by handing this to its own image path, so the two kinds of picture can
+ * never drift apart.
+ * @param {object} block
+ * @returns {object}
+ */
+export function vaktImageBlock(block) {
+  return {
+    ...block,
+    size: vaktImageSize(block),
+    align: vaktImageAlign(block),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // The Word character style carrying the red, mirroring questionStyleId and

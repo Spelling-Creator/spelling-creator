@@ -50,11 +50,10 @@ import {
 } from "../spelling.js";
 import {
   VAKT_COLOR,
-  VAKT_IMAGE_ALIGN,
-  VAKT_IMAGE_SIZE,
   VAKT_LABEL,
   VAKT_STYLE_ID,
   VAKT_STYLE_NAME,
+  vaktImageBlock,
   vaktLinkText,
   vaktLinks,
   vaktText,
@@ -272,16 +271,13 @@ async function vaktBlockParagraphs(block, embedded) {
     }),
   ];
 
-  // A VAKT image illustrates the action rather than carrying the lesson, so it
-  // prints centred at the fixed VAKT size — the block has no size or alignment
-  // controls of its own. Everything else about it (the bytes, the caption, the
-  // aspect-ratio fit) is exactly an image block's, hence the reuse.
+  // A VAKT image prints exactly as an image block's does — the bytes, the
+  // caption, the aspect-ratio fit, the picked size and alignment — hence the
+  // reuse; vaktImageBlock supplies only the VAKT defaults for a block that was
+  // never framed by hand.
   if (block.image || block.src) {
     paragraphs.push(
-      ...(await imageBlockParagraphs(
-        { ...block, size: VAKT_IMAGE_SIZE, align: VAKT_IMAGE_ALIGN },
-        embedded,
-      )),
+      ...(await imageBlockParagraphs(vaktImageBlock(block), embedded)),
     );
   }
 

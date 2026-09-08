@@ -9,6 +9,9 @@ import {
   VAKT_LABEL,
   createVaktBlock,
   vaktHasContent,
+  vaktImageAlign,
+  vaktImageBlock,
+  vaktImageSize,
   vaktLinkText,
   vaktLinks,
   vaktText,
@@ -107,6 +110,35 @@ describe("vaktHasContent", () => {
   });
 });
 
+describe("a VAKT picture's framing", () => {
+  it("defaults to medium and centred, not to an image block's full width", () => {
+    expect(vaktImageSize({ type: "vakt" })).toBe("medium");
+    expect(vaktImageAlign({ type: "vakt" })).toBe("center");
+  });
+
+  it("keeps a size and an alignment the author picked", () => {
+    expect(vaktImageSize({ size: "large" })).toBe("large");
+    expect(vaktImageAlign({ align: "left" })).toBe("left");
+  });
+
+  it("falls back to the VAKT default rather than to full width", () => {
+    // imageSizeScale treats an unknown size as full, which would make a
+    // corrupted value the biggest a picture can be. A VAKT picture that has
+    // lost its framing should look the way an unframed one does instead.
+    expect(vaktImageSize({ size: "enormous" })).toBe("medium");
+    expect(vaktImageAlign({ align: "justify" })).toBe("center");
+  });
+
+  it("hands the renderers a block they can treat as an image block", () => {
+    expect(vaktImageBlock({ id: "b1", type: "vakt", size: "small" })).toEqual({
+      id: "b1",
+      type: "vakt",
+      size: "small",
+      align: "center",
+    });
+  });
+});
+
 describe("a VAKT block in the walkthrough", () => {
   const doc = {
     sections: [
@@ -182,6 +214,36 @@ describe("importing a VAKT block from a lesson file", () => {
     ]);
     expect(block.image).toEqual({ hash: "abc", mime: "image/png", ext: "png" });
     expect(block.caption).toBe("A wall push");
+    // Unframed in the file, so the block comes back carrying the VAKT defaults.
+    expect(block.size).toBe("medium");
+    expect(block.align).toBe("center");
+  });
+
+  it("keeps the framing the file carried", () => {
+    const { sections } = normalizeLessonFile({
+      title: "Volcanoes",
+      sections: [
+        {
+          id: "s1",
+          name: "One",
+          blocks: [
+            {
+              id: "b1",
+              type: "vakt",
+              text: "Do 3 wall pushes",
+              image: { hash: "abc", mime: "image/png", ext: "png" },
+              width: 100,
+              height: 50,
+              size: "full",
+              align: "right",
+            },
+          ],
+        },
+      ],
+    });
+    const [block] = sections[0].blocks;
+    expect(block.size).toBe("full");
+    expect(block.align).toBe("right");
   });
 
   it("keeps a picture that is still a legacy inline src", () => {

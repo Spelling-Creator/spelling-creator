@@ -10,7 +10,12 @@ import { QUESTION_TYPES } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
 import { isSafeLink } from "./richText.js";
-import { vaktHasContent, vaktText } from "./vakt.js";
+import {
+  vaktHasContent,
+  vaktImageAlign,
+  vaktImageSize,
+  vaktText,
+} from "./vakt.js";
 
 // Thrown when a file is readable but not a usable lesson. EditorPage surfaces
 // the message and refuses to load it — same contract as DocxImportError.
@@ -178,6 +183,10 @@ function normalizeVakt(block) {
     if (block.width != null) normalized.width = block.width;
     if (block.height != null) normalized.height = block.height;
     if (typeof block.caption === "string") normalized.caption = block.caption;
+    // The framing, defaulted the VAKT way rather than the image block's, so a
+    // file that never carried one imports looking the way it printed.
+    normalized.size = vaktImageSize(block);
+    normalized.align = vaktImageAlign(block);
   }
   return vaktHasContent(normalized) ? normalized : null;
 }
