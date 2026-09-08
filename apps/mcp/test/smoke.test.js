@@ -1318,6 +1318,34 @@ test("buildDoc builds a VAKT activity, its links and its picture", () => {
     ext: "png",
   });
   assert.equal(block.caption, "Jumping jacks");
+  // Unframed input leaves the framing to the renderers, which default a VAKT
+  // picture to medium and centred (core/vakt.js).
+  assert.equal(block.size, undefined);
+  assert.equal(block.align, undefined);
+});
+
+test("buildDoc frames a VAKT picture the way it frames an image block's", () => {
+  const doc = buildDoc({
+    title: "Volcanoes",
+    sections: [
+      {
+        name: "Reading",
+        blocks: [
+          {
+            type: "vakt",
+            text: "Do 3 wall pushes",
+            image: { hash: "abc", mime: "image/png", ext: "png" },
+            size: "large",
+            align: "left",
+          },
+        ],
+      },
+    ],
+  });
+
+  const [block] = doc.sections[0].blocks;
+  assert.equal(block.size, "large");
+  assert.equal(block.align, "left");
 });
 
 test("buildDoc requires a VAKT activity, whatever else the block carries", () => {

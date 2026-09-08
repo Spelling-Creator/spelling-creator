@@ -16,6 +16,11 @@ export const IMAGE_SIZES = [
   { key: "full", label: "Full", scale: 1 },
 ];
 
+// Where an image sits across the width it doesn't fill. One list, so the editor
+// toggles, the importers and the MCP server all agree on what a valid alignment
+// is instead of each spelling out its own three strings.
+export const IMAGE_ALIGNS = ["left", "center", "right"];
+
 export const DEFAULT_IMAGE_SIZE = "full";
 export const DEFAULT_IMAGE_ALIGN = "center";
 

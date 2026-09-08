@@ -55,10 +55,23 @@ Two optional extras, both off by default:
 - **An image.** Use **Add image** to upload one or search
   [Pixabay or Wikimedia](./search-images.md). It's referenced by content hash
   exactly as an image block's is, so it resolves, uploads and exports through the
-  same path — and it prints centred at medium width, with no size or alignment
-  controls of its own. A VAKT picture illustrates the action rather than carrying
-  the lesson's content, so that's one fewer decision on a block whose whole point
-  is to be quick to write.
+  same path, and it's framed by the same **alignment** (left / centre / right)
+  and **size** (small / medium / large / full) toggles, which appear under the
+  picture once there is one.
+
+  The **defaults differ**: an image block starts full width, a VAKT picture
+  starts **medium and centred**. A VAKT picture illustrates the action rather
+  than carrying the lesson's content, so half width is the right starting point —
+  but an activity whose picture has to be read from across the room, or one that
+  should sit beside the text rather than under it, can say so. A picture whose
+  `size` or `align` is missing or unrecognised falls back to the VAKT defaults,
+  not to an image block's full width.
+
+  Framing describes the **lesson page** — the editor, the read-only view, and
+  what's printed. [Interactive mode](./interactive-mode.md) ignores it, for a
+  VAKT picture and an image block alike: there a picture is sized by the reading
+  column so it fills the width on a phone, which is the point of that view.
+
 - **Links.** Each is a `{ url, label? }` pair — a video to play, a song, a
   printable. The label is optional; a link without one shows its address. On screen they're real links, opening in a new tab. On paper, where
   a link can't be clicked, each prints as `Label — https://address` so the
@@ -73,12 +86,12 @@ progress never destroys what's in the field.
 
 ## Round trips
 
-| Path                   | What survives                                                                                                                                                     |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Export/Import JSON** | Every supported field, unchanged — the closest thing to a lossless round trip. The importer still drops an unsafe link and a block with no activity in it at all. |
-| **Export DOCX**        | The red (via a Word character style), the picture, and the links as real hyperlinks.                                                                              |
-| **Print PDF**          | The red, via that same character style — see below.                                                                                                               |
-| **Import DOCX**        | The activity, its picture and its links, read back off the `VAKT:` label.                                                                                         |
+| Path                   | What survives                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Export/Import JSON** | Every supported field, unchanged — the closest thing to a lossless round trip. The importer still drops an unsafe link and a block with no activity in it at all.                                                                                                                                                                                                                                        |
+| **Export DOCX**        | The red (via a Word character style), the picture at its own size and alignment, and the links as real hyperlinks.                                                                                                                                                                                                                                                                                       |
+| **Print PDF**          | The red, via that same character style — see below.                                                                                                                                                                                                                                                                                                                                                      |
+| **Import DOCX**        | The activity, its picture and its links, read back off the `VAKT:` label. The picture's framing is **not** recovered: it comes back at the VAKT defaults, medium and centred. An image block's is lost the same way — each lands on its own defaults — and for the same reason: mammoth hands back no paragraph alignment, and a printed width can't be told apart from a picture that was simply small. |
 
 The Word character style (`S2C VAKT`) exists for the same reason the question
 ones do: mammoth drops run colours, so the PDF path — which renders the docx as
@@ -99,3 +112,7 @@ section, **last** — after that section's questions — and a lesson with one
 somewhere else is flagged with a warning (never an error, since a break mid-section
 is a legitimate thing to want). See
 [Lesson validation](../mcp-server/lesson-validation.md).
+
+A block written there may also carry an `image` from `add_image`, with the same
+optional `size` and `align` an image block takes — left off, they land on the
+VAKT defaults above.

@@ -25,7 +25,13 @@ import {
 } from "../questions.js";
 import { SPELLING_LABEL } from "../spelling.js";
 import { isSafeLink } from "../richText.js";
-import { VAKT_LABEL, VAKT_LINK_JOINER, vaktHasContent } from "../vakt.js";
+import {
+  VAKT_DEFAULT_IMAGE_ALIGN,
+  VAKT_DEFAULT_IMAGE_SIZE,
+  VAKT_LABEL,
+  VAKT_LINK_JOINER,
+  vaktHasContent,
+} from "../vakt.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "../image.js";
 import { convertDocImages, resolveImageSrc } from "./imageRef.js";
 
@@ -408,6 +414,12 @@ function readVakt(nodes, i) {
     block.src = img.getAttribute("src");
     block.width = 0; // filled in by measureImages()
     block.height = 0;
+    // The framing starts at the VAKT defaults, the way an imported image block
+    // starts at the image defaults: mammoth gives us no paragraph alignment and
+    // a printed width can't be told apart from a picture that was simply small,
+    // so a size and alignment picked before the export can't be read back.
+    block.size = VAKT_DEFAULT_IMAGE_SIZE;
+    block.align = VAKT_DEFAULT_IMAGE_ALIGN;
     if (caption) {
       block.caption = caption;
       k += 1;

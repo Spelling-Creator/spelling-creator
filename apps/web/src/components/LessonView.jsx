@@ -33,8 +33,7 @@ import {
 } from "@spelling-creator/core/spelling";
 import {
   VAKT_COLOR,
-  VAKT_IMAGE_ALIGN,
-  VAKT_IMAGE_SIZE,
+  vaktImageBlock,
   vaktLinks,
   vaktText,
 } from "@spelling-creator/core/vakt";
@@ -253,16 +252,10 @@ function VaktBlock({ block }) {
       </p>
 
       {hasImage && (
-        // A VAKT picture illustrates the action rather than carrying the
-        // lesson's content, so it prints at the fixed VAKT size and centred —
-        // the block has no size or alignment controls of its own.
-        <ImageBlock
-          block={{
-            ...block,
-            size: VAKT_IMAGE_SIZE,
-            align: VAKT_IMAGE_ALIGN,
-          }}
-        />
+        // A VAKT picture is framed exactly as an image block's is, by the same
+        // component — vaktImageBlock only fills in the VAKT defaults for a block
+        // whose author never picked a size or an alignment.
+        <ImageBlock block={vaktImageBlock(block)} />
       )}
 
       {links.length > 0 && (

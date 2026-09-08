@@ -15,7 +15,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildDocument } from "./docxExport.js";
-import { VAKT_IMAGE_SIZE } from "../vakt.js";
+import { VAKT_DEFAULT_IMAGE_SIZE } from "../vakt.js";
 import { DOCX_MAX_IMAGE_WIDTH } from "../lessonLayout.js";
 import { imageSizeScale } from "../image.js";
 
@@ -56,9 +56,9 @@ describe("the embedded-picture list", () => {
     ]);
   });
 
-  it("records a VAKT picture at the fixed VAKT framing", async () => {
+  it("records an unframed VAKT picture at the VAKT defaults", async () => {
     // The block carries no size or alignment of its own, so the exporter prints
-    // it centred at the VAKT size and reports what it actually used.
+    // it centred at the VAKT default size and reports what it actually used.
     const embedded = await embeddedFor([
       {
         id: "b1",
@@ -74,10 +74,33 @@ describe("the embedded-picture list", () => {
     expect(embedded).toEqual([
       {
         width: Math.round(
-          DOCX_MAX_IMAGE_WIDTH * imageSizeScale(VAKT_IMAGE_SIZE),
+          DOCX_MAX_IMAGE_WIDTH * imageSizeScale(VAKT_DEFAULT_IMAGE_SIZE),
         ),
         align: "center",
         caption: "Wall push",
+      },
+    ]);
+  });
+
+  it("honours a VAKT picture's own size and alignment", async () => {
+    const embedded = await embeddedFor([
+      {
+        id: "b1",
+        type: "vakt",
+        text: "Do 3 wall pushes",
+        links: [],
+        src: PNG,
+        width: 2000,
+        height: 1000,
+        size: "small",
+        align: "left",
+      },
+    ]);
+    expect(embedded).toEqual([
+      {
+        width: Math.round(DOCX_MAX_IMAGE_WIDTH * imageSizeScale("small")),
+        align: "left",
+        caption: "",
       },
     ]);
   });

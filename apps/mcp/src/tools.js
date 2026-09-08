@@ -173,17 +173,23 @@ const blockSchema = z
       .string()
       .optional()
       .describe(
-        'For type "image": the caption shown under it. Keep the attribution add_image supplies.',
+        'For type "image" (and a "vakt" block carrying one): the caption shown under it. Keep ' +
+          "the attribution add_image supplies.",
       ),
     align: z
       .enum(["left", "center", "right"])
       .optional()
-      .describe('For type "image": horizontal alignment (default center).'),
+      .describe(
+        'For type "image" (and a "vakt" block carrying one): horizontal alignment. ' +
+          "Defaults to center either way.",
+      ),
     size: z
       .string()
       .optional()
       .describe(
-        'For type "image": display size key ("small", "medium", "large", or "full"; default full).',
+        'For type "image" (and a "vakt" block carrying one): display size key ("small", ' +
+          '"medium", "large", or "full"). Defaults to full on an image block and to medium on ' +
+          "a VAKT activity, whose picture illustrates the action rather than carrying the lesson.",
       ),
   })
   // Unknown keys survive the parse so validation can object to them by name.

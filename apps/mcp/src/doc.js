@@ -13,6 +13,7 @@
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
+import { IMAGE_ALIGNS } from "@spelling-creator/core/image";
 import { isSafeLink } from "@spelling-creator/core/richText";
 
 import { extFromMime } from "./images.js";
@@ -20,8 +21,6 @@ import { extFromMime } from "./images.js";
 export function newId() {
   return crypto.randomUUID();
 }
-
-const IMAGE_ALIGNS = ["left", "center", "right"];
 
 export const QUESTION_TYPES = [
   "number",
@@ -122,13 +121,17 @@ function buildVaktBlock(block, where) {
   const out = { id: newId(), type: "vakt", text, links };
 
   // The picture, in exactly an image block's shape and produced the same way —
-  // by add_image, never by hand.
+  // by add_image, never by hand. Its framing comes through too: a VAKT picture
+  // takes the same "size" and "align" an image block does, only defaulting
+  // smaller when neither is given (see core/vakt.js).
   if (block.image) {
     const image = buildImageBlock(block, where);
     out.image = image.image;
     if (image.width != null) out.width = image.width;
     if (image.height != null) out.height = image.height;
     if (image.caption != null) out.caption = image.caption;
+    if (image.align != null) out.align = image.align;
+    if (image.size != null) out.size = image.size;
   }
 
   return out;

@@ -28,6 +28,7 @@ import IconActionButton from "./IconActionButton.jsx";
 import {
   fitWithin,
   imageSizeScale,
+  IMAGE_ALIGNS,
   IMAGE_SIZES,
   DEFAULT_IMAGE_SIZE,
   DEFAULT_IMAGE_ALIGN,
@@ -41,6 +42,8 @@ import {
   VAKT_COLOR,
   VAKT_LABEL,
   createVaktLink,
+  vaktImageAlign,
+  vaktImageSize,
 } from "@spelling-creator/core/vakt";
 
 // Every block is content + a stack of controls (drag/move/delete, plus a couple
@@ -191,6 +194,73 @@ function ContentBlock({
   );
 }
 
+// How each alignment is offered: its icon and its label, keyed by the value it
+// writes. A record rather than three hand-written items, so the toggles are
+// driven by the same IMAGE_ALIGNS the importers and the MCP server validate
+// against — the way the size toggles are driven by IMAGE_SIZES — and the editor
+// can't end up offering a different set from the one that's accepted. The
+// translation keys are written out in full rather than built from the value, so
+// they can still be found by searching for them.
+const ALIGN_CONTROLS = {
+  left: { Icon: AlignLeftIcon, labelKey: "contentBlock.image.alignLeft" },
+  center: { Icon: AlignCenterIcon, labelKey: "contentBlock.image.alignCenter" },
+  right: { Icon: AlignRightIcon, labelKey: "contentBlock.image.alignRight" },
+};
+
+// The alignment and size toggles that frame a picture. Shared by the image block
+// and the VAKT activity's optional picture: the two differ in what they default
+// to (see core/vakt.js), not in what an author can pick, so they offer the same
+// three alignments and the same four sizes from the same controls.
+function ImageFramingControls({ align, size, onChange }) {
+  const { t } = useTranslation("editorSections");
+  return (
+    <>
+      <ToggleGroup
+        type="single"
+        size="sm"
+        value={align}
+        onValueChange={(next) => next && onChange({ align: next })}
+        aria-label={t("contentBlock.image.alignmentAriaLabel")}
+        className={TOUCH_TOGGLES}
+      >
+        {IMAGE_ALIGNS.map((value) => {
+          // An alignment core has gained but this file hasn't been given an icon
+          // for yet: leave it out rather than crash the editor over it.
+          const control = ALIGN_CONTROLS[value];
+          if (!control) return null;
+          const { Icon, labelKey } = control;
+          return (
+            <ToggleGroupItem key={value} value={value} aria-label={t(labelKey)}>
+              <Icon />
+            </ToggleGroupItem>
+          );
+        })}
+      </ToggleGroup>
+      <ToggleGroup
+        type="single"
+        size="sm"
+        value={size}
+        onValueChange={(next) => next && onChange({ size: next })}
+        aria-label={t("contentBlock.image.sizeAriaLabel")}
+        className={TOUCH_TOGGLES}
+      >
+        {IMAGE_SIZES.map((s) => (
+          <ToggleGroupItem key={s.key} value={s.key}>
+            {s.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </>
+  );
+}
+
+// The preview image is display:block, so margins decide its alignment.
+function previewMargin(align) {
+  if (align === "left") return "0 auto 0 0";
+  if (align === "right") return "0 0 0 auto";
+  return "0 auto";
+}
+
 // Image blocks reference their bytes by content hash; useImageSrc resolves that
 // to a usable URL (a local blob URL, or the public R2 URL once uploaded). It's
 // its own component so the hook is always called for an image block, never
@@ -220,13 +290,7 @@ function ImageBlock({
     block.height,
     360 * imageSizeScale(size),
   );
-  // The preview image is display:block, so margins decide its alignment.
-  const imgMargin =
-    align === "left"
-      ? "0 auto 0 0"
-      : align === "right"
-        ? "0 0 0 auto"
-        : "0 auto";
+  const imgMargin = previewMargin(align);
   return (
     <div className="rounded-md border border-border bg-card p-4 text-card-foreground">
       <div className={cn(BLOCK_LAYOUT, "sm:justify-between")}>
@@ -254,51 +318,11 @@ function ImageBlock({
             />
           )}
           <div className="mb-3 flex flex-wrap items-center gap-3">
-            <ToggleGroup
-              type="single"
-              size="sm"
-              value={align}
-              onValueChange={(next) =>
-                next && onChange({ ...block, align: next })
-              }
-              aria-label={t("contentBlock.image.alignmentAriaLabel")}
-              className={TOUCH_TOGGLES}
-            >
-              <ToggleGroupItem
-                value="left"
-                aria-label={t("contentBlock.image.alignLeft")}
-              >
-                <AlignLeftIcon />
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="center"
-                aria-label={t("contentBlock.image.alignCenter")}
-              >
-                <AlignCenterIcon />
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="right"
-                aria-label={t("contentBlock.image.alignRight")}
-              >
-                <AlignRightIcon />
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <ToggleGroup
-              type="single"
-              size="sm"
-              value={size}
-              onValueChange={(next) =>
-                next && onChange({ ...block, size: next })
-              }
-              aria-label={t("contentBlock.image.sizeAriaLabel")}
-              className={TOUCH_TOGGLES}
-            >
-              {IMAGE_SIZES.map((s) => (
-                <ToggleGroupItem key={s.key} value={s.key}>
-                  {s.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            <ImageFramingControls
+              align={align}
+              size={size}
+              onChange={(patch) => onChange({ ...block, ...patch })}
+            />
             {canReplace && (
               <>
                 <DropdownMenu>
@@ -400,14 +424,25 @@ function VaktBlock({
   };
 
   // Drop the picture and everything that described it, so a block that no longer
-  // has an image doesn't keep a stale caption or aspect ratio around.
+  // has an image doesn't keep a stale caption, aspect ratio or framing around.
   const removeImage = () => {
-    const { image, src: legacySrc, width, height, caption, ...rest } = block;
+    const {
+      image,
+      src: legacySrc,
+      width,
+      height,
+      caption,
+      size,
+      align,
+      ...rest
+    } = block;
     void image;
     void legacySrc;
     void width;
     void height;
     void caption;
+    void size;
+    void align;
     onChange(rest);
   };
 
@@ -423,7 +458,17 @@ function VaktBlock({
   const removeLink = (id) =>
     onChange({ ...block, links: links.filter((l) => l.id !== id) });
 
-  const preview = fitWithin(block.width, block.height, 240);
+  // The picture's framing, defaulted the way every renderer defaults it (medium
+  // and centred, rather than the image block's full width) so the editor preview
+  // matches the printed lesson before anything is picked.
+  const align = vaktImageAlign(block);
+  const size = vaktImageSize(block);
+  const preview = fitWithin(
+    block.width,
+    block.height,
+    360 * imageSizeScale(size),
+  );
+  const imgMargin = previewMargin(align);
 
   return (
     <div
@@ -471,7 +516,11 @@ function VaktBlock({
                   src={src}
                   alt={block.caption || t("contentBlock.vakt.imageAlt")}
                   className="block max-w-full rounded-md border border-border"
-                  style={{ width: preview.width, height: "auto" }}
+                  style={{
+                    width: preview.width,
+                    height: "auto",
+                    margin: imgMargin,
+                  }}
                 />
               ) : (
                 <div
@@ -480,9 +529,17 @@ function VaktBlock({
                     width: preview.width,
                     maxWidth: "100%",
                     height: preview.height,
+                    margin: imgMargin,
                   }}
                 />
               )}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <ImageFramingControls
+                  align={align}
+                  size={size}
+                  onChange={(patch) => onChange({ ...block, ...patch })}
+                />
+              </div>
               <Field className="mt-2">
                 <FieldLabel htmlFor={`${block.id}-vakt-caption`}>
                   {t("contentBlock.vakt.captionLabel")}
