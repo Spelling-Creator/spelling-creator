@@ -334,4 +334,5 @@ The full schema, with the reasoning in comments, is `apps/api/schema.sql`.
 | `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough.                                                      |
 | `apps/web/src/components/MyLessonAnswers.jsx`      | The private "Your answers" panel on the lesson page.                              |
 | `apps/web/src/pages/lesson/LessonLayout.jsx`       | Start vs. **Continue lesson** on the lesson page's button.                        |
-| `apps/web/src/lib/useSpeech.js`                    | Web Speech API wrapper, preferences, and the platform workarounds.                |
+| `apps/web/src/lib/useSpeech.js`                    | Web Speech API wrapper: speaking, and the two platform quirks it owns.            |
+| `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice list, shared with the settings page.         |
