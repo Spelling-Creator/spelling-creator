@@ -4,6 +4,11 @@ name: Deploy to Cloudflare
 # prerenders pages for crawlers with Browser Rendering. So a deploy builds the
 # web app and the VitePress docs (into apps/web/dist/docs), then `wrangler
 # deploy` uploads the Worker together with apps/web/dist.
+#
+# That happens in two jobs. `build` lints and builds, and hands apps/web/dist and
+# apps/web/dist-ssr to `deploy` as an artifact. `deploy` is the only job that
+# reads the Cloudflare token, so none of the build tooling runs with it in
+# reach, and a failed deploy can be re-run on its own without rebuilding.
 on:
   push:
     paths:
@@ -24,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -55,7 +60,6 @@ jobs:
           test -n "${{ secrets.VITE_GOOGLE_CLIENT_ID }}" && echo "google cloud ok"
           test -n "${{ secrets.VITE_SUPABASE_URL }}" && echo "supabase url ok"
           test -n "${{ secrets.VITE_SUPABASE_ANON_KEY }}" && echo "supabase anon key ok"
-          test -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" && echo "cloudflare token ok"
 
       - name: Inject env vars
         run: |
@@ -76,6 +80,56 @@ jobs:
       # web build because Vite empties apps/web/dist on each build.
       - name: Build docs
         run: pnpm --filter @spelling-creator/docs build
+
+      # dist is the static assets bundle (docs included); dist-ssr is the server
+      # renderer that apps/api/src/routes/ssr.js imports, so the Worker can't be
+      # bundled without it. Hidden files are included so the artifact is an exact
+      # copy of the build even if something like a .well-known/ file lands in it.
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-build
+          path: |
+            apps/web/dist
+            apps/web/dist-ssr
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      # Wrangler bundles apps/api from source at deploy time, so the Worker's
+      # dependencies (and wrangler itself) are still needed here.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Debug env
+        run: test -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" && echo "cloudflare token ok"
+
+      # The artifact's root is apps/web (the common parent of both paths), so
+      # this restores apps/web/dist and apps/web/dist-ssr.
+      - name: Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: apps/web
 
       # Deploys the Worker (apps/api) which bundles apps/web/dist as static
       # assets via the `assets` config in wrangler.jsonc.
