@@ -36,3 +36,7 @@ PLEASE, PLEASE do not use a package that is old or deprecated. EVEN IF IT IS "IN
 ## Try to avoid spinners
 
 When applicable, try to use `shadcn` skeletons instead of spinners.
+
+## Keep things human
+
+Do no use em dashes or other special symbols not normally found in writing. Do not word things in a weird way. Keep it looking human. If you need to use, for example, an arrow icon, use an SVG instead.
