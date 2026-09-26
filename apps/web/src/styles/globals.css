@@ -68,21 +68,6 @@
      them, not as editorial copy. */
   --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Fraunces", ui-serif, Georgia, serif;
-
-  /* The app sidebar's own colour family (ui/sidebar.jsx draws from these and
-     nothing else). It's a separate family from --card because the sidebar is
-     chrome, not content: it sits beside the scrolling page rather than on it,
-     so it can be more opaque than a card without the page's own surfaces
-     losing their glass. The values are defined alongside every other token in
-     the four theme blocks below. */
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 /* This app's only addition to Tailwind's preflight: the default border-color
@@ -177,21 +162,29 @@
   --radius-tile: 0.375rem; /* 6px */
   --radius-pill: 999px;
 
-  /* AppHeader's height, published as a token so anything that has to sit clear
-     of the sticky bar references it instead of restating 64px.
+  /* The chrome's heights, published as tokens so anything that has to sit
+     clear of a sticky bar references them instead of restating pixels.
 
-     --header-row-h is the bar itself (AppHeader applies it as h-(--header-row-h),
-     so this is the single source of truth). --header-h adds the iOS status-bar
-     inset the header pads itself by when the app runs installed — it's the real
-     distance from the top of the viewport to the first pixel of page content,
-     and it's what the editor's sticky section headers pin to and what
-     scroll-mt-(--header-h) offsets a scrolled-to element by. */
+     --header-row-h is AppHeader's row (it applies it as h-(--header-row-h), so
+     this is the single source of truth); --pagebar-row-h is PageBar's, the
+     contextual crumbs-and-actions bar the lesson pages and the editor pin
+     beneath it. --appheader-h adds the iOS status-bar inset the header pads
+     itself by when the app runs installed — it's where PageBar pins its top.
+
+     --header-h is the total: the real distance from the top of the viewport to
+     the first pixel of page content on a page that has a PageBar — which is
+     every page that pins something to it. It's what the editor's sticky
+     section headers and the lesson's tab bar pin to, and what
+     scroll-mt-(--header-h) offsets a scrolled-to element by. (Pages without a
+     PageBar have nothing sticky below the header, so nothing there reads it.) */
   --header-row-h: 4rem;
-  --header-h: calc(var(--header-row-h) + env(safe-area-inset-top));
+  --pagebar-row-h: 3rem;
+  --appheader-h: calc(var(--header-row-h) + env(safe-area-inset-top));
+  --header-h: calc(var(--appheader-h) + var(--pagebar-row-h));
 
   /* THE LIGHT PALETTE. Three surfaces, in the order the eye should read them:
      the page is a tinted well (--background), content boxes are white on top of
-     it (--card), and the app's chrome — sidebar and top bar — is white too,
+     it (--card), and the app's chrome — the header and page bars — is white too,
      separated from the well by a border rather than by a tint.
 
      Every one of these used to be translucent, and that is the change. --border
@@ -247,15 +240,6 @@
      --shadow-tile went with them — it was already unreferenced. */
   --shadow-panel:
     0 8px 24px -6px rgba(30, 34, 70, 0.18), 0 2px 6px rgba(30, 34, 70, 0.08);
-
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1e2138;
-  --sidebar-primary: #4f5fd9;
-  --sidebar-primary-foreground: #f2f3ff;
-  --sidebar-accent: #eceffc;
-  --sidebar-accent-foreground: #4f5fd9;
-  --sidebar-border: #d5daed;
-  --sidebar-ring: #4f5fd9;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -264,7 +248,7 @@
 
     /* THE DARK PALETTE — the same three surfaces as light, and the same reason
        for each. The page well is the darkest thing on screen, content boxes are
-       lifted above it, and the chrome sits between the two so the sidebar reads
+       lifted above it, and the chrome sits between the two so the header reads
        as the frame rather than as another panel.
 
        Dark is where the old translucency hurt most: --card at 58% over a
@@ -302,15 +286,6 @@
 
     --shadow-panel:
       0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
-
-    --sidebar: #12131f;
-    --sidebar-foreground: #eef0fb;
-    --sidebar-primary: #5b64dd;
-    --sidebar-primary-foreground: #f4f5ff;
-    --sidebar-accent: #222541;
-    --sidebar-accent-foreground: #8891f2;
-    --sidebar-border: #2c3050;
-    --sidebar-ring: #5b64dd;
   }
 }
 
@@ -351,15 +326,6 @@
 
   --shadow-panel:
     0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
-
-  --sidebar: #12131f;
-  --sidebar-foreground: #eef0fb;
-  --sidebar-primary: #5b64dd;
-  --sidebar-primary-foreground: #f4f5ff;
-  --sidebar-accent: #222541;
-  --sidebar-accent-foreground: #8891f2;
-  --sidebar-border: #2c3050;
-  --sidebar-ring: #5b64dd;
 }
 
 :root[data-theme="light"] {
@@ -398,15 +364,6 @@
 
   --shadow-panel:
     0 8px 24px -6px rgba(30, 34, 70, 0.18), 0 2px 6px rgba(30, 34, 70, 0.08);
-
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1e2138;
-  --sidebar-primary: #4f5fd9;
-  --sidebar-primary-foreground: #f2f3ff;
-  --sidebar-accent: #eceffc;
-  --sidebar-accent-foreground: #4f5fd9;
-  --sidebar-border: #d5daed;
-  --sidebar-ring: #4f5fd9;
 }
 
 /* Shared spacing for rendered rich text — both the live tiptap editor

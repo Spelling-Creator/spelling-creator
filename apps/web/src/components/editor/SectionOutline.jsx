@@ -21,8 +21,9 @@
 // outline of its own otherwise; this is that outline, not a copy of it.
 //
 // It appears once the editor's page column passes 52rem — AppShell's
-// @container/page, not the viewport, so collapsing the sidebar can bring it in
-// without the window changing size. Below that the editor is a single column
+// @container/page, not the viewport, so anything that ever narrows the page
+// column takes it away without the window changing size. Below that the editor
+// is a single column
 // and the outline would be spending width the document needs; "collapse all"
 // (the cheap way to see a lesson's shape on any screen) therefore stays on the
 // document panel as well as in this header.

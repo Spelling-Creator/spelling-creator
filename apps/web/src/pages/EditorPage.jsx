@@ -163,10 +163,15 @@ const SPRING_OPEN_MS = 500;
 // is still below the app bar. Used to keep the user's place across a
 // collapse-all / expand-all, which changes the page height by ~20x.
 function currentSectionEl() {
-  // Measured off the bar itself rather than read from --header-h, which is a
-  // calc() with an env() in it and doesn't resolve to a bare number.
-  const top =
-    document.querySelector("header")?.getBoundingClientRect().bottom ?? 0;
+  // Measured off the sticky bars themselves rather than read from --header-h,
+  // which is a calc() with an env() in it and doesn't resolve to a bare
+  // number. The chrome is two <header>s (AppHeader, then the editor's PageBar
+  // pinned beneath it), so the lowest bottom is its real edge; `.sticky`
+  // excludes in-content headers like the practice view's.
+  let top = 0;
+  for (const bar of document.querySelectorAll("header.sticky")) {
+    top = Math.max(top, bar.getBoundingClientRect().bottom);
+  }
   for (const el of document.querySelectorAll("[data-section-id]")) {
     if (el.getBoundingClientRect().bottom > top) return el;
   }
@@ -790,8 +795,8 @@ export default function EditorPage() {
     [localId, refreshLocalLessons],
   );
 
-  // Deep links into the library: the sidebar lists the lessons on this device
-  // and links here with ?local=<id>, and its "New lesson" button with ?new=1.
+  // Deep links into the library: the header links here with ?local=<id> for a
+  // lesson on this device, and its "New lesson" button with ?new=1.
   // The editor is already mounted when either is followed from another page, so
   // a param is what carries the intent across; it's stripped as soon as it's
   // read, which is also what stops this from firing twice.
@@ -2707,13 +2712,11 @@ export default function EditorPage() {
           cannot drift from itself.)
 
           "Room" is measured against AppShell's @container/page, not the
-          viewport, and that distinction is what lets the editor use the same
-          sidebar as every other page. The sidebar is 16rem open and 3rem
-          collapsed, so the space the editor actually has is not a function of
-          the window's width; keyed off the container, collapsing the sidebar
-          hands the panes its 13rem the instant you do it. The editor used to
-          get its own permanently-collapsed sidebar to dodge this, which bought
-          the room at the price of the app having two different sidebars.
+          viewport. The distinction dates from the sidebar era, when the page
+          column was 13rem narrower or wider depending on a collapse toggle;
+          with the sidebar gone the two agree, but the keys stay written
+          against the container so anything that narrows the column again
+          costs nothing here.
 
           `items-start` so each pane scrolls with the page and the sticky
           columns inside them can pin.
@@ -2747,8 +2750,8 @@ export default function EditorPage() {
 
             flex-1 and nothing else. The document takes whatever the outline
             leaves, which is the only description of this column that stays true
-            as the window and the sidebar change. It has been through two
-            narrower ideas, and both showed up as empty page:
+            as the window changes. It has been through two narrower ideas, and
+            both showed up as empty page:
 
               - `reading` (48rem), inherited from the rest of the app. A section
                 card is not prose — it is a form, with a header row of controls,

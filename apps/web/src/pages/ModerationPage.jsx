@@ -18,7 +18,6 @@ import {
   PASSWORD_MIN_LENGTH,
 } from "@spelling-creator/core/config";
 import { Trash2Icon, XIcon, TriangleAlertIcon } from "lucide-react";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Badge } from "../components/ui/badge.jsx";
@@ -614,14 +613,10 @@ export default function ModerationPage() {
 
   return (
     <>
-      <PageBar
-        crumbs={[
-          { label: t("page.lessonHub"), to: "/hub" },
-          { label: t("page.title") },
-        ]}
-      />
-
       <PageBody width="reading">
+        <h1 className="mb-4 text-2xl font-bold md:text-3xl">
+          {t("page.title")}
+        </h1>
         {resolvingAuth ? (
           <div className="flex justify-center py-16">
             <Spinner className="size-8" />

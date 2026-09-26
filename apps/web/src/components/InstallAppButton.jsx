@@ -5,12 +5,12 @@
 // On Chromium it calls the deferred prompt directly. On iOS there is no API, so
 // it opens a dialog spelling out the two taps instead.
 //
-// Two callers, and `label` is what separates them: the sidebar's footer row
-// (AppSidebar.jsx) wants an icon in a 36px square alongside the theme toggle and
-// the notification bell, and leans on the tooltip to say what it is; the
-// settings page (SettingsPage.jsx) has room for words and wants a button that
-// reads as one. A tooltip restating a visible label is noise, so it's dropped
-// where the label is shown.
+// Two callers, and `label` is what separates them: the header's utility
+// cluster (AppHeader.jsx) wants an icon in a 36px square alongside the theme
+// toggle and the notification bell, and leans on the tooltip to say what it is;
+// the settings page (SettingsPage.jsx) has room for words and wants a button
+// that reads as one. A tooltip restating a visible label is noise, so it's
+// dropped where the label is shown.
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,7 +29,7 @@ import {
  * @param {object} props
  * @param {string} props.className  The caller's trigger styling. This button
  *                                  sits on surfaces that don't share a token set
- *                                  (the sidebar footer, a settings card), so it
+ *                                  (the header, a settings card), so it
  *                                  doesn't style itself.
  * @param {string} [props.label]    Visible button text. Omit for the icon-only
  *                                  form, which explains itself with a tooltip.

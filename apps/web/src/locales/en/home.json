@@ -3,10 +3,6 @@
     "title": "Home",
     "description": "Create, share and print Spelling lessons with a focused editor, AI help, images and live collaboration."
   },
-  "header": {
-    "title": "Spelling Creator",
-    "editor": "Editor"
-  },
   "marketing": {
     "hero": {
       "title": "Spelling lessons that stick",
@@ -57,6 +53,11 @@
     "subtitle": "Pick up where you left off, or start something new.",
     "newLesson": "New lesson",
     "hub": "Hub",
+    "yourLessons": {
+      "title": "Your lessons",
+      "empty": "Nothing here yet. Your first lesson is one click away.",
+      "seeAll": "See all {{count}} in the hub"
+    },
     "untitled": "Untitled",
     "latestFromHub": {
       "title": "Latest from the hub",

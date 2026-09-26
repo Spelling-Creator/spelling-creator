@@ -1,7 +1,6 @@
 {
   "page": {
     "title": "Moderation",
-    "lessonHub": "Lesson hub",
     "signInPrompt": "Please sign in to access moderation tools.",
     "signIn": "Sign in",
     "noAccess": "You don't have moderation access.",

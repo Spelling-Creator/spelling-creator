@@ -9,9 +9,7 @@
 //
 // There are two widths, and the difference between them is real:
 //
-//   wide     — listings, dashboards, and a lesson with its side rail. 64rem,
-//              which is also what fits beside the expanded sidebar on a 1280px
-//              screen without the page starting to scroll sideways.
+//   wide     — listings, dashboards, and a lesson with its side rail. 64rem.
 //   reading  — prose people actually read or write: comments, a proposal's
 //              description, a commit list. 48rem, because a line of text set to
 //              the full width of a desktop screen is harder to read, not

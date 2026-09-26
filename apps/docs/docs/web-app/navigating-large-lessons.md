@@ -42,15 +42,17 @@ any sticky list does.
 
 Two details make it work:
 
-- **It pins to `--header-h`, not to `0`.** `globals.css` publishes the app bar's
-  height as a pair of tokens: `--header-row-h` (the bar itself — `PageBar`
-  applies it as `h-(--header-row-h)`, so it's the single source of truth) and
-  `--header-h`, which adds `env(safe-area-inset-top)` for the
-  [installed app](./pwa-and-offline.md), where the header pads itself by the iOS
-  status bar. `--header-h` is the real distance from the top of the viewport to
-  the first pixel of page content. Use it for anything that has to sit clear of
-  the bar, including `scroll-mt-(--header-h)` on anything scrolled to
-  programmatically.
+- **It pins to `--header-h`, not to `0`.** `globals.css` publishes the chrome's
+  heights as tokens: `--header-row-h` (`AppHeader`'s row) and `--pagebar-row-h`
+  (`PageBar`'s — each bar applies its own as `h-(...)`, so the tokens are the
+  single source of truth), `--appheader-h` (the header plus
+  `env(safe-area-inset-top)` for the [installed app](./pwa-and-offline.md),
+  where the header pads itself by the iOS status bar — it's where `PageBar` pins
+  its top), and `--header-h`, the sum of all of it: the real distance from the
+  top of the viewport to the first pixel of page content on a page with a
+  `PageBar`, which is every page that pins anything. Use it for whatever has to
+  sit clear of the chrome, including `scroll-mt-(--header-h)` on anything
+  scrolled to programmatically.
 - **The row bleeds out of the card's padding.** It lives inside `SectionCard`'s
   `p-4`, so it carries `-mx-4 -mt-4 px-4 pt-4` to reach the card's edges;
   otherwise blocks would scroll visibly through the gap beside it. It takes
@@ -289,8 +291,8 @@ Three deliberate limits:
   `scroll-mt-(--header-h)` to land clear of the bar, rather than computing an
   offset of its own.
 - **It appears at 52rem of _page column_, not of viewport.** The measurement is
-  against `AppShell`'s `@container/page`, so collapsing the sidebar can bring
-  the outline in without the window changing size — see
+  against `AppShell`'s `@container/page`, so anything that ever narrows the page
+  column takes the outline away without the window changing size — see
   [Laying out against the container](./pages-and-routing.md#laying-out-against-the-container).
   Below that threshold the editor is a single column and the outline would be
   spending width the document needs. **Collapse all**, which is the cheap way to

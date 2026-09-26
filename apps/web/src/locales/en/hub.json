@@ -4,9 +4,7 @@
     "description": "Browse and copy community-made spelling lessons, then print or export them."
   },
   "header": {
-    "title": "Lesson hub",
-    "editorLabel": "Editor",
-    "editorAria": "editor"
+    "title": "Lesson hub"
   },
   "card": {
     "editDraftTooltip": "Edit this draft",

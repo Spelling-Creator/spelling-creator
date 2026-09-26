@@ -11,8 +11,8 @@
 // It also finishes two controls that were only half-exposed:
 //
 //   Theme. lib/colorScheme.jsx has always supported "system", but the only UI
-//   was the sidebar's light/dark toggle — so once you touched it there was no
-//   way back to following the OS. The three-way choice lives here; the sidebar
+//   was the header's light/dark toggle — so once you touched it there was no
+//   way back to following the OS. The three-way choice lives here; the header
 //   keeps its toggle, which is a one-click convenience rather than the whole
 //   control.
 //
@@ -37,7 +37,6 @@ import {
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import { Button, buttonVariants } from "../components/ui/button.jsx";
 import {
@@ -447,12 +446,14 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageBar crumbs={[{ label: t("title") }]} />
       {/* "reading", not the default "wide": this is a stack of one label and one
           control each, and at 64rem a row leaves its label stranded a long way
           from the thing it names. */}
       <PageBody width="reading">
-        <p className="mb-6 text-sm text-muted-foreground">{t("subtitle")}</p>
+        <h1 className="text-2xl font-bold md:text-3xl">{t("title")}</h1>
+        <p className="mt-1 mb-6 text-sm text-muted-foreground">
+          {t("subtitle")}
+        </p>
         <div className="flex flex-col gap-6">
           <AppearanceSection />
           <LanguageSection />

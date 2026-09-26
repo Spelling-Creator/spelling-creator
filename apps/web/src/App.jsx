@@ -1,10 +1,10 @@
 // App shell — defines the client-side routes.
 //
 // Every page of the app renders inside one layout route, `AppShell`, which is
-// what makes the chrome identical everywhere: the same sidebar, at the same
-// width, collapsing the same way and remembering the same state, on the
-// homepage and the editor and everything between. Pages describe only their own
-// body, and use PageBody for its column so the columns line up too.
+// what makes the chrome identical everywhere: the same header, with the same
+// navigation, on the homepage and the editor and everything between. Pages
+// describe only their own body, and use PageBody for its column so the columns
+// line up too.
 //
 // There is exactly one exception, and it is deliberate rather than left over:
 //
@@ -59,13 +59,11 @@ const OAuthAuthorizePage = lazy(() => import("./pages/OAuthAuthorizePage.jsx"));
 // Shown while a lazy route's chunk is in flight. A skeleton, not a spinner, per
 // the project's UI convention.
 //
-// This one renders *no chrome at all*, and that is a correctness requirement
-// rather than a style choice. This Suspense boundary sits above the layout
-// route, so React unwinds past AppShell to reach it — which means anything here
-// renders with no SidebarProvider above it, and PageBar would throw from
-// SidebarTrigger's useSidebar(). In practice it is almost never seen: AppShell
-// has a boundary of its own, so a lazy page inside the shell keeps the sidebar
-// and the page bar on screen and only its body is replaced.
+// This one renders no chrome: this Suspense boundary sits above the layout
+// route, so React unwinds past AppShell to reach it, taking the header with
+// it. In practice it is almost never seen — AppShell has a boundary of its
+// own, so a lazy page inside the shell keeps the header on screen and only its
+// body is replaced.
 function RouteFallback() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pt-6 pb-16">

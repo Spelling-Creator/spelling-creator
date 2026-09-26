@@ -1,24 +1,23 @@
-// The sticky bar at the top of every page inside AppShell. It replaces
-// AppHeader, and it is deliberately much less than AppHeader was.
+// The contextual bar under AppHeader: where you are, and what you can do here.
 //
-// The old bar was the app's --primary surface: a block of indigo carrying the
-// page title *and* the whole of the app's navigation. Now that AppSidebar holds
-// the navigation, a second heavy surface would just compete with it — two
-// things both claiming to be the app's chrome. So this one sits on the page
-// background, keeps only the glass blur, and carries three things: the sidebar
-// toggle, where you are, and what you can do here.
+// It used to be the app's whole top bar (with the sidebar toggle on its left),
+// and every page rendered one even when its crumb just restated the page's own
+// title. Now that AppHeader carries the app-level chrome, this bar appears only
+// where it earns its row: pages that are *inside* something — a lesson under
+// the hub, a document in the editor — and that carry page-level actions. Plain
+// pages (home, hub, settings…) put their title in their body instead.
 //
-// Height still comes from --header-row-h / --header-h in globals.css, which
-// remain the single source of truth — the editor's sticky section headers pin
-// to them and anything scrolled to programmatically offsets by them. See
+// It pins directly beneath the header, on the same --card surface, so the two
+// read as one piece of chrome. Heights come from --pagebar-row-h / --header-h
+// in globals.css, which remain the single source of truth — the editor's
+// sticky section headers and the lesson's tab bar pin to --header-h (header +
+// this bar) and anything scrolled to programmatically offsets by it. See
 // docs/web-app/navigating-large-lessons.md.
 
 import { Fragment } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { ChevronRightIcon } from "lucide-react";
 import { cn } from "../../lib/utils.js";
-import { SidebarTrigger } from "../ui/sidebar.jsx";
-import { Separator } from "../ui/separator.jsx";
 
 /**
  * @param {object} props
@@ -32,22 +31,11 @@ export default function PageBar({ crumbs = [], children }) {
   const last = crumbs.length - 1;
 
   return (
-    // pt-safe keeps the contents clear of the iOS status bar when the app runs
-    // installed, where the page reaches the very top of the screen. It resolves
-    // to 0 in a browser tab — see globals.css.
-    // bg-card, and opaque: this bar is the app's chrome, so it takes the same
-    // white as the sidebar beside it and the page's tinted well starts below
-    // it. It used to be bg-background/80 over a backdrop-blur, which was the
-    // only way a translucent bar could stay readable with content scrolling
-    // under it — an opaque one needs neither.
-    <header className="sticky top-0 z-40 border-b border-border bg-card pt-safe">
-      <div className="flex h-(--header-row-h) items-center gap-1 px-3 sm:px-4">
-        <SidebarTrigger className="shrink-0" />
-        <Separator
-          orientation="vertical"
-          className="mr-1 ml-0.5 data-[orientation=vertical]:h-5"
-        />
-
+    // top-(--appheader-h) rather than top-0: the bar pins under AppHeader,
+    // which already pads itself by the iOS status-bar inset, so this needs no
+    // pt-safe of its own.
+    <header className="sticky top-(--appheader-h) z-40 border-b border-border bg-card">
+      <div className="flex h-(--pagebar-row-h) items-center gap-1 px-3 sm:px-4">
         <nav className="flex min-w-0 flex-1 items-center gap-1 text-sm">
           {crumbs.map((crumb, i) => (
             <Fragment key={`${crumb.label}-${i}`}>

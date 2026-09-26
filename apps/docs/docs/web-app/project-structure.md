@@ -28,16 +28,16 @@ src/
       LessonHistory.jsx   the published commit timeline, read out of the lesson's packfile (lazy — it loads the git engine)
   components/
     layout/
-      AppShell.jsx        the one layout route every page sits in: SidebarProvider + AppSidebar + the page. Takes no configuration — one sidebar, one width, one persisted state. Publishes @container/page
-      AppSidebar.jsx      the app's navigation, the account/theme/notification cluster, and your own lessons
-      PageBar.jsx         the slim sticky bar: sidebar toggle + breadcrumb + the page's own actions
+      AppShell.jsx        the one layout route every page sits in: AppHeader + the page. Takes no configuration. Publishes @container/page
+      AppHeader.jsx       the app's chrome: nav links (a sheet below md), New lesson, and the install/theme/settings/notification/account cluster
+      PageBar.jsx         the contextual bar pinned under the header on lesson pages and in the editor: breadcrumb + the page's own actions
       PageBody.jsx        the content column, in two documented widths (wide / reading). Exports PAGE_WIDTHS for the two things that need the width but can't be the column
       EditorShell.jsx     the editor's nested routes behind one lazy import; mounts no chrome of its own
     editor/
       SectionOutline.jsx  the editor's left-hand section list (52rem+ of page column) — jump to a section, collapse them all; `readOnly` reuses it beside the preview
       LessonPreview.jsx   what the editor's document column holds while Preview is on — the eyebrow, the narrow-screen exit, and LessonView in a panel frame
-    InstallAppButton.jsx  the "install app" button in the sidebar footer; renders nothing unless the app is installable (see pwa-and-offline.md)
-    NotificationBell.jsx  sidebar bell that polls for and shows the user's notifications
+    InstallAppButton.jsx  the "install app" button in the header's utility cluster; renders nothing unless the app is installable (see pwa-and-offline.md)
+    NotificationBell.jsx  header bell that polls for and shows the user's notifications
     DisplayNameGate.jsx   makes a signed-in user pick a display name before using the app
     DisplayNameDialog.jsx pick / change your public display name
     BioDialog.jsx         edit your public profile bio (rich text)

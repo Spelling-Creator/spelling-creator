@@ -19,7 +19,6 @@ import {
   UserPlusIcon,
   XIcon,
 } from "lucide-react";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import BioDialog from "../components/BioDialog.jsx";
 import FollowListDialog from "../components/FollowListDialog.jsx";
@@ -206,15 +205,9 @@ export default function ProfilePage() {
             : undefined
         }
       />
-      {/* The trail names the person rather than repeating "Profile", which the
-          old bar did — the page is already obviously a profile. */}
-      <PageBar
-        crumbs={[
-          { label: t("profilePage.lessonHubLink"), to: "/hub" },
-          { label: displayName || t("profilePage.headerTitle") },
-        ]}
-      />
-
+      {/* No PageBar: the body's own header (avatar, name, counts) is the page
+          title, and a crumb restating the name above it was the bar's whole
+          content. */}
       <PageBody>
         {loading ? (
           <>

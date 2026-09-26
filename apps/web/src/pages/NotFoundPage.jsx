@@ -18,7 +18,6 @@
 import { Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CompassIcon } from "lucide-react";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { DocumentMeta } from "../lib/seo.jsx";
@@ -34,15 +33,14 @@ export default function NotFoundPage() {
       <DocumentMeta title={t("notFound.title")} image={null} />
       <meta name="robots" content="noindex" />
 
-      <PageBar crumbs={[{ label: t("notFound.title") }]} />
-
       <PageBody width="reading">
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <CompassIcon
             className="size-10 text-muted-foreground"
             aria-hidden="true"
           />
-          <h2 className="text-xl font-semibold">{t("notFound.heading")}</h2>
+          {/* h1: this page's only heading now that the crumb bar is gone. */}
+          <h1 className="text-xl font-semibold">{t("notFound.heading")}</h1>
           <p className="max-w-prose text-sm text-muted-foreground">
             {t("notFound.description")}
           </p>

@@ -1,15 +1,11 @@
 // The editor's routes, behind one lazy import.
 //
 // It mounts no chrome of its own — AppShell is already above it in the route
-// table, and the editor gets exactly the same sidebar as every other page. This
-// file used to configure that sidebar into a narrow, non-persisting rail
-// because the editor's panes plus a 16rem sidebar don't fit a 1280px screen;
-// that is still true, but it is the *panes'* problem to solve, not the
-// sidebar's. They size themselves against the `@container/page` AppShell
-// publishes, so collapsing the sidebar hands them its 13rem the moment you do
-// it — and the sidebar behaves the same here as everywhere else. (The editor
-// has since given the width back a second way, by retiring the always-on
-// preview pane; see the layout comment in EditorPage.)
+// table, and the editor gets exactly the same header as every other page. In
+// the sidebar era this file configured its own narrow rail to buy the panes
+// room, which gave the app two different sidebars; the panes now size
+// themselves against the `@container/page` AppShell publishes and get the full
+// viewport width for free.
 //
 // What this file is still for is the chunk boundary. Everything the editor owns
 // — Yjs, lib0, the collaboration client, ~6,000 lines of page — has to stay
