@@ -321,25 +321,53 @@ function DashboardView() {
   const { user, accessToken, displayName } = useAuth();
   const navigate = useNavigate();
 
-  const [myLessons, setMyLessons] = useState([]);
+  // null while the fetch is in flight, which is what the skeleton keys off.
+  const [myLessons, setMyLessons] = useState(null);
   const [latest, setLatest] = useState([]);
   const [activity, setActivity] = useState([]);
   const [following, setFollowing] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // The user's own lessons load in an effect of their own rather than inside
+  // `load` below, for two reasons the sidebar this list came from learned the
+  // hard way. One: these are lesson titles, drafts included, and the request
+  // outlives the session that authorised it — sign out (or in as someone else)
+  // while one is in flight and the response would arrive to paint the previous
+  // user's private drafts into the new user's dashboard. The flag is captured
+  // per effect run, so only the newest run may write. Two: a fetch of its own
+  // means this panel settles on its own — the four feeds below don't sit in
+  // skeletons behind a /mine request that hangs.
+  useEffect(() => {
+    if (!hasApi() || !accessToken) {
+      setMyLessons([]);
+      return;
+    }
+    let current = true;
+    setMyLessons(null);
+    fetchMyLessons(accessToken)
+      .then((lessons) => {
+        if (current) setMyLessons(lessons);
+      })
+      .catch(() => {
+        // Non-fatal: the panel renders empty. The hub lists the same lessons.
+        if (current) setMyLessons([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [accessToken]);
+
   const load = useCallback(async () => {
     setLoading(true);
     // Each feed is independent; one failing shouldn't blank the others.
-    const [mineRes, latestRes, activityRes, followingRes, notifRes] =
+    const [latestRes, activityRes, followingRes, notifRes] =
       await Promise.allSettled([
-        accessToken ? fetchMyLessons(accessToken) : Promise.resolve([]),
         hasApi() ? fetchLatestLessons() : Promise.resolve([]),
         user ? fetchUserActivity(user.id) : Promise.resolve([]),
         accessToken ? fetchFollowingActivity(accessToken) : Promise.resolve([]),
         accessToken ? fetchNotifications(accessToken) : Promise.resolve([]),
       ]);
-    setMyLessons(mineRes.status === "fulfilled" ? mineRes.value : []);
     setLatest(latestRes.status === "fulfilled" ? latestRes.value : []);
     setActivity(activityRes.status === "fulfilled" ? activityRes.value : []);
     setFollowing(followingRes.status === "fulfilled" ? followingRes.value : []);
@@ -389,7 +417,7 @@ function DashboardView() {
           icon={LibraryIcon}
           title={t("dashboard.yourLessons.title")}
         >
-          {loading ? (
+          {myLessons === null ? (
             <FeedListSkeleton count={3} />
           ) : myLessons.length === 0 ? (
             <p className="py-2 text-sm text-muted-foreground">

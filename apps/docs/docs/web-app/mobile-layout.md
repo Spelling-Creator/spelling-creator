@@ -138,9 +138,11 @@ under the status bar — which is what
 `apple-mobile-web-app-status-bar-style: black-translucent` asks for, so that
 the app bar fills the notch area instead of leaving a mismatched
 strip above it. Without padding, the header's title and buttons would sit behind
-the clock. It's a **padding** on `PageBar` rather than a margin so the
+the clock. It's a **padding** on `AppHeader` rather than a margin so the
 background still reaches the top edge while its contents drop below the status
-bar. In a browser tab the inset is zero, so nothing changes there.
+bar; `PageBar` needs neither, since it pins below the header at
+`--appheader-h`, which already includes the inset. In a browser tab the inset
+is zero, so nothing changes there.
 
 ## The nav is a sheet below `md`
 

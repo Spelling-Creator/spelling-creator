@@ -32,7 +32,6 @@ import { useTranslation } from "react-i18next";
 import {
   Link as RouterLink,
   useMatch,
-  useNavigate,
   useResolvedPath,
 } from "react-router-dom";
 import {
@@ -140,7 +139,6 @@ export default function AppHeader() {
   const { t } = useTranslation("common");
   const { enabled, user, displayName, signOut, isModerator } = useAuth();
   const { resolved, setScheme } = useColorScheme();
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [nameDialogOpen, setNameDialogOpen] = useState(false);
 
@@ -254,8 +252,14 @@ export default function AppHeader() {
             whichever you last had open. This asks for another one. (Pressing
             it while already in an empty lesson stays put rather than stacking
             up untitled empties — see EditorPage.) */}
+        {/* aria-label because below `sm` the visible label is hidden and the
+            icon is aria-hidden, which would leave the link nameless. */}
         <Button size="sm" asChild className="shrink-0">
-          <RouterLink to="/editor?new=1" className="no-underline">
+          <RouterLink
+            to="/editor?new=1"
+            aria-label={t("nav.newLesson")}
+            className="no-underline"
+          >
             <PlusIcon data-icon="inline-start" />
             <span className="hidden sm:inline">{t("nav.newLesson")}</span>
           </RouterLink>
@@ -301,18 +305,25 @@ export default function AppHeader() {
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate(`/users/${user.id}`)}>
-                <UserIcon />
-                {t("nav.myProfile")}
+              {/* Destinations render as real links (asChild), not onClick
+                  navigations, so middle-click and "open in new tab" work.
+                  "Edit display name" stays an action — it opens a dialog. */}
+              <DropdownMenuItem asChild>
+                <RouterLink to={`/users/${user.id}`} className="no-underline">
+                  <UserIcon />
+                  {t("nav.myProfile")}
+                </RouterLink>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setNameDialogOpen(true)}>
                 <IdCardIcon />
                 {t("nav.editDisplayName")}
               </DropdownMenuItem>
               {isModerator && (
-                <DropdownMenuItem onClick={() => navigate("/moderation")}>
-                  <ShieldIcon />
-                  {t("nav.moderation")}
+                <DropdownMenuItem asChild>
+                  <RouterLink to="/moderation" className="no-underline">
+                    <ShieldIcon />
+                    {t("nav.moderation")}
+                  </RouterLink>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
