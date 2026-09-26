@@ -1,11 +1,12 @@
-// Notification bell, shown to signed-in users in the sidebar footer. It polls
-// the notification API, shows an unread count as a badge, and opens a menu
-// listing notifications (newest first). Opening the menu marks everything read.
+// Notification bell, shown to signed-in users in the header's utility cluster.
+// It polls the notification API, shows an unread count as a badge, and opens a
+// menu listing notifications (newest first). Opening the menu marks everything
+// read.
 //
-// The trigger takes its styling from the caller (`className`) because it used
-// to sit on the header's --primary surface and now sits on the sidebar's — the
-// two need different foreground tokens, and the bell shouldn't have to know
-// which. The fallback below is the sidebar's.
+// The trigger takes its styling from the caller (`className`) because it has
+// sat on surfaces with different token sets over its life (the old --primary
+// bar, then the sidebar, now the header) and shouldn't have to know which. The
+// fallback below matches the header's icon triggers.
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -121,7 +122,7 @@ export default function NotificationBell({ className }) {
               className={cn(
                 "relative",
                 className ||
-                  "inline-flex size-9 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
+                  "inline-flex size-9 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
               )}
             >
               <BellIcon />

@@ -19,7 +19,6 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import IconActionButton from "../components/IconActionButton.jsx";
 import { Button } from "../components/ui/button.jsx";
@@ -333,12 +332,14 @@ export default function HubPage() {
         description={t("meta.description")}
       />
       <JsonLd data={listSchema} />
-      {/* The "Editor" link that used to sit on the left of this bar is now the
-          sidebar's "New lesson" action, which every page has. */}
-      <PageBar crumbs={[{ label: t("header.title") }]} />
 
+      {/* No PageBar: the hub is a top-level destination, already named in the
+          header's nav, so its title belongs to the page body. (The "Editor"
+          link that used to sit up there is now the header's "New lesson"
+          action, which every page has.) */}
       <PageBody>
-        <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold md:text-3xl">{t("header.title")}</h1>
+        <div className="mt-1 mb-4 flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
             {t("toolbar.description")}
           </p>

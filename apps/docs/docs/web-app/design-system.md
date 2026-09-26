@@ -15,17 +15,16 @@ directions.
 
 ## Surfaces are opaque, and borders do the separating
 
-Three surfaces carry the app — the page, the boxes on it, and the chrome around
-it — plus a tint for a box's header strip and the line that separates any of
-them:
+Two surfaces carry the app — the page, and the boxes on it, which is also what
+the chrome (`AppHeader`, `PageBar`) is drawn in — plus a tint for a box's header
+strip and the line that separates any of them:
 
-| Role                                | Token             | Light     | Dark      |
-| ----------------------------------- | ----------------- | --------- | --------- |
-| The page, as a tinted well          | `--background`    | `#f3f5fc` | `#0c0d16` |
-| Content boxes sitting on it         | `--card`          | `#ffffff` | `#161829` |
-| App chrome (sidebar, `PageBar`)     | `--sidebar`       | `#ffffff` | `#12131f` |
-| The strip at the top of a box       | `--surface-muted` | `#eff2fb` | `#1c1f33` |
-| The line that separates any of them | `--border`        | `#d5daed` | `#2c3050` |
+| Role                                                        | Token             | Light     | Dark      |
+| ----------------------------------------------------------- | ----------------- | --------- | --------- |
+| The page, as a tinted well                                  | `--background`    | `#f3f5fc` | `#0c0d16` |
+| Content boxes and the app's chrome (`AppHeader`, `PageBar`) | `--card`          | `#ffffff` | `#161829` |
+| The strip at the top of a box                               | `--surface-muted` | `#eff2fb` | `#1c1f33` |
+| The line that separates any of them                         | `--border`        | `#d5daed` | `#2c3050` |
 
 All of these were translucent, over a tinted gradient, with a `backdrop-blur`.
 That is worth knowing because it explains most of the rules below:
@@ -48,7 +47,7 @@ That is worth knowing because it explains most of the rules below:
 One shadow token, and it is not for cards. Anything in the page's own flow gets
 a border and nothing else. `--shadow-panel` belongs only to things genuinely
 above the page: `Dialog`, `Popover`, `DropdownMenu`, `Select`, toasts, the
-mobile sidebar sheet, the collab chat and its bubble, and the editor's FAB.
+mobile nav sheet, the collab chat and its bubble, and the editor's FAB.
 
 If you are adding a surface and reaching for a shadow, the question to ask is
 whether it floats. If it scrolls with the page, it doesn't.

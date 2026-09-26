@@ -6,7 +6,7 @@ title: Lessons on this device
 
 The editor holds **as many lessons as you make**. They live in this browser, in
 IndexedDB, and you switch between them from the **Lessons** button in the editor's
-top bar (or **On this device** in the sidebar, which opens the same panel).
+top bar (or **On this device** in the app header, which opens the same panel).
 
 Nothing you are working on is ever replaced. That is the whole point of the
 feature, and it is worth saying plainly, because it used to be the opposite: the
@@ -68,7 +68,7 @@ are. `repoIdFor(lessonId, localId)` is the one place that decides. See
 
 | You do this                                | What happens                                                                                                                                                                    |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **New lesson** (sidebar)                   | Adds an empty lesson and opens it. Pressing it while already in an untouched one stays put.                                                                                     |
+| **New lesson** (app header)                | Adds an empty lesson and opens it. Pressing it while already in an untouched one stays put.                                                                                     |
 | **Edit** on one of your hub lessons        | Opens the copy this device already has, exactly as you left it — never a second copy of the same lesson, and never overwritten by the cloud's. If the two differ, it tells you. |
 | **Fork** a lesson from the hub             | A new lesson, cloned with the original's history, titled "… (copy)".                                                                                                            |
 | **Fork into a new lesson** (in the editor) | The same, from the lesson you're in — which stays in the list, still attached to its hub row.                                                                                   |

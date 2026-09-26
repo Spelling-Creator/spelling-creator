@@ -37,7 +37,6 @@ import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
 } from "@spelling-creator/core/username";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
@@ -155,7 +154,6 @@ export default function LoginPage() {
   return (
     <>
       <DocumentMeta title={t("meta.title")} />
-      <PageBar crumbs={[{ label: t("meta.title") }]} />
 
       {/* The card is narrow — a couple of fields — but the column it sits in is
           the app's, not a width of this page's own. */}

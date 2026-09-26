@@ -8,29 +8,22 @@
     "loading": "Loading"
   },
   "nav": {
-    "lessonHubAriaLabel": "lesson hub",
     "lessonHub": "Lesson hub",
     "switchToLightMode": "Switch to light mode",
     "switchToDarkMode": "Switch to dark mode",
     "accountMenuAriaLabel": "account menu",
-    "account": "Account",
     "signedIn": "Signed in",
     "myProfile": "My profile",
     "editDisplayName": "Edit display name",
     "moderation": "Moderation",
     "settings": "Settings",
     "signOut": "Sign out",
-    "signedOut": "Signed out",
     "signIn": "Sign in",
     "appName": "Spelling Creator",
-    "appTagline": "Make and share lessons",
+    "openMenu": "Open menu",
     "home": "Home",
     "newLesson": "New lesson",
-    "onThisDevice": "On this device",
-    "yourLessons": "Your lessons",
-    "noLessonsYet": "No lessons yet.",
-    "untitledLesson": "Untitled lesson",
-    "seeAllLessons": "See all {{count}}"
+    "onThisDevice": "On this device"
   },
   "install": {
     "ariaLabel": "install app",

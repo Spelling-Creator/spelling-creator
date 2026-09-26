@@ -17,16 +17,17 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   BellIcon,
   BookMarkedIcon,
+  CloudIcon,
   FileTextIcon,
   HistoryIcon,
   ImagePlusIcon,
+  LibraryIcon,
   PencilIcon,
   RssIcon,
   SparklesIcon,
   Users2Icon,
   UsersIcon,
 } from "lucide-react";
-import PageBar from "../components/layout/PageBar.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import FloatingWords from "../components/FloatingWords.jsx";
 import { FeedListSkeleton } from "../components/Skeletons.jsx";
@@ -41,6 +42,7 @@ import {
   fetchUserActivity,
 } from "@spelling-creator/core/browser/feeds";
 import { fetchFollowingActivity } from "@spelling-creator/core/users";
+import { fetchMyLessons } from "@spelling-creator/core/lessons";
 import { fetchNotifications } from "@spelling-creator/core/notifications";
 
 // The features shown to signed-out visitors. `image` points at a file under
@@ -78,6 +80,10 @@ const FEATURES = [
     image: "/home/feature-export.jpg",
   },
 ];
+
+// How many of the user's own lessons the dashboard panel lists before it stops
+// and points at the hub.
+const MY_LESSON_LIMIT = 6;
 
 function formatDateTime(value) {
   if (!value) return "";
@@ -315,11 +321,42 @@ function DashboardView() {
   const { user, accessToken, displayName } = useAuth();
   const navigate = useNavigate();
 
+  // null while the fetch is in flight, which is what the skeleton keys off.
+  const [myLessons, setMyLessons] = useState(null);
   const [latest, setLatest] = useState([]);
   const [activity, setActivity] = useState([]);
   const [following, setFollowing] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // The user's own lessons load in an effect of their own rather than inside
+  // `load` below, for two reasons the sidebar this list came from learned the
+  // hard way. One: these are lesson titles, drafts included, and the request
+  // outlives the session that authorised it — sign out (or in as someone else)
+  // while one is in flight and the response would arrive to paint the previous
+  // user's private drafts into the new user's dashboard. The flag is captured
+  // per effect run, so only the newest run may write. Two: a fetch of its own
+  // means this panel settles on its own — the four feeds below don't sit in
+  // skeletons behind a /mine request that hangs.
+  useEffect(() => {
+    if (!hasApi() || !accessToken) {
+      setMyLessons([]);
+      return;
+    }
+    let current = true;
+    setMyLessons(null);
+    fetchMyLessons(accessToken)
+      .then((lessons) => {
+        if (current) setMyLessons(lessons);
+      })
+      .catch(() => {
+        // Non-fatal: the panel renders empty. The hub lists the same lessons.
+        if (current) setMyLessons([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [accessToken]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -372,6 +409,59 @@ function DashboardView() {
       {/* The dashboard layout renders immediately; each feed shows skeleton rows
           until its data arrives, so panels don't jump in as a spinner clears. */}
       <div className="flex flex-col gap-4">
+        {/* The user's own lessons, drafts included. This list used to be a
+            group in the sidebar; a dashboard panel is a better home for it —
+            it's your work, not the app's navigation, and moving it here means
+            the chrome no longer fetches anything. */}
+        <DashboardPanel
+          icon={LibraryIcon}
+          title={t("dashboard.yourLessons.title")}
+        >
+          {myLessons === null ? (
+            <FeedListSkeleton count={3} />
+          ) : myLessons.length === 0 ? (
+            <p className="py-2 text-sm text-muted-foreground">
+              {t("dashboard.yourLessons.empty")}
+            </p>
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {myLessons.slice(0, MY_LESSON_LIMIT).map((lesson) => (
+                <button
+                  key={lesson.id}
+                  type="button"
+                  onClick={() => navigate(`/hub/${lesson.id}`)}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-2 py-2.5 text-left transition-colors hover:bg-accent"
+                >
+                  {/* A draft and a published lesson look the same in a list of
+                      titles; the icon is the only thing that says which is
+                      which. */}
+                  {lesson.published === false ? (
+                    <CloudIcon className="size-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {lesson.title || t("dashboard.untitled")}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatDateTime(lesson.createdAt)}
+                  </span>
+                </button>
+              ))}
+              {myLessons.length > MY_LESSON_LIMIT && (
+                <RouterLink
+                  to="/hub"
+                  className="rounded-md px-2 py-2.5 text-sm text-muted-foreground no-underline transition-colors hover:bg-accent"
+                >
+                  {t("dashboard.yourLessons.seeAll", {
+                    count: myLessons.length,
+                  })}
+                </RouterLink>
+              )}
+            </div>
+          )}
+        </DashboardPanel>
+
         {/* Latest lessons + your activity, together in one section. */}
         <div className="rounded-panel border border-border bg-card p-4 text-card-foreground md:p-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
@@ -507,9 +597,12 @@ export default function HomePage() {
         title={t("meta.title")}
         description={t("meta.description")}
       />
-      <PageBar crumbs={[{ label: t("header.title") }]} />
 
-      {/* Both faces of "/" sit in the same shell. They used not to: the splash
+      {/* No PageBar: a crumb that just said "Spelling Creator" under a header
+          that already says it. Both faces bring their own h1 — the hero's
+          headline, the dashboard's greeting.
+
+          Both faces of "/" sit in the same shell. They used not to: the splash
           had a header of its own on the grounds that a visitor who has never
           used the app doesn't need navigation. That was a defensible thing to
           say about the splash on its own and the wrong thing to do to the app —

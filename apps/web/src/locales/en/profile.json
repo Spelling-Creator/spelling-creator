@@ -1,8 +1,6 @@
 {
   "profilePage": {
     "documentTitle": "Profile",
-    "lessonHubLink": "Lesson hub",
-    "headerTitle": "Profile",
     "anonymousName": "Anonymous",
     "metaDescriptionFallback": "Spelling lessons published by {{name}}.",
     "publishedLessonCount_one": "{{count}} published lesson",

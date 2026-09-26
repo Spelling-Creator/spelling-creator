@@ -74,9 +74,8 @@ export default function LessonOverview() {
 
       {/* Stacked, the rail sits under the lesson — that is what someone came
           for, and the facts about it are a footnote until there's room to put
-          them beside it. The breakpoint is the page column's own width, so
-          collapsing the sidebar can bring the rail alongside without the window
-          changing size at all. */}
+          them beside it. The breakpoint is the page column's own width
+          (@container/page), not the viewport's. */}
       <aside className="order-last w-full shrink-0 @min-[52rem]/page:w-64">
         <div className="flex flex-col gap-3 @min-[52rem]/page:sticky @min-[52rem]/page:top-[calc(var(--header-h)+3.5rem)]">
           <h3 className="text-sm font-semibold">{t("about.heading")}</h3>

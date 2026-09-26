@@ -12,22 +12,26 @@ and serve `index.html` for it so a deep link resolves before the router has run.
 ## One shell
 
 The route table in `src/App.jsx` puts every page inside a single layout route,
-`AppShell`, and that is the whole of the app's chrome: a collapsible sidebar
-(`AppSidebar`) beside the page, with `PageBar` at the top of it.
+`AppShell`, and that is the whole of the app's chrome: one slim sticky header
+(`AppHeader`) with the page below it.
 
-Pages used to render their own `AppHeader` over their own `mx-auto max-w-*`
-column, which is why they all looked alike and why anything larger than a column
-— a merge, a collaboration session, a commit timeline — had nowhere to go but a
-modal. The chrome now lives in the layout route, and a page describes only its
-own body.
+The header carries the app's five destinations as inline links (behind a menu
+button and a sheet below `md`), the **New lesson** action, and a right-hand
+cluster of utilities: install, the light/dark toggle, settings, notifications,
+and the account menu. Pages that are _inside_ something — a lesson under the
+hub, a document in the editor — pin a second, contextual bar (`PageBar`)
+directly beneath it, carrying a breadcrumb trail and that page's actions. Plain
+pages don't render one; their title lives in their body.
 
-The sidebar takes no per-page configuration. It is 16rem wide everywhere,
-collapses to a 3rem icon rail everywhere (`collapsible="icon"` — collapsing
-leaves navigation you can still reach rather than removing it), and its state is
-one persisted preference that follows you between pages. An earlier version let
-routes configure it, and the editor used that to pin itself to a permanent rail;
-the result was an app with two sidebars of different widths, one of which threw
-away the state you had set on every other page.
+The shell has been through three shapes, and the history is why this one is so
+small. Pages first rendered their own heavy `--primary` header over their own
+`mx-auto max-w-*` column, restating the whole nav on every page. Then a
+collapsible sidebar absorbed the nav and shrank the top bar to a breadcrumb —
+which fixed the header and created a 16rem column of mostly-empty chrome beside
+every content page, since five destinations don't fill a sidebar. They fit in
+one row, so now there is one header, no sidebar, and every page gets the full
+width of the viewport (which the homepage hero and the editor, in particular,
+put to use).
 
 Pages that need more room ask the **container**, not the shell — see
 [Laying out against the container](#laying-out-against-the-container).
@@ -54,10 +58,10 @@ three different bottom ones, none of which meant anything.
 
 There are two widths:
 
-| Width            | Value       | For                                                                                                                                           |
-| ---------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `wide` (default) | `max-w-5xl` | Listings, dashboards, the lesson and its side rail. Also what fits beside the expanded sidebar at 1280px without the page scrolling sideways. |
-| `reading`        | `max-w-3xl` | Prose people read or write: comments, a proposal's description, a commit list.                                                                |
+| Width            | Value       | For                                                                            |
+| ---------------- | ----------- | ------------------------------------------------------------------------------ |
+| `wide` (default) | `max-w-5xl` | Listings, dashboards, the lesson and its side rail.                            |
+| `reading`        | `max-w-3xl` | Prose people read or write: comments, a proposal's description, a commit list. |
 
 The `reading` width is why the page getting wider did **not** make lesson text
 wider: a line of text set to the full width of a desktop screen is harder to
@@ -70,49 +74,40 @@ gradient) and the editor's panes.
 
 ## Laying out against the container
 
-`SidebarInset` — the page column — is a named container (`@container/page`), and
-anything that lays itself out against available space keys off that rather than
-off a `lg:`/`xl:` viewport breakpoint.
+`AppShell`'s `<main>` — the page column — is a named container
+(`@container/page`), and anything that lays itself out against available space
+keys off that rather than off a `lg:`/`xl:` viewport breakpoint. The editor's
+outline pane appears once the page column passes 52rem; the lesson's "About"
+rail moves alongside the lesson at the same 52rem.
 
-This matters because the sidebar is 16rem open and 3rem collapsed, so how much
-room a page has is not a function of the window's width. The editor's outline
-pane appears once the page column passes 52rem; the lesson's "About" rail moves
-alongside the lesson at the same 52rem. Collapse the sidebar and the threshold
-is crossed immediately, with no change to the window:
-
-| Window | Sidebar | Page column | Outline |
-| ------ | ------- | ----------- | ------- |
-| 1440px | open    | 1184px      | yes     |
-| 1280px | open    | 1024px      | yes     |
-| 1024px | open    | 768px       | no      |
-| 1024px | rail    | 976px       | **yes** |
-
-That is what lets one sidebar configuration serve the editor as well as every
-other page. Viewport breakpoints could not: at 1024px they have no way to know
-whether 256px of the screen is currently a sidebar or not — the last two rows
-are the same window, and only one of them has room for an outline.
+The distinction dates from the sidebar era, when the page column was 13rem
+narrower or wider depending on a collapse toggle and a viewport breakpoint had
+no way to know which. With the sidebar gone the column and the viewport
+currently agree — but the keys stay written against the container, so the next
+thing that narrows the column (a future rail, a split view) costs nothing in
+these layouts.
 
 ## The routes
 
-| Route                      | Page                    | What it does                                                                                                                                                                                          |
-| -------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                        | **Home**                | Landing page. Signed out: a marketing splash (animated floating words + feature blurbs). Signed in: a dashboard (latest-lessons feed, your activity, activity from people you follow, notifications). |
-| `/editor`                  | **Editor**              | The lesson builder. Two panes — section outline and document — the outline appearing once the page column has room for it. **Preview** toggles the document pane for the reader's view of the lesson. |
-| `/editor/lessons`          | **Editor**              | The [lessons this device holds](./local-lessons.md), over the editor — switch between them, copy, rename or delete one.                                                                               |
-| `/editor/history`          | **Editor**              | The version-history panel, over the editor.                                                                                                                                                           |
-| `/editor/variations`       | **Editor**              | The [variations](./lesson-variations.md) panel, over the editor.                                                                                                                                      |
-| `/editor/collaborate`      | **Editor**              | The [live-collaboration](./live-collaboration.md) panel, over the editor.                                                                                                                             |
-| `/hub`                     | **Lesson hub**          | Public gallery of published lessons (plus your own drafts), with search.                                                                                                                              |
-| `/hub/:id`                 | **Lesson → Lesson**     | The lesson itself, with an "About" rail: author, ages, section count, fork lineage, and the print / Word / fork actions.                                                                              |
-| `/hub/:id/practice`        | **Lesson → Practice**   | [Interactive mode](./interactive-mode.md), full screen over the page.                                                                                                                                 |
-| `/hub/:id/discussion`      | **Lesson → Discussion** | Comments and the star rating.                                                                                                                                                                         |
-| `/hub/:id/proposals`       | **Lesson → Proposals**  | [Changes proposed](./pull-requests.md) from other people's forks.                                                                                                                                     |
-| `/hub/:id/proposals/:prId` | **Lesson → Proposals**  | One proposal, read-only. **Review & merge** hands off to the editor — see below.                                                                                                                      |
-| `/hub/:id/history`         | **Lesson → History**    | The lesson's published commit timeline, read out of its packfile.                                                                                                                                     |
-| `/users/:id`               | **User profile**        | A user's public profile — bio, follower/following counts, a Follow button, and published lessons.                                                                                                     |
-| `/login`                   | **Sign in**             | Magic-link sign-in / account status.                                                                                                                                                                  |
-| `/moderation`              | **Moderation**          | Moderator/admin queue for reviewing reported content (gated to mods/admins).                                                                                                                          |
-| `/settings`                | **Settings**            | Appearance (light/dark/system), display language, [read-aloud](./interactive-mode.md) preferences, this device's lessons, and the account's display name and bio. Works signed out.                   |
+| Route                      | Page                    | What it does                                                                                                                                                                                                        |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                        | **Home**                | Landing page. Signed out: a marketing splash (animated floating words + feature blurbs). Signed in: a dashboard (your lessons, latest-lessons feed, your activity, activity from people you follow, notifications). |
+| `/editor`                  | **Editor**              | The lesson builder. Two panes — section outline and document — the outline appearing once the page column has room for it. **Preview** toggles the document pane for the reader's view of the lesson.               |
+| `/editor/lessons`          | **Editor**              | The [lessons this device holds](./local-lessons.md), over the editor — switch between them, copy, rename or delete one.                                                                                             |
+| `/editor/history`          | **Editor**              | The version-history panel, over the editor.                                                                                                                                                                         |
+| `/editor/variations`       | **Editor**              | The [variations](./lesson-variations.md) panel, over the editor.                                                                                                                                                    |
+| `/editor/collaborate`      | **Editor**              | The [live-collaboration](./live-collaboration.md) panel, over the editor.                                                                                                                                           |
+| `/hub`                     | **Lesson hub**          | Public gallery of published lessons (plus your own drafts), with search.                                                                                                                                            |
+| `/hub/:id`                 | **Lesson → Lesson**     | The lesson itself, with an "About" rail: author, ages, section count, fork lineage, and the print / Word / fork actions.                                                                                            |
+| `/hub/:id/practice`        | **Lesson → Practice**   | [Interactive mode](./interactive-mode.md), full screen over the page.                                                                                                                                               |
+| `/hub/:id/discussion`      | **Lesson → Discussion** | Comments and the star rating.                                                                                                                                                                                       |
+| `/hub/:id/proposals`       | **Lesson → Proposals**  | [Changes proposed](./pull-requests.md) from other people's forks.                                                                                                                                                   |
+| `/hub/:id/proposals/:prId` | **Lesson → Proposals**  | One proposal, read-only. **Review & merge** hands off to the editor — see below.                                                                                                                                    |
+| `/hub/:id/history`         | **Lesson → History**    | The lesson's published commit timeline, read out of its packfile.                                                                                                                                                   |
+| `/users/:id`               | **User profile**        | A user's public profile — bio, follower/following counts, a Follow button, and published lessons.                                                                                                                   |
+| `/login`                   | **Sign in**             | Magic-link sign-in / account status.                                                                                                                                                                                |
+| `/moderation`              | **Moderation**          | Moderator/admin queue for reviewing reported content (gated to mods/admins).                                                                                                                                        |
+| `/settings`                | **Settings**            | Appearance (light/dark/system), display language, [read-aloud](./interactive-mode.md) preferences, this device's lessons, and the account's display name and bio. Works signed out.                                 |
 
 ### Unknown paths
 
@@ -197,7 +192,7 @@ own:
 | `?join=<code>`                 | Opens the [live-collaboration](./live-collaboration.md) panel on that invite.                                                                                                                                                                 |
 | `?pull=<id>&lesson=<lessonId>` | Opens a [proposed change](./pull-requests.md) for review once the lesson it names has loaded — the lesson id is part of the link precisely so the review waits for the right one, rather than acting on whatever the editor already had open. |
 | `?local=<id>`                  | Switches to one of the [lessons on this device](./local-lessons.md).                                                                                                                                                                          |
-| `?new=1`                       | Starts a new lesson — what the sidebar's **New lesson** button links to, since plain `/editor` resumes whichever lesson you last had open.                                                                                                    |
+| `?new=1`                       | Starts a new lesson — what the header's **New lesson** button links to, since plain `/editor` resumes whichever lesson you last had open.                                                                                                     |
 
 The first two are consumed once and then simply sit in the URL; the last two are
 stripped from it as they are read, because they are instructions rather than
@@ -243,9 +238,8 @@ everything:
 
 `AppShell` mounts a `Suspense` boundary of its own around its `<Outlet/>`. The
 one in `App.jsx` sits _above_ the layout routes, so a lazy page suspending there
-unwinds past the shell and takes the sidebar with it — and any fallback that
-used `PageBar` would then throw, having lost the `SidebarProvider` too. The
-inner boundary keeps the chrome on screen and replaces only the body.
+unwinds past the shell and takes the header with it. The inner boundary keeps
+the chrome on screen and replaces only the body.
 
 Tiptap/ProseMirror stays eager on purpose — `CommentsSection` uses
 `RichTextInput` on the public lesson page, so it isn't editor-only.
@@ -253,8 +247,8 @@ Tiptap/ProseMirror stays eager on purpose — `CommentsSection` uses
 ## Home page
 
 The home page (`src/pages/HomePage.jsx`) has two faces, chosen from the auth
-state. Both render inside the app's shell, with the same sidebar and page bar
-as everywhere else — only the body differs:
+state. Both render inside the app's shell, under the same header as everywhere
+else — only the body differs:
 
 - **Signed out** — a hero whose backdrop is real spelling words drifting upward
   (built with [tsParticles](https://particles.js.org); see
@@ -269,9 +263,12 @@ as everywhere else — only the body differs:
   If that fetch fails, a small built-in word list is used instead. Feature
   illustrations live under `apps/web/public/home/` (a missing file degrades to a
   labelled placeholder — see that folder's `README.md`).
-- **Signed in** — a dashboard showing the hub's latest-lessons Atom feed and the
-  user's own activity feed (both parsed client-side from Atom with `DOMParser`,
-  reusing the same `feed.xml` / `profiles/:id/feed.xml` endpoints the "RSS"
-  links point at), a **"From people you follow"** feed (from the Worker's
-  `GET /following/activity`; see [Following](./profiles-and-display-names.md#following)),
-  plus a roomier list of the user's notifications.
+- **Signed in** — a dashboard showing the user's own lessons (drafts included,
+  from `GET /mine` — this list used to be a sidebar group, and a panel of your
+  work is a better home for it than global chrome), the hub's latest-lessons
+  Atom feed and the user's own activity feed (both parsed client-side from Atom
+  with `DOMParser`, reusing the same `feed.xml` / `profiles/:id/feed.xml`
+  endpoints the "RSS" links point at), a **"From people you follow"** feed
+  (from the Worker's `GET /following/activity`; see
+  [Following](./profiles-and-display-names.md#following)), plus a roomier list
+  of the user's notifications.

@@ -138,31 +138,27 @@ under the status bar — which is what
 `apple-mobile-web-app-status-bar-style: black-translucent` asks for, so that
 the app bar fills the notch area instead of leaving a mismatched
 strip above it. Without padding, the header's title and buttons would sit behind
-the clock. It's a **padding** on `PageBar` rather than a margin so the
+the clock. It's a **padding** on `AppHeader` rather than a margin so the
 background still reaches the top edge while its contents drop below the status
-bar. In a browser tab the inset is zero, so nothing changes there.
+bar; `PageBar` needs neither, since it pins below the header at
+`--appheader-h`, which already includes the inset. In a browser tab the inset
+is zero, so nothing changes there.
 
-## The sidebar is a sheet below `md`
+## The nav is a sheet below `md`
 
-`AppSidebar` docks beside the page on desktop and becomes a `Sheet` over it on a
-phone, opened from `PageBar`'s toggle. Two consequences worth knowing:
+`AppHeader` shows its destinations as inline links on desktop and moves them
+behind a menu button into a `Sheet` below `md`. Following a link out of the
+sheet closes it — a sheet covers the page you just navigated to, so it can't
+stay put the way inline links do. The sheet also carries a **Settings** row,
+because the gear it normally shares the utility cluster with is hidden at that
+width (the whole cluster is, below `sm` — the notification bell and the account
+menu are what stay, since an unread notification is worth a slot at any width).
 
-- **Following a link has to close it.** A docked sidebar sits beside the page
-  and can stay put; a sheet covers the page you just navigated to. `AppSidebar`
-  binds that to its header and content regions only — toggling the theme or
-  opening the account menu isn't navigation and shouldn't dismiss the panel.
-- **The sheet carries a shadow; the docked sidebar doesn't need one.**
-  `--sidebar` is opaque, so a sheet over the page is readable on its own — what
-  it still needs is to look like it is _above_ the page rather than part of it.
-  The mobile branch of `ui/sidebar.jsx` adds `shadow-(--shadow-panel)` for that,
-  the same as `Dialog`, `Popover` and `DropdownMenu`. Docked, the sidebar sits
-  beside the page and a border does the whole job.
-
-This also retired a duplication that used to run through every page: the old
+The header holds one copy of each control at any width. The old `--primary`
 header couldn't fit text buttons on a narrow screen, so most controls existed
 twice — an icon-only copy under `md:hidden` and a labelled copy under
 `hidden md:inline-flex` — and the lesson page kept a whole second copy of its
-actions in an overflow menu. The sidebar holds one copy at any width.
+actions in an overflow menu.
 
 ## `dvh`, not `vh`
 
