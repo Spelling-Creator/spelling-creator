@@ -24,7 +24,7 @@
     "description": "We sent a confirmation link to <strong>{{email}}</strong>. Open it to finish creating your account."
   },
   "form": {
-    "magicLinkDescription": "Enter your email and we'll send you a one-time sign-in link — no password needed. You only need an account to publish lessons to the hub.",
+    "magicLinkDescription": "Enter your email and we'll send you a one-time sign-in link; no password needed. You only need an account to publish lessons to the hub.",
     "passwordDescription": "Sign in with your username and password. You only need an account to publish lessons to the hub.",
     "registerDescription": "Pick a username and a password. No email address needed. You only need an account to publish lessons to the hub.",
     "emailLabel": "Email address",
@@ -42,7 +42,7 @@
   },
   "errors": {
     "invalidEmail": "Please enter a valid email address.",
-    "invalidUsername": "Usernames are {{min}}–{{max}} characters, using letters, numbers, dots, dashes and underscores.",
+    "invalidUsername": "Usernames are {{min}}-{{max}} characters, using letters, numbers, dots, dashes and underscores.",
     "invalidIdentifier": "Enter your username or email address.",
     "passwordTooShort": "Your password must be at least {{count}} characters.",
     "usernameTaken": "That username is already taken.",

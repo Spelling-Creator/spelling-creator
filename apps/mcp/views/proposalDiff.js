@@ -107,7 +107,7 @@ async function decide(button, others, { name, verb, done, tell }) {
   for (const b of [button, ...others]) b.disabled = true;
   const status = document.getElementById("status");
   status.className = "status";
-  status.textContent = `${verb}…`;
+  status.textContent = `${verb}...`;
   try {
     const result = await app.callServerTool({
       name,
@@ -150,7 +150,7 @@ function actions() {
   merge.disabled = !mergeable;
   if (!mergeable) {
     merge.title = state.conflicts?.length
-      ? "This one needs a decision block by block — merge it in the web app."
+      ? "This one needs a decision block by block, so merge it in the web app."
       : "There is nothing here to merge yet.";
   }
   merge.addEventListener("click", () =>

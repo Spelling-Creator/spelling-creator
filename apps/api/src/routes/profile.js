@@ -66,10 +66,10 @@ export async function handleProfile(request, env, url, cors) {
 			return textResponse(`Display names are limited to ${DISPLAY_NAME_MAX} characters.`, 400, cors);
 		}
 		if (profanityFilter.checkProfanity(name).containsProfanity) {
-			return textResponse('That display name isn’t allowed. Please choose another.', 422, cors);
+			return textResponse("That display name isn't allowed. Please choose another.", 422, cors);
 		}
 		if (await isNameBanned(env, base, name)) {
-			return textResponse('That display name isn’t available. Please choose another.', 409, cors);
+			return textResponse("That display name isn't available. Please choose another.", 409, cors);
 		}
 
 		// Write the name into user_metadata, preserving any other metadata keys.
@@ -133,7 +133,7 @@ export async function handleProfile(request, env, url, cors) {
 			return textResponse(`Bios are limited to ${BIO_MAX} characters.`, 400, cors);
 		}
 		if (text && profanityFilter.checkProfanity(text).containsProfanity) {
-			return textResponse('That bio isn’t allowed. Please remove any inappropriate language.', 422, cors);
+			return textResponse("That bio isn't allowed. Please remove any inappropriate language.", 422, cors);
 		}
 
 		// Write the bio into user_metadata, preserving any other metadata keys. A bio

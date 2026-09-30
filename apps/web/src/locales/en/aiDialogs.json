@@ -10,7 +10,7 @@
     "steps": {
       "nameLesson": {
         "label": "Name your lesson",
-        "body": "Start at the top of the page and type a title for your lesson — for example <em>\"The Life of Albert Einstein\"</em>. You can change it any time."
+        "body": "Start at the top of the page and type a title for your lesson, for example <em>\"The Life of Albert Einstein\"</em>. You can change it any time."
       },
       "addSection": {
         "label": "Add a section",
@@ -29,14 +29,14 @@
   "aiLessonIdea": {
     "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
     "verificationFailed": "Verification failed. Please try again.",
-    "noIdeas": "No ideas came back — try generating again.",
+    "noIdeas": "No ideas came back. Try generating again.",
     "genericError": "Something went wrong.",
     "title": "Suggest lesson ideas with AI",
     "descriptionWithAgeRange": "Ideas for lessons aimed at <badge>{{ageRange}}</badge>.",
     "descriptionNoAgeRange": "Set an age range above to tailor the ideas, or generate general ideas now.",
     "descriptionSuffix": "Pick one to use it as your lesson title.",
     "cancel": "Cancel",
-    "generating": "Generating…",
+    "generating": "Generating...",
     "generate": "Generate",
     "generateMore": "Generate more"
   },
@@ -50,7 +50,7 @@
     "descriptionNoSubject": "Give this section a name first, that's what the question will be about.",
     "questionTypeLabel": "Question type",
     "cancel": "Cancel",
-    "generating": "Generating…",
+    "generating": "Generating...",
     "generate": "Generate"
   },
   "aiText": {
@@ -63,7 +63,7 @@
     "dislikeReasonDisliked": "Removed from the cache",
     "dislikeReasonDefault": "Not a good suggestion? Remove it from the cache",
     "dislikeAriaLabel": "Remove this suggestion from the cache",
-    "helperDisliked": "Removed from the cache — generate a fresh one below.",
+    "helperDisliked": "Removed from the cache. Generate a fresh one below.",
     "helperDefault": "Don't like it? Remove it so the next try is freshly written.",
     "title": "Suggest text with AI",
     "descriptionWithSubject": "Generate a block of text for the section <strong>\"{{subject}}\"</strong>.",
@@ -71,7 +71,7 @@
     "cancel": "Cancel",
     "insert": "Insert",
     "insertAnyway": "Insert anyway",
-    "generating": "Generating…",
+    "generating": "Generating...",
     "generate": "Generate",
     "generateFresh": "Generate fresh"
   }

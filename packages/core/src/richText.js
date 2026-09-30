@@ -177,7 +177,7 @@ export function isRichTextEmpty(html) {
 export function richTextToLine(html, max = 160) {
   const text = richTextToPlain(html).replace(/\s*\n\s*/g, " ");
   if (text.length <= max) return text;
-  return `${text.slice(0, max - 1).trimEnd()}…`;
+  return `${text.slice(0, max - 3).trimEnd()}...`;
 }
 
 /**

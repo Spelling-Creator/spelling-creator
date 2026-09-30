@@ -7,26 +7,26 @@ title: Notifications
 Signed-in users get a **notification bell** in the app header
 (`NotificationBell.jsx`). It polls the Worker for the caller's notifications,
 shows an unread badge, and lets you open and mark them read. The browser never
-queries the table directly — everything goes through the Worker's
+queries the table directly; everything goes through the Worker's
 `/notifications` endpoints, which scope every query to the signed-in caller.
 
 ## What triggers one
 
-- **`comment`** — someone replied to your comment, or commented on a lesson you
+- **`comment`**: someone replied to your comment, or commented on a lesson you
   published. The Worker creates these inside its comment handler when a comment is
   posted (notifying the parent comment's author and the lesson's author). Comments
   are [rich text](./rich-text.md), but the notification's `body` carries the comment
-  **flattened to plain text** — the bell renders it as text, so markup would show up
+  **flattened to plain text**: the bell renders it as text, so markup would show up
   there as literal tags.
-- **`link`** — another signed-in user sent you a link via **send link to user**
+- **`link`**: another signed-in user sent you a link via **send link to user**
   (an optional short message can ride along, and is profanity-checked server-side).
   Because the recipient may not have an account id yet, a `link` notification is
   addressed by **email**, so it's waiting for them the next time they sign in.
-- **`follow`** — someone started following you. The Worker creates this inside its
+- **`follow`**: someone started following you. The Worker creates this inside its
   follow handler (`POST /profiles/:id/follow`) when a _new_ follow edge is added;
   re-following is a no-op and doesn't re-notify. Its link opens the follower's
   profile. See [Following](./profiles-and-display-names.md#following).
-- **`pull_request`** — someone proposed changes to a lesson you published, or the
+- **`pull_request`**: someone proposed changes to a lesson you published, or the
   proposal _you_ made was merged or closed. The three are one type because they're
   one conversation, and the title says which happened. The link follows what you'd
   want next: a proposal to review opens that proposal, while a merged or closed one
@@ -34,11 +34,11 @@ queries the table directly — everything goes through the Worker's
   where your changes ended up.
   Nothing is sent until a proposal actually has changes in it (an upload that
   never finished notifies nobody), and withdrawing your own never notifies you.
-  A proposal opened from your own account — which is how an AI assistant working
-  over MCP offers changes — reads _"Changes are waiting for your review"_, because
+  A proposal opened from your own account (which is how an AI assistant working
+  over MCP offers changes) reads _"Changes are waiting for your review"_, because
   it's the only thing telling you there's something in the queue.
   See [Pull requests](./pull-requests.md).
-- **`lesson_update`** — a trusted collaborator saved a lesson you published. It
+- **`lesson_update`**: a trusted collaborator saved a lesson you published. It
   changed under you and you didn't do it, so you're told. (Merging a proposal into
   your lesson also lands as one of these, from whoever merged it.)
 

@@ -218,7 +218,7 @@ function SpeechControls({ speech, onReplay }) {
                           rate,
                         })}
                       >
-                        {rate}×
+                        {rate}x
                       </ToggleGroupItem>
                     ))}
                   </ToggleGroup>

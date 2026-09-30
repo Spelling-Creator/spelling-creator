@@ -21,7 +21,7 @@ export function clampLabel(raw) {
 		.replace(/\s+/g, ' ')
 		.trim();
 	if (!text) return '';
-	return text.length <= ASSISTANT_LABEL_MAX ? text : `${text.slice(0, ASSISTANT_LABEL_MAX - 1).trimEnd()}…`;
+	return text.length <= ASSISTANT_LABEL_MAX ? text : `${text.slice(0, ASSISTANT_LABEL_MAX - 3).trimEnd()}...`;
 }
 
 /**

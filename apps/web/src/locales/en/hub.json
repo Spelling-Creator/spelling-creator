@@ -39,7 +39,7 @@
   },
   "search": {
     "label": "Search lessons",
-    "placeholder": "Search lessons by title or author…",
+    "placeholder": "Search lessons by title or author...",
     "clearAria": "clear search"
   },
   "alerts": {
@@ -48,13 +48,13 @@
   },
   "emptyState": {
     "noLessonsTitle": "No lessons yet",
-    "noLessonsHintPrefix": "Be the first to publish — build a lesson in the editor and press",
+    "noLessonsHintPrefix": "Be the first to publish: build a lesson in the editor and press",
     "publishToHub": "Publish to hub",
     "noMatchesTitle": "No matches",
-    "noMatchesHint": "No lessons match “{{query}}”. Try a different search."
+    "noMatchesHint": "No lessons match \"{{query}}\". Try a different search."
   },
   "toast": {
-    "deleted": "Deleted “{{title}}”."
+    "deleted": "Deleted \"{{title}}\"."
   },
   "errors": {
     "loadFailed": "Could not load lessons.",
@@ -63,7 +63,7 @@
   "deleteDialog": {
     "title": "Delete this lesson?",
     "confirmPrefix": "This permanently deletes",
-    "confirmSuffix": "This can’t be undone. To confirm, type the lesson’s name below.",
+    "confirmSuffix": "This can't be undone. To confirm, type the lesson's name below.",
     "nameLabel": "Lesson name",
     "cancel": "Cancel",
     "delete": "Delete"

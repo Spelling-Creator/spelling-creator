@@ -163,7 +163,7 @@ export async function handleNotifications(request, env, url, cors) {
 		// Moderate the optional message like comments — done server-side so it
 		// can't be bypassed by a crafted client request.
 		if (message && profanityFilter.checkProfanity(message).containsProfanity) {
-			return textResponse('This message contains language that isn’t allowed. Please revise it and try again.', 422, cors);
+			return textResponse("This message contains language that isn't allowed. Please revise it and try again.", 422, cors);
 		}
 
 		let res;

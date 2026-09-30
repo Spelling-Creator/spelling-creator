@@ -7,7 +7,7 @@ title: AI text suggestions
 Press **AI text** on any section to open a dialog that generates a block of
 lesson text about that section's title. The flow:
 
-1. The section title is used as the subject — there's no separate prompt to fill in.
+1. The section title is used as the subject; there's no separate prompt to fill in.
 2. A [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) widget
    verifies the request is coming from a real browser on our domain.
 3. The verified token, subject, and document title are POSTed to the companion

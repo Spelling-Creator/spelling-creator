@@ -429,8 +429,8 @@ export async function handleModeration(request, env, url, cors) {
 			// of a role is what *permits* the reset, so an unreachable store would
 			// hand over another admin's account. Refuse instead, and say why.
 			const { known, role: targetRole } = await lookupUserRole(env, base, target.id);
-			if (!known) return textResponse('Could not check that user’s role, so the password was not changed.', 502, cors);
-			if (targetRole === 'admin') return textResponse('That user is an admin. Admins cannot reset each other’s passwords.', 409, cors);
+			if (!known) return textResponse("Could not check that user's role, so the password was not changed.", 502, cors);
+			if (targetRole === 'admin') return textResponse("That user is an admin. Admins cannot reset each other's passwords.", 409, cors);
 		}
 
 		let res;

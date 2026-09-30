@@ -84,7 +84,7 @@ function reportChoice(image, added) {
 async function choose(image, card, button) {
   const placing = canPlaceDirectly();
   button.disabled = true;
-  setStatus(placing ? "Adding…" : "Passing your pick along…");
+  setStatus(placing ? "Adding..." : "Passing your pick along...");
   try {
     if (placing) {
       const result = await app.callServerTool({
@@ -164,7 +164,7 @@ function render() {
   setStatus(
     canPlaceDirectly()
       ? ""
-      : "Picking one tells the assistant which file to use — it places the image.",
+      : "Picking one tells the assistant which file to use, and it places the image.",
   );
 }
 

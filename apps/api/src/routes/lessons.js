@@ -375,7 +375,7 @@ export async function handleLessons(request, env, url, cors) {
 			await createNotification(env, base, {
 				userId: existing.author_id,
 				type: 'lesson_update',
-				title: `${displayNameOf(user) || 'A collaborator'} saved changes to “${title}”`,
+				title: `${displayNameOf(user) || 'A collaborator'} saved changes to "${title}"`,
 				body: 'They are a trusted collaborator on this lesson. Open it to see the current version.',
 				link: `/hub/${id}`,
 			}).catch(() => {});

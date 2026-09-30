@@ -399,7 +399,7 @@ export async function prepareRevert({ repoId, oid, doc }) {
   // request and not this one.
   if (!parent) {
     throw new Error(
-      "This is where the lesson starts — there is nothing before it to go back to.",
+      "This is where the lesson starts. There is nothing before it to go back to.",
     );
   }
 
@@ -659,7 +659,7 @@ export async function submitPullRequest({
   const branch = await currentBranch(ctx);
   const packed = await packRepo({ ...ctx, only: [branch], headBranch: branch });
   if (!packed) {
-    throw new Error("There is nothing to propose yet — make an edit first.");
+    throw new Error("There is nothing to propose yet. Make an edit first.");
   }
 
   // The lesson's tip as it stands, recorded on the request so a reviewer can see
@@ -723,14 +723,14 @@ export async function updatePullRequest({
   const branch = await currentBranch(ctx);
   const packed = await packRepo({ ...ctx, only: [branch], headBranch: branch });
   if (!packed) {
-    throw new Error("There is nothing to propose yet — make an edit first.");
+    throw new Error("There is nothing to propose yet. Make an edit first.");
   }
   if (packed.head === head) {
     throw new Error("This proposal already contains everything you have here.");
   }
   if (!(await contains({ ...ctx, oid: packed.head, ancestor: head }))) {
     throw new Error(
-      "This doesn’t build on what the proposal already contains — it would replace it rather than update it. " +
+      "This doesn't build on what the proposal already contains; it would replace it rather than update it. " +
         "Withdraw the proposal and open a new one.",
     );
   }

@@ -12,7 +12,7 @@ title: How the export pipeline works
    renders it to PDF with `html2pdf.js`. Using one shared document builder keeps
    the two outputs in sync.
 4. **Import** (`browser/docxImport`) is the same machinery in the other
-   direction — `mammoth` again, this time reading a user's file — and **Save to
+   direction (`mammoth` again, this time reading a user's file), and **Save to
    Google Docs** uploads the very same `.docx`.
 
 ## What a printed lesson looks like
@@ -20,23 +20,23 @@ title: How the export pipeline works
 The exported lesson is laid out as a finished worksheet, not as an outline of the
 editor:
 
-- **A centred title block** on the first page — the title, then `By {author}`,
+- **A centred title block** on the first page: the title, then `By {author}`,
   then the lesson's age range and release month when it has them. All of it is
   derived from the lesson (`doc.ageRange`) and the record it was published from;
   nothing about any particular publisher is baked in, and a lesson with no author
   or publication date simply prints without those lines.
 - **No section headings.** A section's name is an organising device for the
   editor; the printed lesson runs straight through from one block to the next.
-- **Questions marked by colour alone** — the prompt in its type's colour,
+- **Questions marked by colour alone**: the prompt in its type's colour,
   its answer in black on the same line, with no `[Label]` in front of it. The one
   exception is **Suggested answers**, which shares the amber of **Multiple
   answers** and is set in italic to separate them (see
   [Question blocks](./question-blocks.md#the-two-amber-types)).
 - **Spelling words on one running line**, `Spell: FIRST SECOND THIRD`.
 - **A footer on every page**: the copyright line above a legend naming each
-  question type in its own colour — and its own italic, where it has one — which
+  question type in its own colour (and its own italic, where it has one), which
   is what makes the colour coding legible.
-  [VAKT activities](./vakt-activities.md) are deliberately not in the legend —
+  [VAKT activities](./vakt-activities.md) are deliberately not in the legend:
   they aren't questions, and their `VAKT:` label already names them.
 - **A page number** in the top right corner.
 
@@ -60,14 +60,14 @@ signed-in user's display name, since a draft has no author of its own yet.
 
 mammoth drops run colours and paragraph alignment, so on the PDF path neither the
 question colour coding nor the centred title lines survive on their own. The docx
-therefore marks both with **named Word styles** — a character style per question
-type and one paragraph style for the title lines — which `pdfExport` maps onto
+therefore marks both with **named Word styles** (a character style per question
+type and one paragraph style for the title lines), which `pdfExport` maps onto
 CSS classes with a `styleMap` and colours again from `questions.js`.
 
 That is also how **import** recovers a question's type now that nothing in the
 visible text names it: `docxImport` asks mammoth for the same style map and reads
 the type off the `<span class="s2c-q-…">`. Section _divisions_ have nothing left
-to carry them, so a DOCX round trip collapses a lesson into a single section —
+to carry them, so a DOCX round trip collapses a lesson into a single section;
 Export/Import **JSON** is the lossless one.
 
 The page number and the footer are drawn straight onto the finished PDF pages
@@ -79,8 +79,8 @@ footer.
 
 Those four are the whole list. Nothing else in the app touches `docx` or
 `mammoth`; in particular, **preview does not**. The editor's preview mode
-renders the lesson model directly with `LessonView` — the same component the
-public `/hub/:id` page uses — so previewing builds no document, waits on no
+renders the lesson model directly with `LessonView` (the same component the
+public `/hub/:id` page uses), so previewing builds no document, waits on no
 chunk, and shows exactly what a reader will see. (It used to build a docx and
 convert it back to HTML with mammoth just to fill a dialog.)
 
@@ -90,12 +90,12 @@ not the export pipeline.
 ### On screen it follows the theme
 
 `LessonView` draws a lesson in the app's own theme, light or dark, on both
-surfaces that show one — the public lesson page and the editor's preview mode —
+surfaces that show one (the public lesson page and the editor's preview mode),
 exactly as [interactive mode](./interactive-mode.md#what-it-looks-like) does.
 It keeps the export's measurements (the `fitWithin` image maths against
-`DOCX_MAX_IMAGE_WIDTH`, the spacing) and its block layout — no section headings,
+`DOCX_MAX_IMAGE_WIDTH`, the spacing) and its block layout (no section headings,
 a question's answer inline after its coloured prompt, spelling words on one line,
-a [VAKT activity](./vakt-activities.md) in red under its `VAKT:` label — so a
+a [VAKT activity](./vakt-activities.md) in red under its `VAKT:` label), so a
 lesson keeps the shape it will print in; only the colours and the typeface
 are the theme's. What it does _not_ copy is the paper furniture: the title
 block's by-line, the page numbers and the footer legend belong to the printed
@@ -103,17 +103,17 @@ sheet, and the app already shows the author and the legend in its own chrome.
 
 There is no second "paper" rendering to keep in sync. A lesson is read on screen
 far more often than it is printed, and a white sheet glaring out of a dark page
-is the wrong default for reading — the printout look lives in the thing that
+is the wrong default for reading; the printout look lives in the thing that
 actually prints, the DOCX and PDF exports.
 
 Question-type and spelling colours stay literal there, as they are in the editor
-and in interactive mode: they're content — the same colour coding the docx
-carries — rather than chrome.
+and in interactive mode: they're content (the same colour coding the docx
+carries) rather than chrome.
 
 ## It loads on demand
 
-Together those libraries — `docx`, `mammoth`, `html2pdf.js`, `html2canvas`,
-`jszip` — are the largest single cluster in the dependency graph: about 390 kB
+Together those libraries (`docx`, `mammoth`, `html2pdf.js`, `html2canvas`,
+`jszip`) are the largest single cluster in the dependency graph: about 390 kB
 gzipped. None of it is needed until someone clicks Export, Print, Import or Save
 to Drive, so it lives in its own chunk behind `src/lib/exports/load.js`, in the
 same shape as the git engine:
@@ -124,7 +124,7 @@ await exportDocx(doc);
 ```
 
 `src/lib/exports/engine.js` is the chunk; nothing imports it directly. It's one
-chunk rather than four because the entry points share nearly all their weight —
+chunk rather than four because the entry points share nearly all their weight:
 the PDF path builds the docx and converts it with mammoth, which is also what
 the importer uses.
 
@@ -132,8 +132,8 @@ the importer uses.
 
 `DOCX_MAX_IMAGE_WIDTH` lives in `@spelling-creator/core/lessonLayout`, **not**
 beside the code that first needed it. It used to sit in `browser/docxExport`,
-which meant `LessonView.jsx` — wanting one number, and rendering on the public
-`/hub/:id` page — pulled the entire Word toolchain into the bundle every visitor
+which meant `LessonView.jsx` (wanting one number, and rendering on the public
+`/hub/:id` page) pulled the entire Word toolchain into the bundle every visitor
 downloaded.
 
 Being outside `browser/` is also what lets the server render a lesson at all:

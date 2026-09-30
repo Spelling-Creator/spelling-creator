@@ -6,7 +6,7 @@ title: Live collaboration
 
 Press **Collaborate** in the editor toolbar to edit a lesson together with other
 people in real time. Each participant opens **a single WebSocket** to a
-server-side **room** — a [Cloudflare Durable Object](https://developers.cloudflare.com/durable-objects/)
+server-side **room**, a [Cloudflare Durable Object](https://developers.cloudflare.com/durable-objects/)
 (`CollabRoom`) that is the authority and relay for the session. The companion
 Worker verifies your **Supabase sign-in** before the connection reaches the room,
 so **only logged-in users can host or join**, and your identity is established
@@ -22,14 +22,14 @@ guest the moment they're added.
 2. A guest pastes the code (or opens the invite link) and connects. Connecting
    does **not** yet make them a collaborator.
 3. The guest appears in the host's **Waiting to join** list. The host clicks
-   **Add to lesson** — this is the gate the feature is built around: only after a
+   **Add to lesson**; this is the gate the feature is built around: only after a
    guest is _added_ does the room send them the lesson and start syncing edits.
    The host can decline a request or remove a collaborator at any time. **Trusted
    collaborators** (an email list saved on the lesson) skip the waiting room and
    are admitted automatically.
 
    That trusted list carries further privileges outside the live session: a
-   trusted collaborator may **save the lesson** — the only non-author who can —
+   trusted collaborator may **save the lesson** (the only non-author who can)
    and may **merge a pull request** into it, deciding alongside the author which
    proposed changes land. See
    [Version history](/monorepo/version-history#what-a-trusted-collaborator-may-not-do)
@@ -42,19 +42,19 @@ guest the moment they're added.
 
 **Conflict handling (CRDT).** Edits are merged with a **CRDT** ([Yjs](https://yjs.dev)),
 not applied last-write-wins. Two people working on **different blocks, sections or
-fields** both keep their work — previously the document was synced whole, so
+fields** both keep their work; previously the document was synced whole, so
 whoever typed last silently overwrote the other. Every participant keeps a Yjs
 document mirroring the lesson, the room holds the authoritative copy, and only the
 **changes** travel over the wire rather than the whole lesson on every keystroke.
 
 The one deliberate limit: text is merged **per field**, not per character. If two
 people type into the **same** field at the same time, one of them still wins (both
-sides agree on which). Editing different blocks — the normal case — always merges.
+sides agree on which). Editing different blocks, the normal case, always merges.
 
 **What the room never carries.** The trusted list itself is stripped out of the
 document before it is reconciled into the Y.Doc, and so never reaches the room or
 anyone in it. Those are email addresses, and the host admits people who aren't on
-the list — there is no reason for a guest to receive everyone else's address to
+the list; there is no reason for a guest to receive everyone else's address to
 edit a lesson. Nobody in the session needs it: only the host reads it, to
 auto-admit trusted guests, from their own copy. The host puts it back on each
 document they adopt from the room; a guest doesn't, because their local copy
@@ -65,7 +65,7 @@ belongs to whatever lesson they had open before joining, not to this one. See
 speed: a one-byte type tag followed by the payload. Cursor and chat payloads are
 UTF-8 JSON; document payloads are opaque Yjs update bytes, which the room relays
 without parsing. A participant is identified by a server-assigned numeric **slot**
-rather than by name in every packet; the client maps slot → identity from the
+rather than by name in every packet; the client maps slot to identity from the
 presence roster to label cursors and chat.
 
 **Live cursors.** Each collaborator's text selection is relayed to the others, so
@@ -77,7 +77,7 @@ floating coloured carets/avatars over the editor.
 A caret is drawn only for a field that's actually on screen. Sections you have
 [collapsed](./navigating-large-lessons.md#collapsing-sections) are hidden with
 `content-visibility`, whose descendants still measure as full-size, so
-`CollabCursors` tests `Element.checkVisibility()` rather than geometry —
+`CollabCursors` tests `Element.checkVisibility()` rather than geometry;
 otherwise a collaborator editing inside a folded section would have their avatar
 pinned over the collapsed card. Their edits still arrive as normal; only the
 marker is suppressed. Collapsed state is per-person and never leaves the
@@ -86,7 +86,7 @@ browser, so nobody else's view is affected by what you fold away.
 **Live chat.** Once you're collaborating, a floating chat panel (`CollabChat.jsx`,
 pinned to the bottom-left) lets everyone in the session talk. It appears for the
 host as soon as a session is live and for a guest once the host has added them.
-The transcript is **ephemeral** — it lives only in memory for the duration of the
+The transcript is **ephemeral**: it lives only in memory for the duration of the
 session and is not saved anywhere; a launcher badge shows the unread count while
 the panel is collapsed.
 
@@ -94,25 +94,25 @@ the panel is collapsed.
 cheap and abuse-resistant: at most **5 session joins per minute** and **6
 concurrent hosted rooms** per user, **10 participants** per room, and per
 connection a budget of **30 document updates, 15 cursor moves and 2 chat messages
-per second** (a single update is capped at 512 KB — a ceiling that only the host's
+per second** (a single update is capped at 512 KB, a ceiling that only the host's
 opening copy of the lesson ever approaches, since ordinary edits are a few bytes).
 Over-budget traffic is dropped, and a connection that keeps flooding is closed.
 
 **Implementation.** `@spelling-creator/core/ydoc` owns the CRDT: it maps the editor's plain
 lesson document (`{ title, sections: [...] }`) onto a Yjs document and back. The
-editor itself is untouched by any of this — it keeps working on plain objects, and
+editor itself is untouched by any of this: it keeps working on plain objects, and
 `ydoc` keeps a Yjs document in step underneath, matching sections, blocks,
 spelling words and answers by the stable `id` they already carry. Its `reconcile`
 is **idempotent**, which is what stops a received edit from bouncing straight back
 to the sender.
 
 `src/lib/collab.js` is a `useCollaboration` hook that owns the WebSocket, the
-Yjs document, the slot → identity roster, the admission state and the chat
+Yjs document, the slot-to-identity roster, the admission state and the chat
 transcript. `src/components/CollaborateDialog.jsx` is the control panel (host/join
 landing, invite sharing, the waiting-to-join admission list, and the roster). It
 is addressed by URL rather than by component state: `/editor/collaborate` opens
 it and leaving the panel closes it, so the back button works and a host can send
-someone a link to it. Navigating in or out preserves the query string — an
+someone a link to it. Navigating in or out preserves the query string: an
 invite arrives as `?join=<code>`, and dropping it on the way into the panel
 would break the very flow that opened it.
 `EditorPage` wires the hook's `onRemoteDoc` to its `setDoc`, passes the access

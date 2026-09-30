@@ -12,10 +12,10 @@ This page records what that costs, measured, and the mechanisms that answer it.
 
 ## How long "long" actually is
 
-Measured against a lesson built to the standard shape the MCP server documents —
-6 sections × (2 text paragraphs + 4 spelling words + 15 questions), 108 blocks:
+Measured against a lesson built to the standard shape the MCP server documents:
+6 sections x (2 text paragraphs + 4 spelling words + 15 questions), 108 blocks:
 
-|                 | desktop 1280×800 | phone 390×844 |
+|                 | desktop 1280x800 | phone 390x844 |
 | --------------- | ---------------- | ------------- |
 | Page height     | ~29,700px        | ~45,700px     |
 | In screenfuls   | **37**           | **54**        |
@@ -26,16 +26,16 @@ Where the height goes, by block type (desktop):
 
 | Block type            | Count | Each      | Total    | Share   |
 | --------------------- | ----- | --------- | -------- | ------- |
-| Questions (all types) | 90    | 159–359px | 23,094px | **77%** |
+| Questions (all types) | 90    | 159-359px | 23,094px | **77%** |
 | Text                  | 12    | 192px     | 2,304px  | 8%      |
 | Spelling              | 6     | 278px     | 1,668px  | 6%      |
 
 Question blocks are three quarters of the scroll. Anything that compresses them
-buys more than anything else can — see [What isn't solved yet](#what-isnt-solved-yet).
+buys more than anything else can; see [What isn't solved yet](#what-isnt-solved-yet).
 
 ## Sticky section headers
 
-Each section's header row — number, name, block count — is `sticky` and pins
+Each section's header row (number, name, block count) is `sticky` and pins
 directly below the app bar, so the section you're in is named on screen the
 whole time you're inside it. It hands off to the next section's header the way
 any sticky list does.
@@ -44,10 +44,10 @@ Two details make it work:
 
 - **It pins to `--header-h`, not to `0`.** `globals.css` publishes the chrome's
   heights as tokens: `--header-row-h` (`AppHeader`'s row) and `--pagebar-row-h`
-  (`PageBar`'s — each bar applies its own as `h-(...)`, so the tokens are the
+  (`PageBar`'s; each bar applies its own as `h-(...)`, so the tokens are the
   single source of truth), `--appheader-h` (the header plus
   `env(safe-area-inset-top)` for the [installed app](./pwa-and-offline.md),
-  where the header pads itself by the iOS status bar — it's where `PageBar` pins
+  where the header pads itself by the iOS status bar; it's where `PageBar` pins
   its top), and `--header-h`, the sum of all of it: the real distance from the
   top of the viewport to the first pixel of page content on a page with a
   `PageBar`, which is every page that pins anything. Use it for whatever has to
@@ -57,7 +57,7 @@ Two details make it work:
   `p-4`, so it carries `-mx-4 -mt-4 px-4 pt-4` to reach the card's edges;
   otherwise blocks would scroll visibly through the gap beside it. It takes
   `bg-surface-muted` rather than the card's own `bg-card`, which is what makes
-  it read as the card's **header strip** — a tinted bar naming the section —
+  it read as the card's **header strip**, a tinted bar naming the section,
   instead of a row of content that happens to be pinned. (It used to be
   `bg-card` plus `backdrop-blur-(--glass-blur)`, because `--card` was
   translucent and content would otherwise show through the pinned row. Both went
@@ -74,14 +74,14 @@ it that way.
 ### Only the identity is pinned
 
 The section header holds two things: identity (number, name, size) and controls
-(move up, move down, delete). Below `sm` the controls wrap onto a second row —
-see [Mobile layout & touch targets](./mobile-layout.md) for why they can't share
-the first — and pinning that second row made the sticky header **113px, 13% of
+(move up, move down, delete). Below `sm` the controls wrap onto a second row
+(see [Mobile layout & touch targets](./mobile-layout.md) for why they can't share
+the first), and pinning that second row made the sticky header **113px, 13% of
 an 844px screen**, on top of the app bar's own 64px.
 
 So only the identity row is sticky. The controls are rendered twice, once inside
 the identity row (`hidden sm:flex`) and once below it (`sm:hidden`), with a
-breakpoint hiding whichever copy doesn't apply — `display: none` takes the
+breakpoint hiding whichever copy doesn't apply; `display: none` takes the
 hidden copy out of the accessibility tree too, so only one is ever exposed. On a
 phone the sticky header is 65px (8%) and the controls scroll away with the top
 of the section.
@@ -94,7 +94,7 @@ not for controls you go looking for when you want them.**
 A question block used to show its type badge and nothing else, so ten "Open
 ended" cards in a row were visually interchangeable and scrolling back to the
 one you were fixing was a guess. Each now shows its 1-based position among its
-section's questions — `Q7` — which makes it nameable.
+section's questions, `Q7`, which makes it nameable.
 
 Numbered **per section, not per lesson**, because that's how questions are
 authored and read (the MCP authoring standard specifies fifteen per section, in
@@ -102,7 +102,7 @@ a fixed order). `SectionCard` computes the numbering and passes it down as a
 plain number; it stays a stable prop, so inserting a question mid-section
 re-renders only the blocks whose number actually changed.
 
-The section header shows `18 blocks` alongside the name for the same reason —
+The section header shows `18 blocks` alongside the name for the same reason:
 it gives the section a length that isn't just a scrollbar. Desktop only; on a
 phone the name needs that row.
 
@@ -119,7 +119,7 @@ Measured on the same 108-block lesson:
 | Everything folded             | **1,186px** | **1.5**         |
 
 A folded card keeps its number, name, block count and move/delete controls, and
-shows what's inside — `2 paragraphs · 1 spelling list · 15 questions` — because
+shows what's inside (`2 paragraphs · 1 spelling list · 15 questions`) because
 a section reduced to a name alone says nothing about what it holds or how far
 along it is.
 
@@ -127,7 +127,7 @@ along it is.
 
 Collapsed state lives in `EditorPage`, **not** in the document. It isn't
 content, it must never reach the exporters, and it is never sent to
-collaborators — the same reasoning as `SectionCard`'s `activeBlockId`. What one
+collaborators; the same reasoning as `SectionCard`'s `activeBlockId`. What one
 person folds away to get some screen back is theirs, not everyone's.
 
 It's held there rather than per-card so that "collapse all" is possible, and
@@ -145,7 +145,7 @@ adopts into React state.
 The attribute is set imperatively from a `useLayoutEffect`, deliberately not
 through JSX, because **React 18 treats `hidden` as a boolean attribute**:
 `hidden="until-found"` renders as a plain `hidden=""`, which is `display: none`
-and not searchable at all. This was verified in the browser — it is not a
+and not searchable at all. This was verified in the browser; it is not a
 one-line prop. Since React never renders the attribute, the two can't disagree,
 including when the browser removes it on a match.
 
@@ -156,7 +156,7 @@ outright, which is what unmounting it would have given us anyway.
 
 `hidden="until-found"` is `content-visibility: hidden` underneath, and its
 descendants **still report a full-size `getBoundingClientRect()`**. Anything
-that measures elements has to account for that — measuring alone will not tell
+that measures elements has to account for that; measuring alone will not tell
 you the content is hidden.
 
 `CollabCursors` is the case in the codebase today: it pins a caret and avatar to
@@ -191,7 +191,7 @@ with a block in flight and it **springs open** after 500ms, on a dwell rather
 than on the first `dragover` so that dragging _past_ a folded card on the way
 somewhere else doesn't keep re-flowing the page under the pointer. While it's
 still folded, its summary line becomes the drop zone, and dropping there before
-the spring fires expands the card and appends the block — the same thing an
+the spring fires expands the card and appends the block, the same thing an
 empty section does, rather than swallowing the block into a card you can't see.
 
 ## Position is preserved across edits
@@ -199,15 +199,15 @@ empty section does, rather than swallowing the block into a card you can't see.
 Three things used to throw away the user's place.
 
 **Reordering.** `moveSection` and `moveBlock` reorder elements that are
-screenfuls tall. Under a fixed `scrollY` that flings the thing you just moved —
-and the button you just pressed — far off screen: "move section down" landed you
+screenfuls tall. Under a fixed `scrollY` that flings the thing you just moved
+(and the button you just pressed) far off screen: "move section down" landed you
 in the middle of a _different_ section.
 
 `lib/useScrollAnchor.js` fixes this. Call the returned `anchor(selector)`
 immediately **before** the state update that reorders the DOM; after React
 commits, the hook re-measures that element and scrolls by the difference, so it
 ends up back under the same pixel. It anchors the _moved_ element rather than
-the page, which is what makes the move buttons repeatable — they stay under the
+the page, which is what makes the move buttons repeatable: they stay under the
 pointer, so a block can be walked up a section one click at a time. Measured
 drift after a section move: **0px** (previously ~4,900px).
 
@@ -216,7 +216,7 @@ same frame as the reorder; otherwise the page paints once at the wrong offset
 and visibly jumps.
 
 It's bounded by the scroll range: reordering inside a document only a screen or
-two tall — every section collapsed, say — can leave some drift (measured: 131px,
+two tall (every section collapsed, say) can leave some drift (measured: 131px,
 with the page already clamped at its maximum scroll) because there is nowhere
 left to scroll. Unavoidable rather than a defect, and in a document that short
 whatever moved is still on screen.
@@ -226,7 +226,7 @@ deleted element, and you can only delete something you can see, so nothing above
 the viewport shifts and there's nothing to correct.
 
 **Adding a section.** A new section is appended to the end of the document,
-which in a six-section lesson is ~30,000px below wherever the user is standing —
+which in a six-section lesson is ~30,000px below wherever the user is standing:
 the dialog closed and, as far as the screen showed, nothing happened. The editor
 now scrolls to the new card and puts the cursor in its name field. The focus
 call passes `preventScroll: true`, or it would jump the viewport there instantly
@@ -240,7 +240,7 @@ It stores a **block id, not a scroll offset**: block heights change as the
 lesson is edited and as images load, so a pixel position points at something
 else by the time it's used, while an id still means the thing you were working
 on. It's written by a `focusin` listener straight to `sessionStorage`, entirely
-outside React — lifting `SectionCard`'s local `activeBlockId` up to `EditorPage`
+outside React; lifting `SectionCard`'s local `activeBlockId` up to `EditorPage`
 would re-render every section on each focus change, the exact cost keeping it
 local avoids on a 108-block document.
 
@@ -248,7 +248,7 @@ local avoids on a 108-block document.
 the tab: coming back to a lesson tomorrow ought to start at the beginning;
 coming back from the hub five minutes later ought not to. Restore runs once per
 mount, so it can never yank the page from someone who has already started
-scrolling, and it scrolls instantly rather than smoothly — this is where you
+scrolling, and it scrolls instantly rather than smoothly: this is where you
 already were, so it shouldn't play as a journey.
 
 ## Scrolling to something, generally
@@ -256,15 +256,15 @@ already were, so it shouldn't play as a journey.
 `lib/useScrollAnchor.js` exports two helpers alongside the hook:
 
 - `scrollToElement(el, { block, smooth })` honours the OS "reduce motion"
-  setting. A smooth scroll is worth it for a deliberate jump — you see where
-  you're being taken — but never for restoring a position on load. Restores pass
+  setting. A smooth scroll is worth it for a deliberate jump (you see where
+  you're being taken) but never for restoring a position on load. Restores pass
   `smooth: false`.
 - `idSelector(attr, id)` builds `[data-block-id=…]` through `CSS.escape`. Ids
   are not always ours: `jsonImport`'s `keepId()` passes any string in a lesson
   file through verbatim, and one containing a quote would make `querySelector`
   throw.
 
-Scroll targets align with `block: "center"` when the target is a block —
+Scroll targets align with `block: "center"` when the target is a block:
 aligning a block to the top of the page would put it underneath its own
 section's sticky header.
 
@@ -275,24 +275,24 @@ numbered list of the lesson's sections down the left of the editor, with each
 section's block count beside it. Clicking one scrolls to it.
 
 Sticky headers answer _where am I_; this answers _where is everything else_. At
-37 screenfuls those are different questions, and the scrollbar — a 21px thumb —
+37 screenfuls those are different questions, and the scrollbar (a 21px thumb)
 answers neither. Getting to section 5 from section 1 was a scroll of roughly
 20,000px or a collapse-all followed by a hunt; it is now one click.
 
 Three deliberate limits:
 
 - **It navigates, and does not reorder.** Moving sections stays on the cards,
-  where the move buttons and drag targets already are — and where the scroll
+  where the move buttons and drag targets already are, and where the scroll
   anchor (see [Position is preserved across edits](#position-is-preserved-across-edits)) keeps the page still
   through the move. An outline you could also drag would be a second, subtly
   different way to do the same thing.
 - **It scrolls via `scrollToElement`/`idSelector`** from `lib/useScrollAnchor.js`
-  — the same helpers the move buttons use — and relies on `SectionCard`'s own
+  (the same helpers the move buttons use) and relies on `SectionCard`'s own
   `scroll-mt-(--header-h)` to land clear of the bar, rather than computing an
   offset of its own.
 - **It appears at 52rem of _page column_, not of viewport.** The measurement is
   against `AppShell`'s `@container/page`, so anything that ever narrows the page
-  column takes the outline away without the window changing size — see
+  column takes the outline away without the window changing size; see
   [Laying out against the container](./pages-and-routing.md#laying-out-against-the-container).
   Below that threshold the editor is a single column and the outline would be
   spending width the document needs. **Collapse all**, which is the cheap way to
@@ -305,7 +305,7 @@ the document, the outline is the only place it appears at all.
 The same outline stands beside the editor's **Preview**, with `readOnly` set:
 collapse-all and add-section drop away, and the list keeps working unchanged.
 It can, because it addresses a section by `data-section-id` and `LessonView`
-publishes that attribute — with the same `scroll-mt-(--header-h)` — on each
+publishes that attribute, with the same `scroll-mt-(--header-h)`, on each
 `<section>` it renders, exactly as `SectionCard` does in the editor. The two
 surfaces never coexist (preview replaces the panes rather than sitting beside
 them), so one id always matches one element. A 37-screen lesson is no easier to
@@ -318,11 +318,11 @@ The section outline above was one of the answers this page called for. One
 further step the measurements point at, still not built:
 
 - **Collapsing inactive question blocks** to a single line, expanding on focus.
-  This is where the 77% lives: measured at **10,354px** (−65%) _with every
+  This is where the 77% lives: measured at **10,354px** (-65%) _with every
   section still expanded_, so it compounds with section collapse rather than
   competing with it, and it needs no navigation UI at all. It's also the most
   invasive change to how editing feels, which is why section collapse came
-  first — that may well be enough.
+  first; that may well be enough.
 
 One further idea, worth considering only if the outline and collapse-all turn
 out not to be enough between them: a jump-to-section dropdown on the sticky

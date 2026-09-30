@@ -10,7 +10,7 @@ pnpm --filter @spelling-creator/mcp run pack   # build dist/spelling-creator-hub
 ```
 
 `pack` stages a clean copy of the runtime files and vendors **production**
-dependencies with a flat `npm install --omit=dev` before zipping — necessary
+dependencies with a flat `npm install --omit=dev` before zipping, which is necessary
 because this is a pnpm workspace whose `node_modules` are symlinks that wouldn't
 zip into a working bundle. The manifest (`manifest.json`) declares the Node server
 entry point, the `user_config` fields Claude Desktop collects (the refresh token
@@ -21,13 +21,13 @@ server already reads. Bundle artifacts (`build/`, `dist/`, `*.mcpb`) are gitigno
 
 `@spelling-creator/core` needs handling that npm can't provide. npm doesn't
 understand the `workspace:` protocol and fails the whole install on it, and a
-`file:` dependency would be symlinked — the exact thing that doesn't survive the
+`file:` dependency would be symlinked, the exact thing that doesn't survive the
 zip. So `pack` copies the core modules the server actually imports into the staged
 `node_modules` as real files and removes the dependency from the staged manifest
 before npm sees it.
 
 That works because those modules (`richText`, `wikimedia`) are dependency-free.
-Core's own dependency list — yjs, docx, isomorphic-git, supabase — belongs to its
+Core's own dependency list (yjs, docx, isomorphic-git, supabase) belongs to its
 browser modules and has no business in this bundle. `pack` doesn't assume that
 silently: it walks the imports out from each module the server uses and **fails
 the build** if any of them reaches a real package, naming the package and the file:
@@ -43,12 +43,12 @@ If that fires, either keep the module dependency-free or add the package to
 
 ## Publishing a release
 
-Releases are cut by hand. There is no CI workflow for this — an
+Releases are cut by hand. There is no CI workflow for this: an
 `mcpb-release.yml` existed once and was removed as broken, so the tag-push
 trigger some older notes describe does nothing.
 
 1. Bump the version in **both** `apps/mcp/manifest.json` and
-   `apps/mcp/package.json`. They must match — the release tag and asset name are
+   `apps/mcp/package.json`. They must match; the release tag and asset name are
    derived from the manifest.
 
 2. Validate and build:

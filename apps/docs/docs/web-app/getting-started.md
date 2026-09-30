@@ -17,7 +17,7 @@ it (see [Installable app & offline use](./pwa-and-offline.md#local-development))
 
 ## Environment variables
 
-Optional features are configured in `apps/web/.env` — Vite reads env
+Optional features are configured in `apps/web/.env`; Vite reads env
 files from the package holding `vite.config.js`, not from the monorepo root, and
 exposes only `VITE_`-prefixed vars to client code:
 
@@ -40,5 +40,5 @@ The app degrades gracefully when a feature is unconfigured:
   browsing the hub still works.
 
 The Supabase **anon key** is designed to be shipped to the browser. Keep the
-**service-role key** and **JWT secret** on the Worker only — never in `VITE_*`
+**service-role key** and **JWT secret** on the Worker only, never in `VITE_*`
 vars, which are bundled into the client.

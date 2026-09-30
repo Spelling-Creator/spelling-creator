@@ -10,7 +10,7 @@
     "landing": {
       "signInPrompt": "Sign in to start or join a live collaboration session.",
       "inviteHeading": "Invite people to this lesson",
-      "inviteDescription": "Start a live session, then share the code. People who join wait until you add them to the lesson — after that, your edits sync both ways in real time.",
+      "inviteDescription": "Start a live session, then share the code. People who join wait until you add them to the lesson. After that, your edits sync both ways in real time.",
       "startSession": "Start a collaboration session",
       "joinHeading": "Join someone's lesson",
       "joinCodeLabel": "Session code",
@@ -19,8 +19,8 @@
       "joinHint": "Joining replaces your current draft with the host's lesson."
     },
     "connecting": {
-      "host": "Starting session…",
-      "guest": "Connecting to the host…"
+      "host": "Starting session...",
+      "guest": "Connecting to the host..."
     },
     "host": {
       "sessionLive": "Your session is live. Share the code or link below to invite people.",
@@ -46,7 +46,7 @@
     },
     "guest": {
       "admittedMessage": "You're collaborating live. Your changes sync with everyone here.",
-      "waitingForHost": "Connected — waiting for the host to add you to the lesson."
+      "waitingForHost": "Connected. Waiting for the host to add you to the lesson."
     },
     "trusted": {
       "heading": "Trusted collaborators",
@@ -57,10 +57,10 @@
       "signInToAutoInvite": "Sign in to automatically email the invite link to trusted collaborators.",
       "invalidEmail": "Enter a valid email address.",
       "alreadyOnList": "That collaborator is already on the list.",
-      "inviteMessage": "You're a trusted collaborator on this lesson — join the live session with this link."
+      "inviteMessage": "You're a trusted collaborator on this lesson. Join the live session with this link."
     },
     "autoSend": {
-      "sending": "Sending the invite link to your trusted collaborators…",
+      "sending": "Sending the invite link to your trusted collaborators...",
       "partialFailure": "Invited {{count}}; couldn't reach {{emails}}.",
       "sent_one": "Invite link sent to {{count}} trusted collaborator.",
       "sent_other": "Invite link sent to {{count}} trusted collaborators."
@@ -73,7 +73,7 @@
       "recipientEmailLabel": "Recipient email",
       "messageLabel": "Message (optional)",
       "cancel": "Cancel",
-      "sending": "Sending…",
+      "sending": "Sending...",
       "send": "Send link",
       "sendFailedDefault": "Could not send the link."
     }
@@ -82,7 +82,7 @@
     "openChat": "Open chat",
     "closeChat": "Close chat",
     "title": "Chat",
-    "noMessages": "No messages yet — say hello!",
+    "noMessages": "No messages yet. Say hello!",
     "you": "You",
     "collaboratorFallback": "Collaborator",
     "messagePlaceholder": "Type a message",

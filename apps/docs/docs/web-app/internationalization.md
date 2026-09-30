@@ -24,7 +24,7 @@ call `useTranslation()` immediately.
 ## Namespaces
 
 Strings are split into namespaces roughly by page or feature area, not lumped into
-one file — keeps each JSON file a manageable size and lets a translator work on one
+one file; that keeps each JSON file a manageable size and lets a translator work on one
 area without wading through the whole app:
 
 | Namespace        | Covers                                                                                                                                           |
@@ -67,7 +67,7 @@ logic:
 t("resultCount", { count }); // resultCount_one / resultCount_other in the JSON
 ```
 
-A plain (non-component) helper — `HistoryDialog.jsx`'s exported `timeAgo()` — can't call
+A plain (non-component) helper, `HistoryDialog.jsx`'s exported `timeAgo()`, can't call
 `useTranslation`, so it imports the shared `i18n` instance directly and calls
 `i18n.t("editorTools:timeAgo.minutes", { count })`, with the namespace prefixed
 explicitly since there's no `useTranslation` scoping it.
@@ -79,7 +79,7 @@ Not every string in a migrated file goes through `t()`. Left as-is, deliberately
 - Debug-only `console.*` output and code comments.
 - CSS class names, `data-*`/technical `aria-*` values, internal state-machine string
   literals (e.g. `"idle"`, `"docx"`, `"ours"`).
-- User-authored content — lesson text, comments, bios, display names — which is data,
+- User-authored content (lesson text, comments, bios, display names), which is data,
   not app copy. (A reader can still have a comment machine-translated into their
   own language, on their device: see
   [Comment translation](./comment-translation.md). That's a separate feature from
@@ -96,14 +96,14 @@ Not every string in a migrated file goes through `t()`. Left as-is, deliberately
    `resources`, and add its code to `supportedLngs`.
 3. Add `{ code: "<lng>", label: "..." }` to `LANGUAGES` in `src/lib/languages.js`.
 
-No component changes are needed — every string already resolves through `t()`, and the
+No component changes are needed: every string already resolves through `t()`, and the
 switcher renders whatever `LANGUAGES` holds.
 
 ## The switcher
 
 The **Language** section of the [settings page](./pages-and-routing.md) reads
 `LANGUAGES` and calls `i18n.changeLanguage()`. While the registry holds a single entry
-the control is disabled and says so, rather than offering a choice that isn't one — a
+the control is disabled and says so, rather than offering a choice that isn't one; a
 second entry turns it into a real select with no code change.
 
 The choice persists itself: the language detector is configured with

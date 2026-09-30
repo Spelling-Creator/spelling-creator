@@ -13,7 +13,7 @@ The browser holds no authority of its own: it asks the Worker
 `GET /mod/whoami` what the caller is allowed to do and renders accordingly,
 and the Worker **re-derives the caller's role from the database on every
 privileged request**, so a tampered client can never grant itself power.
-(The Worker's moderation API lives at `/mod`, not `/moderation` — it's named
+(The Worker's moderation API lives at `/mod`, not `/moderation`; it's named
 differently on purpose so it can't collide with this page's own `/moderation`
 route; see the registration comment in `apps/api/src/index.js`.)
 
@@ -22,14 +22,14 @@ route; see the registration comment in `apps/api/src/index.js`.)
 Roles live in the `user_roles` table (`apps/api/schema.sql`). A normal signed-in
 user is a plain author who can only touch their own content. Above that:
 
-- **Moderator** — delete any comment, close any
+- **Moderator**: delete any comment, close any
   [proposed change](./pull-requests.md), **shadowban** a lesson, ban users by
   name, and **request** that a lesson be fully deleted.
-- **Admin** — everything a moderator can do, plus: add moderators, approve a
+- **Admin**: everything a moderator can do, plus: add moderators, approve a
   moderator's lesson-deletion request, fully delete a lesson, and ban users by IP.
 
 Note what is _not_ on either list: **editing** someone else's comment. A comment can
-only be edited by the person who wrote it (see [Rich text](./rich-text.md)) — a
+only be edited by the person who wrote it (see [Rich text](./rich-text.md)); a
 moderator's power over a bad comment is to delete it, not to rewrite it under its
 author's name.
 
@@ -38,7 +38,7 @@ For the same reason, a moderator can **close** a proposed change but never
 authorship, not moderation; only that author and the collaborators they trust can
 do it.
 
-There is deliberately **no in-app way to create an admin** — admins are seeded by
+There is deliberately **no in-app way to create an admin**; admins are seeded by
 hand in the Supabase SQL editor (see the snippet at the bottom of `schema.sql`).
 Admins can add moderators (`POST /mod/moderators`); `granted_by` records
 which admin added each one.
@@ -90,18 +90,18 @@ wrapper is `@spelling-creator/core/moderation`.
 
 An instance that signs people in with a username and has no mail server has
 nowhere to send a reset link, so a forgotten password would otherwise be
-unrecoverable short of the database. An admin can set one from this page —
+unrecoverable short of the database. An admin can set one from this page,
 identifying the person by username or by email, whichever they are known by.
 
 It is **admin-only, never moderator**. Setting somebody's password is taking
 their account, which is a different kind of power from hiding a lesson. An admin
 may reset their own and anybody below them, but not another admin's: admins are
 peers, and taking a peer's account is an escalation the tier was never meant to
-allow. The section only appears at all on an instance that uses passwords —
+allow. The section only appears at all on an instance that uses passwords;
 there is nothing to set on a magic-link one.
 
-That last rule fails closed. If the target's role cannot be read at all — the
-database is unreachable, or answers with something that isn't a row list — the
+That last rule fails closed. If the target's role cannot be read at all (the
+database is unreachable, or answers with something that isn't a row list), the
 reset is refused with a 502 rather than allowed through. Everywhere else an
 unknown role means "no privileges" and blocks by itself; here an absent role is
 what _permits_ the reset, so the same reading would hand over another admin's

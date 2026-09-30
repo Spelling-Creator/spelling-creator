@@ -27,12 +27,12 @@ there aren't many to spare:
 Out of that 264px the control stack took 128px (text, image, question blocks)
 or 164px (spelling blocks, which have two extra buttons). Subtract the `gap-2`
 between the content and the controls and what remained was a ~128px box for
-typing a 60–110 word lesson paragraph. A spelling word is worse than the 92px
+typing a 60-110 word lesson paragraph. A spelling word is worse than the 92px
 that leaves suggests: each word sits in its own row with a delete button beside
 it (`gap-1` + 32px), so the field itself came out at a **~56px box for typing a
-6–9 letter word**.
+6-9 letter word**.
 
-## Rule 1 — controls become a footer below `sm`
+## Rule 1: controls become a footer below `sm`
 
 `ContentBlock.jsx` defines one shared layout class and uses it for every block
 type:
@@ -48,8 +48,8 @@ it's the original corner column, unchanged.
 
 `SectionCard`'s section header splits the same way: the section number and name
 keep the first row and the move/delete buttons drop below them. It does this by
-rendering the control group twice — once inside the header row (`hidden sm:flex`)
-and once beneath it (`sm:hidden`) — rather than by wrapping, because the header
+rendering the control group twice, once inside the header row (`hidden sm:flex`)
+and once beneath it (`sm:hidden`), rather than by wrapping, because the header
 row is sticky and the controls must **not** be pinned with it. Pinning them cost
 113px, 13% of an 844px screen. See
 [Navigating large lessons](./navigating-large-lessons.md#only-the-identity-is-pinned).
@@ -57,7 +57,7 @@ row is sticky and the controls must **not** be pinned with it. Pinning them cost
 **If you add a new block type, use `BLOCK_LAYOUT`** rather than a bare
 `flex items-start gap-2`.
 
-## Rule 2 — 40px touch targets, shrinking to 32px only for a mouse
+## Rule 2: 40px touch targets, shrinking to 32px only for a mouse
 
 The editor's icon buttons were `size="icon-sm"` (32px) and its inline buttons
 `size="sm"` (h-8, 32px). Both are under Apple's 44pt and Material's 48dp
@@ -75,8 +75,8 @@ minimums, and they sit in rows of three to five with 4px between them.
 **The shrink is gated on the pointer, not only on the width.** A tablet is
 `sm` and up and still driven by a finger, so keying off the breakpoint alone
 handed every tablet exactly the 32px targets this rule exists to avoid. The
-variants are stacked — shrink only where the screen is wide _and_ the pointer
-is fine — rather than written as a `pointer-coarse:` override competing with
+variants are stacked (shrink only where the screen is wide _and_ the pointer
+is fine) rather than written as a `pointer-coarse:` override competing with
 `sm:`, because those two are equally specific and which one wins would come
 down to the order Tailwind emits the media queries in.
 
@@ -84,7 +84,7 @@ This is the same signal that hides the drag handle (see
 [Drag-and-drop is desktop-only](#drag-and-drop-is-desktop-only));
 `pointer-coarse` and `pointer-fine` are the two halves of it.
 
-## Rule 3 — `tooltip` is also the accessible name
+## Rule 3: `tooltip` is also the accessible name
 
 `IconActionButton` takes a `tooltip` prop and now forwards it as `aria-label`
 too. A tooltip labels these buttons for a mouse user and nobody else: touch
@@ -97,7 +97,7 @@ you want a longer spoken name than the tooltip's text.
 Block reordering uses the HTML5 Drag and Drop API (`draggable` plus
 `dragstart`/`dragover`/`drop`, see [Overview & features](./overview.md)).
 Android Chrome never synthesises drag events from touch, and iOS Safari only
-does so for a long-press in some cases — so on a phone the grab handle was a
+does so for a long-press in some cases, so on a phone the grab handle was a
 control that mostly did nothing, and its `touch-none` meant touching it
 swallowed the page scroll as well.
 
@@ -105,7 +105,7 @@ The handle is therefore hidden on coarse pointers
 (`pointer-coarse:hidden` in `SectionCard.jsx`). Nothing is lost: the move
 up/down buttons sitting next to it reorder blocks without a drag, and they work
 across the whole lesson the same way. `useDragAutoScroll` is likewise inert on
-touch, which is fine — it only runs while a drag is in flight.
+touch, which is fine: it only runs while a drag is in flight.
 
 ## Safe areas and the home indicator
 
@@ -127,14 +127,14 @@ touch, which is fine — it only runs while a drag is in flight.
 `mb-safe` is a **margin**, not a `bottom-safe` replacement for `bottom-*`, so it
 composes with whatever offset an element already has (the add-section FAB is
 `bottom-4 sm:bottom-8`) instead of having to restate it. Every bottom-anchored
-floating element uses it — the FAB, the collapsed collab-chat launcher, and the
-first-lesson wizard — because 1rem of clearance puts their lower half inside the
+floating element uses it (the FAB, the collapsed collab-chat launcher, and the
+first-lesson wizard) because 1rem of clearance puts their lower half inside the
 ~34px iOS home-indicator swipe strip, where the gesture wins and the tap
 doesn't land.
 
 `pt-safe` is the top half of the same problem, and only bites in the
 [installed app](./pwa-and-offline.md). iOS in standalone mode draws the page
-under the status bar — which is what
+under the status bar, which is what
 `apple-mobile-web-app-status-bar-style: black-translucent` asks for, so that
 the app bar fills the notch area instead of leaving a mismatched
 strip above it. Without padding, the header's title and buttons would sit behind
@@ -148,16 +148,16 @@ is zero, so nothing changes there.
 
 `AppHeader` shows its destinations as inline links on desktop and moves them
 behind a menu button into a `Sheet` below `md`. Following a link out of the
-sheet closes it — a sheet covers the page you just navigated to, so it can't
+sheet closes it: a sheet covers the page you just navigated to, so it can't
 stay put the way inline links do. The sheet also carries a **Settings** row,
 because the gear it normally shares the utility cluster with is hidden at that
-width (the whole cluster is, below `sm` — the notification bell and the account
+width (the whole cluster is, below `sm`; the notification bell and the account
 menu are what stay, since an unread notification is worth a slot at any width).
 
 The header holds one copy of each control at any width. The old `--primary`
 header couldn't fit text buttons on a narrow screen, so most controls existed
-twice — an icon-only copy under `md:hidden` and a labelled copy under
-`hidden md:inline-flex` — and the lesson page kept a whole second copy of its
+twice (an icon-only copy under `md:hidden` and a labelled copy under
+`hidden md:inline-flex`), and the lesson page kept a whole second copy of its
 actions in an overflow menu.
 
 ## `dvh`, not `vh`
@@ -174,7 +174,7 @@ is visible jank on a marketing page and worse than the problem it fixes.
 ## The collab chat is a bottom sheet on mobile
 
 `CollabChat`'s expanded panel used to be a 420px-tall floating window inset 16px
-from the bottom-left at `w-[calc(100vw-32px)]` — which on a phone covered most
+from the bottom-left at `w-[calc(100vw-32px)]`, which on a phone covered most
 of the screen _and_ sat on top of the editor's add-section FAB, while still
 looking like a window that wasn't meant to.
 
@@ -188,15 +188,15 @@ From `sm` up every one of those is reverted and it's the original corner panel.
 - **Initial JS payload.** Routes are code-split and the export/import libraries
   (`docx`, `mammoth`, `html2pdf.js`) load on demand behind
   `src/lib/exports/load.js`, so a phone that only reads lessons never downloads
-  them — previewing and viewing a lesson render through `LessonView` instead.
+  them; previewing and viewing a lesson render through `LessonView` instead.
   What's left to watch is the editor chunk itself; see
   [How the export pipeline works](./export-pipeline.md).
 
 ## Installing to a Home Screen
 
 The app ships a web app manifest and a service worker, so on a phone it can be
-installed and opened in its own full-screen window, and the editor — already
-local-first, see [Version history](../monorepo/version-history.md) — keeps
-working with no network. The header's install button and the iOS Share → "Add to
+installed and opened in its own full-screen window, and the editor (already
+local-first, see [Version history](../monorepo/version-history.md)) keeps
+working with no network. The header's install button and the iOS Share menu's "Add to
 Home Screen" instructions are covered in
 [Installable app & offline use](./pwa-and-offline.md).

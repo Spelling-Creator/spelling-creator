@@ -483,7 +483,7 @@ function validateImportedDoc(doc) {
   const hasContent = doc.sections.some((s) => s.blocks.some(blockHasContent));
   if (!hasContent) {
     throw new DocxImportError(
-      "This Word document has no readable lesson content — no passages, questions or spelling words could be found in it.",
+      "This Word document has no readable lesson content: no passages, questions or spelling words could be found in it.",
     );
   }
 }

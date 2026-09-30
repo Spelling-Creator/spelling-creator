@@ -11,7 +11,7 @@ PDF.
 
 Built with **React + Vite + shadcn/ui + Tailwind**, using [`docx`](https://docx.js.org) for Word
 export and [`html2pdf.js`](https://github.com/eKoopmans/html2pdf.js) (via
-[`mammoth`](https://github.com/mwilliamson/mammoth.js) docx→HTML conversion) for
+[`mammoth`](https://github.com/mwilliamson/mammoth.js) docx to HTML conversion) for
 PDF printing.
 
 ## Features
@@ -23,8 +23,8 @@ PDF printing.
   one with a click (see [Search images](./search-images.md)).
 - **Question blocks** - add structured questions in seven types (see [Question blocks](./question-blocks.md)).
 - **VAKT activities** - drop a regulation break into a section: a red, labelled
-  "VAKT: …" activity a speller does rather than answers, optionally with a
-  picture and links. It's a content block, not a question — it's never scored and
+  "VAKT: ..." activity a speller does rather than answers, optionally with a
+  picture and links. It's a content block, not a question: it's never scored and
   never counted by interactive mode (see [VAKT activities](./vakt-activities.md)).
 - **AI text suggestions** - generate a block of lesson text from a section's
   title with one click (see [AI text suggestions](./ai-text-suggestions.md)).
@@ -39,7 +39,7 @@ PDF printing.
 - **Interactive lesson mode** - work through any published lesson instead of
   reading it: each section's material appears full-screen on its own, then its
   questions one at a time with a field to type an answer into. Every lesson ever
-  published already works — the walkthrough is derived from the document itself.
+  published already works; the walkthrough is derived from the document itself.
   What you type is saved **privately to your account** when you finish, readable
   by you and nobody else (not even the lesson's author), and any step can be read
   aloud by the browser's own speech synthesis. You needn't finish in one sitting:
@@ -57,18 +57,18 @@ PDF printing.
 - **Preview** - a toggle, not a window. Pressing **Preview** replaces the editing
   panes with the lesson exactly as a reader sees it, in the same place and at the
   same width, with the section outline still beside it and still navigating;
-  pressing it again returns you to editing. Nothing is built to show it — see
+  pressing it again returns you to editing. Nothing is built to show it; see
   [How the export pipeline works](./export-pipeline.md).
 - **Collapse sections** - fold any section to its header, or the whole lesson at
   once, turning 37 screens into 1.5. A folded section still says what's inside
   it, still reorders, still takes a dragged block (dwell over it and it springs
-  open), and is still found by Cmd-F. What you fold is yours — it isn't saved
+  open), and is still found by Cmd-F. What you fold is yours: it isn't saved
   into the lesson and collaborators don't see it.
 - **Reorder / delete** sections and blocks with inline controls. On a device
   with a mouse or trackpad, blocks can also be dragged by their grab handle,
   both within a section and **from one section into another** (an empty section
   shows a drop zone that takes the block). An insertion line shows where the
-  block will land — anywhere in a section, including the gaps between blocks —
+  block will land (anywhere in a section, including the gaps between blocks),
   and holding the pointer near the top or bottom of the window scrolls the page
   on its own, so a block can be carried to a section well past the visible part
   of a long lesson. The grab handle is hidden on touch devices, where the
@@ -78,7 +78,7 @@ PDF printing.
 - **Print PDF** - builds the docx, converts it to HTML with mammoth, then renders
   a PDF with html2pdf.js so the printout mirrors the Word document. Along with
   the DOCX export (and the Drive upload, which is that same file), this is the
-  only place a Word document is built — **Preview** and the published lesson page
+  only place a Word document is built; **Preview** and the published lesson page
   both render the lesson straight to React, in the app's light/dark theme, so a
   preview opens instantly and shows exactly what a reader sees (see
   [How the export pipeline works](./export-pipeline.md)).
@@ -87,9 +87,9 @@ PDF printing.
 - **Lesson hub** - browse lessons other users have published, preview any of them,
   and publish your own once signed in (see [Lesson hub & accounts](./lesson-hub-and-accounts.md)).
 - **Comments & ratings** - discuss a published lesson in a threaded comment box,
-  and leave a 1–5 star rating with your comment; the lesson page shows the average
+  and leave a 1-5 star rating with your comment; the lesson page shows the average
   (see [Lesson hub & accounts](./lesson-hub-and-accounts.md)). Comments (and bios)
-  are **rich text** — formatting and links, but no embedded media — and you can edit
+  are **rich text** (formatting and links, but no embedded media), and you can edit
   your own after posting (see [Rich text](./rich-text.md)).
 - **Accounts** - passwordless magic-link sign-in (Supabase Auth) on a dedicated
   login page; required only to publish to the hub (see [Lesson hub & accounts](./lesson-hub-and-accounts.md)).
@@ -109,7 +109,7 @@ PDF printing.
 - **Version history** - every lesson is a real git repository in the browser, one
   file per content block. Edits are committed automatically as you pause, so you
   can browse every version and restore any of them. Forking a lesson **clones**
-  its repository, and a fork can later pull the original's changes in — merged
+  its repository, and a fork can later pull the original's changes in, merged
   block by block, with edits to different blocks (or different parts of the same
   block) merging automatically (see
   [Version history](/monorepo/version-history)).

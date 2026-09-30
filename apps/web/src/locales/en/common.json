@@ -29,7 +29,7 @@
     "ariaLabel": "install app",
     "tooltip": "Install app",
     "iosTitle": "Install Spelling Lesson Maker",
-    "iosDescription": "Add it to your Home Screen to open it like an app — full screen, and your lessons stay available offline.",
+    "iosDescription": "Add it to your Home Screen to open it like an app: full screen, and your lessons stay available offline.",
     "iosStepShare": "Tap the Share button in Safari's toolbar.",
     "iosStepAdd": "Choose \"Add to Home Screen\"."
   },
@@ -50,7 +50,7 @@
     "titleEdit": "Edit display name",
     "description": "This is the name other people see on your lessons and comments. Your email address is never shown.",
     "label": "Display name",
-    "charCountHint": "{{min}}–{{max}} characters.",
+    "charCountHint": "{{min}}-{{max}} characters.",
     "saveError": "Could not save your display name."
   },
   "notFound": {

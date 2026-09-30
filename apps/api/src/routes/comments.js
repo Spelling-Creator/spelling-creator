@@ -88,7 +88,7 @@ async function readCommentBody(body, cors) {
 	// server-side so it can't be bypassed by a crafted client request.
 	if (profanityFilter.checkProfanity(text).containsProfanity) {
 		return {
-			error: textResponse('This comment contains language that isn’t allowed. Please revise it and try again.', 422, cors),
+			error: textResponse("This comment contains language that isn't allowed. Please revise it and try again.", 422, cors),
 		};
 	}
 
@@ -246,7 +246,7 @@ export async function handleComments(request, env, lessonId, cors) {
 			}
 			const parentRows = parentRes.ok ? await parentRes.json().catch(() => []) : [];
 			if (!Array.isArray(parentRows) || parentRows.length === 0) {
-				return textResponse('The comment you’re replying to no longer exists.', 404, cors);
+				return textResponse("The comment you're replying to no longer exists.", 404, cors);
 			}
 			parentComment = parentRows[0];
 		}

@@ -106,7 +106,7 @@ async function userFeed(env, base, url, id, cors) {
 					id: `urn:s2c:lesson:${row.id}`,
 					title: row.title || 'Untitled Lesson',
 					link: `${origin}/hub/${encodeURIComponent(row.id)}`,
-					summary: `${user.displayName} published the lesson “${row.title || 'Untitled Lesson'}”.`,
+					summary: `${user.displayName} published the lesson "${row.title || 'Untitled Lesson'}".`,
 					createdAt: row.created_at,
 				});
 			}
@@ -146,7 +146,7 @@ async function userFeed(env, base, url, id, cors) {
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-	<title>${xmlEscape(user.displayName)} — activity</title>
+	<title>Activity from ${xmlEscape(user.displayName)}</title>
 	<subtitle>Lessons and comments from ${xmlEscape(user.displayName)}</subtitle>
 	<id>${xmlEscape(profileUrl)}</id>
 	<link rel="self" type="application/atom+xml" href="${xmlEscape(selfUrl)}"/>

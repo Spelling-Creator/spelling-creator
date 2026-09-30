@@ -86,7 +86,7 @@ export async function handleFollow(request, env, targetId, cors) {
 
 	const user = await verifySupabaseUser(env, bearerToken(request));
 	if (!user) return textResponse('Please sign in to follow people.', 401, cors);
-	if (user.id === targetId) return textResponse('You can’t follow yourself.', 400, cors);
+	if (user.id === targetId) return textResponse("You can't follow yourself.", 400, cors);
 
 	const base = env.SUPABASE_URL.replace(/\/$/, '');
 

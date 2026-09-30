@@ -35,7 +35,7 @@ export async function importJsonFile(file) {
   if (!file) throw new JsonImportError("No file was selected.");
   if (!/\.json$/i.test(file.name || "")) {
     throw new JsonImportError(
-      "Please choose a .json lesson file — the kind you get from “Export JSON” here or from the Spelling Creator AI tool.",
+      'Please choose a .json lesson file, the kind you get from "Export JSON" here or from the Spelling Creator AI tool.',
     );
   }
 
@@ -63,13 +63,13 @@ export async function importJsonFile(file) {
 export function normalizeLessonFile(parsed) {
   if (!parsed || typeof parsed !== "object") {
     throw new JsonImportError(
-      "This file isn't a lesson — expected a JSON object.",
+      "This file isn't a lesson: expected a JSON object.",
     );
   }
   // A wrong but explicit format marker is a clear, actionable error.
   if (parsed.format && parsed.format !== LESSON_FILE_FORMAT) {
     throw new JsonImportError(
-      `This JSON file is “${parsed.format}”, not a Spelling Creator lesson.`,
+      `This JSON file is "${parsed.format}", not a Spelling Creator lesson.`,
     );
   }
   const docLike =

@@ -3,7 +3,7 @@
     "sectionNamePlaceholder": "Section name",
     "blockCount_one": "{{count}} block",
     "blockCount_other": "{{count}} blocks",
-    "collapse": "Collapse “{{name}}”",
+    "collapse": "Collapse \"{{name}}\"",
     "expand": "Expand this section",
     "collapsedDropHint": "Hold the block here to open this section.",
     "collapsedSummary": {
@@ -56,7 +56,7 @@
       "delete": "Delete block"
     },
     "text": {
-      "placeholder": "Type lesson text here…"
+      "placeholder": "Type lesson text here..."
     },
     "image": {
       "altFallback": "lesson image",
@@ -87,9 +87,9 @@
     "question": {
       "label": "Question",
       "number": "Q{{number}}",
-      "promptPlaceholder": "Type the question…",
+      "promptPlaceholder": "Type the question...",
       "answerLabel": "Answer",
-      "answerPlaceholder": "The correct answer…",
+      "answerPlaceholder": "The correct answer...",
       "stepPlaceholder": "Step {{number}}",
       "removeStep": "Remove step",
       "addStep": "Add step",
@@ -98,12 +98,12 @@
       "removeAnswer": "Remove answer",
       "addAnswer": "Add answer",
       "answersHelp": "Type every accepted answer. The student only needs to give one of them to be correct.",
-      "suggestedAnswersHelp": "Type a few answers that would count. These are suggestions, not the only right answers — anything that fits the topic is correct."
+      "suggestedAnswersHelp": "Type a few answers that would count. These are suggestions, not the only right answers. Anything that fits the topic is correct."
     },
     "vakt": {
       "badge": "VAKT activity",
       "label": "Activity",
-      "placeholder": "Bob likes to do jumping jacks. Let’s do 3 of those.",
+      "placeholder": "Bob likes to do jumping jacks. Let's do 3 of those.",
       "imageAlt": "VAKT activity image",
       "captionLabel": "Caption (optional)",
       "addImage": "Add image",
@@ -112,7 +112,7 @@
       "addLink": "Add link",
       "removeLink": "Remove link",
       "linkLabelPlaceholder": "Link text (optional)",
-      "linkUrlPlaceholder": "https://…",
+      "linkUrlPlaceholder": "https://...",
       "linkLabelAriaLabel": "Link {{number}} text",
       "linkUrlAriaLabel": "Link {{number}} address",
       "linksHelp": "Links open in a new tab. A link with no text shows its address.",

@@ -165,7 +165,7 @@ export function applyRefs(current, { refs, deletes, expected }) {
 	// The lesson has to still be there afterwards. Deleting the branch that *is*
 	// the lesson would leave a row whose history advertises a tip nothing points
 	// at, and no client asks for that.
-	if (!next[DEFAULT_BRANCH]) return { error: 'The lesson’s own history cannot be removed.', status: 400 };
+	if (!next[DEFAULT_BRANCH]) return { error: "The lesson's own history cannot be removed.", status: 400 };
 	if (Object.keys(next).length > MAX_BRANCHES) {
 		return { error: `A lesson can have at most ${MAX_BRANCHES} versions.`, status: 400 };
 	}
@@ -310,12 +310,12 @@ export async function handleGit(request, env, lessonId, rest, cors) {
 		// We hold a branch map we can't read. Every path below decides what to keep
 		// and what to drop by comparing against it, so none of them can run safely.
 		if (held?.unreadable) {
-			return textResponse('This lesson’s stored history could not be read. Please report this rather than saving over it.', 409, cors);
+			return textResponse("This lesson's stored history could not be read. Please report this rather than saving over it.", 409, cors);
 		}
 
 		if (current && parent !== current) {
 			return textResponse(
-				'This lesson’s history has moved on since you last synced. Merge the latest changes, then save again.',
+				"This lesson's history has moved on since you last synced. Merge the latest changes, then save again.",
 				409,
 				cors,
 			);
@@ -343,7 +343,7 @@ export async function handleGit(request, env, lessonId, rest, cors) {
 		if (applied.error) {
 			return textResponse(
 				applied.status === 409
-					? 'One of this lesson’s versions has moved on since you last synced. Merge the latest changes, then save again.'
+					? "One of this lesson's versions has moved on since you last synced. Merge the latest changes, then save again."
 					: applied.error,
 				applied.status,
 				cors,

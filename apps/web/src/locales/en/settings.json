@@ -4,7 +4,7 @@
   "appearance": {
     "title": "Appearance",
     "themeLabel": "Theme",
-    "themeDescription": "“System” follows whatever your device is set to, and changes with it.",
+    "themeDescription": "\"System\" follows whatever your device is set to, and changes with it.",
     "light": "Light",
     "dark": "Dark",
     "system": "System"
@@ -17,7 +17,7 @@
   },
   "speech": {
     "title": "Reading aloud",
-    "description": "Used by practice mode to read each step out. Everything is spoken by your own device — no lesson text is sent anywhere.",
+    "description": "Used by practice mode to read each step out. Everything is spoken by your own device; no lesson text is sent anywhere.",
     "enabledLabel": "Read steps aloud",
     "on": "On",
     "off": "Off",
@@ -42,7 +42,7 @@
     "displayNameDescription": "The name shown to other people, in place of your email.",
     "displayNameNotSet": "Not chosen yet",
     "bio": "Bio",
-    "bioDescription": "A short “about me” on your public profile.",
+    "bioDescription": "A short \"about me\" on your public profile.",
     "bioEmpty": "You haven't written one yet.",
     "email": "Email",
     "emailDescription": "How you sign in. Never shown to other people.",

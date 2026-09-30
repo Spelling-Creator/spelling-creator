@@ -14,17 +14,17 @@ JavaScript, and then hydrated in place:
 | `/hub/:id/<tab>` | `fetchLesson(id)`         | Everyone     |
 | `/users/:id`     | `fetchUserProfile(id)`    | Everyone     |
 
-Everything else — `/`, `/editor`, `/login`, `/oauth/authorize`, `/moderation` —
+Everything else (`/`, `/editor`, `/login`, `/oauth/authorize`, `/moderation`)
 is served as the static SPA shell exactly as before.
 
 A lesson's tabs (`/hub/:id/practice`, `/discussion`, `/proposals`,
-`/proposals/:prId`, `/history` — see [Pages & routing](./pages-and-routing.md))
+`/proposals/:prId`, `/history`; see [Pages & routing](./pages-and-routing.md))
 are all the same lesson, so one `fetchLesson` serves all of them and the tab
 decides what to draw with it. `LESSON_PATH` names those five forms rather than
 matching any extra segment, so it and the SPA's route table agree about what a
 lesson URL is: a wildcard let `/hub/:id/anything` through, costing a lesson
 fetch and a full render to produce a page that isn't one. Adding a tab means
-editing both. The pattern itself lives in `apps/api/src/routes/spa.js` — the
+editing both. The pattern itself lives in `apps/api/src/routes/spa.js`, the
 Worker's route table, shared so that the code deciding a path is a lesson and
 the code deciding it is [a page at all](./pages-and-routing.md#unknown-paths)
 cannot disagree.
@@ -40,7 +40,7 @@ offline there is nothing to fall through to and it fails outright. The two lists
 have to stay in step, and both say so in a comment.
 
 The bootstrap payload is keyed by the exact `url.pathname` the Worker rendered,
-and `useServerData` only hands it to a page still on that path — so following a
+and `useServerData` only hands it to a page still on that path, so following a
 tab link releases it and the layout keeps serving its own state, which is the
 behaviour you want.
 
@@ -53,7 +53,7 @@ author's Edit/Delete controls, whether you follow a profile) fill in when the
 client hydrates. No session ever has to move to a cookie, which is what keeps
 this tractable.
 
-`fetchLatestLessons` and `fetchUserActivity` can't be server-rendered at all —
+`fetchLatestLessons` and `fetchUserActivity` can't be server-rendered at all:
 they parse Atom with `DOMParser`, and live in `@spelling-creator/core/browser/feeds`.
 Both are dashboard content, so hydrating them is correct.
 
@@ -67,9 +67,9 @@ apps/api/src/routes/spa.js        the route table, and the asset/shell/404 fall-
 ```
 
 1. `handleFrontend` (`apps/api/src/routes/render.js`) asks `shouldServerRender`.
-2. `serverRender` fetches the page's data — through the very same
+2. `serverRender` fetches the page's data (through the very same
    `@spelling-creator/core` modules the browser calls, so the two paths can't
-   drift — and calls `render()` from the server bundle.
+   drift) and calls `render()` from the server bundle.
 3. `render()` returns `{ head, body }`. React hoists `<title>`/`<meta>` to the
    front of its output when rendering a subtree rather than a whole document, so
    they're split off and spliced into the real `<head>`; a scraper won't read an
@@ -79,13 +79,13 @@ apps/api/src/routes/spa.js        the route table, and the asset/shell/404 fall-
 5. `src/main.jsx` reads that, and calls `hydrateRoot` instead of `createRoot`.
 
 **Failure is always soft.** A failed data fetch, a render error, a missing
-server bundle — each falls through to the static shell, which is what the app
+server bundle: each falls through to the static shell, which is what the app
 served before any of this existed.
 
 One consequence is worth knowing: a lesson that genuinely does not exist takes
 that same path, because a 404 from the API and a timeout reaching it arrive here
 as the same thrown error. So `/hub/<deleted-id>` is still answered `200` with the
-shell, and the app reports the miss after it hydrates — unlike a path that isn't
+shell, and the app reports the miss after it hydrates, unlike a path that isn't
 a route at all, which the Worker 404s outright
 ([Unknown paths](./pages-and-routing.md#unknown-paths)).
 
@@ -93,7 +93,7 @@ a route at all, which the Worker 404s outright
 
 `src/lib/seo.jsx` exports a `<DocumentMeta>` component, not a hook. React 19
 hoists `<title>`, `<meta>` and `<link>` into `<head>` from anywhere in the tree,
-so page metadata is ordinary JSX — which is exactly what makes it work under
+so page metadata is ordinary JSX, which is exactly what makes it work under
 SSR, where an effect that writes into `document.head` never runs.
 
 JSON-LD is deliberately _not_ hoisted: React only hoists `<script>` when it's
@@ -106,13 +106,13 @@ place, which search engines accept.
   before the page's own tags go in. Otherwise a scraper reading the _first_
   `og:title` would get the generic one.
 - **The service worker must not answer these navigations.** `navigateFallback`
-  would otherwise serve the precached shell and the Worker would never be asked
-  — silently disabling SSR for exactly the returning visitors whose browsers
+  would otherwise serve the precached shell and the Worker would never be asked,
+  silently disabling SSR for exactly the returning visitors whose browsers
   have the shell cached. The three routes are in `WORKER_PATHS` in
   `apps/web/vite.config.js`; see [Installable app & offline use](./pwa-and-offline.md#navigation-fallback-and-the-paths-it-must-not-touch).
 - **`ColorSchemeProvider` no longer reads `localStorage`/`matchMedia` during
   render.** The server can't, and a hydrating client has to render the same
-  thing the server did — the theme toggle shows a sun or a moon, so this is
+  thing the server did: the theme toggle shows a sun or a moon, so this is
   markup, not just a CSS variable. The stored choice is adopted in a layout
   effect, after hydration but before paint. Page colours were already correct
   pre-paint via the inline script in `index.html`.
@@ -131,11 +131,11 @@ place, which search engines accept.
 
 `apps/api/src/routes/render.js` used headless Chromium for two unrelated jobs:
 
-- **`prerender()`** — an HTML snapshot for ~30 crawler user-agents. SSR replaces
+- **`prerender()`**: an HTML snapshot for ~30 crawler user-agents. SSR replaces
   this for the three routes above. It's still the fallback for `/` (whose
   content is auth-gated, so an anonymous render is only ever the marketing
   splash) and for any SSR attempt that fails.
-- **`ogImage()`** — live 1200×630 screenshots for link previews. **Unaffected.**
+- **`ogImage()`**: live 1200x630 screenshots for link previews. **Unaffected.**
   SSR cannot take a screenshot, so the `browser` binding stays.
 
 ## Build order
@@ -155,7 +155,7 @@ the route table.
 
 ## Local development
 
-`pnpm dev:web` (the Vite dev server) does **not** server-render — there is no
+`pnpm dev:web` (the Vite dev server) does **not** server-render; there is no
 Worker in front of it, so every route arrives as the plain SPA shell and mounts
 with `createRoot`. To exercise SSR you need `pnpm dev:api`, which serves the
 built assets through the real Worker.

@@ -22,19 +22,19 @@
     "label": "Answer",
     "labelPlural": "Answers",
     "labelSuggested": "Suggested answers",
-    "suggestedNote": "Examples, not the only right answers — anything that fits the topic counts.",
+    "suggestedNote": "Examples, not the only right answers. Anything that fits the topic counts.",
     "working": "Working",
     "none": "This question has no set answer.",
     "use": "Put this in your answer",
-    "useThis": "Put “{{answer}}” in your answer"
+    "useThis": "Put \"{{answer}}\" in your answer"
   },
   "step": {
     "noQuestionText": "(no question text)",
     "yourAnswer": "Your answer",
-    "answerPlaceholder": "Type your answer…",
+    "answerPlaceholder": "Type your answer...",
     "imageAlt": "lesson image",
     "spellingWords": "Spelling words",
-    "speakWord": "Read “{{word}}” aloud",
+    "speakWord": "Read \"{{word}}\" aloud",
     "vaktLabel": "VAKT activity"
   },
   "progress": {
@@ -56,7 +56,7 @@
     "title": "Leave the lesson?",
     "body": "Your answers are kept on this device, so you can open the lesson again and carry on from here.",
     "noStorageTitle": "Leave without saving?",
-    "noStorageBody": "This browser won’t let us keep your answers, so there’s nothing to come back to. Leaving now discards what you’ve typed.",
+    "noStorageBody": "This browser won't let us keep your answers, so there's nothing to come back to. Leaving now discards what you've typed.",
     "keepGoing": "Keep going",
     "leave": "Leave",
     "discard": "Discard answers"
@@ -65,19 +65,19 @@
     "readThrough": "You worked through the whole lesson.",
     "answered": "You answered {{answered}} of {{total}} questions.",
     "skipped": "Skipped",
-    "saving": "Saving your answers…",
+    "saving": "Saving your answers...",
     "saved": "Saved privately to your account.",
     "couldNotSave": "Could not save your answers.",
     "retry": "Retry",
-    "notConfigured": "The lesson hub is not configured, so your answers can’t be saved.",
+    "notConfigured": "The lesson hub is not configured, so your answers can't be saved.",
     "signInToSave": "Sign in before you start to have your answers saved privately to your account.",
-    "signedInSince": "A different account signed in while you were working, so these answers aren’t filed to it. They’re still on this device, kept for whoever started this run-through.",
+    "signedInSince": "A different account signed in while you were working, so these answers aren't filed to it. They're still on this device, kept for whoever started this run-through.",
     "startAgain": "Start again",
     "done": "Done"
   },
   "saved": {
     "heading": "Your answers",
-    "privateNote": "Only you can see these. The lesson’s author can’t.",
+    "privateNote": "Only you can see these. The lesson's author can't.",
     "answeredCount": "{{answered}}/{{total}} answered",
     "delete": "Delete these answers",
     "deleted": "Answers deleted.",

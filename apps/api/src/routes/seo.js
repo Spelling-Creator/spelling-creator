@@ -100,7 +100,7 @@ export async function handleLessonsFeed(request, env, url, cors) {
 						title,
 						author,
 						link: `${origin}/hub/${encodeURIComponent(row.id)}`,
-						summary: `${author} published the lesson “${title}”.`,
+						summary: `${author} published the lesson "${title}".`,
 						createdAt: row.created_at,
 					});
 				}
@@ -115,7 +115,7 @@ export async function handleLessonsFeed(request, env, url, cors) {
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-	<title>Spelling Creator — latest lessons</title>
+	<title>Spelling Creator: latest lessons</title>
 	<subtitle>The most recently published lessons on the hub</subtitle>
 	<id>${xmlEscape(hubUrl)}</id>
 	<link rel="self" type="application/atom+xml" href="${xmlEscape(selfUrl)}"/>

@@ -6,7 +6,7 @@ title: Profiles & display names
 
 Every signed-in user has a **public display name** and an optional **bio**, and a
 public **profile page** that lists the lessons they've published. None of this
-exposes the user's email — the hub shows the chosen display name everywhere an
+exposes the user's email: the hub shows the chosen display name everywhere an
 author or commenter is named.
 
 ## Display names
@@ -17,7 +17,7 @@ whole app in `main.jsx`), and `DisplayNameDialog.jsx` is the picker; a user can
 change their name later from the account menu or the
 [settings page](./pages-and-routing.md).
 
-The name is **not** a database column — it's stored in the Supabase user's
+The name is **not** a database column; it's stored in the Supabase user's
 `user_metadata.display_name`. The browser can't write metadata directly; it calls
 the Worker's `POST /profile/display-name`, which validates the name (and runs the
 same profanity / name-ban checks as publishing) and writes it through the Supabase
@@ -27,15 +27,15 @@ for fast listing, changing your name also backfills it onto your existing rows.
 ## Bios
 
 A bio is a short "about me" shown on your profile page. It's edited in
-`BioDialog.jsx` — opened from your own profile or from the
-[settings page](./pages-and-routing.md) — and saved with `POST /profile/bio`, which sanitizes it, caps the
-length, runs a profanity check (rejecting with `422` if it fails), and — like the
-display name — stores it in `user_metadata.bio` via the Admin API. An empty bio
+`BioDialog.jsx` (opened from your own profile or from the
+[settings page](./pages-and-routing.md)) and saved with `POST /profile/bio`, which sanitizes it, caps the
+length, runs a profanity check (rejecting with `422` if it fails), and, like the
+display name, stores it in `user_metadata.bio` via the Admin API. An empty bio
 clears it. Bio is profile-only (never denormalised onto rows).
 
 **Bios are rich text**, written with the same [tiptap](https://tiptap.dev)-based
 editor as a comment (`RichTextInput.jsx`) and stored as sanitized HTML: formatting,
-lists and links, but **no embedded media** — see [Rich text](./rich-text.md). Two
+lists and links, but **no embedded media**; see [Rich text](./rich-text.md). Two
 consequences worth knowing:
 
 - The 500-character cap counts the **text** you wrote, not the markup around it, so
@@ -79,13 +79,13 @@ follower/following counts, plus their **published** lessons:
 ```
 
 The Worker resolves the profile via the Supabase Admin API and **never returns the
-email** — only the display name (falling back to `"Anonymous"`) and bio. The
+email**, only the display name (falling back to `"Anonymous"`) and bio. The
 endpoint is served under `/profiles/:id` on the Worker so it doesn't collide with
 the SPA's own `/users/:id` page. The read stays public; `isFollowing` is only
 meaningful when the request carries a session token (it reflects whether _you_
 follow this profile, and is `false` for an anonymous view).
 
-Each profile also has a feed at `GET /profiles/:id/feed.xml` — an Atom feed of the
+Each profile also has a feed at `GET /profiles/:id/feed.xml`, an Atom feed of the
 user's lessons and comments (surfaced as "RSS" in the UI).
 
 ## Following
@@ -96,12 +96,12 @@ is one row in the `follows` table (`follower_id → following_id`, defined in
 display-name change. The profile header shows the Follow / Following button (never
 for your own profile) plus the follower and following counts.
 
-- **`POST /profiles/:id/follow`** (Bearer) — follow the user. Idempotent
+- **`POST /profiles/:id/follow`** (Bearer): follow the user. Idempotent
   (`ON CONFLICT DO NOTHING`): re-following is a no-op, so it doesn't create a
   second row or re-notify. A genuinely new follow drops a `follow`
   [notification](./notifications.md) into the followed user's bell. You can't
   follow yourself (`400`) or a user who doesn't exist (`404`).
-- **`DELETE /profiles/:id/follow`** (Bearer) — unfollow.
+- **`DELETE /profiles/:id/follow`** (Bearer): unfollow.
 
 Both return `{ following, followerCount }` so the button and count update without a
 refetch. The follower is always taken from the verified session, never the request
@@ -111,8 +111,8 @@ The follower/following counts in the profile header are clickable: they open a
 **connections dialog** (`FollowListDialog.jsx`) with **Followers** and **Following**
 tabs, each row linking to that user's profile. The lists are public:
 
-- **`GET /profiles/:id/followers`** — the users who follow `:id`.
-- **`GET /profiles/:id/following`** — the users `:id` follows.
+- **`GET /profiles/:id/followers`**: the users who follow `:id`.
+- **`GET /profiles/:id/following`**: the users `:id` follows.
 
 Both return `{ users: [{ id, displayName, bio }] }`, newest-follow first and capped
 (each id is resolved to its public profile via the Admin API, so no email leaks).

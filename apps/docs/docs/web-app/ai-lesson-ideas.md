@@ -5,8 +5,8 @@ title: AI lesson ideas
 # AI lesson ideas
 
 When you're starting from a blank document, **AI lesson ideas**
-(`AiLessonIdeaDialog.jsx`) suggests a batch of lesson **topics** to pick from —
-each a short title plus a one-line description — rather than writing the lesson
+(`AiLessonIdeaDialog.jsx`) suggests a batch of lesson **topics** to pick from,
+each a short title plus a one-line description, rather than writing the lesson
 body. Pick one and it seeds a new lesson you then flesh out with the editor and
 the other AI helpers.
 
@@ -30,7 +30,7 @@ The frontend wrapper is `suggestLessonIdeas()` in `@spelling-creator/core/aiSugg
 feature needs the same `VITE_API_URL` / `VITE_TURNSTILE_SITE_KEY` as the other AI
 helpers (see [Getting started](./getting-started.md)).
 
-A dismissable [first-lesson wizard](./overview.md) (`FirstLessonWizard.jsx`) — a
+A dismissable [first-lesson wizard](./overview.md) (`FirstLessonWizard.jsx`), a
 floating, non-modal walkthrough that auto-shows once for newcomers and can be
-reopened from the editor's help button — points people at this and the other
+reopened from the editor's help button, points people at this and the other
 authoring tools.

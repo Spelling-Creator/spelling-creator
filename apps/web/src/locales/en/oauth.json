@@ -10,7 +10,7 @@
   "signIn": {
     "heading": "Sign in to connect",
     "description": "wants to publish and manage spelling lessons on your behalf. Sign in to continue.",
-    "checkEmail": "Check your email for a sign-in link — opening it on this device brings you right back here.",
+    "checkEmail": "Check your email for a sign-in link. Opening it on this device brings you right back here.",
     "emailLabel": "Email address",
     "sendButton": "Send magic link"
   },
@@ -18,7 +18,7 @@
     "heading": "Connect {{clientName}}",
     "signedInAs": "Signed in as",
     "willLet": ". This will let",
-    "behalfText": "publish, update, and delete spelling lessons on your behalf — the same as you can do yourself in the editor."
+    "behalfText": "publish, update, and delete spelling lessons on your behalf, the same as you can do yourself in the editor."
   },
   "buttons": {
     "deny": "Deny",

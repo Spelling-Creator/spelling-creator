@@ -88,7 +88,7 @@ describe("richTextToLine", () => {
 
   it("truncates with an ellipsis past the limit", () => {
     const out = richTextToLine("<p>abcdefghij</p>", 5);
-    expect(out).toBe("abcd…");
+    expect(out).toBe("ab...");
     expect(out).toHaveLength(5);
   });
 
@@ -97,7 +97,7 @@ describe("richTextToLine", () => {
   });
 
   it("does not leave a dangling space before the ellipsis", () => {
-    expect(richTextToLine("<p>ab cdefg</p>", 4)).toBe("ab…");
+    expect(richTextToLine("<p>ab cdefg</p>", 6)).toBe("ab...");
   });
 });
 

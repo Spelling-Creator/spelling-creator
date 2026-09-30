@@ -267,7 +267,7 @@ function SpeechSection() {
                       rate: option,
                     })}
                   >
-                    {option}×
+                    {option}x
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>

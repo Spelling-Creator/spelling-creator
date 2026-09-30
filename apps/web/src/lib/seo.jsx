@@ -212,5 +212,5 @@ export function htmlToDescription(html, max = 160) {
     .replace(/\s+/g, " ")
     .trim();
   if (text.length <= max) return text;
-  return `${text.slice(0, max - 1).trimEnd()}…`;
+  return `${text.slice(0, max - 3).trimEnd()}...`;
 }

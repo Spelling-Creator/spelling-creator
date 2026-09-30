@@ -21,11 +21,11 @@ pnpm lint               # check formatting, then lint (oxfmt --check + oxlint)
 
 Each app keeps its own environment file:
 
-- `apps/web/.env` — `VITE_*`-prefixed values exposed to client code by Vite at
+- `apps/web/.env`: `VITE_*`-prefixed values exposed to client code by Vite at
   build time (see `apps/web/vite.config.js`).
-- `apps/api/.env` — Worker secrets (e.g. `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
-  `GROQ_API_KEY` — the Worker tries each configured AI provider in order, skipping any without a
-  key set). Cloudflare Workers AI needs no key — it's wired up via the `AI` binding in
+- `apps/api/.env`: Worker secrets (e.g. `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
+  `GROQ_API_KEY`; the Worker tries each configured AI provider in order, skipping any without a
+  key set). Cloudflare Workers AI needs no key; it's wired up via the `AI` binding in
   `wrangler.jsonc` instead, and serves as the no-external-dependency fallback if every other
   provider is unset or fails.
 
@@ -44,7 +44,7 @@ fallbacks rather than competitors for priority with the better models.
 **`openai-compatible`** is the one an instance with no hosted keys and no
 Cloudflare bindings can use. Ollama, llama.cpp's server, vLLM, LM Studio, LiteLLM
 and most hosted gateways all expose the OpenAI chat-completions shape, so one
-provider covers all of them — including a model running on the same machine as
+provider covers all of them, including a model running on the same machine as
 the app.
 
 | Variable                    | Required | Meaning                                                  |
@@ -55,26 +55,26 @@ the app.
 | `OPENAI_COMPATIBLE_JSON`    | no       | `schema` if the server enforces JSON Schema.             |
 
 Structured output defaults to the weaker `json_object` mode, with the shape
-described in the prompt — the same thing the Groq provider does, and for the same
+described in the prompt, the same thing the Groq provider does, and for the same
 reason: whether a server honours `json_schema` depends on which runtime it is and
 which version, and a wrong guess fails every question suggestion with a 400. Set
 `OPENAI_COMPATIBLE_JSON=schema` if you know yours enforces schemas.
 
-A self-hosted instance that would rather use its local model _first_ — for
-privacy, or because it has no hosted keys worth spending — sets
+A self-hosted instance that would rather use its local model _first_ (for
+privacy, or because it has no hosted keys worth spending) sets
 `AI_PROVIDER_ORDER=openai-compatible` rather than being told what it wants.
 
 ## Documentation site
 
 This site is [VitePress](https://vitepress.dev). Pages are plain Markdown under
-`apps/docs/docs`, and the config is `apps/docs/docs/.vitepress/config.mts` — the
+`apps/docs/docs`, and the config is `apps/docs/docs/.vitepress/config.mts`. The
 `.mts` extension matters, because `apps/docs/package.json` has no
 `"type": "module"` and VitePress is ESM-only.
 
 The dependency tracks the **2.0 alpha on purpose**: `vitepress@latest` is still
 1.6.4 from August 2025, and it would drag in a second Vite major (5) alongside
 the Vite 8 that `apps/web` builds on. The range is `^2.0.0-alpha.19`, so the
-lockfile decides the exact version — today `2.0.0-alpha.19`, and a lockfile
+lockfile decides the exact version (today `2.0.0-alpha.19`), and a lockfile
 refresh can move it to a later alpha or to 2.x once that ships. See
 [Frontend migration](./frontend-migration.md) for the full reasoning.
 
@@ -86,7 +86,7 @@ refresh can move it to a later alpha or to 2.x once that ships. See
   build on a dead one.
 - **`base` is `/docs/`** and the output goes to `apps/docs/doc_build`, which
   `pnpm build:docs` then copies into `apps/web/dist/docs`. Run it **after** the
-  web build — Vite empties `apps/web/dist` each time, so a `pnpm build` after
+  web build: Vite empties `apps/web/dist` each time, so a `pnpm build` after
   `pnpm build:docs` deletes the docs again. `pnpm deploy` and the deploy
   workflow both run the two in that order for you. `cleanUrls` is on, and
   Cloudflare's default `auto-trailing-slash` asset handling resolves
@@ -100,25 +100,25 @@ refresh can move it to a later alpha or to 2.x once that ships. See
 
 ## Code quality
 
-The repo uses the [Oxc](https://oxc.rs) toolchain — `oxfmt` for formatting and
+The repo uses the [Oxc](https://oxc.rs) toolchain: `oxfmt` for formatting and
 `oxlint` for linting. They replaced Prettier and ESLint, so `eslint.config.js`,
 `.prettierrc` and `.prettierignore` no longer exist.
 
-- **`.oxfmtrc.json`** (root) — `printWidth` is pinned to `80` (Prettier's
+- **`.oxfmtrc.json`** (root): `printWidth` is pinned to `80` (Prettier's
   default, and what the existing code is wrapped to; oxfmt's own default is
   `100`), plus the ignore list that used to live in `.prettierignore`.
-- **`apps/api/.oxfmtrc.json`** — the Worker keeps its own style (tabs, single
+- **`apps/api/.oxfmtrc.json`**: the Worker keeps its own style (tabs, single
   quotes, 140 columns), previously `apps/api/.prettierrc`. Oxfmt discovers
   nested configs automatically, so running `pnpm fmt` from the root still
   applies it.
-- **`.oxlintrc.json`** (root) — the `eslint` and `react` plugins with the
+- **`.oxlintrc.json`** (root): the `eslint` and `react` plugins with the
   `correctness` category as errors, mirroring the old flat config's
   `js/recommended` + `eslint-plugin-react` + `eslint-plugin-react-hooks` setup.
   Per-app `overrides` supply the right globals for each runtime: browser for
   `apps/web`, worker + Node (plus `WebSocketPair` and
   `WebSocketRequestResponsePair`, the Durable Objects' globals) for `apps/api`,
   and Node for `apps/mcp`. `packages/core` is
-  linted against the `worker` env — the narrowest of the three — so that anything
+  linted against the `worker` env, the narrowest of the three, so that anything
   reaching for a browser-only global there fails the lint rather than breaking at
   runtime inside the Worker. The modules that legitimately need the DOM
   are grouped under `src/browser/`, which is the only path opted back into `browser`.
@@ -129,8 +129,8 @@ and `env` blocks do anything.
 
 Oxlint enables its `unicorn`, `oxc` and `typescript` plugins by default; the
 config lists `plugins` explicitly to keep them off, so the rule set stays the one
-this codebase was written against. Two rules the ESLint config switched off —
-`react/prop-types` and `react-hooks/set-state-in-effect` — are not implemented by
+this codebase was written against. Two rules the ESLint config switched off
+(`react/prop-types` and `react-hooks/set-state-in-effect`) are not implemented by
 oxlint, so there is nothing to disable.
 
 `react-hooks/exhaustive-deps` is a warning, and `pnpm lint` does not pass
@@ -143,14 +143,14 @@ merge: install (with `--frozen-lockfile`), `pnpm lint`, `pnpm test`, then the we
 and docs builds.
 
 `apps/api`'s own suite runs **twice, in two runtimes**, because the API is meant
-to run in two. The `workers` project runs everything inside workerd — the hosted
+to run in two. The `workers` project runs everything inside workerd: the hosted
 instance's runtime, and the only place the Durable Objects and the R2/KV adapters
 can be exercised for real. The `node` project runs the portable subset under Node,
 which is what a self-hosted instance runs on. Most files are in both, and that
 overlap is the point: a module that behaves differently across the two is a
 self-hosting bug, and the cheapest moment to find one is when it is introduced.
 
-`pnpm test` is `pnpm -r test`, which runs each workspace's own suite —
+`pnpm test` is `pnpm -r test`, which runs each workspace's own suite:
 `packages/core` and `apps/api` under vitest (the Worker's through
 `@cloudflare/vitest-pool-workers`, so its platform-adapter tests run against real
 R2 and KV), and `apps/mcp` under `node --test`. `apps/docs` has no test script and
@@ -159,33 +159,33 @@ is skipped.
 `apps/api`'s `test` script builds `apps/web`'s SSR bundle first, the same way its
 `dev`, `start` and `deploy` scripts do. That is not incidental: `routes/ssr.js`
 imports the built bundle _statically_, deliberately, so that a missing one is a
-build failure rather than a runtime surprise — and the Node entry's tests reach
+build failure rather than a runtime surprise, and the Node entry's tests reach
 it through `createHandler`. Building it here is what lets `pnpm test` work from a
 clean checkout in any order.
 
-The build runs without the `VITE_*` secrets — they are injected only for the real
+The build runs without the `VITE_*` secrets: they are injected only for the real
 deploy, and a pull request from a fork could not read them anyway. It still
 resolves every import and runs the full bundler, which is what catches a bad
 module path or a broken chunk boundary.
 
 `.github/workflows/deploy.yml` is separate and still triggers only on a push to
 `main`. It lints and builds again before deploying, but by then the change has
-already been merged — CI is what gates the merge.
+already been merged; CI is what gates the merge.
 
 ## Dependency updates
 
 `.github/dependabot.yml` runs Dependabot every Monday against two ecosystems:
 
-- **npm** — a single root entry covers all workspace packages, since Dependabot
+- **npm**: a single root entry covers all workspace packages, since Dependabot
   resolves pnpm workspaces from the root `pnpm-lock.yaml`.
-- **github-actions** — the actions used by `.github/workflows/`.
+- **github-actions**: the actions used by `.github/workflows/`.
 
 Minor and patch bumps are grouped (dev tooling, React, Radix UI, Cloudflare,
 then everything else split by production/development) so a routine week lands as
 a handful of PRs; majors open individually because they need review.
 
 `@cfworker/json-schema`, `@modelcontextprotocol/client` and
-`@modelcontextprotocol/server` are ignored — all three are patched via
+`@modelcontextprotocol/server` are ignored: all three are patched via
 `patchedDependencies` in `pnpm-workspace.yaml` (the latter two inline their own
 copy of the first), so bumping any of them requires regenerating the matching
 `patches/*.patch` by hand. See
@@ -194,7 +194,7 @@ for why the patches exist and how to verify a regenerated one.
 
 ### Security overrides
 
-Most Dependabot security alerts here name a package nobody depends on directly —
+Most Dependabot security alerts here name a package nobody depends on directly:
 `undici` inside miniflare, `qs` inside the express that the MCP SDK pulls in,
 `tmp` four levels under `@anthropic-ai/mcpb`. Dependabot cannot open a PR for
 those, because the fix is not a range this repo controls.
@@ -205,15 +205,15 @@ range, and each one is annotated with the advisory it answers and the path it
 arrives by. Keep two rules when adding one:
 
 - **Stay inside the parent's major**, or find evidence the parent already works
-  with the newer version — the `sharp` and `esbuild` pins are justified by
+  with the newer version; the `sharp` and `esbuild` pins are justified by
   current Cloudflare tooling shipping exactly those versions.
 - **Delete the entry once it is redundant.** An override outlives its advisory
   and then silently holds a package _back_. After a dependency bump, drop the
   entry, run `pnpm install`, and check whether the tree resolves to something
   already fixed.
 
-Write them as ranges, not exact versions. An override is a floor — "no older
-than the fixed version" — and `pnpm-lock.yaml` is what pins the exact one that
+Write them as ranges, not exact versions. An override is a floor ("no older
+than the fixed version"), and `pnpm-lock.yaml` is what pins the exact one that
 gets installed, so a re-resolution shows up as a lockfile diff to review rather
 than something happening behind your back. Pinning in `overrides` instead would
 freeze each package on a version that can pick up an advisory of its own later,

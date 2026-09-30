@@ -197,7 +197,7 @@ function readPullText(body, cors) {
 		return { error: textResponse(`A description is limited to ${PULL_BODY_MAX} characters.`, 400, cors) };
 	}
 	if (profanityFilter.checkProfanity(`${title}\n${text}`).containsProfanity) {
-		return { error: textResponse('This proposal contains language that isn’t allowed. Please revise it and try again.', 422, cors) };
+		return { error: textResponse("This proposal contains language that isn't allowed. Please revise it and try again.", 422, cors) };
 	}
 	return { title, text, error: null };
 }
@@ -357,7 +357,7 @@ async function openPull(request, env, base, lessonId, cors) {
 	// theirs would satisfy that, which would turn the rule off entirely and attach a
 	// fork link to something that isn't one.
 	if (lesson.author_id === user.id && !sourceForkedFromThis) {
-		return textResponse('This is your own lesson — save your changes to it directly instead.', 400, cors);
+		return textResponse('This is your own lesson. Save your changes to it directly instead.', 400, cors);
 	}
 
 	// Cap what one person can have open against one lesson at a time.
@@ -440,7 +440,7 @@ export function planPullUpload(pull, head, now = new Date().toISOString()) {
 	if (!updating) {
 		if (head !== pull.head) {
 			return {
-				error: 'These changes don’t match the proposal they were opened with. Start the proposal again.',
+				error: "These changes don't match the proposal they were opened with. Start the proposal again.",
 				status: 409,
 			};
 		}
@@ -615,7 +615,7 @@ async function getPullPack(request, env, base, lessonId, pullId, cors) {
 	if (!pull || !pull.ready) return textResponse('Proposal not found.', 404, cors);
 
 	const object = await store.get(pullPackKey(pullId));
-	if (!object) return textResponse('This proposal’s changes are no longer stored.', 404, cors);
+	if (!object) return textResponse("This proposal's changes are no longer stored.", 404, cors);
 
 	const headers = new Headers(cors);
 	headers.set('Content-Type', 'application/x-git-packfile');
@@ -686,7 +686,7 @@ async function mergePull(request, env, base, lessonId, pullId, cors) {
 	const lesson = await fetchLessonRow(env, base, lessonId, { withDoc: true });
 	if (!lesson) return textResponse('Lesson not found.', 404, cors);
 	if (!canReview(lesson, user)) {
-		return textResponse('Only this lesson’s author or a trusted collaborator can merge a proposal.', 403, cors);
+		return textResponse("Only this lesson's author or a trusted collaborator can merge a proposal.", 403, cors);
 	}
 
 	const pull = await fetchPull(env, base, lessonId, pullId);
@@ -701,7 +701,7 @@ async function mergePull(request, env, base, lessonId, pullId, cors) {
 	const head = await storedLessonHead(env, lessonId);
 	if (!head || head !== mergeCommit) {
 		return textResponse(
-			'Save the merged lesson before marking this proposal merged — its history doesn’t contain the merge yet.',
+			"Save the merged lesson before marking this proposal merged. Its history doesn't contain the merge yet.",
 			409,
 			cors,
 		);
@@ -764,7 +764,7 @@ async function closePull(request, env, base, lessonId, pullId, cors) {
 
 	const isProposer = pull.author_id === user.id;
 	if (!isProposer && !canReview(lesson, user) && !isModeratorRole(role)) {
-		return textResponse('You can’t close this proposal.', 403, cors);
+		return textResponse("You can't close this proposal.", 403, cors);
 	}
 
 	// Conditional, like the merge: whoever resolves it first wins, and the loser

@@ -8,28 +8,28 @@ The **Lesson hub** (`/hub`) is a public gallery of lessons users have shared.
 Anyone can browse and preview; saving to the cloud **and commenting** require a
 signed-in account. The editor's **Save to cloud** button is a dropdown with two
 choices: **Publish to hub** (shared publicly) or **Save as draft** (backed up to
-the database but kept private — only the author sees it, in a "Your drafts"
+the database but kept private; only the author sees it, in a "Your drafts"
 section on the hub). A draft can be published later, or a published lesson pulled
 back to a draft; both go through the same `POST`/`PUT` with a `published` flag.
-Signed-in users see an **Edit** action on lessons they published — it
+Signed-in users see an **Edit** action on lessons they published: it
 opens the lesson back in the editor (warning first before it replaces any
 in-progress work), and saving sends a `PUT` that the Worker accepts only from the
 lesson's author. Clicking a lesson opens its own page at `/hub/:id`, which is
-organised as tabs — the lesson, practice, discussion, proposals and history (see
+organised as tabs: the lesson, practice, discussion, proposals and history (see
 [Pages & routing](./pages-and-routing.md)). **Comments** (including threaded
 replies) live on the **Discussion** tab; the lesson's own tab keeps the rating
 summary in its "About" rail, so the social proof is still on the page people
 land on. Comments are
 **moderated server-side**: a comment containing profanity (detected with
 [`glin-profanity`](https://www.npmjs.com/package/glin-profanity)) is blocked
-entirely by the Worker — it is never stored, and the user is shown why. Posting a
+entirely by the Worker: it is never stored, and the user is shown why. Posting a
 reply sends a [notification](./notifications.md) to the parent commenter and the
 lesson author.
 
 **Comments are rich text.** They're written with a [tiptap](https://tiptap.dev)-based
 editor (`RichTextInput.jsx`) and stored as sanitized HTML: bold, italic, underline, strikethrough, inline code,
-lists, blockquotes and links. **Media cannot be embedded** — no images, video,
-audio or frames — and that rule is enforced by the Worker's sanitizer rather than
+lists, blockquotes and links. **Media cannot be embedded** (no images, video,
+audio or frames), and that rule is enforced by the Worker's sanitizer rather than
 by the toolbar, so it holds even against a hand-crafted request. See
 [Rich text](./rich-text.md) for how that works and what survives sanitizing.
 
@@ -38,7 +38,7 @@ comment then shows an **"edited"** marker next to its timestamp, so it never
 changes silently under someone who already read (or replied to) it. Editing runs
 the same sanitizing, length and profanity checks as posting, so it can't be used
 to launder content past the rules. Moderators can _delete_ a comment but not
-rewrite one — see [Moderation](./moderation.md).
+rewrite one; see [Moderation](./moderation.md).
 
 **Translating a comment.** Any comment can be translated into the reader's own
 language, on the reader's device: the browser's built-in Translator API where
@@ -47,12 +47,12 @@ read publicly, so they translate publicly too), nothing is sent to a server, and
 the original is always one click away. See
 [Comment translation](./comment-translation.md).
 
-A commenter can also leave a **1–5 star rating** for the lesson (a star-rating
-control in the comment box). Ratings are one-per-user-per-lesson — re-rating updates your
-existing star count rather than adding a second vote — and the lesson page shows
+A commenter can also leave a **1-5 star rating** for the lesson (a star-rating
+control in the comment box). Ratings are one-per-user-per-lesson (re-rating updates your
+existing star count rather than adding a second vote) and the lesson page shows
 the **average** rating and how many ratings it has.
 
-**Forking.** Any lesson can be forked into a new lesson of your own — the
+**Forking.** Any lesson can be forked into a new lesson of your own; the
 original row is never touched, so this needs no special permission. A fork is a
 **clone of the lesson's git repository**: it carries the original's full version
 history and, because git addresses commits by content, shares its ancestry. The
@@ -62,8 +62,8 @@ commit they diverged from, block by block. See
 [Version history](/monorepo/version-history).
 
 **Proposing changes back.** Work travels from a fork into the original as a **pull
-request**: you propose your version, and the lesson's author — or a **trusted
-collaborator**, someone they added to the lesson's collaboration list — reviews it
+request**: you propose your version, and the lesson's author (or a **trusted
+collaborator**, someone they added to the lesson's collaboration list) reviews it
 and merges it. Nobody writes a lesson they don't own or aren't trusted with, so a
 lesson only ever changes because someone with authority over it chose to. See
 [Pull requests](./pull-requests.md).
@@ -72,11 +72,11 @@ Those trusted collaborators are the one kind of non-author who may write a lesso
 directly: its title, document and history, but never its published/draft state,
 the trusted list itself, or its existence (no delete). Pushes are
 compare-and-swapped on the history's head, so neither the author nor a
-collaborator can overwrite work they haven't seen — whoever is stale is told to
+collaborator can overwrite work they haven't seen; whoever is stale is told to
 merge and try again. The author is notified when someone else saves their lesson.
 
-**Where the data lives.** Lessons are stored in **Supabase Postgres**, but — like
-the AI and Pixabay features — the browser never talks to the database directly.
+**Where the data lives.** Lessons are stored in **Supabase Postgres**, but, like
+the AI and Pixabay features, the browser never talks to the database directly.
 All lesson reads/writes go through the companion Worker (`apps/api` in this
 monorepo), which holds the privileged Supabase credentials server-side. The only
 thing the browser does directly with Supabase is **authentication**.
@@ -116,20 +116,20 @@ their own pages.)
 | `GET /lessons/mine`                           | `Bearer <Supabase JWT>` | `{ "lessons": [{ id, authorId, title, author, sectionCount, published, createdAt }] }` (caller's own, incl. drafts)   |
 | `GET /lessons/:id`                            | none, unless a draft\*  | `{ "lesson": { id, authorId, title, author, sectionCount, published, createdAt, doc, avgRating, ratingCount } }`      |
 | `POST /lessons`                               | `Bearer <Supabase JWT>` | `{ "lesson": { id, authorId, title, author, sectionCount, published, createdAt } }`                                   |
-| `PUT /lessons/:id`                            | `Bearer <Supabase JWT>` | `{ "lesson": { ... } }` — the author, or a trusted collaborator (title + doc only); anyone else `403`                 |
+| `PUT /lessons/:id`                            | `Bearer <Supabase JWT>` | `{ "lesson": { ... } }`; the author, or a trusted collaborator (title + doc only); anyone else `403`                  |
 | `GET /lessons/:id/comments`                   | none, unless a draft\*  | `{ "comments": [{ id, parentId, authorId, author, body, createdAt, editedAt }] }` (oldest first)                      |
 | `POST /lessons/:id/comments`                  | `Bearer <Supabase JWT>` | `{ "comment": { id, ..., body, createdAt, editedAt }, "rating": { average, count } \| null }`                         |
-| `PATCH /lessons/:id/comments/:commentId`      | `Bearer <Supabase JWT>` | `{ "comment": { ... } }` — edit your own comment (author only; else `403`)                                            |
-| `GET /lessons/:id/pulls`                      | none, unless a draft\*  | `{ "pulls": [...], "canReview": bool }` — changes people have proposed to this lesson                                 |
-| `POST /lessons/:id/pulls`                     | `Bearer <Supabase JWT>` | `{ "pull": { ... } }` — propose changes; anyone but the lesson's own author                                           |
+| `PATCH /lessons/:id/comments/:commentId`      | `Bearer <Supabase JWT>` | `{ "comment": { ... } }`; edit your own comment (author only; else `403`)                                             |
+| `GET /lessons/:id/pulls`                      | none, unless a draft\*  | `{ "pulls": [...], "canReview": bool }`, the changes people have proposed to this lesson                              |
+| `POST /lessons/:id/pulls`                     | `Bearer <Supabase JWT>` | `{ "pull": { ... } }`, proposing changes; anyone but the lesson's own author                                          |
 | `/lessons/:id/pulls/:prId/{pack,merge,close}` | `Bearer`, except `GET`  | A proposal's packfile, and resolving it; see [Pull requests](./pull-requests.md) for who may do which                 |
-| `GET/POST /lessons/:id/responses`             | `Bearer <Supabase JWT>` | Your own saved answers from [interactive mode](./interactive-mode.md) — private to the caller; see that page          |
-| `DELETE /lessons/:id/responses/:rid`          | `Bearer <Supabase JWT>` | `{ "ok": true }` — deletes one of your own saved run-throughs; someone else's matches nothing and `404`s              |
-| `POST /ai-text/dislike`                       | `Bearer <Supabase JWT>` | `{ "ok": true }` — evicts the cached text for `{ subject, documentName }`                                             |
+| `GET/POST /lessons/:id/responses`             | `Bearer <Supabase JWT>` | Your own saved answers from [interactive mode](./interactive-mode.md), private to the caller; see that page           |
+| `DELETE /lessons/:id/responses/:rid`          | `Bearer <Supabase JWT>` | `{ "ok": true }`; deletes one of your own saved run-throughs; someone else's matches nothing and `404`s               |
+| `POST /ai-text/dislike`                       | `Bearer <Supabase JWT>` | `{ "ok": true }`; evicts the cached text for `{ subject, documentName }`                                              |
 
 \* A published lesson's `GET /lessons/:id` and `GET /lessons/:id/comments` need
-no auth. A **draft** (`published: false`) is private — having the id/URL is not
-enough — so those two reads 404 unless the request carries a `Bearer <Supabase
+no auth. A **draft** (`published: false`) is private (having the id/URL is not
+enough), so those two reads 404 unless the request carries a `Bearer <Supabase
 JWT>` for the lesson's author, a trusted collaborator (`doc.trustedCollaborators`),
 or a moderator/admin. The frontend (`@spelling-creator/core/lessons`'s `fetchLesson`,
 `@spelling-creator/core/comments`'s `fetchComments`) always sends the signed-in user's token
@@ -140,10 +140,10 @@ their own draft.
   holds collaborator email addresses, and `GET /lessons/:id` is public (and
   server-rendered into the page), so the Worker strips the field on the way out
   for everyone except the lesson's author and the collaborators on the list
-  itself — not the public, and not moderators. A published lesson is still read
+  itself; not the public, and not moderators. A published lesson is still read
   without verifying anything; a token is only checked when one was actually sent.
   Since a document can therefore arrive back without the field, `PUT` treats an
-  absent list as "leave the stored one alone" — only an explicit array replaces
+  absent list as "leave the stored one alone"; only an explicit array replaces
   it. See
   [Version history](/monorepo/version-history#what-is-deliberately-not-versioned-or-shared-at-all).
 - `doc` is the editor document shape used throughout the app:
@@ -170,29 +170,29 @@ their own draft.
 - `POST /lessons/:id/comments` body is `{ body, parentId?, rating? }`, where `body`
   is rich-text HTML. The Worker verifies the JWT the same way, derives the author
   from the verified user, then **sanitizes the HTML** against an allow-list
-  ([Rich text](./rich-text.md)) — dropping media and anything else not permitted —
+  ([Rich text](./rich-text.md)), dropping media and anything else not permitted,
   and runs the _resulting text_ through
   [`glin-profanity`](https://www.npmjs.com/package/glin-profanity);
   if any profanity is found it **rejects the whole comment with `422`** (nothing is
   stored). Otherwise it inserts the **sanitized** HTML with the service-role key.
   Both checks run on the Worker so neither can be bypassed by a crafted client
   request. The 2000-character limit counts the comment's _text_, not the markup. An
-  optional `rating` (integer 1–5) rates the lesson alongside the comment: the Worker
-  upserts it into the `ratings` table keyed by `(lesson_id, author_id)` — one rating
-  per user, re-rating updates it — and returns the lesson's new `{ average, count }`
-  as `rating` (or `null` when no rating was sent). A `rating` outside 1–5 is `400`.
+  optional `rating` (integer 1-5) rates the lesson alongside the comment: the Worker
+  upserts it into the `ratings` table keyed by `(lesson_id, author_id)` (one rating
+  per user; re-rating updates it) and returns the lesson's new `{ average, count }`
+  as `rating` (or `null` when no rating was sent). A `rating` outside 1-5 is `400`.
 - `PATCH /lessons/:id/comments/:commentId` body is `{ body }`. Edits one comment,
   and **only its author may do so**: ownership is decided by comparing the stored
   `author_id` against the verified JWT (a non-author gets `403`, a missing comment
   `404`). The new body runs through the same sanitize/length/profanity pipeline as a
   fresh post, so an edit can't launder content past the rules that applied when it
   was written. A successful edit stamps `edited_at`, which the UI shows as an
-  "edited" marker. Moderators cannot edit — only delete.
+  "edited" marker. Moderators cannot edit, only delete.
 - `POST /ai-text/dislike` body is `{ subject, documentName }`. The Worker
   verifies the JWT the same way (sign-in required), then rebuilds the cache key
   for that text suggestion and deletes it, so the next request for the same
   subject is regenerated instead of served from cache.
-- On 4xx/5xx, return a short **plain-text** reason — the frontend surfaces it
+- On 4xx/5xx, return a short **plain-text** reason; the frontend surfaces it
   directly (matching the existing AI/Pixabay error convention).
 
 ## Supabase schema
@@ -200,10 +200,10 @@ their own draft.
 The canonical, ready-to-run schema lives in the monorepo at
 [`apps/api/schema.sql`](https://github.com/Spelling-Creator/spelling-creator/blob/main/apps/api/schema.sql).
 Run it once in the Supabase SQL editor. Besides the `lessons` and `comments`
-tables shown below, that file also defines the `ratings` table (1–5 stars, one
+tables shown below, that file also defines the `ratings` table (1-5 stars, one
 row per `(lesson_id, author_id)`), the `notifications` table (see
-[Notifications](./notifications.md)) and the moderation tables — `user_roles`,
-`banned_names`, `banned_ips`, and `lesson_delete_requests` — plus the
+[Notifications](./notifications.md)) and the moderation tables (`user_roles`,
+`banned_names`, `banned_ips`, and `lesson_delete_requests`) plus the
 `shadowbanned` / `author_ip` columns (see [Moderation](./moderation.md)). It also
 defines `lesson_responses`, which is the one table in the file with **no public
 read policy**: it holds learners' own answers from

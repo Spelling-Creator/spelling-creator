@@ -5,12 +5,12 @@ title: Interactive lesson mode
 # Interactive lesson mode
 
 Any lesson on the hub can be **worked through** instead of read. Press **Start
-lesson** on a lesson page — or open `/hub/:id/practice` directly — and the lesson
+lesson** on a lesson page (or open `/hub/:id/practice` directly) and the lesson
 takes over the screen: a section's material appears on its own, one step at a
 time, then that section's questions appear one after another, each with a field
 to type an answer into.
 
-It has its own URL (it is a tab of the lesson — see
+It has its own URL (it is a tab of the lesson; see
 [Pages & routing](./pages-and-routing.md)), so a teacher can send a class
 straight into the walkthrough rather than to the lesson with an instruction to
 press a button. Closing it returns to the lesson. The component itself is still
@@ -21,7 +21,7 @@ You don't have to finish in one sitting: what you type is kept in your browser a
 you go, and the lesson reopens where you left it. See
 [Picking up where you left off](#picking-up-where-you-left-off).
 
-At the end you get a summary of everything you wrote, and — if you're signed in —
+At the end you get a summary of everything you wrote, and, if you're signed in,
 it is saved **privately to your account**. Nobody else can read it, including the
 person who wrote the lesson. See [Privacy](#privacy-who-can-read-your-answers)
 below, which is the part of this feature worth being precise about.
@@ -38,8 +38,8 @@ author's answer to each question alongside it.
 
 There is no "interactive lesson" document type and nothing to switch on when
 authoring. The walkthrough is **derived from the lesson document you already
-have** (`packages/core/src/interactive.js`), so every lesson ever published works
-— including ones made long before this feature existed and ones written by the
+have** (`packages/core/src/interactive.js`), so every lesson ever published works,
+including ones made long before this feature existed and ones written by the
 [MCP server](/mcp-server/overview). Nothing is added to a lesson to make it
 playable, and a lesson stays exactly as printable as it was.
 
@@ -49,7 +49,7 @@ The rules that turn a document into steps:
 | ------------------------------------------------- | ----------------------------------------------------------------------- |
 | A section's text, image, spelling and VAKT blocks | One **content step**, holding them together in document order.          |
 | Each question block                               | One **question step**, with a text field, after that section's content. |
-| A section with only questions                     | No content step — it opens straight on its first question.              |
+| A section with only questions                     | No content step; it opens straight on its first question.               |
 | A section with nothing in it                      | Nothing.                                                                |
 | A lesson with no questions at all                 | A read-through: every content step, no answer fields, nothing saved.    |
 
@@ -59,10 +59,10 @@ numbering (see [Navigating large lessons](./navigating-large-lessons.md#question
 ## What it looks like
 
 Interactive mode is **full-screen** and drawn in the app's own theme, light or
-dark — as is the lesson page below it, which follows the theme too rather than
+dark, as is the lesson page below it, which follows the theme too rather than
 reproducing the white sheet the [DOCX/PDF export](./export-pipeline.md)
 produces. What's different here is the _scale_: a surface you read and answer on
-for twenty minutes gets its own treatment, so the blocks are re-rendered — prose
+for twenty minutes gets its own treatment, so the blocks are re-rendered: prose
 at reading size, images framed in the app's border and radius and sized by the
 reading column rather than by the size and alignment they carry (so a picture
 fills the width on a phone), spelling words as
@@ -86,11 +86,11 @@ towards.
   settings it isn't remembered, so a learner's own run-through never begins with
   the answers on screen.
 - The button is only rendered when the lesson has an answer to reveal
-  _somewhere_ — a lesson of purely open-ended questions has nothing behind it.
+  _somewhere_; a lesson of purely open-ended questions has nothing behind it.
 - Each question type shows what it stores: the answer for a single, number or
   background question, the working steps as well for a number question, and
-  every accepted answer for a multiple-answer one. An open-ended question — which
-  by design has no author's answer — says so rather than leaving a gap.
+  every accepted answer for a multiple-answer one. An open-ended question, which
+  by design has no author's answer, says so rather than leaving a gap.
 - A **suggested-answers** question labels its reveal as suggestions and says that
   anything fitting the topic counts. Whoever is looking at the reveal is usually
   the person deciding whether the learner was right, and for that one type the
@@ -100,7 +100,7 @@ towards.
   three answers as three things rather than as a bulleted list under one
   heading. They're stacked as equals rather than numbered: any of them is a right
   answer, and a list numbered 1, 2, 3 reads as an order to give them in. A number
-  question's _working_ is not one of these boxes — it's how you reach the answer,
+  question's _working_ is not one of these boxes: it's how you reach the answer,
   not an answer, and it stays a numbered list below them.
 - **Clicking an answer puts it in your field.** It replaces what's there (a
   multiple-answer question wants one of its accepted answers, not all of them run
@@ -108,12 +108,12 @@ towards.
   putting text there is usually to keep working on it. What lands in the field is
   from then on your own answer: it counts as answered, it's kept by
   [progress](#picking-up-where-you-left-off), and it's what gets filed at the end.
-  A shortcut through typing, not a verdict — see below.
+  A shortcut through typing, not a verdict; see below.
 - The reveal also applies to the **end-of-lesson summary**, where the author's
   answer sits under the one you wrote. Useful for going back over the questions
   as a class. The boxes are read-only there: there is no field to fill on the
   summary, so nothing there is clickable.
-- Answers are still **never spoken** — see [Reading aloud](#reading-aloud-text-to-speech).
+- Answers are still **never spoken**; see [Reading aloud](#reading-aloud-text-to-speech).
 
 Showing an answer is not marking one; see below.
 
@@ -121,7 +121,7 @@ Showing an answer is not marking one; see below.
 
 A lesson is twenty minutes of typing, and a bell goes, or a tab gets closed, or a
 laptop lid comes down. So the run-through you are in the middle of is **written
-to your browser as you work** — every answer and which step you were on — and
+to your browser as you work** (every answer and which step you were on), and
 opening the lesson again drops you back exactly there, with what you'd typed
 still in the fields. The lesson page's button says **Continue lesson** rather
 than **Start lesson** when there is something to come back to, and the step you
@@ -134,7 +134,7 @@ and the differences are the point:
 |              | Progress (unfinished)                                       | A saved run-through (finished) |
 | ------------ | ----------------------------------------------------------- | ------------------------------ |
 | Lives in     | this browser (`localStorage`)                               | your account, on the server    |
-| Needs        | nothing — signed out works too                              | a signed-in session            |
+| Needs        | nothing; signed out works too                               | a signed-in session            |
 | Travels      | no: this device only                                        | yes: any device you sign in on |
 | Kept until   | it is filed, you start again or discard it, or 90 days pass | you delete it                  |
 | Anyone else? | never sent anywhere at all                                  | only you can read it           |
@@ -154,7 +154,7 @@ Consequences worth knowing:
   a resumed run-through always says so and offers _Start again_ rather than
   quietly continuing.
 - A run-through belongs to **whoever started it**. The signed-in account can
-  change with the walkthrough open — a sign-in in another tab, a sign-out — and
+  change with the walkthrough open (a sign-in in another tab, a sign-out), and
   the run then carries on writing to the record it began in, rather than moving
   one person's half-written answers into the account that just appeared.
   Pressing **Finish** in that state doesn't file them either; the summary says
@@ -165,15 +165,15 @@ Consequences worth knowing:
   [isn't for saved run-throughs](#worker-endpoints): this is a resume cache, not
   the only copy of anything you chose to keep.
 - **Closing mid-way no longer discards anything**, so the confirmation on the way
-  out now says that instead of warning about it — and carries a _Discard answers_
+  out now says that instead of warning about it, and carries a _Discard answers_
   button for deliberately throwing the attempt away. Where the browser refuses us
   storage (private browsing, a full quota) or has none at all, the old warning
   comes back, because by then it is true again: every write reports whether it
   landed, and the confirmation only promises what was actually kept.
 - The local copy is dropped **as soon as the run-through is filed** to your
   account. A _failed_ save deliberately leaves it, so closing and coming back is
-  a way to try again rather than a way to lose the lot. Signed out — where saving
-  was never possible — it also stays, since it is the only copy there is.
+  a way to try again rather than a way to lose the lot. Signed out, where saving
+  was never possible, it also stays, since it is the only copy there is.
 - Answers are keyed by **block id**, so a lesson edited between two sittings still
   matches each answer to its question. The step you were on is remembered by key
   rather than by number for the same reason; if that step has since been deleted
@@ -182,7 +182,7 @@ Consequences worth knowing:
 ## What it deliberately doesn't do
 
 **It doesn't mark your answers.** Nothing you type is ever compared against the
-author's answer, and no verdict is ever drawn — not while answering, not on the
+author's answer, and no verdict is ever drawn: not while answering, not on the
 summary, and not with the reveal above turned on, which only puts the two side
 by side. Spelling is about the learner producing the response; a right/wrong
 verdict from a string comparison would be wrong a lot of the time and the wrong
@@ -204,7 +204,7 @@ finished.
 Only you.
 
 - Every endpoint that touches saved answers requires a signed-in session, and
-  the Worker scopes each query to `user_id = <verified caller>` — that filter is
+  the Worker scopes each query to `user_id = <verified caller>`; that filter is
   the only way a row is ever addressed, not a check layered on top of one.
 - There is **no endpoint that returns another user's answers**. Not for the
   lesson's author, not for a moderator, not for an admin. A lesson author can see
@@ -218,15 +218,15 @@ Only you.
 - The in-progress copy described in
   [Picking up where you left off](#picking-up-where-you-left-off) is narrower
   still: it never leaves the device. There is no endpoint behind it, nothing to
-  scope by user id server-side, and no new way for anyone — author, moderator,
-  admin — to learn that a lesson was even opened.
+  scope by user id server-side, and no new way for anyone (author, moderator,
+  admin) to learn that a lesson was even opened.
 
 Your saved run-throughs appear in a **Your answers** panel on the lesson page,
 below the lesson itself and above the comments. It renders for you and nobody
 else, and each one can be deleted outright.
 
 Signed out, you can still work through a lesson start to finish and see your
-summary — there's just no account to save it to, and the summary says so.
+summary; there's just no account to save it to, and the summary says so.
 
 ## Reading aloud (text-to-speech)
 
@@ -235,12 +235,12 @@ The speaker button in the top bar turns on **read aloud**, using the browser's
 (`speechSynthesis`). Like [lesson summaries](./lesson-summaries.md), this runs
 entirely on the reader's own device: no Worker call, no API key, no cost, and the
 lesson text never leaves the machine. Unlike summaries, it needs no special
-hardware and is supported across current browsers — but it's still probed for
+hardware and is supported across current browsers, but it's still probed for
 rather than assumed, and where it's missing the controls aren't rendered at all.
 
 With it on:
 
-- each step is read as it appears — the section name, then the prose, image
+- each step is read as it appears: the section name, then the prose, image
   captions, or the question prompt;
 - a **replay** button re-reads the current step (and turns into a stop button
   while it's speaking);
@@ -248,7 +248,7 @@ With it on:
   again is the commonest thing a learner wants and a different job from hearing
   the whole step;
 - the settings popover picks a **voice** from the ones the browser offers and a
-  **pace** from 0.7× to 1.5×.
+  **pace** from 0.7x to 1.5x.
 
 A question's answer is never spoken, even with
 [show answers](#showing-the-answers-for-whoever-is-presenting) on: speech is a
@@ -270,18 +270,18 @@ section is rendered at all, rather than offering a button that can't work.
 
 Three platform quirks are handled between the two files. `speechPrefs.js` takes
 the one that belongs to the voice list: voices load asynchronously, announced by
-`voiceschanged`. `useSpeech.js` takes the two that belong to speaking — Chromium
+`voiceschanged`. `useSpeech.js` takes the two that belong to speaking: Chromium
 cuts off a single utterance after about 15 seconds (so text is split into
 sentence-sized chunks and queued), and `cancel()` isn't synchronous (so a new
 utterance is deferred a tick after one).
 
 ## Worker endpoints
 
-| Method & path                        | Auth                    | Response                                                                                              |
-| ------------------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `GET /lessons/:id/responses`         | `Bearer <Supabase JWT>` | `{ "responses": [{ id, lessonId, answers, completedAt }] }` — **the caller's own only**, newest first |
-| `POST /lessons/:id/responses`        | `Bearer <Supabase JWT>` | `{ "response": { id, lessonId, answers, completedAt } }`                                              |
-| `DELETE /lessons/:id/responses/:rid` | `Bearer <Supabase JWT>` | `{ "ok": true }` — the caller's own only; else `404`                                                  |
+| Method & path                        | Auth                    | Response                                                                                             |
+| ------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `GET /lessons/:id/responses`         | `Bearer <Supabase JWT>` | `{ "responses": [{ id, lessonId, answers, completedAt }] }`; **the caller's own only**, newest first |
+| `POST /lessons/:id/responses`        | `Bearer <Supabase JWT>` | `{ "response": { id, lessonId, answers, completedAt } }`                                             |
+| `DELETE /lessons/:id/responses/:rid` | `Bearer <Supabase JWT>` | `{ "ok": true }`, the caller's own only; else `404`                                                  |
 
 - `POST` body is `{ answers }`, where `answers` is one entry per question:
   `{ blockId, sectionId, sectionName, questionType, prompt, answer }`. The
@@ -296,7 +296,7 @@ utterance is deferred a tick after one).
   `packages/core/src/interactive.js`): 5,000 characters per answer and 500
   answers per submission.
 - You may keep **20 saved run-throughs of any one lesson**. Past that a `POST` is
-  rejected with `409` and a message asking you to delete an older one — rejected
+  rejected with `409` and a message asking you to delete an older one, rejected
   rather than silently pruning the oldest, for the same reason the
   [draft cap](./lesson-hub-and-accounts.md) is: they're the user's own answers,
   and quietly deleting them to make room isn't ours to decide.

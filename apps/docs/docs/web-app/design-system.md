@@ -7,16 +7,16 @@ title: Design system (surfaces, borders, boxes)
 Every colour, radius and shadow in the web app comes from a token in
 [`apps/web/src/styles/globals.css`](https://github.com/Spelling-Creator/spelling-creator/blob/main/apps/web/src/styles/globals.css).
 Components reference tokens; they don't hard-code colours. That file has four
-theme blocks — `:root` (light), `@media (prefers-color-scheme: dark)`, and an
+theme blocks: `:root` (light), `@media (prefers-color-scheme: dark)`, and an
 explicit `[data-theme="dark"]` / `[data-theme="light"]` pair so a chosen theme
-beats the OS preference — and the three colour blocks restate the same values
+beats the OS preference. The three colour blocks restate the same values
 rather than sharing them, because a single combined selector can't win in both
 directions.
 
 ## Surfaces are opaque, and borders do the separating
 
-Two surfaces carry the app — the page, and the boxes on it, which is also what
-the chrome (`AppHeader`, `PageBar`) is drawn in — plus a tint for a box's header
+Two surfaces carry the app: the page, and the boxes on it, which is also what
+the chrome (`AppHeader`, `PageBar`) is drawn in, plus a tint for a box's header
 strip and the line that separates any of them:
 
 | Role                                                        | Token             | Light     | Dark      |
@@ -31,7 +31,7 @@ That is worth knowing because it explains most of the rules below:
 
 - **`--border` is a real edge.** It used to be white at 85% _on_ a white card,
   which draws nothing. A page could hold any number of surfaces and none of them
-  had a boundary — the only thing separating two panels was a drop shadow. This
+  had a boundary; the only thing separating two panels was a drop shadow. This
   is the single change that lets a long list stay legible, and it is what the
   rest of the system is built on.
 - **`--card` is flat.** In dark, a translucent card took its colour from
@@ -55,9 +55,9 @@ whether it floats. If it scrolls with the page, it doesn't.
 ## Radii: one value, everywhere a border is drawn
 
 `--radius` and `--radius-panel` are both `0.5rem` (8px); `--radius-tile` is 6px
-and `--radius-pill` is a pill. There used to be an 8 → 14 → 20px scale that grew
+and `--radius-pill` is a pill. There used to be an 8 to 14 to 20px scale that grew
 with the surface, which read as softness at button size and as an unfinished
-edge at panel size — and made a card nested in a panel step visibly against its
+edge at panel size, and made a card nested in a panel step visibly against its
 parent's corner.
 
 ## The bordered box with a header strip
@@ -78,12 +78,12 @@ The app's main structural pattern, and the shape every listing uses:
 The strip is the part that earns its keep. It gives the box somewhere to say
 what it holds **and how much**, which is usually the question the reader arrives
 with, and which the rows can only answer by being counted. Where a count is
-shown next to a filtered list, count what's on screen — the hub's listing counts
+shown next to a filtered list, count what's on screen: the hub's listing counts
 `visibleLessons`, so it stays true while a search narrows it rather than
 reporting a total nobody can see.
 
 Used by: `HubPage`'s drafts and published listings, `ProfilePage`'s lessons,
-`PullRequestsSection`, and `SectionCard` — whose strip is also `sticky`, which
+`PullRequestsSection`, and `SectionCard`, whose strip is also `sticky`, which
 carries one extra constraint (see
 [Navigating large lessons](./navigating-large-lessons.md)): **the card around a
 sticky strip must not set `overflow-hidden`**, or it becomes the nearest scroll
@@ -91,7 +91,7 @@ container and the strip stops sticking.
 
 ## State pills
 
-A proposal's state is a solid filled pill, not a tinted outline — down a column
+A proposal's state is a solid filled pill, not a tinted outline: down a column
 of rows a 10% tint doesn't read at a glance. The colours follow the convention
 every repository host uses:
 
@@ -104,7 +104,7 @@ every repository host uses:
 ## Fields are defined by their border, not a fill
 
 `Input`, `Textarea` and `SelectTrigger` have no background of their own in
-either theme — stock shadcn gives them a `dark:bg-input/30`, and this app
+either theme; stock shadcn gives them a `dark:bg-input/30`, and this app
 doesn't. Two reasons: light mode has no fill either, so a dark-only one makes
 the themes disagree about what a field is; and the app has several deliberately
 text-like inputs (the document title, a section's name) that pass
@@ -118,6 +118,6 @@ you type into shouldn't.
 ## Adding to this
 
 - Style through tokens. A literal colour in a component works in one theme.
-- Don't define a colour only inside a `@media` or `[data-theme]` block — most
+- Don't define a colour only inside a `@media` or `[data-theme]` block; most
   viewers are in the un-stamped default state, and it won't apply to them.
 - New surface? Border first, and reach for a shadow only if it floats.

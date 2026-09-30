@@ -4,8 +4,8 @@ title: Rich text (comments & bios)
 
 # Rich text (comments & bios)
 
-The two things users write about each other — **lesson comments** and **profile
-bios** — are rich text. Both are authored with a small [tiptap](https://tiptap.dev)
+The two things users write about each other, **lesson comments** and **profile
+bios**, are rich text. Both are authored with a small [tiptap](https://tiptap.dev)
 editor (`RichTextInput.jsx`, built directly on `@tiptap/react` with a shadcn
 `ToggleGroup` toolbar) and stored as **sanitized HTML**.
 
@@ -27,15 +27,15 @@ document.
 
 ## The pieces
 
-| File                                              | Role                                                                      |
-| ------------------------------------------------- | ------------------------------------------------------------------------- |
-| `@spelling-creator/core/richText`                 | **The policy.** Allow-list, link schemes, link `rel`/`target`, HTML→text. |
-| `packages/core/src/richText.test.js`              | Its tests — link safety, the allow-list, the browser-side helpers.        |
-| `apps/api/src/lib/richtext.js`                    | **The boundary.** Sanitizes on write (parse5).                            |
-| `apps/api/src/lib/richtext.test.js`               | Its tests — media, XSS, links, legacy values.                             |
-| `apps/web/src/components/RichTextInput.jsx`       | The editor (toolbar, limits, no media affordances).                       |
-| `apps/web/src/components/RichText.jsx`            | The renderer, for both rich text and legacy plain text.                   |
-| `@spelling-creator/core/browser/sanitizeRichText` | Render-time sanitizing (DOMPurify).                                       |
+| File                                              | Role                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `@spelling-creator/core/richText`                 | **The policy.** Allow-list, link schemes, link `rel`/`target`, HTML to text. |
+| `packages/core/src/richText.test.js`              | Its tests: link safety, the allow-list, the browser-side helpers.            |
+| `apps/api/src/lib/richtext.js`                    | **The boundary.** Sanitizes on write (parse5).                               |
+| `apps/api/src/lib/richtext.test.js`               | Its tests: media, XSS, links, legacy values.                                 |
+| `apps/web/src/components/RichTextInput.jsx`       | The editor (toolbar, limits, no media affordances).                          |
+| `apps/web/src/components/RichText.jsx`            | The renderer, for both rich text and legacy plain text.                      |
+| `@spelling-creator/core/browser/sanitizeRichText` | Render-time sanitizing (DOMPurify).                                          |
 
 The two sanitizers are deliberately separate, but not for the reason they
 originally were. The write-side one used to be built on HTMLRewriter, which only
@@ -50,7 +50,7 @@ the browser), each with a comment asking the reader to keep them in sync.
 
 ## Where "no media" is actually enforced
 
-The editor has no image button — but a toolbar is a suggestion, not a boundary.
+The editor has no image button, but a toolbar is a suggestion, not a boundary.
 Anyone can `POST` hand-written HTML straight at the Worker, so the rule is enforced
 in four places, only the third of which is load-bearing:
 
@@ -59,7 +59,7 @@ in four places, only the third of which is load-bearing:
    go and is dropped on the way in; `handlePaste`/`handleDrop` additionally refuse
    dropped and pasted _files_, which is what stops the browser from helpfully
    inlining a dragged-in screenshot as a giant `data:` URI.
-3. **The Worker's sanitizer** (`sanitizeRichText`) — the only one of these a hostile
+3. **The Worker's sanitizer** (`sanitizeRichText`), the only one of these a hostile
    client cannot skip. It is an **allow-list**: anything not explicitly permitted is
    dropped, so a tag nobody thought of fails closed. Media tags are removed along
    with their content, and every attribute is stripped except a validated `href`.
@@ -76,19 +76,19 @@ classic way to ship an XSS hole (`<img/src=x onerror=…>`, `<scr<script>ipt>`).
 
 It was HTMLRewriter, the Workers runtime's own streaming parser, until
 self-hosting made that a problem: HTMLRewriter runs in one runtime, so any other
-host would have needed a second sanitizer — and two implementations of a security
+host would have needed a second sanitizer, and two implementations of a security
 boundary that have to agree is a worse thing to own than a dependency, because
 the drift would be silent and it would be an XSS hole.
 
 Swapping a streaming parser for a tree-building one brought one new concern with
 it. The routes cap raw input at 20,000 characters and `<b>` is three of them, so
-a caller can send a tree nearly 7,000 levels deep — enough to exhaust the stack
+a caller can send a tree nearly 7,000 levels deep, enough to exhaust the stack
 in any tree-shaped walk. The walk is iterative, and nesting past 100 levels is
 flattened to its text, the same thing that happens to unrecognised markup
 everywhere else. The editor's deepest possible output is five.
 
-It brought one other, sharper concern. An unknown tag is normally _unwrapped_ —
-the tag goes and its words stay — but that is only safe for tags whose content
+It brought one other, sharper concern. An unknown tag is normally _unwrapped_
+(the tag goes and its words stay), but that is only safe for tags whose content
 was parsed as markup. HTML's raw-text elements (`script`, `style`, `xmp`,
 `iframe`, `noembed`, `noframes`, `plaintext`, `noscript`) hold literal text, and
 a serializer writes their content back **unescaped** because that is what a
@@ -101,8 +101,8 @@ decided by an element that was removed.
 ### Links
 
 Links are the one thing a user may embed. Only `http:`, `https:` and `mailto:`
-targets survive — `javascript:` executes, and `data:` is an HTML/media smuggling
-channel — and the check is run against the URL with control characters stripped, so
+targets survive (`javascript:` executes, and `data:` is an HTML/media smuggling
+channel), and the check is run against the URL with control characters stripped, so
 `java\tscript:` doesn't sneak past it. Every surviving link is rewritten to carry
 `target="_blank"` and `rel="nofollow ugc noopener noreferrer"`: user-generated links
 open away from the app, earn spammers no SEO value, and can't reach back through
@@ -133,12 +133,12 @@ rejected (or, for a bio, stored as empty) rather than saved as blank markup.
 An author may **edit their own comment** after posting
 (`PATCH /lessons/:id/comments/:commentId`). Ownership is decided by comparing the
 stored `author_id` against the verified JWT, never by anything the request claims.
-The new body runs through the identical sanitize → length → profanity pipeline as a
+The new body runs through the identical sanitize, length and profanity pipeline as a
 fresh post, so editing is not a way to launder content past the rules that applied
 when it was written.
 
 A successful edit stamps `comments.edited_at`, which the thread renders as an
-**"edited"** marker — a comment never changes silently under someone who already
+**"edited"** marker; a comment never changes silently under someone who already
 read or replied to it. **Moderators cannot edit a comment**, only delete it
 ([Moderation](./moderation.md)): rewriting someone's words under their own name is a
 power worth not having.
@@ -150,6 +150,6 @@ Bios have always been editable, and are simply saved again through
 
 Every comment and bio predating this feature is a bare plain-text string. They are
 detected (`isRichTextHtml`) and rendered **as text**, with `white-space: pre-wrap`
-so their line breaks survive — exactly as they always looked. They are never
+so their line breaks survive, exactly as they always looked. They are never
 reinterpreted as markup years after the fact. The flattening helpers pass them
 through unchanged, so a plain-text value with no tags is its own plain text.

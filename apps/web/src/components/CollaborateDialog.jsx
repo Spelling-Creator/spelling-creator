@@ -472,7 +472,7 @@ export default function CollaborateDialog({
           </ToneAlert>
         ) : (
           <ToneAlert severity="info" icon={<Spinner className="size-[18px]" />}>
-            Connected — waiting for the host to add you to the lesson.
+            Connected. Waiting for the host to add you to the lesson.
           </ToneAlert>
         )}
         {admitted && renderRoster()}
@@ -631,7 +631,7 @@ export default function CollaborateDialog({
         }
       >
         {autoSend.sending
-          ? "Sending the invite link to your trusted collaborators…"
+          ? "Sending the invite link to your trusted collaborators..."
           : autoSend.failed.length > 0
             ? `Invited ${autoSend.sent.length}; couldn't reach ${autoSend.failed.join(", ")}.`
             : `Invite link sent to ${autoSend.sent.length} trusted collaborator${

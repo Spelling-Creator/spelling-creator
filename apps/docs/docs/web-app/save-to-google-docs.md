@@ -17,7 +17,7 @@ entirely client-side:
 3. On success a toast offers an **Open** link to the new doc.
 
 The app requests only the [`drive.file`](https://developers.google.com/drive/api/guides/api-specific-auth)
-scope, so it can touch only the files it creates — never the user's existing
+scope, so it can touch only the files it creates, never the user's existing
 Drive contents. The button is hidden unless `VITE_GOOGLE_CLIENT_ID` is set (see
 [Environment variables](./getting-started.md#environment-variables)). The OAuth client must list every origin the app is
 served from (e.g. `http://localhost:5173` and the production URL) under

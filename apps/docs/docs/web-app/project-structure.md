@@ -95,7 +95,7 @@ src/
 
 Outside `src/`, `public/icons/` holds the PWA icons and the two SVGs they're
 rasterised from, and the `VitePWA` block in `vite.config.js` holds the manifest
-and service-worker configuration — see
+and service-worker configuration; see
 [Installable app & offline use](./pwa-and-offline.md).
 
 ## Auto-growing text fields
@@ -104,13 +104,13 @@ Every `Textarea` sizes itself to its content, so a lesson paragraph or a long
 question prompt is read in full inside its content block rather than scrolled
 through a two-line slot. `ui/textarea.jsx` measures it: on each `input`, on any
 change to a controlled `value` (a lesson loading, a collaborator's edit, an AI
-suggestion landing in a block), and — via a `ResizeObserver` on the field — on
+suggestion landing in a block), and, via a `ResizeObserver` on the field, on
 any change to its _width_, since re-wrapping the text changes how tall it needs
 to be. That last one also covers a field going from zero width to a real one,
 which is how a block inside a collapsed section gets measured when the section
 is opened.
 
-This was `field-sizing: content` — a single CSS declaration that does the same
+This was `field-sizing: content`, a single CSS declaration that does the same
 job. It's deliberately gone: where a browser doesn't honour it there is no
 symptom to debug, only a field stuck at its min-height showing a scrollbar and
 a resize grabber, which is the exact state it existed to prevent. Measuring in
@@ -122,13 +122,13 @@ nothing to scroll).
 
 ## Focus rings
 
-`globals.css` gives `:focus-visible` the app's own ring — 2px of `--ring`, offset
-by 2px — in the base layer. shadcn's primitives are unaffected: they pair
+`globals.css` gives `:focus-visible` the app's own ring (2px of `--ring`, offset
+by 2px) in the base layer. shadcn's primitives are unaffected: they pair
 `outline-none` with a `focus-visible:ring-*` of their own, and utilities beat
 base. The rule is there for everything else, and the app has a lot of it: the
 header's links and icon buttons, the editor's toolbar buttons, the star rating.
 None of those had a focus style, so they fell through to the browser's default
-ring, which Chrome draws as a dark outline banded with white — stray chrome
+ring, which Chrome draws as a dark outline banded with white: stray chrome
 rather than part of the app, and on the indigo header bar the white band was
 the only part of it you could see.
 
@@ -139,13 +139,13 @@ way a new hand-rolled button gets it without anyone remembering.
 Two surfaces override the color, because `--ring` _is_ `--primary` and would
 disappear into them:
 
-- **HomePage's hero** — a fixed gradient that doesn't follow the theme, so its
+- **HomePage's hero**: a fixed gradient that doesn't follow the theme, so its
   two call-to-action links carry `focus-visible:outline-white` themselves.
 
 There used to be a second: `header :focus-visible` switched the ring to
 `--primary-foreground`, because the app bar was a block of `--primary` and the
 ordinary ring vanished into it. `PageBar` draws on the page background, so the
-ordinary ring is correct again — and the override had become actively wrong, a
+ordinary ring is correct again, and the override had become actively wrong, a
 near-white ring on a light surface. It is gone.
 
 ## Shared lesson logic
@@ -154,7 +154,7 @@ The parts of the lesson model that don't depend on React live in
 `packages/core` (`@spelling-creator/core`), so the Worker and the MCP server can
 apply the same rules. Each module is its own subpath export.
 
-**Runtime-neutral** — safe to import from the browser, Node or the Worker:
+**Runtime-neutral**: safe to import from the browser, Node or the Worker:
 
 ```
 @spelling-creator/core/
@@ -192,7 +192,7 @@ apply the same rules. Each module is its own subpath export.
   git/pack              pack for upload; clone/fetch from a pack; find the merge base
 ```
 
-**Browser tier** — framework-agnostic, but needs a DOM (IndexedDB, `<canvas>`,
+**Browser tier**: framework-agnostic, but needs a DOM (IndexedDB, `<canvas>`,
 `FileReader`, an `<a>` to download). Behind a separate subpath so the Worker and
 the MCP server cannot reach it by accident:
 
@@ -228,7 +228,7 @@ inside the Worker.
 
 ### The config seam
 
-Core modules must not read `import.meta.env` — it is bundler-specific, substituted
+Core modules must not read `import.meta.env`: it is bundler-specific, substituted
 at build time, and absent in Node, in the Worker and under any other bundler. A
 module that reads it at import time can only ever be used by the web app, which is
 what previously pinned the whole image/export tier inside `apps/web`.
@@ -257,12 +257,12 @@ refresh timer exist exactly once. It is also why the old `supabaseEnabled`,
 `googleDriveEnabled`, `lessonHubEnabled`, `notificationsEnabled`, `profilesEnabled`
 and `gitRemoteEnabled` constants are gone: every one was computed at module scope,
 so under a lazily-resolved config all of them would have read as `false`. They are
-now `hasSupabase()`, `hasGoogleDrive()` and `hasApi()` — the last replacing four
+now `hasSupabase()`, `hasGoogleDrive()` and `hasApi()`, the last replacing four
 names for one predicate.
 
 ### Why version history splits the way it does
 
-`git/repo` and friends never open a filesystem themselves — they take one through
+`git/repo` and friends never open a filesystem themselves: they take one through
 `repoCtx`, which is why they port unchanged. What stays in the web app is
 `engine` and `load` (the dynamic-import boundary and the `Buffer` polyfill
 browsers need) plus `useLessonGit`, the editor's own controller. `fs`
@@ -275,11 +275,11 @@ That boundary is load-bearing for bundle size: isomorphic-git stays behind
 bundle every homepage visitor downloads.
 
 `wikimedia` holds only the parts of the Commons integration that are genuinely
-common to both clients — the endpoint, the query/unwrap call, and the
+common to both clients: the endpoint, the query/unwrap call, and the
 licence/author handling. The web app and the MCP server keep their own search and
 download functions on top of it, because their result shapes, paging and error
 wording are part of their respective contracts and are not interchangeable.
 
 `image` and `jsonExport` still use the DOM (a `<canvas>` to downscale, an `<a>` to
-trigger a download), so only the web app imports them for now — see the
+trigger a download), so only the web app imports them for now; see the
 [monorepo overview](../monorepo/overview.md) for how that tier is being split out.

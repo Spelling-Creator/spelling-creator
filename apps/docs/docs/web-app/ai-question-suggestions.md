@@ -20,7 +20,7 @@ suggester, just in a different mode. The flow:
    `packages/core/src/questions.js`.
 
 Every type in the **Add question** menu has an entry in `QUESTION_SCHEMAS`,
-`QUESTION_LABELS` and `QUESTION_INSTRUCTIONS` (`apps/api/src/lib/ai/schemas.js`)
-— the Worker refuses a `questionType` it has no schema for with a 400, so a type
+`QUESTION_LABELS` and `QUESTION_INSTRUCTIONS` (`apps/api/src/lib/ai/schemas.js`);
+the Worker refuses a `questionType` it has no schema for with a 400, so a type
 in the menu without one is a button that only returns an error. Add all three
 entries whenever a question type is added.

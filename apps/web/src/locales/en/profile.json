@@ -15,7 +15,7 @@
     "noRecentActivity": "No recent activity.",
     "activityLoadError": "Could not load activity.",
     "rssButton": "RSS",
-    "rssTooltip": "Subscribe to this user’s activity (RSS)",
+    "rssTooltip": "Subscribe to this user's activity (RSS)",
     "dismiss": "Dismiss",
     "profileLoadError": "Could not load this profile.",
     "followUpdateError": "Could not update follow.",
@@ -25,7 +25,7 @@
     "publishedLessonsHeading": "Published lessons",
     "lessonCount_one": "{{count}} lesson",
     "lessonCount_other": "{{count}} lessons",
-    "noLessonsYet": "{{name}} hasn’t published any lessons yet.",
+    "noLessonsYet": "{{name}} hasn't published any lessons yet.",
     "untitledLesson": "Untitled Lesson",
     "sectionCount_one": "{{count}} section",
     "sectionCount_other": "{{count}} sections"
@@ -34,7 +34,7 @@
     "title": "Edit bio",
     "description": "A short description shown on your public profile. Leave it empty to remove your bio.",
     "fieldLabel": "Bio",
-    "placeholder": "Tell people a little about yourself…",
+    "placeholder": "Tell people a little about yourself...",
     "cancel": "Cancel",
     "save": "Save",
     "saveError": "Could not save your bio."
@@ -46,7 +46,7 @@
     "followersTab": "Followers",
     "followingTab": "Following",
     "noFollowers": "{{name}} has no followers yet.",
-    "noFollowing": "{{name}} isn’t following anyone yet.",
+    "noFollowing": "{{name}} isn't following anyone yet.",
     "loadError": "Could not load these."
   }
 }

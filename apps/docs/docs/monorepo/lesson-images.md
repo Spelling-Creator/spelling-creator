@@ -4,16 +4,16 @@ title: Lesson images (binary, R2 + IndexedDB)
 
 # Lesson images (binary, R2 + IndexedDB)
 
-Lesson images are stored as binary, keyed by their SHA-256 content hash — not as
+Lesson images are stored as binary, keyed by their SHA-256 content hash, not as
 base64 inside the lesson doc. Locally they live as blobs in IndexedDB (so large
 drafts aren't capped by `localStorage`'s ~5 MB quota); in the cloud they live in
 an R2 bucket. The lesson doc only references images by hash.
 
 Worker endpoints (`apps/api/src/index.js`):
 
-- `GET /images/:hash` — public; serves the image bytes from R2 (immutable cache),
+- `GET /images/:hash`: public; serves the image bytes from R2 (immutable cache),
   with whatever content type the stored object has.
-- `PUT /images/:hash` — authenticated (Supabase JWT); verifies the body hashes to
+- `PUT /images/:hash`: authenticated (Supabase JWT); verifies the body hashes to
   `:hash` before storing. Called on save/publish to upload locally-drafted images.
   On the way in, the Worker re-compresses raster images to **WEBP**
   (`convertImageToWebp` in `apps/api/src/imageConvert.js`), falling back to the
@@ -24,7 +24,7 @@ The conversion uses [@jsquash](https://github.com/jamsinclair/jSquash)'s WASM
 codecs rather than a native dependency like `sharp`, which is what lets the same
 code run in the Workers runtime and in Node with no per-platform build step. Each
 codec's `init()` is handed an already-compiled `WebAssembly.Module`, so the
-Emscripten glue never tries to fetch its binary at runtime — the Workers sandbox
+Emscripten glue never tries to fetch its binary at runtime; the Workers sandbox
 forbids that, and in Node it would resolve against the wrong base.
 
 Where that module comes from is the only per-runtime part, and it sits behind the
@@ -38,16 +38,16 @@ The two halves are verified in different places, because no single runner covers
 both. The Node half runs in the API's Node test project; the Workers half is
 resolved by wrangler's bundler, which CI exercises with
 `pnpm --filter @spelling-creator/api bundle` (a `wrangler deploy --dry-run`).
-`vitest-pool-workers` cannot resolve a `.wasm` out of `node_modules` — it uses
-Vite's module graph, not wrangler's — so the image tests are excluded from that
+`vitest-pool-workers` cannot resolve a `.wasm` out of `node_modules`. It uses
+Vite's module graph, not wrangler's, so the image tests are excluded from that
 project rather than made to limp along in it.
 
 The browser also tries to do this conversion itself before an image ever reaches
 the Worker: `readImageFile` (`apps/web/src/lib/image.js`) re-encodes PNG/JPEG
 picks to WEBP on a canvas (same quality target, same keep-whichever-is-smaller
 rule) while it's already decoding the file to measure its dimensions. This is
-purely an optimization — it saves upload bandwidth and R2 conversion work for
-the common case — not a correctness requirement: browsers without WEBP canvas
+purely an optimization (it saves upload bandwidth and R2 conversion work for
+the common case), not a correctness requirement: browsers without WEBP canvas
 encoding, GIF/SVG (skipped client-side on purpose, same as server-side), and any
 client that skips or fails the step all still land on the Worker as their
 original raster type, which converts them exactly as described above.
@@ -76,17 +76,17 @@ curl -X POST https://<worker-host>/admin/migrate-images \
   -d '{"cursor": 0, "limit": 25}'
 ```
 
-Local lessons migrate automatically on first load (old `localStorage` doc →
-IndexedDB → the [lesson library](/web-app/local-lessons)).
+Local lessons migrate automatically on first load (the old `localStorage` doc
+moves to IndexedDB, then to the [lesson library](/web-app/local-lessons)).
 Readers tolerate legacy base64 throughout, so the backfill can run any time after
-deploy. Deploy order: deploy the Worker (so `/images` exists) → ship the web build
-→ run the backfill.
+deploy. Deploy order: deploy the Worker (so `/images` exists), then ship the web
+build, then run the backfill.
 
-A second, separate backfill **re-compresses images already in R2** to WEBP — for
+A second, separate backfill **re-compresses images already in R2** to WEBP, for
 objects uploaded before the `PUT` handler started converting. It's gated by the
 same `ADMIN_MIGRATE_TOKEN` and pages through the bucket with R2's list cursor,
 overwriting each PNG/JPEG object at the same key (only when the WEBP is smaller).
-It's idempotent — already-WEBP and untranscodable objects are skipped:
+It's idempotent (already-WEBP and untranscodable objects are skipped):
 
 ```bash
 # Repeat, passing the returned nextCursor each time, until nextCursor is null.
@@ -101,17 +101,18 @@ curl -X POST https://<worker-host>/admin/backfill-webp \
 R2's free tier allows 10 GB-month storage, 1M class-A (write) ops/month, and 10M
 class-B (read) ops/month. The design keeps usage well inside these:
 
-- **Class A (writes)** ≈ number of _distinct_ images, not number of saves.
+- **Class A (writes)** is roughly the number of _distinct_ images, not the
+  number of saves.
   Images are content-addressed, so `PUT /images/:hash` first does a `head()`
   (class B) and only `put()`s when the object is missing; the client also caches
   which hashes it has uploaded this session, so re-saving a lesson uploads
   nothing new. Identical images (across all users/lessons) share one object.
 - **Class B (reads)** stays low because `GET /images/:hash` responses are cached
   at Cloudflare's edge (the bytes are immutable, so they're safe to cache
-  forever). Repeat views of a popular lesson — and the og-image/prerender
-  browser — are served from cache and don't hit R2.
+  forever). Repeat views of a popular lesson (and the og-image/prerender
+  browser) are served from cache and don't hit R2.
 - **Storage** is bounded by global content-hash dedup plus an 8 MB-per-image cap
-  (`MAX_IMAGE_BYTES` in `apps/api/src/lib/images.js`, enforced server-side only —
+  (`MAX_IMAGE_BYTES` in `apps/api/src/lib/images.js`, enforced server-side only;
   there is no client-side size check). This is the one limit without a hard
   code guard, so set an R2 storage alert in the Cloudflare dashboard
   (Notifications) if you want a heads-up as the bucket grows. Cloudflare does not

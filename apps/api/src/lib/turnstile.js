@@ -65,7 +65,7 @@ export async function verifyTurnstile(token, secret, allowedHostnames, remoteIp)
 			return {
 				ok: false,
 				status: 403,
-				reason: 'Verification expired — please re-verify and try again',
+				reason: 'Verification expired. Please re-verify and try again',
 			};
 		}
 		const detail = codes.length ? ` (${codes.join(', ')})` : '';

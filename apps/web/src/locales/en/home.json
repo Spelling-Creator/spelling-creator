@@ -6,11 +6,11 @@
   "marketing": {
     "hero": {
       "title": "Spelling lessons that stick",
-      "subtitle": "Build, share and print Spelling lessons — with a focused editor, AI help, images and live collaboration.",
+      "subtitle": "Build, share and print Spelling lessons with a focused editor, AI help, images and live collaboration.",
       "openEditor": "Open the editor",
       "browseHub": "Browse the hub"
     },
-    "accountsDisabled": "Accounts aren't configured, so sign-in and the dashboard are unavailable — the editor and hub still work.",
+    "accountsDisabled": "Accounts aren't configured, so sign-in and the dashboard are unavailable. The editor and hub still work.",
     "features": {
       "eyebrow": "Everything you need",
       "heading": "From blank page to printed lesson",
@@ -20,7 +20,7 @@
       },
       "ai": {
         "title": "AI that helps you write",
-        "body": "Draft passage text, generate question ideas, or spin up a whole lesson concept with built-in AI suggestions — then edit anything to taste."
+        "body": "Draft passage text, generate question ideas, or spin up a whole lesson concept with built-in AI suggestions, then edit anything to taste."
       },
       "images": {
         "title": "Find the perfect picture",
@@ -41,7 +41,7 @@
     },
     "cta": {
       "title": "Ready to make your first lesson?",
-      "body": "No account needed to start building — sign in only when you want to publish or collaborate.",
+      "body": "No account needed to start building. Sign in only when you want to publish or collaborate.",
       "openEditor": "Open the editor"
     }
   },
@@ -61,7 +61,7 @@
     "untitled": "Untitled",
     "latestFromHub": {
       "title": "Latest from the hub",
-      "empty": "No published lessons yet — be the first to share one."
+      "empty": "No published lessons yet. Be the first to share one."
     },
     "recentActivity": {
       "title": "Your recent activity",
@@ -73,7 +73,7 @@
     },
     "notifications": {
       "title": "Notifications",
-      "empty": "You're all caught up — no notifications."
+      "empty": "You're all caught up. No notifications."
     }
   }
 }

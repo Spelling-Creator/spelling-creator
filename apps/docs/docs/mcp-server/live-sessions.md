@@ -16,7 +16,7 @@ whatever it was before the session started. An assistant using `patch_lesson` du
 session is editing a stale copy, and the host's next save overwrites whatever it did.
 
 The other half is that a room is two-way. An API write is a statement; a session is a
-conversation — the assistant edits under a participant of its own, the teacher watches
+conversation: the assistant edits under a participant of its own, the teacher watches
 each change land, and the session chat is a channel for asking rather than guessing.
 
 ## The tools
@@ -42,7 +42,7 @@ leave_collab_session()
 
 ## Who the host sees
 
-An assistant joins on the user's own account — it holds their token, because that is the
+An assistant joins on the user's own account; it holds their token, because that is the
 only identity it has. Left alone that puts two cursors in the room with the same name, and
 the host has no way to tell which one is a person.
 
@@ -60,7 +60,7 @@ is what the **AI** badge in the Collaborate dialog reads.
 
 **This is self-declared, and deliberately not a security control.** The account is
 authenticated; the label is not. A connection that lies can only make itself _look_ like an
-assistant, or decline to admit that it is one — neither of which grants it anything, and
+assistant, or decline to admit that it is one (neither of which grants it anything), and
 the room still gates what matters on the host admitting a participant they can see. What
 it buys is that the honest case, which is every case shipped here, is legible.
 
@@ -70,7 +70,7 @@ verified.
 
 ## What the design leans on
 
-Three properties of the room, none of them new — the session tools are built on the
+Three properties of the room, none of them new: the session tools are built on the
 collaboration model the web app already had:
 
 - **Admission is the host's.** A joining participant waits until the host adds them, so
@@ -84,7 +84,7 @@ collaboration model the web app already had:
 
 ## What does not merge
 
-Text within **one field** is still last-write-wins — `reconcile` stores it as a plain
+Text within **one field** is still last-write-wins: `reconcile` stores it as a plain
 string (see `packages/core/src/ydoc.js`), so two people typing in the same paragraph means
 one of them loses a sentence.
 
@@ -111,7 +111,7 @@ tools that save to the hub still reject, as they always did.
 ## Nothing is saved
 
 `edit_collab_doc` changes the session's document and nothing else. The lesson is the host's
-to keep — they save it from the editor — so an assistant should **not** follow up with
+to keep (they save it from the editor), so an assistant should **not** follow up with
 `update_lesson` or `patch_lesson` to "finish the job": that writes to the stale stored copy
 and the host's next save discards it.
 
@@ -130,8 +130,8 @@ and the host's next save discards it.
 
 ## The wire protocol
 
-All three ends — the room (`apps/api/src/collab-room.js`), the browser
-(`apps/web/src/lib/collab.js`) and this server (`apps/mcp/src/collab.js`) — speak the frame
+All three ends, the room (`apps/api/src/collab-room.js`), the browser
+(`apps/web/src/lib/collab.js`) and this server (`apps/mcp/src/collab.js`), speak the frame
 format defined once in `packages/core/src/collabFrames.js`. It used to live as two copies
 joined by a comment reading "must match T in collab-room.js", which is a convention rather
 than a guarantee; a renumbered frame is not a crash but a silent misread, on a byte array

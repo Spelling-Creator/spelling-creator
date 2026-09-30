@@ -23,7 +23,7 @@ The editor shows which copy you're on, next to the "Version saved" chip:
 ```
 
 Clicking it opens the list. From there you can start one, switch between them,
-rename one, delete one, and — the point of the whole thing — **bring one into the
+rename one, delete one, and, the point of the whole thing, **bring one into the
 main lesson**.
 
 Each variation says how much work is sitting on it ("3 changes that aren't in the
@@ -40,7 +40,7 @@ summary just says what it settled.
 
 The order matters and is fixed: the editor **switches to the main lesson first**,
 then merges the variation into it. That is what makes the result the lesson with
-your changes folded in, rather than the variation with the lesson folded in —
+your changes folded in, rather than the variation with the lesson folded in,
 which is the same commit and the opposite meaning. Anything you had unsaved is
 committed to the variation on the way out, so nothing in flight is carried across
 by accident.
@@ -51,14 +51,14 @@ main lesson". Keep it and carry on, or delete it.
 ### Trying somebody else's proposal in one
 
 A variation is also where a reviewer can put a [proposal](./pull-requests.md)
-they aren't sure about — "Try it in a variation" on its page — and read the whole
+they aren't sure about ("Try it in a variation" on its page) and read the whole
 lesson with the change in it before deciding. The lesson doesn't move and the
 proposal stays open.
 
 ## Variations are as public as the lesson
 
 They travel with the lesson, so a variation you start on your laptop is there when
-you open the lesson on your phone. That is the point — but it means a variation
+you open the lesson on your phone. That is the point, but it means a variation
 lives in the same packfile as the lesson, and **a published lesson's packfile is
 public**, because that is what makes forking work.
 
@@ -67,7 +67,7 @@ that's you (and anyone you trust); on a published lesson that's everyone. The
 dialog says so, in those words, where an author will see it.
 
 If you want to try something genuinely privately, fork the lesson into a new
-private draft instead — see [Pull requests](./pull-requests.md).
+private draft instead; see [Pull requests](./pull-requests.md).
 
 ## What it is underneath
 
@@ -78,24 +78,24 @@ original safe while they do.
 
 The mapping is exact, though, and everything on this page falls out of it.
 
-| In the app                  | In the repository                                   |
-| --------------------------- | --------------------------------------------------- |
-| The main lesson             | `refs/heads/main` — the default branch              |
-| A variation                 | `refs/heads/<name>`                                 |
-| Which one you're editing    | `HEAD`, a symbolic ref                              |
-| Switching                   | Writing `HEAD`, and adopting the doc at the new tip |
-| Bringing one in             | A merge commit on `main` — or a fast-forward\*      |
-| "3 changes that aren't in…" | Commits on the branch not reachable from `main`     |
+| In the app                    | In the repository                                   |
+| ----------------------------- | --------------------------------------------------- |
+| The main lesson               | `refs/heads/main`, the default branch               |
+| A variation                   | `refs/heads/<name>`                                 |
+| Which one you're editing      | `HEAD`, a symbolic ref                              |
+| Switching                     | Writing `HEAD`, and adopting the doc at the new tip |
+| Bringing one in               | A merge commit on `main`, or a fast-forward\*       |
+| "3 changes that aren't in..." | Commits on the branch not reachable from `main`     |
 
 \* When `main` is the merge base and the editor has nothing uncommitted, the
 branch simply moves: there is nothing for a merge commit to record. Otherwise it
 is a two-parent commit, and only blocks changed on both sides _in the same field_
-reach a dialog — a caption edited here and a width edited there merge field by
+reach a dialog: a caption edited here and a width edited there merge field by
 field, with both kept.
 
 Recording the current variation in `HEAD` rather than beside the repository is
 what makes it survive a reload, a second tab, and the two places a repository gets
-copied wholesale — publishing a draft (`adoptDraftRepo`) and forking a lesson
+copied wholesale: publishing a draft (`adoptDraftRepo`) and forking a lesson
 locally (`copyRepo`), neither of which knows branches exist.
 
 ### Names
@@ -115,7 +115,7 @@ caps that metadata at 2 KB.
 ## How they travel
 
 The lesson's stored `refs.json` gained a map, and kept `head` meaning exactly what
-it always did — the default branch, which is what a reader, a forker and the
+it always did: the default branch, which is what a reader, a forker and the
 lesson's own page ask for:
 
 ```json
@@ -140,7 +140,7 @@ claim they were.
 
 A **proposal** carries exactly one branch: the one you were working on when you
 proposed it. Both halves matter. Offering the branch you are looking at is the
-only reading of "propose these changes" that isn't a trap — work an idea up on a
+only reading of "propose these changes" that isn't a trap: work an idea up on a
 variation, propose, and you would otherwise have sent the untouched lesson and
 been told it worked. Offering _only_ that one is what keeps the rest to yourself.
 See [Pull requests](./pull-requests.md).
@@ -163,13 +163,13 @@ so every branch advances or none does.
 The rule that makes this safe with two devices is that **a branch a push doesn't
 mention is left exactly as it is**. Otherwise a device that had never heard of a
 variation would delete it simply by not knowing about it. A client sending neither
-`X-Git-Refs` nor `X-Git-Expected` — one written before any of this — therefore
+`X-Git-Refs` nor `X-Git-Expected` (one written before any of this) therefore
 still means "move the lesson, leave everything else alone", and keeps working.
 
 ### Deleting has to be asked for
 
 Which leaves a gap: if a push only ever _adds_, how does a deletion travel? It
-can't be inferred, for the reason above — "I don't have it" and "I deleted it"
+can't be inferred, for the reason above: "I don't have it" and "I deleted it"
 look identical from a ref map.
 
 So a delete leaves a marker in the repository (`refs/deleted/<name>`, holding the
@@ -179,14 +179,14 @@ landed clears the marker. Cleared any earlier and the variation would be gone
 locally, alive on the hub, and back on the next device that opened the lesson.
 
 The same marker is why fetching doesn't undo a delete: a branch on the hub that we
-hold a marker for is not adopted back. And reusing the name clears it — a name
+hold a marker for is not adopted back. And reusing the name clears it: a name
 used again is not the deleted variation returning, and a marker left behind would
 make the next push ask to create and remove one name in a single request. The
 Worker refuses that request rather than picking a half.
 
 Fetching prunes in the other direction too. A branch the hub no longer has, which
 we still hold at exactly the tip it last told us about, holds nothing that isn't
-already gone, so it goes — otherwise a deletion made on one device would be
+already gone, so it goes; otherwise a deletion made on one device would be
 undone by another that still had the branch. One that has _moved_ holds unpushed
 work, and that is the author's to keep: it goes back up, and they can delete it
 again.

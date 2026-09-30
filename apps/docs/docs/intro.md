@@ -12,11 +12,11 @@ If you do not know what those are, I suggest you visit the links I provided.
 
 The documentation is split into three areas:
 
-- **[Monorepo](./monorepo/overview.md)** — the pnpm workspace layout, getting
+- **[Monorepo](./monorepo/overview.md)**: the pnpm workspace layout, getting
   started, and how lesson images are stored (R2 + IndexedDB).
-- **[Web App](./web-app/overview.md)** — the Spelling Lesson Maker: features,
+- **[Web App](./web-app/overview.md)**: the Spelling Lesson Maker, covering features,
   routing, question blocks, the AI helpers, image search, Google Docs export,
   live collaboration, the lesson hub, profiles, notifications, moderation, and the
   export pipeline.
-- **[MCP Server](./mcp-server/overview.md)** — connect an AI assistant to author
+- **[MCP Server](./mcp-server/overview.md)**: connect an AI assistant to author
   and publish lessons to the hub.
