@@ -104,6 +104,21 @@ export function CommentsSkeleton({ count = 3 }) {
   );
 }
 
+/**
+ * Placeholder for a comment body while it's being translated on-device
+ * (CommentsSection). Stands in for the body alone (the avatar and author line
+ * stay put), using the same line metrics as CommentSkeleton's body, so the
+ * translated text lands without a jump.
+ */
+export function TranslationSkeleton() {
+  return (
+    <div className="mt-1">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="mt-2 h-4 w-[70%]" />
+    </div>
+  );
+}
+
 // A single editor section placeholder, matching SectionCard: a numbered-circle +
 // title header, a divider, and a content block. Mirrors the real card so the
 // hydrated sections don't shift the layout when they replace it.
