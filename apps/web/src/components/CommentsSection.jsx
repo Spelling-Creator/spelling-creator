@@ -419,20 +419,34 @@ export default function CommentsSection({ lessonId, onRated }) {
     }
     const { signal } = translateAbortRef.current;
     const targetLanguage = i18n.resolvedLanguage || i18n.language || "en";
-    patchTranslation(c.id, { status: "translating", progress: 0 });
+    // Every write below is tied to this run. Editing the comment mid-run clears
+    // its entry (submitEdit), and without the check a slow run would write the
+    // old body's translation back over the edited comment when it finished, and
+    // its progress events would recreate a half-entry before that. A write only
+    // lands while the entry still belongs to this run.
+    const runId = Symbol(c.id);
+    const patchRun = (patch) => {
+      setTranslations((prev) => {
+        if (prev.get(c.id)?.runId !== runId) return prev;
+        const next = new Map(prev);
+        if (patch === null) next.delete(c.id);
+        else next.set(c.id, { ...prev.get(c.id), ...patch });
+        return next;
+      });
+    };
+    patchTranslation(c.id, { status: "translating", progress: 0, runId });
     try {
       const blocks = textBlocksForTranslation(c.body);
       // No text survived extraction (a whitespace-only body): nothing to do.
       if (!blocks.length) {
-        patchTranslation(c.id, null);
+        patchRun(null);
         return;
       }
       // Detection may itself download a model (the fallback's detector), so it
       // reports through the same progress line as the translation download.
       const sourceLanguage = await detectLanguage(blocks.join("\n"), {
         signal,
-        onDownloadProgress: (loaded) =>
-          patchTranslation(c.id, { progress: loaded }),
+        onDownloadProgress: (loaded) => patchRun({ progress: loaded }),
       });
       // Already in the reader's language: say so rather than "translating" it
       // into itself.
@@ -440,7 +454,7 @@ export default function CommentsSection({ lessonId, onRated }) {
         sourceLanguage &&
         sameTranslationLanguage(sourceLanguage, targetLanguage)
       ) {
-        patchTranslation(c.id, null);
+        patchRun(null);
         toast(t("comments.alreadyInYourLanguage"));
         return;
       }
@@ -448,18 +462,17 @@ export default function CommentsSection({ lessonId, onRated }) {
         sourceLanguage,
         targetLanguage,
         signal,
-        onDownloadProgress: (loaded) =>
-          patchTranslation(c.id, { progress: loaded }),
+        onDownloadProgress: (loaded) => patchRun({ progress: loaded }),
       });
       if (signal.aborted) return;
-      patchTranslation(c.id, {
+      patchRun({
         status: "done",
         blocks: translated,
         sourceLanguage,
         showOriginal: false,
       });
     } catch (err) {
-      patchTranslation(c.id, null);
+      patchRun(null);
       // An abort is us leaving the page, not a failure worth a toast.
       if (signal.aborted || err?.name === "AbortError") return;
       toast(translationErrorMessage(err));

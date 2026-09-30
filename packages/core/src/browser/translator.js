@@ -62,10 +62,14 @@ function loadNllb() {
  * A comment body as translatable text blocks, one per paragraph-ish unit.
  *
  * Rich-text bodies are parsed (DOMParser, so browser-only; fine, translation
- * is click-driven) and each block element's text becomes one string. tiptap
- * puts all text inside paragraphs, headings or code blocks (list items and
- * blockquotes wrap paragraphs), so selecting those three never double-counts a
- * line. Legacy plain-text comments split on their own line breaks.
+ * is click-driven), every block element gets a trailing newline, and the body
+ * is then read as text and split on those newlines. Appending rather than
+ * selecting is what keeps this correct however the markup nests: tiptap wraps
+ * a list item's text in a paragraph, but a sanitized body may equally carry
+ * bare "<li>one</li><li>two</li>", and either way each item is its own block
+ * instead of "onetwo". Nested blocks just stack newlines, which the blank-line
+ * filter drops, so nothing is ever counted twice. Legacy plain-text comments
+ * split on their own line breaks.
  *
  * @param {string} value  The stored body: rich-text HTML or a plain string.
  * @returns {string[]} Non-empty text blocks in reading order.
@@ -85,15 +89,13 @@ export function textBlocksForTranslation(value) {
   for (const br of doc.body.querySelectorAll("br")) {
     br.replaceWith("\n");
   }
-  const blocks = [];
-  const elements = doc.body.querySelectorAll("p, h1, h2, h3, h4, h5, h6, pre");
-  for (const el of elements) {
-    blocks.push(...toLines(el.textContent || ""));
+  const blockElements = doc.body.querySelectorAll(
+    "p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, ul, ol",
+  );
+  for (const el of blockElements) {
+    el.append("\n");
   }
-  // A body that parses as HTML but has no block elements (shouldn't happen with
-  // the sanitizer's output, but old rows are old rows): take its text as-is.
-  if (!blocks.length) blocks.push(...toLines(doc.body.textContent || ""));
-  return blocks;
+  return toLines(doc.body.textContent || "");
 }
 
 /**
