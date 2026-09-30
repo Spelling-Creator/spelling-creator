@@ -137,6 +137,10 @@ export default defineConfig({
             link: "/web-app/lesson-summaries",
           },
           {
+            text: "Comment translation (on-device AI)",
+            link: "/web-app/comment-translation",
+          },
+          {
             text: "Interactive lesson mode",
             link: "/web-app/interactive-mode",
           },

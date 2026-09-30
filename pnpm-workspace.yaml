@@ -15,6 +15,10 @@ allowBuilds:
   # packages (we have none), so there's nothing for it to do here.
   "@tsparticles/engine": false
   core-js-pure: true
+  # @huggingface/transformers' Node backend. Its install script downloads native
+  # binaries for running models in Node; the app only ever runs models in the
+  # browser (onnxruntime-web), so there is nothing here for them to do.
+  onnxruntime-node: false
 
 # Transitive dependencies held back on vulnerable versions by their parents.
 # Each override stays inside the parent's major, so it is a drop-in bump.

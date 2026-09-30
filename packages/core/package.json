@@ -27,6 +27,7 @@
     "./browser/storage": "./src/browser/storage.js",
     "./browser/summarizer": "./src/browser/summarizer.js",
     "./browser/supabase": "./src/browser/supabase.js",
+    "./browser/translator": "./src/browser/translator.js",
     "./browser/turnstile": "./src/browser/turnstile.js",
     "./collabFrames": "./src/collabFrames.js",
     "./comments": "./src/comments.js",
@@ -60,6 +61,7 @@
     "./richText": "./src/richText.js",
     "./spelling": "./src/spelling.js",
     "./spellingWords": "./src/spellingWords.js",
+    "./translationLanguages": "./src/translationLanguages.js",
     "./username": "./src/username.js",
     "./users": "./src/users.js",
     "./vakt": "./src/vakt.js",
@@ -70,6 +72,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
     "@isomorphic-git/lightning-fs": "^4.7.0",
     "@supabase/supabase-js": "^2.112.3",
     "docx": "^9.0.3",

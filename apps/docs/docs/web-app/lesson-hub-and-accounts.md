@@ -40,6 +40,13 @@ the same sanitizing, length and profanity checks as posting, so it can't be used
 to launder content past the rules. Moderators can _delete_ a comment but not
 rewrite one — see [Moderation](./moderation.md).
 
+**Translating a comment.** Any comment can be translated into the reader's own
+language, on the reader's device: the browser's built-in Translator API where
+it exists, an in-page NLLB model everywhere else. No sign-in is needed (comments
+read publicly, so they translate publicly too), nothing is sent to a server, and
+the original is always one click away. See
+[Comment translation](./comment-translation.md).
+
 A commenter can also leave a **1–5 star rating** for the lesson (a star-rating
 control in the comment box). Ratings are one-per-user-per-lesson — re-rating updates your
 existing star count rather than adding a second vote — and the lesson page shows

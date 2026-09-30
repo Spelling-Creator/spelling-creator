@@ -74,6 +74,12 @@ const SSR_UNREACHABLE = [
   "src/pages/ModerationPage.jsx",
   "src/pages/LoginPage.jsx",
   "src/pages/OAuthAuthorizePage.jsx",
+  // transformers.js + the NLLB translation fallback. Reached only through the
+  // dynamic import() in core/browser/translator.js, from a click on Translate,
+  // and it downloads a ~600 MB model into browser storage. Nothing about it
+  // can run in the Worker, and bundling it would be the export pipeline story
+  // again, several times over.
+  "../../packages/core/src/browser/nllbTranslator.js",
 ];
 
 function stubUnreachableOnServer() {
@@ -250,6 +256,14 @@ export default defineConfig(({ isSsrBuild }) => ({
     alias: {
       "@": path.resolve(__dirname, "src"),
     },
+  },
+  optimizeDeps: {
+    // transformers.js resolves its ONNX runtime's .wasm/.mjs files relative to
+    // its own module URL; esbuild pre-bundling rewrites those URLs into the
+    // dep-cache and the runtime then 404s in dev. Leaving it un-optimised keeps
+    // the files where the library expects them. Production builds are
+    // unaffected either way (the library is only in the lazy NLLB chunk).
+    exclude: ["@huggingface/transformers"],
   },
   define: {
     // html2pdf.js / mammoth reference a Node-ish `global`; map it to globalThis

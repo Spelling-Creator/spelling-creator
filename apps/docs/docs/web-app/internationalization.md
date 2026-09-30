@@ -80,7 +80,11 @@ Not every string in a migrated file goes through `t()`. Left as-is, deliberately
 - CSS class names, `data-*`/technical `aria-*` values, internal state-machine string
   literals (e.g. `"idle"`, `"docx"`, `"ours"`).
 - User-authored content — lesson text, comments, bios, display names — which is data,
-  not app copy.
+  not app copy. (A reader can still have a comment machine-translated into their
+  own language, on their device: see
+  [Comment translation](./comment-translation.md). That's a separate feature from
+  this page's locale files, though it does use `i18n.resolvedLanguage` as the
+  target language.)
 - Third-party attribution text supplied by an API (e.g. a Wikimedia image's own
   caption).
 

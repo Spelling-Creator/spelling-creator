@@ -17,8 +17,14 @@
 // An author may edit their own comment after posting; the thread then shows an
 // "edited" marker, so a comment never changes silently under someone reading it.
 // Moderators can delete a comment but not rewrite it — see handleCommentEdit.
+//
+// Any comment can be translated into the reader's language, entirely on their
+// device: the browser's built-in Translator API where it exists, the NLLB model
+// via transformers.js where it doesn't (@spelling-creator/core/browser/translator).
+// The translated text replaces the body in place, with the original one click
+// away and nothing sent to any server.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -26,6 +32,7 @@ import { EllipsisVerticalIcon, Trash2Icon, BanIcon, XIcon } from "lucide-react";
 import { Button } from "./ui/button.jsx";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert.jsx";
 import { Avatar, AvatarFallback } from "./ui/avatar.jsx";
+import { Progress } from "./ui/progress.jsx";
 import { Spinner } from "./ui/spinner.jsx";
 import { StarRating } from "./ui/star-rating.jsx";
 import {
@@ -34,7 +41,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "./ui/dropdown-menu.jsx";
-import { CommentsSkeleton } from "./Skeletons.jsx";
+import { CommentsSkeleton, TranslationSkeleton } from "./Skeletons.jsx";
 import RichText from "./RichText.jsx";
 import RichTextInput from "./RichTextInput.jsx";
 import { cn } from "../lib/utils.js";
@@ -51,6 +58,13 @@ import {
   isRichTextEmpty,
   richTextLength,
 } from "@spelling-creator/core/richText";
+import {
+  detectLanguage,
+  sameTranslationLanguage,
+  textBlocksForTranslation,
+  translateBlocks,
+  translationErrorMessage,
+} from "@spelling-creator/core/browser/translator";
 import { banName } from "@spelling-creator/core/moderation";
 
 // How deep replies are allowed to indent before they stop nesting further. Deeper
@@ -79,6 +93,19 @@ function initial(name) {
 // Whether a rich-text draft can be submitted: it must say something, and must fit.
 function isSubmittable(html) {
   return !isRichTextEmpty(html) && richTextLength(html) <= COMMENT_MAX;
+}
+
+// "es" as "Spanish", named in the reader's own language. Intl carries the
+// names, so nothing here needs a locale file; the bare tag is the fallback.
+function languageDisplayName(tag, displayLanguage) {
+  try {
+    return (
+      new Intl.DisplayNames([displayLanguage], { type: "language" }).of(tag) ||
+      tag
+    );
+  } catch {
+    return tag;
+  }
 }
 
 // A dismissible post/reply/edit notice. `severity: "warning"` is an expected,
@@ -115,7 +142,7 @@ function Notice({ notice, blockedTitle, onDismiss }) {
 }
 
 export default function CommentsSection({ lessonId, onRated }) {
-  const { t } = useTranslation("lesson");
+  const { t, i18n } = useTranslation("lesson");
   const navigate = useNavigate();
   const { enabled: authEnabled, user, accessToken, isModerator } = useAuth();
 
@@ -150,6 +177,27 @@ export default function CommentsSection({ lessonId, onRated }) {
   const [editDraft, setEditDraft] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [editNotice, setEditNotice] = useState(null);
+
+  // On-device translation, keyed by comment id. An entry exists while a
+  // translation is in flight or on screen: { status: "translating", progress }
+  // becomes { status: "done", blocks, sourceLanguage, showOriginal }. No entry
+  // means untranslated; a failed run toasts and removes its entry, so the
+  // Translate button comes back. `progress` is the 0–1 model-download fraction,
+  // 0 until a download actually starts (most translations never need one).
+  const [translations, setTranslations] = useState(() => new Map());
+  // One controller shared by every in-flight translation; leaving the lesson
+  // (or the page) aborts them all rather than letting a model download run on.
+  const translateAbortRef = useRef(null);
+
+  // Merge `patch` into a comment's translation entry, or remove it with null.
+  const patchTranslation = (id, patch) => {
+    setTranslations((prev) => {
+      const next = new Map(prev);
+      if (patch === null) next.delete(id);
+      else next.set(id, { ...next.get(id), ...patch });
+      return next;
+    });
+  };
 
   // Group the flat list into parent -> [replies] (preserving the oldest-first
   // order the Worker returns) so we can render the thread recursively.
@@ -192,9 +240,15 @@ export default function CommentsSection({ lessonId, onRated }) {
     setEditing(null);
     setEditDraft("");
     setEditNotice(null);
+    setTranslations(new Map());
+    translateAbortRef.current?.abort();
+    translateAbortRef.current = null;
     // Intentionally re-run only when the lesson changes, not when `load` changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
+
+  // Abort any in-flight translation (and its model download) on unmount.
+  useEffect(() => () => translateAbortRef.current?.abort(), []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -301,6 +355,8 @@ export default function CommentsSection({ lessonId, onRated }) {
           item.id === saved.id ? { ...item, ...saved } : item,
         ),
       );
+      // The body just changed, so a translation of the old body is stale.
+      patchTranslation(saved.id, null);
       cancelEdit();
     } catch (err) {
       // Same shape as posting: a profanity block is a fixable warning (keep the
@@ -351,11 +407,77 @@ export default function CommentsSection({ lessonId, onRated }) {
     }
   };
 
+  // Translate a comment into the reader's language, on their device. The
+  // browser's built-in Translator API does the work where it can; elsewhere the
+  // NLLB model runs in the page instead, which on its first use downloads a
+  // large model. Hence the progress line, and hence this only ever running
+  // from a click (the built-in API also wants a user gesture for downloads).
+  // See @spelling-creator/core/browser/translator.
+  const handleTranslate = async (c) => {
+    if (!translateAbortRef.current) {
+      translateAbortRef.current = new AbortController();
+    }
+    const { signal } = translateAbortRef.current;
+    const targetLanguage = i18n.resolvedLanguage || i18n.language || "en";
+    patchTranslation(c.id, { status: "translating", progress: 0 });
+    try {
+      const blocks = textBlocksForTranslation(c.body);
+      // No text survived extraction (a whitespace-only body): nothing to do.
+      if (!blocks.length) {
+        patchTranslation(c.id, null);
+        return;
+      }
+      // Detection may itself download a model (the fallback's detector), so it
+      // reports through the same progress line as the translation download.
+      const sourceLanguage = await detectLanguage(blocks.join("\n"), {
+        signal,
+        onDownloadProgress: (loaded) =>
+          patchTranslation(c.id, { progress: loaded }),
+      });
+      // Already in the reader's language: say so rather than "translating" it
+      // into itself.
+      if (
+        sourceLanguage &&
+        sameTranslationLanguage(sourceLanguage, targetLanguage)
+      ) {
+        patchTranslation(c.id, null);
+        toast(t("comments.alreadyInYourLanguage"));
+        return;
+      }
+      const { blocks: translated } = await translateBlocks(blocks, {
+        sourceLanguage,
+        targetLanguage,
+        signal,
+        onDownloadProgress: (loaded) =>
+          patchTranslation(c.id, { progress: loaded }),
+      });
+      if (signal.aborted) return;
+      patchTranslation(c.id, {
+        status: "done",
+        blocks: translated,
+        sourceLanguage,
+        showOriginal: false,
+      });
+    } catch (err) {
+      patchTranslation(c.id, null);
+      // An abort is us leaving the page, not a failure worth a toast.
+      if (signal.aborted || err?.name === "AbortError") return;
+      toast(translationErrorMessage(err));
+    }
+  };
+
   // Render a comment and, recursively, its replies. A function (not a component)
   // so it closes over the shared reply state without remounting on every render.
   const renderComment = (c, depth) => {
     const replies = childrenByParent.get(c.id) || [];
     const indented = depth > 0;
+    const translation = translations.get(c.id);
+    const translating = translation?.status === "translating";
+    const translated = translation?.status === "done";
+    // Anyone may translate (reading is public), so this sits outside the auth
+    // gate below. Hidden while a translation is in flight or on screen; the
+    // footer under the translated text takes over from there.
+    const canTranslate = !translation && !isRichTextEmpty(c.body);
     return (
       <div key={c.id}>
         <div className="flex items-start gap-3">
@@ -447,15 +569,78 @@ export default function CommentsSection({ lessonId, onRated }) {
                   </Button>
                 </div>
               </form>
+            ) : translating ? (
+              <div>
+                <TranslationSkeleton />
+                {/* Only appears when an engine has to fetch a model first; an
+                    instant translation never shows it. */}
+                {translation.progress > 0 && translation.progress < 1 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      {t("comments.downloadingTranslationModel", {
+                        percent: Math.round(translation.progress * 100),
+                      })}
+                    </p>
+                    <Progress
+                      value={translation.progress * 100}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : translated && !translation.showOriginal ? (
+              // Translation works on the comment's text, not its markup, so the
+              // translated view is plain paragraphs. The formatting isn't lost:
+              // it's all still there behind "Show original".
+              <div className="text-sm">
+                {translation.blocks.map((block, i) => (
+                  <p key={i} className="mb-1 break-words whitespace-pre-wrap">
+                    {block}
+                  </p>
+                ))}
+              </div>
             ) : (
               <RichText value={c.body} />
             )}
 
+            {/* A translated comment says what happened to it, and the toggle
+                back. Both views keep the toggle, so flipping is never one-way. */}
+            {translated && editing !== c.id && (
+              <div className="mt-1 flex items-center gap-2">
+                {!translation.showOriginal && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("comments.translatedFrom", {
+                      language: languageDisplayName(
+                        translation.sourceLanguage,
+                        i18n.resolvedLanguage || i18n.language || "en",
+                      ),
+                    })}
+                  </p>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto min-w-0 px-1 py-0.5"
+                  onClick={() =>
+                    patchTranslation(c.id, {
+                      showOriginal: !translation.showOriginal,
+                    })
+                  }
+                >
+                  {translation.showOriginal
+                    ? t("comments.showTranslation")
+                    : t("comments.showOriginal")}
+                </Button>
+              </div>
+            )}
+
             {/* Replying and editing both need a signed-in session; editing further
-                needs the comment to be yours (the Worker checks this for real). */}
-            {editing !== c.id && authEnabled && user && (
+                needs the comment to be yours (the Worker checks this for real).
+                Translating needs neither: comments read publicly, so they
+                translate publicly too. */}
+            {editing !== c.id && ((authEnabled && user) || canTranslate) && (
               <div className="mt-1 flex gap-1">
-                {replyTo !== c.id && (
+                {authEnabled && user && replyTo !== c.id && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -465,7 +650,7 @@ export default function CommentsSection({ lessonId, onRated }) {
                     {t("comments.reply")}
                   </Button>
                 )}
-                {c.authorId === user.id && (
+                {authEnabled && user && c.authorId === user.id && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -473,6 +658,16 @@ export default function CommentsSection({ lessonId, onRated }) {
                     onClick={() => openEdit(c)}
                   >
                     {t("comments.edit")}
+                  </Button>
+                )}
+                {canTranslate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto min-w-0 px-1 py-0.5"
+                    onClick={() => handleTranslate(c)}
+                  >
+                    {t("comments.translate")}
                   </Button>
                 )}
               </div>
