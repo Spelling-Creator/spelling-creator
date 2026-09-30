@@ -99,6 +99,15 @@ keep it contained:
 - `optimizeDeps.exclude` keeps Vite's dev-server pre-bundling away from
   `@huggingface/transformers`, whose ONNX runtime resolves its `.wasm` files
   relative to its own module URL.
+- The ONNX runtime's `.wasm` binaries are dropped from the build outright
+  (`dropOnnxWasmAssets` in `vite.config.js`). The bundler emits them because
+  onnxruntime-web references them with `new URL(..., import.meta.url)`, but
+  they are dead weight twice over: the largest is 25.6 MB, over Cloudflare
+  Workers' 25 MiB per-asset cap, and transformers.js never fetches the local
+  copies anyway. Whenever `wasmPaths` is unset it points the runtime at the
+  same files on jsdelivr, pinned to the exact installed `onnxruntime-web`
+  version, so the wasm arrives from a CDN just like the models arrive from
+  huggingface.co.
 
 The package also depends on `onnxruntime-node`, transformers.js's Node backend.
 Its install script downloads native binaries the app never uses (models only run

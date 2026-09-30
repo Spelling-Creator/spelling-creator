@@ -109,12 +109,35 @@ function stubUnreachableOnServer() {
   };
 }
 
+// onnxruntime-web (inside the lazy NLLB translation chunk) references its .wasm
+// binaries with `new URL(..., import.meta.url)`, which the bundler dutifully
+// resolves and emits into dist/assets: 25.6 MB that Cloudflare Workers refuses
+// to deploy (its per-asset cap is 25 MiB). The copies are also never fetched:
+// transformers.js points the runtime at the version-pinned jsdelivr copy of the
+// exact same files whenever `env.backends.onnx.wasm.wasmPaths` is unset (see
+// its src/backends/onnx.js), so the wasm arrives from the CDN alongside the
+// models, which come from huggingface.co anyway. This drops the dead files from
+// the bundle rather than shipping what nothing requests.
+function dropOnnxWasmAssets() {
+  return {
+    name: "drop-onnx-wasm-assets",
+    generateBundle(_options, bundle) {
+      for (const [name, entry] of Object.entries(bundle)) {
+        if (entry.type === "asset" && /ort-.*\.(wasm|mjs)$/.test(name)) {
+          delete bundle[name];
+        }
+      }
+    },
+  };
+}
+
 // `VITE_`-prefixed env vars from apps/web/.env are exposed to client code as
 // `import.meta.env.VITE_*` natively — no config needed. src/main.jsx is the
 // only place in the app that reads them (see packages/core/src/config.js).
 export default defineConfig(({ isSsrBuild }) => ({
   plugins: [
     isSsrBuild && stubUnreachableOnServer(),
+    dropOnnxWasmAssets(),
     react(),
     // The React Compiler runs as a Babel pass. This used to pass
     // `target: "18"`, which makes it emit imports from the `react-compiler-runtime`
