@@ -21,7 +21,10 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { cn } from "../lib/utils.js";
-import { richTextLength } from "@spelling-creator/core/richText";
+import {
+  isSafeLinkCandidate,
+  richTextLength,
+} from "@spelling-creator/core/richText";
 import RichTextToolbar from "./RichTextToolbar.jsx";
 
 // The editable feature set: everything the sanitizer's allow-list keeps, and nothing
@@ -43,6 +46,14 @@ const BASE_EXTENSIONS = [
       openOnClick: false,
       autolink: true,
       protocols: ["http", "https", "mailto"],
+      // `protocols` only teaches autolink extra schemes, it restricts nothing.
+      // This does: a link is only created if the server-side policy would keep
+      // it, so the editor never shows a link (an ftp: target, say) that the
+      // sanitizer would strip on save. Scheme-less autolink candidates are
+      // judged as the URL they will be stored as; see isSafeLinkCandidate.
+      isAllowedUri: (url, ctx) =>
+        ctx.defaultValidate(url) &&
+        isSafeLinkCandidate(url, ctx.defaultProtocol),
       HTMLAttributes: {
         target: "_blank",
         rel: "nofollow ugc noopener noreferrer",

@@ -91,6 +91,28 @@ export function isSafeLink(href) {
 }
 
 /**
+ * Whether the editor may create a link for this value. Same policy as
+ * `isSafeLink`, applied to what tiptap hands its `isAllowedUri` hook: the
+ * toolbar and paste paths pass a full URL, judged as-is, but autolink passes
+ * the matched text ("example.com"), which tiptap stores with the default
+ * protocol prefixed — so a scheme-less value is judged as the URL it will
+ * become. Protocol-relative values stay rejected: "//evil.com" would never
+ * be stored as an http URL, only as itself.
+ * @param {string} value
+ * @param {string} [defaultProtocol] tiptap's `defaultProtocol` option.
+ * @returns {boolean}
+ */
+export function isSafeLinkCandidate(value, defaultProtocol = "http") {
+  const cleaned =
+    typeof value === "string"
+      ? value.trim().replace(URL_IGNORED_CHARS, "")
+      : "";
+  if (!cleaned || cleaned.startsWith("//")) return false;
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(cleaned);
+  return isSafeLink(hasScheme ? cleaned : `${defaultProtocol}://${cleaned}`);
+}
+
+/**
  * What a surviving link is rewritten to carry: user-generated links open away
  * from the app, pass no SEO value to spammers, and cannot reach back through
  * `window.opener`.

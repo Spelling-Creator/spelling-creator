@@ -109,6 +109,14 @@ open away from the app, earn spammers no SEO value, and can't reach back through
 `window.opener`. A link whose target fails the check keeps its words and loses the
 link.
 
+The editor applies the same rule up front (tiptap's `isAllowedUri` hook runs
+`isSafeLinkCandidate` from the shared policy), so a user is never shown a link,
+typed or autolinked, that the server would only strip on save. The "candidate"
+variant exists because autolink validates the matched text before a scheme is
+attached: `example.com` is judged as the `http://example.com` it will be stored
+as, while anything that already names a scheme is judged as-is. As everywhere
+else, this is the honest-user half; the Worker's check is the boundary.
+
 ## Text, not markup
 
 Everything downstream of storage wants text, not markup, and gets it from

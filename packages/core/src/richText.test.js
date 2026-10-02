@@ -11,6 +11,7 @@ import {
   isRichTextEmpty,
   isRichTextHtml,
   isSafeLink,
+  isSafeLinkCandidate,
   richTextLength,
   richTextToLine,
   richTextToPlain,
@@ -48,6 +49,44 @@ describe("isSafeLink", () => {
     expect(isSafeLink(null)).toBe(false);
     expect(isSafeLink("")).toBe(false);
     expect(isSafeLink("   ")).toBe(false);
+  });
+});
+
+describe("isSafeLinkCandidate", () => {
+  it("accepts full URLs on the allowed schemes, like isSafeLink", () => {
+    expect(isSafeLinkCandidate("https://example.com")).toBe(true);
+    expect(isSafeLinkCandidate("http://example.com")).toBe(true);
+    expect(isSafeLinkCandidate("mailto:a@b.com")).toBe(true);
+  });
+
+  it("accepts scheme-less autolink candidates, judged with the default protocol prefixed", () => {
+    // tiptap's autolink validates the matched text ("example.com"), then stores
+    // it with the default protocol prefixed — so that is what gets judged.
+    expect(isSafeLinkCandidate("example.com")).toBe(true);
+    expect(isSafeLinkCandidate("example.com/path?q=1")).toBe(true);
+    expect(isSafeLinkCandidate("example.com", "https")).toBe(true);
+  });
+
+  it("rejects schemes the sanitizer would strip on save", () => {
+    expect(isSafeLinkCandidate("ftp://example.com")).toBe(false);
+    expect(isSafeLinkCandidate("javascript:alert(1)")).toBe(false);
+    expect(isSafeLinkCandidate("data:text/html,x")).toBe(false);
+    expect(isSafeLinkCandidate("tel:+123456")).toBe(false);
+  });
+
+  it("is not fooled by control characters hiding a scheme", () => {
+    // Without the strip, `java\tscript:` would look scheme-less, get the
+    // default protocol test, and sail through.
+    expect(isSafeLinkCandidate("java\tscript:alert(1)")).toBe(false);
+    expect(isSafeLinkCandidate(" javascript:alert(1)")).toBe(false);
+  });
+
+  it("rejects protocol-relative values and blanks", () => {
+    // "//evil.com" is stored as itself, never as an http URL, so prefixing
+    // must not launder it into looking safe.
+    expect(isSafeLinkCandidate("//evil.com")).toBe(false);
+    expect(isSafeLinkCandidate("")).toBe(false);
+    expect(isSafeLinkCandidate(undefined)).toBe(false);
   });
 });
 
