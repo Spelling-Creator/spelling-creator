@@ -23,6 +23,7 @@ import {
 import {
   QUESTION_LEGEND,
   QUESTION_TYPE_LIST,
+  questionLegendText,
   questionStyleClass,
   questionStyleMap,
 } from "../questions.js";
@@ -200,7 +201,7 @@ function drawLegend(pdf, centerX, y) {
   QUESTION_LEGEND.forEach((type, i) => {
     if (i > 0) parts.push({ text: LEGEND_SEPARATOR, rgb: [110, 110, 110] });
     parts.push({
-      text: type.label.toUpperCase(),
+      text: questionLegendText(type),
       rgb: hexToRgb(type.color),
       // Two types share the amber, and the italic is what separates them in the
       // body — so the legend entry has to be set the same way to name them.

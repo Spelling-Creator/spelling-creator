@@ -242,6 +242,7 @@ function normalizeQuestion(block) {
     // Free written responses: no stored answer, so the base block is complete.
     case "paraphrase":
     case "open":
+    case "wyr":
       return base;
     case "background":
       return {

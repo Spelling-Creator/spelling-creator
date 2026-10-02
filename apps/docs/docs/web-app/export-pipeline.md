@@ -35,7 +35,9 @@ editor:
 - **Spelling words on one running line**, `Spell: FIRST SECOND THIRD`.
 - **A footer on every page**: the copyright line above a legend naming each
   question type in its own colour (and its own italic, where it has one), which
-  is what makes the colour coding legible.
+  is what makes the colour coding legible. The legend prints each type's label,
+  except **Would you rather**, which it abbreviates to **W.Y.R.** so the line
+  still fits.
   [VAKT activities](./vakt-activities.md) are deliberately not in the legend:
   they aren't questions, and their `VAKT:` label already names them.
 - **A page number** in the top right corner.

@@ -17,7 +17,7 @@ importers stay in sync.
 
 ## Not a question
 
-A VAKT activity is **its own block type**, not a seventh question type. The
+A VAKT activity is **its own block type**, not a question type. The
 distinction is load-bearing:
 
 - it is addressed to whoever is running the lesson, not to the speller;

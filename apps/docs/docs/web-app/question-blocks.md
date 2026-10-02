@@ -18,6 +18,7 @@ place, `packages/core/src/questions.js`, so the editor and both exporters stay i
 | **Suggested answers**    | amber, _italic_ | Several suggested answers. The key is a guide; other answers can be right.   |
 | **Paraphrase**           | brown           | Restate the passage in their own words. No stored answer.                    |
 | **Open ended**           | pink            | A free written response.                                                     |
+| **Would you rather**     | grape           | A "Would you rather… or…?" choice. Opinion only, so no stored answer.        |
 | **Background knowledge** | blue            | A prompt plus the prior knowledge a student needs to answer it.              |
 
 **Multiple answers** is amber rather than the burnt orange it used to be: it
@@ -42,12 +43,22 @@ Since nothing in a printed lesson names a question's type, two types sharing a
 colour would be two types a reader cannot tell apart, so **Suggested answers**
 prints in _italic_, in the body and in the footer legend alike. That mark is
 load-bearing: it is what tells whoever is marking the lesson that this one
-answer key is advisory. It exists because the palette has no seventh colour
-left that reads as orange without colliding with **Paraphrase**'s brown.
+answer key is advisory. It exists because the palette has no spare colour
+that reads as orange without colliding with **Paraphrase**'s brown.
 
 The editor doesn't need the italic (every question there carries a type badge),
 so the two are told apart by the badge and by the help text under the answer
 rows.
+
+## Would you rather
+
+A **Would you rather** question offers the speller a choice between two options
+and asks which they would pick: "Would you rather watch an opera or a movie?".
+It is opinion, not comprehension, so like **Paraphrase** and **Open ended** it
+stores no answer. It prints in grape; if the colour is ever in doubt on paper,
+the prompt disambiguates itself, since every question of the type starts
+"Would you rather". The footer legend names it **W.Y.R.**, the abbreviation the
+lessons this type comes from use.
 
 In the editor each question also shows its position within its section, `Q7`,
 next to the type badge. A standard section holds fifteen of them, and the type
@@ -60,9 +71,10 @@ A question prints as its **prompt in the colour of its type, followed by its
 answer in black on the same line**: nothing is labelled or bracketed, so the
 colour, plus the italic on **Suggested answers**, is what marks the type. The
 footer legend on every page names the types the same way (see
-[the export pipeline](./export-pipeline.md)). A question with no recorded answer,
-and the free-response types (**Paraphrase** and **Open ended**), print as the
-prompt alone.
+[the export pipeline](./export-pipeline.md)); **Would you rather** is the one
+type the legend abbreviates, to **W.Y.R.**, so the eight-entry line still fits.
+A question with no recorded answer, and the free-response types (**Paraphrase**,
+**Open ended** and **Would you rather**), print as the prompt alone.
 
 Number-answer questions can also hold a list of **steps**, the worked-out
 stages of solving the problem. Use **Add step** in the editor to grow the

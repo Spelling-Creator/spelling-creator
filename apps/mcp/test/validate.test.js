@@ -650,6 +650,99 @@ test("a paraphrase question carrying an answer is rejected from the raw input", 
   assert.match(findings[0].message, /`exampleAnswer`/);
 });
 
+test("a W.Y.R. question carrying an answer is rejected from the raw input", () => {
+  const findings = validateInput([
+    {
+      block: {
+        type: "question",
+        questionType: "wyr",
+        prompt: "Would you rather live by a river or by the sea?",
+        answer: "river",
+      },
+      where: "Section 1, block 10",
+      section: 1,
+    },
+  ]);
+  assert.deepEqual(codes(findings), ["E_OPEN_HAS_ANSWER"]);
+  assert.match(findings[0].message, /W\.Y\.R\. \(grape\) question/);
+  assert.match(findings[0].message, /`answer`/);
+});
+
+test("a well-formed W.Y.R. question only trips the section-shape warning", () => {
+  // It isn't part of the default 15-question shape, so W_QUESTION_SHAPE is
+  // expected. The point is that nothing rejects it and nothing else fires.
+  const { errors, warnings } = check((input) => {
+    input.sections[0].blocks.splice(-3, 0, {
+      type: "question",
+      questionType: "wyr",
+      prompt: "Would you rather climb a mountain or sail a sea?",
+    });
+  });
+  assert.deepEqual(codes(errors), []);
+  assert.deepEqual(codes(warnings), ["W_QUESTION_SHAPE"]);
+});
+
+test("a W.Y.R. prompt that doesn't read as a choice warns", () => {
+  const { errors, warnings } = check((input) => {
+    input.sections[0].blocks.splice(-3, 0, {
+      type: "question",
+      questionType: "wyr",
+      prompt: "Which season do you like best?",
+    });
+  });
+  assert.deepEqual(codes(errors), []);
+  assert.ok(codes(warnings).includes("W_WYR_SHAPE"));
+  assert.match(
+    warnings.find((w) => w.code === "W_WYR_SHAPE").message,
+    /Would you rather/,
+  );
+});
+
+test("a W.Y.R. prompt chaining several 'or's warns; one list or an idiom does not", () => {
+  const withWyr = (prompt) =>
+    check((input) => {
+      input.sections[0].blocks.splice(-3, 0, {
+        type: "question",
+        questionType: "wyr",
+        prompt,
+      });
+    });
+
+  const chained = withWyr("Would you rather take a train or a bus or a bike?");
+  assert.deepEqual(codes(chained.errors), []);
+  assert.match(
+    chained.warnings.find((w) => w.code === "W_WYR_SHAPE").message,
+    /chains 2 "or"s/,
+  );
+
+  // Both read as one choice: a short list joined by a single "or" (the shape
+  // the source lessons use), and an option whose own "or" is an idiom.
+  for (const prompt of [
+    "Would you rather tour through Paris, London, or New York?",
+    "Would you rather wait an hour or so, or leave right now?",
+  ]) {
+    assert.ok(!codes(withWyr(prompt).warnings).includes("W_WYR_SHAPE"), prompt);
+  }
+});
+
+test("a W.Y.R. prompt naming a green answer warns instead of erroring", () => {
+  // The options are often the section's own vocabulary (that is the type
+  // working as designed), so the cross-answer check flags rather than blocks.
+  const { errors, warnings } = check((input) => {
+    input.sections[0].blocks.splice(-3, 0, {
+      type: "question",
+      questionType: "wyr",
+      prompt: "Would you rather live beside a delta or high in the hills?",
+    });
+  });
+  assert.deepEqual(codes(errors), []);
+  assert.ok(codes(warnings).includes("W_ANSWER_REVEALED_OPEN"));
+  assert.match(
+    warnings.find((w) => w.code === "W_ANSWER_REVEALED_OPEN").message,
+    /W\.Y\.R\. \(grape\) prompt/,
+  );
+});
+
 test("the fill-in-the-blank number must be in the passage; the word problem need not be", () => {
   const stray = check((input) => {
     question(input, 0, 3).answer = 41; // no steps, so it is the fill-in-the-blank

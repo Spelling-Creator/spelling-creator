@@ -2,7 +2,7 @@
 // the tools accept. The Worker stores `doc` verbatim and the web editor renders
 // it, so the shapes here must match the editor's exactly. They are kept in sync
 // with:
-//   • packages/core/src/questions.js  (question block shapes, the seven types)
+//   • packages/core/src/questions.js  (question block shapes, the eight types)
 //   • packages/core/src/spelling.js   (spelling block shape)
 //   • packages/core/src/vakt.js       (VAKT activity block shape)
 //   • packages/core/src/id.js         (id generation)
@@ -29,6 +29,7 @@ export const QUESTION_TYPES = [
   "multiple_open",
   "paraphrase",
   "open",
+  "wyr",
   "background",
 ];
 
@@ -188,10 +189,11 @@ function buildQuestionBlock(block, where) {
       return { ...base, answers };
     }
 
-    // Both are free written responses: the speller answers on their own paper,
-    // so neither stores an answer.
+    // All free written responses: the speller answers on their own paper, so
+    // none of them stores an answer.
     case "paraphrase":
     case "open":
+    case "wyr":
       return { ...base };
 
     case "background":
