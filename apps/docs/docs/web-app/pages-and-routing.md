@@ -263,7 +263,7 @@ else; only the body differs:
   containing whitespace and only single words reach the animation.
   If that fetch fails, a small built-in word list is used instead. Feature
   illustrations live under `apps/web/public/home/` (a missing file degrades to a
-  labelled placeholder; see that folder's `README.md`).
+  labelled placeholder; see [Feature screenshots](#feature-screenshots) below).
 - **Signed in**: a dashboard showing the user's own lessons (drafts included,
   from `GET /mine`; this list used to be a sidebar group, and a panel of your
   work is a better home for it than global chrome), the hub's latest-lessons
@@ -273,3 +273,46 @@ else; only the body differs:
   (from the Worker's `GET /following/activity`; see
   [Following](./profiles-and-display-names.md#following)), plus a roomier list
   of the user's notifications.
+
+### Feature screenshots
+
+Each signed-out feature row shows a screenshot from `apps/web/public/home/`. The
+row draws it at 16:10 with `object-cover`, so anything in another shape gets
+cropped. Take new shots at 16:10 to avoid that.
+
+| File                 | Shows                                                                    |
+| -------------------- | ------------------------------------------------------------------------ |
+| `feature-editor.jpg` | The editor with a full lesson loaded: header, sections sidebar, a block  |
+| `feature-ai.jpg`     | The "Suggest text with AI" dialog (Generate with AI, then Text)          |
+| `feature-images.jpg` | The "Search images" dialog with Wikimedia Commons results for "Penguin"  |
+| `feature-hub.jpg`    | The top of the lesson hub list                                           |
+| `feature-collab.jpg` | The "Collaborate on this lesson" dialog                                  |
+| `feature-export.jpg` | Page one of a lesson's "Print PDF" export, on the app's background color |
+
+The docs site's home page uses one more, `apps/docs/docs/public/img/screenshot.jpg`:
+the editor's main column only (the title card and the first section), without
+the header or sidebar. The docs hero draws it at about 260px wide, so a
+whole-app view would be too small to read.
+
+To retake them:
+
+1. Use the live site, signed out, in light mode, at a device scale factor of 2.
+   A 1120px-wide viewport fits the editor without crowding it.
+2. For the editor shots, use a real hub lesson. Fetch its JSON from
+   `GET /lessons/:id`, save the `doc` field to a `.json` file, and load it with
+   the editor's **Import JSON** button. That keeps the lesson in the browser
+   only. The current set uses "Penguins".
+3. For the AI dialog, only open it. Don't press Generate. Pixabay search needs
+   Turnstile, but Wikimedia Commons doesn't, so search there for the image
+   dialog. Signed out, the Collaborate dialog shows a sign-in notice and
+   disables its controls, so before taking that shot, edit the page in DevTools
+   to look signed in: remove the notice and the `disabled` attribute from the
+   Start button, the join-code input and the Join button. Those are the only
+   differences signing in makes (see `renderLanding` in
+   `CollaborateDialog.jsx`).
+4. Crop the dialogs to 672x420 CSS pixels around the dialog, the editor to
+   1120x700 from the top of the page, and the docs shot to about 870x625 around
+   the main column.
+5. Save the homepage shots as JPEG at 1008x630 (quality around 75) and the docs
+   shot at 1100 wide. That's sharp at the size the row draws them (about 490px
+   wide on desktop) and keeps the six homepage files around 500 KB in total.

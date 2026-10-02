@@ -205,7 +205,7 @@ export default defineConfig(({ isSsrBuild }) => ({
       workbox: {
         // The built shell: entry HTML, JS/CSS chunks, the self-hosted Fontsource
         // woff2 files and the icons. Deliberately not the homepage's feature
-        // screenshots (public/home/*.jpg, ~245 KB) — marketing images aren't
+        // screenshots (public/home/*.jpg, ~490 KB) — marketing images aren't
         // worth an install-time download; the runtime rule below picks them up
         // the first time someone actually sees the homepage.
         globPatterns: ["**/*.{html,js,css,woff2,svg,png,ico}"],

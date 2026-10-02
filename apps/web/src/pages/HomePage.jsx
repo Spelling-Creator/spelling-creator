@@ -46,8 +46,9 @@ import { fetchMyLessons } from "@spelling-creator/core/lessons";
 import { fetchNotifications } from "@spelling-creator/core/notifications";
 
 // The features shown to signed-out visitors. `image` points at a file under
-// apps/web/public/home/ (see that folder's README); a missing file degrades to a
-// labelled placeholder. Rows alternate the image left/right down the page.
+// apps/web/public/home/ (see "Feature screenshots" in the docs' pages-and-routing
+// page for what each one shows and how to retake it); a missing file degrades to
+// a labelled placeholder. Rows alternate the image left/right down the page.
 const FEATURES = [
   {
     key: "editor",
@@ -111,7 +112,7 @@ function toPath(href) {
 }
 
 // A feature illustration that degrades to a labelled placeholder if the image
-// file hasn't been added yet (see public/home/README.md).
+// file hasn't been added yet (see the note on FEATURES above).
 function FeatureImage({ src, alt, Icon }) {
   const [broken, setBroken] = useState(false);
   if (broken || !src) {

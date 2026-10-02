@@ -48,7 +48,7 @@ The precache is the built shell: `index.html`, the JS/CSS chunks, the
 self-hosted Fontsource `.woff2` files, and the icons. Two things are
 deliberately left out:
 
-- **`public/home/*.jpg`**, the homepage's feature screenshots (~245 KB). Those
+- **`public/home/*.jpg`**, the homepage's feature screenshots (~490 KB). Those
   are marketing images; they aren't worth an install-time download, so a runtime
   `StaleWhileRevalidate` rule picks them up the first time someone actually
   looks at the homepage.
