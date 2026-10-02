@@ -211,7 +211,8 @@ export default function CommentsSection({ lessonId, onRated }) {
   // { status: "picking", reason, previous } asks the reader for the source
   // language, either because detection couldn't decide (reason "undetected")
   // or because the reader says it guessed wrong ("wrong"); `previous` is the
-  // translation to restore if they cancel.
+  // translation to restore if they cancel, and it rides along on the run that
+  // picking starts so a failed re-translation restores it too.
   const [translations, setTranslations] = useState(() => new Map());
   // One controller shared by every in-flight translation; leaving the lesson
   // (or the page) aborts them all rather than letting a model download run on.
@@ -466,10 +467,20 @@ export default function CommentsSection({ lessonId, onRated }) {
       });
     };
     // A fresh entry, not a merge: re-translating a translated comment with a
-    // picked language shouldn't carry the old run's fields along.
-    setTranslations((prev) =>
-      new Map(prev).set(c.id, { status: "translating", progress: 0, runId }),
-    );
+    // picked language shouldn't carry the old run's fields along. What it does
+    // keep is the translation on screen before the picker opened, as
+    // `previous`, so a failed re-translation puts it back instead of losing it.
+    setTranslations((prev) => {
+      const current = prev.get(c.id);
+      const previous =
+        current?.status === "done" ? current : current?.previous || null;
+      return new Map(prev).set(c.id, {
+        status: "translating",
+        progress: 0,
+        runId,
+        previous,
+      });
+    });
     try {
       const blocks = textBlocksForTranslation(c.body);
       // No text survived extraction (a whitespace-only body): nothing to do.
@@ -515,9 +526,19 @@ export default function CommentsSection({ lessonId, onRated }) {
         blocks: translated,
         sourceLanguage,
         showOriginal: false,
+        previous: null,
       });
     } catch (err) {
-      patchRun(null);
+      // Back to the earlier translation if there was one, else untranslated.
+      // Still only while the entry belongs to this run.
+      setTranslations((prev) => {
+        const current = prev.get(c.id);
+        if (current?.runId !== runId) return prev;
+        const next = new Map(prev);
+        if (current.previous) next.set(c.id, current.previous);
+        else next.delete(c.id);
+        return next;
+      });
       // An abort is us leaving the page, not a failure worth a toast.
       if (signal.aborted || err?.name === "AbortError") return;
       // A source language translation can't use may just be a bad guess, so
@@ -704,7 +725,7 @@ export default function CommentsSection({ lessonId, onRated }) {
             {/* A translated comment says what happened to it, and the toggle
                 back. Both views keep the toggle, so flipping is never one-way. */}
             {translated && editing !== c.id && (
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {!translation.showOriginal && (
                   <p className="text-xs text-muted-foreground">
                     {t("comments.translatedFrom", {

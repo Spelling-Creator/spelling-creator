@@ -78,7 +78,7 @@ original comment) whenever detection lets them down:
 
 Picking a language skips detection and translates from that language.
 Cancelling puts back whatever was there before, including an earlier
-translation. The choices come from `sourceLanguageChoices()` in
+translation, and so does a re-translation that fails. The choices come from `sourceLanguageChoices()` in
 `@spelling-creator/core/translationLanguages`: every row of the language table
 below except the reader's own, named and sorted in the reader's language with
 `Intl.DisplayNames`. The pick isn't remembered; like translations themselves,
