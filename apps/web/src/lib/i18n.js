@@ -17,6 +17,7 @@ import enHome from "../locales/en/home.json";
 import enHub from "../locales/en/hub.json";
 import enInteractive from "../locales/en/interactive.json";
 import enLesson from "../locales/en/lesson.json";
+import enLibrary from "../locales/en/library.json";
 import enLogin from "../locales/en/login.json";
 import enModeration from "../locales/en/moderation.json";
 import enOauth from "../locales/en/oauth.json";
@@ -34,6 +35,7 @@ export const namespaces = [
   "hub",
   "interactive",
   "lesson",
+  "library",
   "login",
   "moderation",
   "oauth",
@@ -54,6 +56,7 @@ export const resources = {
     hub: enHub,
     interactive: enInteractive,
     lesson: enLesson,
+    library: enLibrary,
     login: enLogin,
     moderation: enModeration,
     oauth: enOauth,

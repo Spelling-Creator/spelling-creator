@@ -23,8 +23,8 @@
 //   "/" is the landing page — the most common entry point, and not worth a
 //   chunk request.
 //
-//   Lazy — "/hub/:id/history", "/editor", "/moderation", "/settings", "/login"
-//   and "/oauth/authorize". None is server-rendered and none is reachable
+//   Lazy — "/hub/:id/history", "/editor", "/library", "/moderation",
+//   "/settings", "/login" and "/oauth/authorize". None is server-rendered and none is reachable
 //   without a deliberate click. History is the only reader-facing page that needs
 //   isomorphic-git and LightningFS (~200 KB). The editor is the one that really
 //   matters: ~6,000 lines and the only owner of Yjs, lib0 and the collaboration
@@ -35,7 +35,7 @@
 // RichTextInput on the public lesson page, so it is not editor-only.
 
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./components/layout/AppShell.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import { SectionsSkeleton } from "./components/Skeletons.jsx";
@@ -51,6 +51,7 @@ import LessonPractice from "./pages/lesson/LessonPractice.jsx";
 
 const LessonHistory = lazy(() => import("./pages/lesson/LessonHistory.jsx"));
 const EditorShell = lazy(() => import("./components/layout/EditorShell.jsx"));
+const LibraryPage = lazy(() => import("./pages/LibraryPage.jsx"));
 const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
 const ModerationPage = lazy(() => import("./pages/ModerationPage.jsx"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"));
@@ -96,6 +97,16 @@ export default function App() {
               this-browser preferences that work signed out. */}
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />
+          {/* The lessons this browser is holding. Not /lessons, which is the
+              API's on the same origin (apps/api/src/app.js). */}
+          <Route path="/library" element={<LibraryPage />} />
+          {/* Where the library used to be, as a dialog over the editor. Kept so
+              old links and bookmarks still land somewhere useful. It is more
+              specific than /editor/*, so it wins. */}
+          <Route
+            path="/editor/lessons"
+            element={<Navigate to="/library" replace />}
+          />
           {/* Trailing * so EditorShell can own the routes below it. */}
           <Route path="/editor/*" element={<EditorShell />} />
           {/* An unknown path is a 404, not a detour to the homepage — and the

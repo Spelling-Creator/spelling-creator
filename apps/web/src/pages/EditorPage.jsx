@@ -78,7 +78,6 @@ import FirstLessonWizard from "../components/FirstLessonWizard.jsx";
 import AiLessonIdeaDialog from "../components/AiLessonIdeaDialog.jsx";
 import HistoryDialog, { timeAgo } from "../components/HistoryDialog.jsx";
 import VariationsDialog from "../components/VariationsDialog.jsx";
-import LessonsDialog from "../components/LessonsDialog.jsx";
 import MergeDialog from "../components/MergeDialog.jsx";
 import ProposeChangesDialog from "../components/ProposeChangesDialog.jsx";
 import { AGE_RANGES } from "@spelling-creator/core/ageRanges";
@@ -103,7 +102,6 @@ import {
   createLesson,
   saveLessonDoc,
   saveLessonMeta,
-  deleteLesson,
   getCurrentLessonId,
   setCurrentLessonId,
   loadWizardSeen,
@@ -257,11 +255,9 @@ export default function EditorPage() {
   // (core/browser/storage.js) has one of these ids, and it is also the name of
   // the lesson's git repository until it is published and takes the hub's id
   // instead — so `localId` is what makes switching lessons switch documents and
-  // histories together. `localLessons` is the library itself, read for the
-  // lessons panel and refreshed whenever one is added or removed; null until
-  // it has been read once.
+  // histories together. The library itself is listed on its own page
+  // (LibraryPage), not here.
   const [localId, setLocalId] = useState(null);
-  const [localLessons, setLocalLessons] = useState(null);
 
   // Hub-editing state. `editingId` is the id of a published lesson currently
   // loaded for editing (so "Publish" becomes "Update"); null when authoring a
@@ -340,7 +336,6 @@ export default function EditorPage() {
   const historyOpen = panel === "history";
   const collabOpen = panel === "collaborate";
   const variationsOpen = panel === "variations";
-  const lessonsOpen = panel === "lessons";
   //
   // Opening pushes; closing *replaces*. Both pushing would leave the history as
   // [/editor, /editor/history, /editor], so Back from a panel you had just
@@ -635,10 +630,6 @@ export default function EditorPage() {
   // "Replace your current work?" dialog to guard it. A lesson you leave is a
   // lesson still in the list.
 
-  const refreshLocalLessons = useCallback(async () => {
-    setLocalLessons(await listLessons());
-  }, []);
-
   // commitNow keeps a stable identity (it is keyed to the repository), unlike
   // the `git` object, which is rebuilt every render.
   const commitNow = git.commitNow;
@@ -669,15 +660,11 @@ export default function EditorPage() {
       const request = ++openRequestRef.current;
       await flushCurrentLesson();
       const record = await getLesson(id);
-      if (request !== openRequestRef.current) return;
-      if (!record) {
-        // Deleted in another tab, most likely. Re-read rather than insist.
-        await refreshLocalLessons();
-        return;
-      }
+      // No record: deleted in another tab, most likely. Stay where we are.
+      if (request !== openRequestRef.current || !record) return;
       adoptRecord(record);
     },
-    [adoptRecord, flushCurrentLesson, localId, refreshLocalLessons],
+    [adoptRecord, flushCurrentLesson, localId],
   );
 
   const startNewLesson = useCallback(async () => {
@@ -697,106 +684,12 @@ export default function EditorPage() {
     const record = await createLesson({ doc: createInitialDoc(t) });
     if (request !== openRequestRef.current) return record;
     adoptRecord(record);
-    await refreshLocalLessons();
     return record;
-  }, [adoptRecord, flushCurrentLesson, refreshLocalLessons, t]);
+  }, [adoptRecord, flushCurrentLesson, t]);
 
-  const duplicateLocalLesson = useCallback(
-    async (id) => {
-      if (id === localId) await flushCurrentLesson();
-      const source = await getLesson(id);
-      if (!source) return null;
-
-      const doc = {
-        ...(source.doc || createInitialDoc(t)),
-        title: t("labels.copyOf", {
-          title: source.doc?.title || t("labels.untitledLesson"),
-        }),
-      };
-      // Unattached on purpose: a copy is a lesson of its own, so saving it to
-      // the cloud creates a separate one rather than overwriting what it was
-      // copied from — while remembering what that was, so the two can still be
-      // merged later.
-      const record = await createLesson({
-        doc,
-        forkedFrom: source.lessonId || source.forkedFrom || null,
-      });
-      try {
-        // A real clone of the repository, not just of the text: the copy keeps
-        // the original's history and shares its commit oids.
-        const engine = await loadGitEngine();
-        await engine.forkLocalRepo(
-          repoIdFor(source.lessonId, source.id),
-          record.id,
-        );
-      } catch {
-        /* no history to carry over — the copy starts a fresh one */
-      }
-      await refreshLocalLessons();
-      return record;
-    },
-    [flushCurrentLesson, localId, refreshLocalLessons, t],
-  );
-
-  const removeLocalLesson = useCallback(
-    async (id) => {
-      // Drop any save still in flight for it, so nothing recreates what we are
-      // about to delete.
-      if (pendingSaveRef.current?.id === id) pendingSaveRef.current = null;
-      const record = await getLesson(id);
-      await deleteLesson(id);
-      try {
-        const engine = await loadGitEngine();
-        // The local repository only. A lesson that reached the cloud keeps its
-        // history there, and the lesson page clones it back on demand.
-        //
-        // Both possible names for it: a published lesson's repository lives
-        // under its hub id, but one left under the lesson's own id — by an
-        // adoption that found the destination already taken and returned rather
-        // than merge two histories — would otherwise be unreachable for ever,
-        // since nothing else ever looks there again.
-        await engine.deleteRepo(repoIdFor(record?.lessonId, id));
-        if (record?.lessonId) await engine.deleteRepo(id);
-      } catch {
-        /* the repo may never have existed */
-      }
-
-      if (id === localId) {
-        const request = ++openRequestRef.current;
-        const remaining = (await listLessons()).filter((l) => l.id !== id);
-        const next = remaining[0]
-          ? await getLesson(remaining[0].id)
-          : await createLesson({ doc: createInitialDoc(t) });
-        if (request === openRequestRef.current) adoptRecord(next);
-      }
-      await refreshLocalLessons();
-    },
-    [adoptRecord, localId, refreshLocalLessons, t],
-  );
-
-  const renameLocalLesson = useCallback(
-    async (id, title) => {
-      if (id === localId) {
-        // Written through rather than left to the debounce, because the list is
-        // re-read the moment this returns and would otherwise show the old title
-        // until the panel was closed and opened again. The same object goes into
-        // React state and into storage, so `savedDocRef` matching it keeps the
-        // debounce from writing the identical document a second time.
-        const next = { ...docRef.current, title };
-        setDoc(next);
-        savedDocRef.current = next;
-        await saveLessonDoc(id, next);
-      } else {
-        const record = await getLesson(id);
-        if (record?.doc) await saveLessonDoc(id, { ...record.doc, title });
-      }
-      await refreshLocalLessons();
-    },
-    [localId, refreshLocalLessons],
-  );
-
-  // Deep links into the library: the header links here with ?local=<id> for a
-  // lesson on this device, and its "New lesson" button with ?new=1.
+  // Deep links into the library: ?local=<id> opens a lesson on this device, and
+  // the "New lesson" buttons (the header's and LibraryPage's) link here with
+  // ?new=1.
   // The editor is already mounted when either is followed from another page, so
   // a param is what carries the intent across; it's stripped as soon as it's
   // read, which is also what stops this from firing twice.
@@ -960,7 +853,6 @@ export default function EditorPage() {
       // before, so it gets a lesson — and therefore a history — of its own,
       // starting at the import rather than continuing someone else's timeline.
       adoptRecord(await createLesson({ doc: nextDoc }));
-      await refreshLocalLessons();
       notify({
         severity: "info",
         message:
@@ -1000,7 +892,6 @@ export default function EditorPage() {
         /* no history to clone — fall through to a fresh one */
       }
       adoptRecord(record);
-      await refreshLocalLessons();
       notify({
         severity: "info",
         message: cloned
@@ -1046,7 +937,6 @@ export default function EditorPage() {
       });
     }
     adoptRecord(record);
-    await refreshLocalLessons();
     notify({
       severity: "info",
       message: differs
@@ -1606,7 +1496,6 @@ export default function EditorPage() {
       /* no local history to carry over — the fork starts a fresh one */
     }
     adoptRecord(record);
-    await refreshLocalLessons();
     notify({
       severity: "info",
       message: t("messages.forkedNoUpstream"),
@@ -2443,7 +2332,7 @@ export default function EditorPage() {
             <TooltipContent>{t("header.actionsTooltip")}</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => openPanel("lessons")}>
+            <DropdownMenuItem onClick={() => navigate("/library")}>
               <LibraryIcon />
               {t("header.lessons")}
             </DropdownMenuItem>
@@ -2556,7 +2445,7 @@ export default function EditorPage() {
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                onClick={() => openPanel("lessons")}
+                onClick={() => navigate("/library")}
                 className={headerGhostButton}
               >
                 <LibraryIcon data-icon="inline-start" />
@@ -3307,22 +3196,6 @@ export default function EditorPage() {
         initialJoinCode={joinCode}
         trusted={doc.trustedCollaborators || []}
         onTrustedChange={setTrustedCollaborators}
-      />
-
-      {/* Every lesson this device is holding. Switching between them is the one
-          thing the editor could not do before: there was a single working
-          document, and opening anything meant overwriting it. */}
-      <LessonsDialog
-        open={lessonsOpen}
-        onClose={() => openPanel(null)}
-        lessons={localLessons}
-        currentId={localId}
-        onRefresh={refreshLocalLessons}
-        onOpen={openLocalLesson}
-        onCreate={startNewLesson}
-        onDuplicate={duplicateLocalLesson}
-        onDelete={removeLocalLesson}
-        onRename={renameLocalLesson}
       />
 
       {/* Variations: the other branches of this lesson's repository, as an author
