@@ -179,6 +179,24 @@ just the "prompt".
 The default section shape above still asks for 3 `open` extended opens; a `paraphrase` may be used
 in place of the first of them where a section wants the distinction drawn explicitly.
 
+### `wyr` (grape)
+
+A `wyr` ("Would you rather") question offers the speller a choice between two options and asks
+which they would pick: "Would you rather watch an opera or a movie?", "Would you rather be
+mysterious or predictable?". It is opinion, not comprehension: there is no right answer, so like
+`open` and `paraphrase` it carries no answer, answers, or exampleAnswer field at all, just the
+"prompt". The stem matters: start with "Would you rather" and join the two options with "or"
+(a prompt that doesn't read as a choice is flagged on save).
+
+The options may freely name the section's own vocabulary. "Would you rather be judicious with
+your money or spend it fast and freely?" is the type working as designed, pulling a learning word
+into a choice the speller has a stake in. Keep both options concrete and either genuinely
+appealing (or genuinely awful): a choice with one obvious winner asks nothing.
+
+OPTIONAL, and not part of the default 15-question shape. When the user asks for W.Y.R. questions,
+put them after the tight opens and before the extended opens, several in a row (the lessons this
+type comes from run six or more per section).
+
 ## No prompt gives away another question's answer
 
 Within a section, no question's prompt may contain a word another question expects the speller to
@@ -191,12 +209,13 @@ option in a green prompt does the same thing ("such as Siamese or Persian").
 
 Two things are fine. A prompt may name a topic word whose own question wants a NUMBER back: "more
 than ___ mummies at Bubastis" doesn't help anyone produce BUBASTIS for its own question, and
-scrubbing every such mention makes prompts clumsy for no gain. And a pink or `multiple_open` prompt
-may name the section's subject even when it is also a green answer, because both exist to make the
-speller talk about that word — "In your own words, explain how a delta forms" can't avoid DELTA
-without going vague, and "Give a synonym for DELTA" has to say it outright. Everywhere else, a
-prompt that names another question's recall answer is rejected on save; on those two it is only
-flagged, so reword it if the naming wasn't necessary.
+scrubbing every such mention makes prompts clumsy for no gain. And a pink, `wyr` or `multiple_open`
+prompt may name the section's subject even when it is also a green answer, because all three exist
+to make the speller talk about that word: "In your own words, explain how a delta forms" can't
+avoid DELTA without going vague, "Give a synonym for DELTA" has to say it outright, and "Would you
+rather live by a delta or a canyon?" is the choice the question offers. Everywhere else, a prompt
+that names another question's recall answer is rejected on save; on those it is only flagged, so
+reword it if the naming wasn't necessary.
 
 ## One answer word, one question
 
@@ -310,7 +329,7 @@ Rejected (errors):
 - a spelling word outside 6-9 letters, repeated in another section, or appearing inside any answer
 - the same answer word used by two different questions, anywhere, at any length
 - the same numeric answer given by two different questions
-- an open or paraphrase question carrying an answer, answers, or exampleAnswer
+- an open, paraphrase or wyr question carrying an answer, answers, or exampleAnswer
 - a pink question using the retired "...one word that comes to mind..." stem
 
 Flagged but allowed (warnings, returned with the saved lesson): a section count other than 6, a
@@ -319,9 +338,10 @@ list above, pink questions that don't read as 4 tight + 3 extended, a multi-word
 `multiple` question with fewer than 2 or more than 4 answers, a `multiple_open` question suggesting
 no answers at all, a `multiple` prompt that doesn't blank out the list it is asking about, a
 `multiple_open` question asked before a `multiple` one in the same section, a section without
-exactly 4 spelling words, a word problem with no steps, a pink or `multiple_open` prompt that names
-another question's recall answer, a spelling word that is also ALL-CAPS vocabulary in the same
-section, and a VAKT activity that isn't last in its section.
+exactly 4 spelling words, a word problem with no steps, a pink, `wyr` or `multiple_open` prompt
+that names another question's recall answer, a `wyr` prompt that doesn't read as a "Would you
+rather… or…" choice, a spelling word that is also ALL-CAPS vocabulary in the same section, and a
+VAKT activity that isn't last in its section.
 
 If the user deliberately wants a lesson the standard forbids — a 3-section lesson, questions in a
 different order — pass "skipValidation": true, which turns the errors off. Don't reach for it to

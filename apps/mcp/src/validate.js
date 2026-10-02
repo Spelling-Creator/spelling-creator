@@ -679,6 +679,25 @@ export function validateLesson(doc) {
           break;
         }
 
+        // A W.Y.R. question is a choice, and the stem is what makes it one.
+        // Only a warning: the wording is a convention, and "Would you rather
+        // tour Paris, London, or New York?" phrased some other way is still a
+        // usable question.
+        case "wyr": {
+          const prompt = (block.prompt || "").trim();
+          if (!/^would you rather\b/i.test(prompt) || !/\bor\b/i.test(prompt)) {
+            warn(
+              "W_WYR_SHAPE",
+              questionId,
+              ctx.number,
+              `${where}: this W.Y.R. prompt doesn't read as a choice. A W.Y.R. question starts ` +
+                '"Would you rather…" and offers two options joined by "or": ' +
+                '"Would you rather watch an opera or a movie?".',
+            );
+          }
+          break;
+        }
+
         default:
           break;
       }
@@ -738,26 +757,34 @@ export function validateLesson(doc) {
         .map((entry) => entry.norm)
         .sort()
         .join("|")}`;
-      // Two prompts are allowed to name the thing they are about, so for them
+      // Some prompts are allowed to name the thing they are about, so for them
       // the leak is not always a defect. An extended open exists to make the
       // speller talk about the section's subject, and that subject is usually a
       // green answer — "In your own words, explain how a delta forms" cannot
       // avoid DELTA without going vague. A loose orange question has the same
-      // problem in a sharper form: "Give a synonym for X" has to say X. Worth
-      // flagging in both cases, never worth blocking.
+      // problem in a sharper form: "Give a synonym for X" has to say X. And a
+      // W.Y.R. question's options are often the section's own vocabulary:
+      // "Would you rather be circumspect and get one wish, or bet for ten?" is
+      // the question working as designed. Worth flagging in all three cases,
+      // never worth blocking.
       if (
         block.questionType === "open" ||
+        block.questionType === "wyr" ||
         block.questionType === ORANGE_LOOSE
       ) {
         const kind =
           block.questionType === "open"
             ? "this pink prompt"
-            : "this orange (multiple_open) prompt";
+            : block.questionType === "wyr"
+              ? "this W.Y.R. (grape) prompt"
+              : "this orange (multiple_open) prompt";
         const excuse =
           block.questionType === "open"
             ? "Fine when the open question genuinely has to name the section's subject; worth rewording if it doesn't."
-            : 'Fine when the question is about that word ("Give a synonym for X" has to name X); worth ' +
-              "rewording if it isn't.";
+            : block.questionType === "wyr"
+              ? "Fine when the choice is genuinely about that word; worth rewording if it isn't."
+              : 'Fine when the question is about that word ("Give a synonym for X" has to name X); worth ' +
+                "rewording if it isn't.";
         warn(
           "W_ANSWER_REVEALED_OPEN",
           key,
@@ -1060,12 +1087,20 @@ export function validateLesson(doc) {
   };
 }
 
-// The two types that store no answer at all. `paraphrase` is mechanically an
-// `open` question — the speller writes on their own paper either way — so it is
-// held to the same rule: buildBlock drops a stray answer from both, and being
-// told about it is the only thing that stops the model believing the lesson
-// holds an answer it does not.
-const ANSWERLESS_TYPES = new Set(["open", "paraphrase"]);
+// The types that store no answer at all. `paraphrase` and `wyr` are
+// mechanically `open` questions (the speller writes on their own paper either
+// way), so they are held to the same rule: buildBlock drops a stray answer from
+// all three, and being told about it is the only thing that stops the model
+// believing the lesson holds an answer it does not.
+const ANSWERLESS_TYPES = new Set(["open", "paraphrase", "wyr"]);
+
+// How validateInput names each answerless type in its rejection, colour and
+// all, so the model can find the question in a rendered lesson too.
+const ANSWERLESS_KIND = {
+  open: "open (pink) question",
+  paraphrase: "paraphrase (brown) question",
+  wyr: "W.Y.R. (grape) question",
+};
 
 /**
  * Checks that can only be made against the caller's raw input, because buildBlock
@@ -1085,10 +1120,7 @@ export function validateInput(entries) {
       (field) => block[field] != null && block[field] !== "",
     );
     if (!stray.length) continue;
-    const kind =
-      block.questionType === "open"
-        ? "open (pink) question"
-        : "paraphrase (brown) question";
+    const kind = ANSWERLESS_KIND[block.questionType];
     findings.push({
       level: "error",
       code: "E_OPEN_HAS_ANSWER",
@@ -1096,7 +1128,7 @@ export function validateInput(entries) {
       section: section ?? null,
       message:
         `${where}: this ${kind} carries ${stray.map((f) => `\`${f}\``).join(", ")}. ` +
-        `${block.questionType === "open" ? "Open" : "Paraphrase"} questions have no answer of any kind — just ` +
+        "Questions of this type have no answer of any kind, just " +
         "the `prompt`. Remove the field, or change the question type to one that does take an answer.",
     });
   }

@@ -91,7 +91,8 @@ const blockSchema = z
           "the passage states — every accepted answer), multiple_open (the looser semi-open question: a synonym, " +
           "a definition, anything bounded by the topic, whose answers are SUGGESTIONS the speller need not " +
           "match), paraphrase (restate the passage in their own words — no stored answer), open (free " +
-          "response), background (needs prior knowledge). Every answer except a background one and a " +
+          'response), wyr (a "Would you rather…?" choice between two options, joined by "or"; opinion only, ' +
+          "no stored answer), background (needs prior knowledge). Every answer except a background one and a " +
           "multiple_open suggestion must appear, word for word, in that section's own passage; a background " +
           "answer must NOT. A single " +
           "(green) answer must also be a HARD FACT with one right answer — being in the passage is not enough. " +
@@ -916,7 +917,7 @@ export function registerTools(server, ctx) {
         "public hub. Returns the new lesson id and its hub URL.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), " +
         "spelling (an explicit word list), question " +
-        "(number/single/multiple/multiple_open/paraphrase/open/background), image, and vakt " +
+        "(number/single/multiple/multiple_open/paraphrase/open/wyr/background), image, and vakt " +
         "(a regulation activity — OPTIONAL, only when the user asks for them, and last in its section).\n\n" +
         "DEFAULT STRUCTURE (unless the user asks otherwise): 6 sections; each section is [image?] + 2 text " +
         "paragraphs + 4 spelling words + 15 questions, and ENDS with those question blocks about that section. " +
@@ -996,7 +997,7 @@ export function registerTools(server, ctx) {
         "document”). Use this when you can't (or don't want to) publish to the hub; use create_lesson when you " +
         "want it saved to the cloud directly.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), spelling (an " +
-        "explicit word list), question (number/single/multiple/multiple_open/paraphrase/open/background), image, " +
+        "explicit word list), question (number/single/multiple/multiple_open/paraphrase/open/wyr/background), image, " +
         "and vakt (a regulation " +
         "activity — OPTIONAL, only when the user asks for them, and last in its section). DEFAULT STRUCTURE " +
         "(unless asked otherwise): 6 sections; each is [image?] + 2 text paragraphs + 4 spelling words + 15 " +
@@ -2064,5 +2065,5 @@ export function registerTools(server, ctx) {
 // every client UI and bug report.
 export const SERVER_INFO = {
   name: "spelling-creator-hub",
-  version: "0.15.0",
+  version: "0.20.0",
 };

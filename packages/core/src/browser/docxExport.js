@@ -39,6 +39,7 @@ import {
   QUESTION_LEGEND,
   QUESTION_TYPE_LIST,
   questionAnswerText,
+  questionLegendText,
   questionMeta,
   questionStyleId,
   questionStyleName,
@@ -382,7 +383,7 @@ function pageFooter(meta) {
     }
     legend.push(
       new TextRun({
-        text: type.label.toUpperCase(),
+        text: questionLegendText(type),
         size: 16,
         color: hex(type.color),
         // Two types share the amber (see questions.js), so the legend has to

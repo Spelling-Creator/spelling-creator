@@ -38,7 +38,7 @@ export const QUESTION_SCHEMAS = {
 		required: ['prompt', 'answers'],
 		additionalProperties: false,
 	},
-	// Two free-response types with the same empty shape. They are listed
+	// Three free-response types with the same empty shape. They are listed
 	// separately rather than folded together because the request names the type
 	// and an unlisted one is refused outright — a type in the editor's menu with
 	// no entry here is a button that returns an error.
@@ -49,6 +49,12 @@ export const QUESTION_SCHEMAS = {
 		additionalProperties: false,
 	},
 	open: {
+		type: 'object',
+		properties: { prompt: { type: 'string' } },
+		required: ['prompt'],
+		additionalProperties: false,
+	},
+	wyr: {
 		type: 'object',
 		properties: { prompt: { type: 'string' } },
 		required: ['prompt'],
@@ -71,6 +77,7 @@ export const QUESTION_LABELS = {
 	multiple_open: 'suggested-answer',
 	paraphrase: 'paraphrase',
 	open: 'open-ended',
+	wyr: 'would-you-rather',
 	background: 'background-knowledge',
 };
 
@@ -86,6 +93,7 @@ export const QUESTION_INSTRUCTIONS = {
 	paraphrase:
 		'Write a question that asks the student to restate part of the lesson text in their own words ("In your own words, explain…" / "In your own words, describe…"). It tests whether they understood the passage, not what they think of it. Do not provide answer options or a model answer. Put the question in "prompt".',
 	open: 'Write a question that invites a free, written response. Do not provide answer options or a model answer. Put the question in "prompt".',
+	wyr: 'Write a "Would you rather" question: a choice between exactly two options, each drawn from or inspired by the lesson\'s topic ("Would you rather watch an opera or a movie?"). Start the prompt with "Would you rather" and join the two options with "or". It asks for an opinion, so there is no right answer. Do not provide answer options or a model answer. Make both options concrete and comparably attractive, so the choice is a real one. Put the question in "prompt".',
 	background:
 		'The question must test prior knowledge that is NOT explained anywhere in the lesson text — the student is expected to already know it. Do not ask about anything the lesson text covers. Put the question in "prompt" and the correct answer (a word or brief phrase) in "answer".',
 };

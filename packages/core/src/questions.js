@@ -1,4 +1,4 @@
-// Shared definitions for the seven question types. Imported by the editor
+// Shared definitions for the eight question types. Imported by the editor
 // (SectionCard / ContentBlock) and the exporters so colours, labels, and the
 // default block shape stay in sync everywhere.
 
@@ -61,6 +61,22 @@ export const QUESTION_TYPES = {
     description: "Free written response",
     color: "#e64980", // pink
   },
+  wyr: {
+    key: "wyr",
+    label: "Would you rather",
+    short: "W.Y.R.",
+    // What the printed footer legend calls it. The legend otherwise prints the
+    // label, but "WOULD YOU RATHER" would crowd an eight-entry footer line, and
+    // the lessons this type comes from abbreviate it there too.
+    legend: "W.Y.R.",
+    description: "Choose between options; no right answer",
+    // Grape: a red-violet, sitting between `number`'s blue-violet and `open`'s
+    // pink but readable against both. Teal was the obvious free hue, but the
+    // spelling block already prints teal (see spelling.js). If the colour is
+    // ever in doubt on paper, the prompt itself disambiguates: every question
+    // of this type starts "Would you rather".
+    color: "#9c36b5",
+  },
   background: {
     key: "background",
     label: "Background knowledge",
@@ -95,9 +111,16 @@ export const QUESTION_LEGEND = [
   QUESTION_TYPES.number,
   QUESTION_TYPES.multiple,
   QUESTION_TYPES.multiple_open,
+  QUESTION_TYPES.wyr,
   QUESTION_TYPES.paraphrase,
   QUESTION_TYPES.open,
 ];
+
+/** What the printed footer legend calls a type: the label, unless the type
+ * carries a shorter legend name of its own (only `wyr` does today). */
+export function questionLegendText(type) {
+  return (type.legend || type.label).toUpperCase();
+}
 
 // ---------------------------------------------------------------------------
 // Word character styles, one per question type.
@@ -155,8 +178,8 @@ export const ANSWER_GAP = " \u00A0 ";
 // is one line of coloured prompt followed by its answer in black.
 //
 // Returns "" when there is nothing to show: an unanswered question, or an
-// `open`/`paraphrase` one, which is answered on the speller's own paper and so
-// prints as the prompt alone.
+// `open`/`paraphrase`/`wyr` one, which is answered on the speller's own paper
+// and so prints as the prompt alone.
 export function questionAnswerText(block) {
   if (!block) return "";
   if (SINGLE_ANSWER_TYPES.has(block.questionType)) {
@@ -187,9 +210,10 @@ export function createQuestionBlock(newId, questionType) {
     case "multiple":
     case "multiple_open":
       return { ...base, answers: [{ id: newId(), text: "" }] };
-    // Both are free written responses with no stored answer.
+    // All free written responses with no stored answer.
     case "paraphrase":
     case "open":
+    case "wyr":
       return { ...base };
     case "background":
       return { ...base, answer: "" };
@@ -223,6 +247,7 @@ export function buildQuestionBlock(newId, questionType, data = {}) {
       return { ...base, answers: toAnswers(newId, data.answers) };
     case "paraphrase":
     case "open":
+    case "wyr":
       return { ...base };
     case "background":
       return {

@@ -12,6 +12,7 @@ import {
   QUESTION_TYPE_LIST,
   createQuestionBlock,
   questionAnswerText,
+  questionLegendText,
   questionMeta,
   questionStyleClass,
   questionStyleMap,
@@ -59,6 +60,7 @@ describe("questionAnswerText", () => {
   it("gives the free-response types nothing to print after the prompt", () => {
     expect(questionAnswerText({ questionType: "open" })).toBe("");
     expect(questionAnswerText({ questionType: "paraphrase" })).toBe("");
+    expect(questionAnswerText({ questionType: "wyr" })).toBe("");
   });
 
   it("prints nothing for an unanswered question", () => {
@@ -111,6 +113,49 @@ describe("paraphrase questions", () => {
     });
     expect(doc.sections[0].blocks).toHaveLength(1);
     expect(doc.sections[0].blocks[0].questionType).toBe("paraphrase");
+  });
+});
+
+describe("W.Y.R. questions", () => {
+  it("is a type of its own, in its own colour", () => {
+    expect(QUESTION_TYPES.wyr.color).not.toBe(QUESTION_TYPES.number.color);
+    expect(QUESTION_TYPES.wyr.color).not.toBe(QUESTION_TYPES.open.color);
+  });
+
+  it("abbreviates its legend entry, and only its own", () => {
+    // "WOULD YOU RATHER" would crowd an eight-entry footer line, so the legend
+    // prints the short form the source lessons use.
+    expect(questionLegendText(QUESTION_TYPES.wyr)).toBe("W.Y.R.");
+    expect(questionLegendText(QUESTION_TYPES.open)).toBe("OPEN ENDED");
+  });
+
+  it("builds with no answer field, like an open question", () => {
+    expect(createQuestionBlock(newId, "wyr")).toEqual({
+      id: expect.any(String),
+      type: "question",
+      questionType: "wyr",
+      prompt: "",
+    });
+  });
+
+  it("survives a lesson-file import", () => {
+    const doc = normalizeLessonFile({
+      title: "T",
+      sections: [
+        {
+          name: "S",
+          blocks: [
+            {
+              type: "question",
+              questionType: "wyr",
+              prompt: "Would you rather watch an opera or a movie?",
+            },
+          ],
+        },
+      ],
+    });
+    expect(doc.sections[0].blocks).toHaveLength(1);
+    expect(doc.sections[0].blocks[0].questionType).toBe("wyr");
   });
 });
 

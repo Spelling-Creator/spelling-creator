@@ -383,6 +383,8 @@ A lesson is **sections** of **blocks**. Block types:
   - `paraphrase` is a free response restating the passage in the speller's own words
     (no answer field; just the `prompt`)
   - `open` is a free response (no answer field; just the `prompt`)
+  - `wyr` is a "Would you rather… or…?" choice between two options, opinion only
+    (no answer field; just the `prompt`)
   - `background` takes `background` + `answer` (needs prior knowledge)
 
 - **`image`**: a picture. Don't write these by hand; use `search_images` to find a
