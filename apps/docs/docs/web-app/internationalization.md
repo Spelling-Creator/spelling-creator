@@ -34,6 +34,7 @@ area without wading through the whole app:
 | `hub`            | `HubPage`                                                                                                                                        |
 | `lesson`         | The routed lesson page and its tabs (`pages/lesson/`), `LessonView`, `LessonSummary`, `CommentsSection`, `PullRequestsSection`                   |
 | `interactive`    | `InteractiveLesson` (the full-screen walkthrough and its speech controls), `MyLessonAnswers`                                                     |
+| `library`        | `LibraryPage` (the lessons on this device)                                                                                                       |
 | `login`          | `LoginPage`                                                                                                                                      |
 | `moderation`     | `ModerationPage`                                                                                                                                 |
 | `oauth`          | `OAuthAuthorizePage`                                                                                                                             |

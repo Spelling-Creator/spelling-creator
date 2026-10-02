@@ -15,6 +15,7 @@ src/
     EditorPage.jsx        the lesson builder (toolbar, section list, + button, publish, collaborate) — and the owner of which of this device's lessons is open
     HubPage.jsx           public gallery of published lessons + client-side search
     ProfilePage.jsx       a user's public profile: bio + their published lessons
+    LibraryPage.jsx       the lessons this device holds (/library): open, copy, rename, delete, start another (see local-lessons.md)
     LoginPage.jsx         magic-link sign-in / account status
     ModerationPage.jsx    moderator/admin queue for reported content
     SettingsPage.jsx      appearance, language, read-aloud, this device's lessons, account — see pages-and-routing.md
@@ -62,7 +63,6 @@ src/
     CollabCursors.jsx      floating coloured carets showing collaborators' selections
     CollabChat.jsx         in-session chat: a floating corner panel on desktop, a bottom sheet on mobile
     HistoryDialog.jsx      the lesson's version timeline: what each commit changed, per block, + restore
-    LessonsDialog.jsx      the lessons this device holds: switch, copy, rename, delete, start another (see local-lessons.md)
     VariationsDialog.jsx   a lesson's variations — the branches of its repository, as an author sees them (see lesson-variations.md)
     MergeDialog.jsx        settle a merge — a fork's original, or a pull request being reviewed (mine / theirs / keep both)
     ProposeChangesDialog.jsx  open a pull request against the lesson this fork came from (see pull-requests.md)

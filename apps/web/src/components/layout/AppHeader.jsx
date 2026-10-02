@@ -201,7 +201,7 @@ export default function AppHeader() {
                 onNavigate={closeMenu}
               />
               <SheetNavLink
-                to="/editor/lessons"
+                to="/library"
                 icon={LibraryIcon}
                 label={t("nav.onThisDevice")}
                 onNavigate={closeMenu}
@@ -232,12 +232,11 @@ export default function AppHeader() {
         <nav className="ml-2 hidden items-center gap-0.5 md:flex">
           <HeaderNavLink to="/" label={t("nav.home")} />
           <HeaderNavLink to="/hub" label={t("nav.lessonHub")} />
-          {/* Straight to the editor's library panel, which is the list of what
-              this browser is holding. A link to the panel rather than the
-              titles inline: the editor rewrites a lesson's title as it is
-              typed, and a copy of it in chrome would spend the whole session
-              one keystroke behind. */}
-          <HeaderNavLink to="/editor/lessons" label={t("nav.onThisDevice")} />
+          {/* The list of what this browser is holding (LibraryPage). A link
+              rather than the titles inline: the editor rewrites a lesson's
+              title as it is typed, and a copy of it in chrome would spend the
+              whole session one keystroke behind. */}
+          <HeaderNavLink to="/library" label={t("nav.onThisDevice")} />
         </nav>
 
         <div className="flex-1" />

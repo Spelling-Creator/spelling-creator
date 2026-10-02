@@ -304,9 +304,9 @@ function DeviceSection() {
           </Field>
         )}
 
-        {/* A link to the editor's library panel rather than a copy of it: the
-            editor rewrites a lesson's title as it's typed, and a second list of
-            the same titles here would spend its life one keystroke behind. */}
+        {/* A link to the library page rather than a copy of it: one list of
+            these lessons is enough, and it already has everything you can do
+            with them. */}
         <Field orientation="responsive">
           <FieldContent>
             <FieldTitle>{t("device.lessonsLabel")}</FieldTitle>
@@ -315,7 +315,7 @@ function DeviceSection() {
             </FieldDescription>
           </FieldContent>
           <Button asChild variant="outline">
-            <RouterLink to="/editor/lessons" className="no-underline">
+            <RouterLink to="/library" className="no-underline">
               <LibraryIcon />
               {t("device.manageLessons")}
             </RouterLink>

@@ -51,6 +51,7 @@ const PROFILE_PATH = /^\/users\/([^/]+)\/?$/;
 const MODERATION_PATH = /^\/moderation\/?$/;
 const SETTINGS_PATH = /^\/settings\/?$/;
 const LOGIN_PATH = /^\/login\/?$/;
+const LIBRARY_PATH = /^\/library\/?$/;
 // `<Route path="/editor/*">` — EditorShell owns everything below it, and treats a
 // panel name it doesn't recognise as "no panel open" rather than as a 404. That
 // is a deliberate choice about stale links (see the docs), so the wildcard is
@@ -67,6 +68,7 @@ const APP_PATHS = [
 	MODERATION_PATH,
 	SETTINGS_PATH,
 	LOGIN_PATH,
+	LIBRARY_PATH,
 	EDITOR_PATH,
 	OAUTH_AUTHORIZE_PATH,
 ];
