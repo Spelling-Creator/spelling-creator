@@ -698,6 +698,33 @@ test("a W.Y.R. prompt that doesn't read as a choice warns", () => {
   );
 });
 
+test("a W.Y.R. prompt chaining several 'or's warns; one list or an idiom does not", () => {
+  const withWyr = (prompt) =>
+    check((input) => {
+      input.sections[0].blocks.splice(-3, 0, {
+        type: "question",
+        questionType: "wyr",
+        prompt,
+      });
+    });
+
+  const chained = withWyr("Would you rather take a train or a bus or a bike?");
+  assert.deepEqual(codes(chained.errors), []);
+  assert.match(
+    chained.warnings.find((w) => w.code === "W_WYR_SHAPE").message,
+    /chains 2 "or"s/,
+  );
+
+  // Both read as one choice: a short list joined by a single "or" (the shape
+  // the source lessons use), and an option whose own "or" is an idiom.
+  for (const prompt of [
+    "Would you rather tour through Paris, London, or New York?",
+    "Would you rather wait an hour or so, or leave right now?",
+  ]) {
+    assert.ok(!codes(withWyr(prompt).warnings).includes("W_WYR_SHAPE"), prompt);
+  }
+});
+
 test("a W.Y.R. prompt naming a green answer warns instead of erroring", () => {
   // The options are often the section's own vocabulary (that is the type
   // working as designed), so the cross-answer check flags rather than blocks.

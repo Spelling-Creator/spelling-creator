@@ -117,6 +117,22 @@ const TIGHT_STEM =
   /^\s*name\s+(a|an|one|some|something|someone|a kind|a type|a place|a way)\b/i;
 const TIGHT_OPEN_MAX_WORDS = 12;
 
+// The W_WYR_SHAPE check. A W.Y.R. choice is joined by ONE "or": "A or B", or a
+// short list written "A, B, or C" (the source lessons ask "Would you rather tour
+// through Paris, London, or New York?"). Chaining "A or B or C" is the shape it
+// flags. Idioms whose "or" belongs to an option rather than separating two are
+// set aside first, so "Would you rather wait an hour or so, or leave now?" is
+// still one choice.
+const WYR_STEM = /^would you rather\b/i;
+const WYR_OR_IDIOMS =
+  /\b(?:more or less|sooner or later|whether or not|give or take|rain or shine|one way or another|or so)\b/gi;
+const WYR_SEPARATOR = /\bor\b/gi;
+
+/** How many "or"s in a W.Y.R. prompt join one option to the next. */
+function wyrSeparators(prompt) {
+  return (prompt.replace(WYR_OR_IDIOMS, " ").match(WYR_SEPARATOR) || []).length;
+}
+
 /**
  * @typedef {object} Finding
  * @property {"error"|"warning"} level
@@ -680,12 +696,12 @@ export function validateLesson(doc) {
         }
 
         // A W.Y.R. question is a choice, and the stem is what makes it one.
-        // Only a warning: the wording is a convention, and "Would you rather
-        // tour Paris, London, or New York?" phrased some other way is still a
-        // usable question.
+        // Only a warning: the wording is a convention, and a choice phrased
+        // some other way is still a usable question.
         case "wyr": {
           const prompt = (block.prompt || "").trim();
-          if (!/^would you rather\b/i.test(prompt) || !/\bor\b/i.test(prompt)) {
+          const separators = wyrSeparators(prompt);
+          if (!WYR_STEM.test(prompt) || separators === 0) {
             warn(
               "W_WYR_SHAPE",
               questionId,
@@ -693,6 +709,15 @@ export function validateLesson(doc) {
               `${where}: this W.Y.R. prompt doesn't read as a choice. A W.Y.R. question starts ` +
                 '"Would you rather…" and offers two options joined by "or": ' +
                 '"Would you rather watch an opera or a movie?".',
+            );
+          } else if (separators > 1) {
+            warn(
+              "W_WYR_SHAPE",
+              questionId,
+              ctx.number,
+              `${where}: this W.Y.R. prompt chains ${separators} "or"s, which reads as a run-on rather ` +
+                'than a choice. Offer two options ("Would you rather watch an opera or a movie?"), or at ' +
+                'most a short list joined by one "or" ("Would you rather tour Paris, London, or New York?").',
             );
           }
           break;

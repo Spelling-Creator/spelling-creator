@@ -185,8 +185,9 @@ A `wyr` ("Would you rather") question offers the speller a choice between two op
 which they would pick: "Would you rather watch an opera or a movie?", "Would you rather be
 mysterious or predictable?". It is opinion, not comprehension: there is no right answer, so like
 `open` and `paraphrase` it carries no answer, answers, or exampleAnswer field at all, just the
-"prompt". The stem matters: start with "Would you rather" and join the two options with "or"
-(a prompt that doesn't read as a choice is flagged on save).
+"prompt". The stem matters: start with "Would you rather" and join the two options with one "or".
+A short list joined the same way is fine too ("Would you rather tour through Paris, London, or New
+York?"); a prompt that doesn't read as a choice, or that chains "...or...or...", is flagged on save.
 
 The options may freely name the section's own vocabulary. "Would you rather be judicious with
 your money or spend it fast and freely?" is the type working as designed, pulling a learning word
@@ -340,7 +341,7 @@ no answers at all, a `multiple` prompt that doesn't blank out the list it is ask
 `multiple_open` question asked before a `multiple` one in the same section, a section without
 exactly 4 spelling words, a word problem with no steps, a pink, `wyr` or `multiple_open` prompt
 that names another question's recall answer, a `wyr` prompt that doesn't read as a "Would you
-rather… or…" choice, a spelling word that is also ALL-CAPS vocabulary in the same section, and a
+rather… or…" choice or chains several "or"s, a spelling word that is also ALL-CAPS vocabulary in the same section, and a
 VAKT activity that isn't last in its section.
 
 If the user deliberately wants a lesson the standard forbids — a 3-section lesson, questions in a
