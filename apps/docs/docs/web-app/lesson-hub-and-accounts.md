@@ -42,7 +42,7 @@ rewrite one; see [Moderation](./moderation.md).
 
 **Translating a comment.** Any comment can be translated into the reader's own
 language, on the reader's device: the browser's built-in Translator API where
-it exists, an in-page NLLB model everywhere else. No sign-in is needed (comments
+it exists, an in-page model everywhere else. No sign-in is needed (comments
 read publicly, so they translate publicly too), nothing is sent to a server, and
 the original is always one click away. If the language guess is wrong, or there
 isn't one, the reader picks the comment's language themselves. See

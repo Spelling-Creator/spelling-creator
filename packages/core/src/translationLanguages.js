@@ -9,7 +9,7 @@
 // Adding a language is adding a row. Note that a row only makes a language a
 // possible *source* when a detector can name it: the browser's LanguageDetector
 // covers the table, the fallback detector classifies twenty of these languages
-// (see nllbTranslator.js).
+// (see fallbackTranslator.js).
 
 export const TRANSLATION_LANGUAGES = [
   { tag: "ar", flores: "arb_Arab" },
