@@ -19,9 +19,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Link from "@tiptap/extension-link";
-import Placeholder from "@tiptap/extension-placeholder";
+import { Placeholder } from "@tiptap/extensions";
 import { cn } from "../lib/utils.js";
 import { richTextLength } from "@spelling-creator/core/richText";
 import RichTextToolbar from "./RichTextToolbar.jsx";
@@ -36,18 +34,19 @@ const BASE_EXTENSIONS = [
     heading: false,
     horizontalRule: false,
     codeBlock: false,
-  }),
-  Underline,
-  Link.configure({
-    // Editing a link always goes through the toolbar's link popover; clicking
-    // one inside the editor should place the cursor, not navigate away
-    // mid-sentence.
-    openOnClick: false,
-    autolink: true,
-    protocols: ["http", "https", "mailto"],
-    HTMLAttributes: {
-      target: "_blank",
-      rel: "nofollow ugc noopener noreferrer",
+    // Underline and Link ship inside StarterKit since tiptap v3; underline
+    // needs no config, the link rules live here now.
+    link: {
+      // Editing a link always goes through the toolbar's link popover; clicking
+      // one inside the editor should place the cursor, not navigate away
+      // mid-sentence.
+      openOnClick: false,
+      autolink: true,
+      protocols: ["http", "https", "mailto"],
+      HTMLAttributes: {
+        target: "_blank",
+        rel: "nofollow ugc noopener noreferrer",
+      },
     },
   }),
 ];
