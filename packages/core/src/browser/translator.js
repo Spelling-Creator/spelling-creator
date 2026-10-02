@@ -6,11 +6,14 @@
 // features differ is what happens when the API is missing: a summary is a
 // nicety, so the summariser fails closed and hides itself, but not being able
 // to read a comment at all is worth a heavier fallback. So when the browser
-// can't translate a pair, we fall back to running the NLLB-200 translation
-// model in the page with transformers.js (nllbTranslator.js).
+// can't translate a pair, we fall back to running a translation model in the
+// page with transformers.js (fallbackTranslator.js): a small per-pair Opus-MT
+// model for the into-English pairs opusMtModels.js lists, NLLB-200 for every
+// other pair.
 //
-// The fallback is a large download (the library plus quantised models: ~600 MB
-// to translate, ~280 MB to detect), so it is reached ONLY through a dynamic
+// The fallback is a large download (the library plus quantised models:
+// ~110-140 MB for an Opus-MT pair or ~600 MB for NLLB, and ~280 MB to
+// detect), so it is reached ONLY through a dynamic
 // import() from inside a click
 // handler, and nothing here may static-import it. That keeps transformers.js
 // out of every bundle a visitor loads to read a lesson, and out of the Worker's
@@ -51,20 +54,20 @@ function detectorApi() {
   return globalThis.LanguageDetector;
 }
 
-// The NLLB fallback chunk, fetched once on first use. Only a successful load is
+// The fallback chunk, fetched once on first use. Only a successful load is
 // memoised: caching a rejected promise would turn one flaky network moment into
 // "translation is broken until you reload" (same reasoning as lib/exports/load.js
 // in the web app).
-let nllbPromise = null;
+let fallbackPromise = null;
 
-function loadNllb() {
-  if (!nllbPromise) {
-    nllbPromise = import("./nllbTranslator.js").catch((err) => {
-      nllbPromise = null;
+function loadFallback() {
+  if (!fallbackPromise) {
+    fallbackPromise = import("./fallbackTranslator.js").catch((err) => {
+      fallbackPromise = null;
       throw err;
     });
   }
-  return nllbPromise;
+  return fallbackPromise;
 }
 
 /**
@@ -146,8 +149,8 @@ export async function detectLanguage(
       // A detector that breaks is the same as no detector: try the fallback.
     }
   }
-  const nllb = await loadNllb();
-  return nllb.detectLanguage(text, { signal, onDownloadProgress });
+  const fallback = await loadFallback();
+  return fallback.detectLanguage(text, { signal, onDownloadProgress });
 }
 
 // Can the built-in Translator handle this pair? Fails closed: a missing API, an
@@ -193,7 +196,8 @@ async function translateWithBrowser(blocks, options) {
  * Translate text blocks into `targetLanguage`, on this device.
  *
  * Tries the browser's Translator API for the pair first; anything it can't do
- * falls through to the NLLB model via transformers.js. Call from a click
+ * falls through to an in-page model via transformers.js (Opus-MT or NLLB,
+ * fallbackTranslator.js's pick). Call from a click
  * handler: the built-in API wants transient activation for a model download,
  * and the fallback's download is far too heavy to start uninvited.
  *
@@ -204,9 +208,9 @@ async function translateWithBrowser(blocks, options) {
  * @param {string} options.targetLanguage  BCP-47, the reader's language.
  * @param {AbortSignal} [options.signal]
  * @param {(loaded: number) => void} [options.onDownloadProgress]  0–1 fraction,
- *   reported while either engine downloads a model. May restart from 0 when the
+ *   reported while whichever engine runs downloads a model. May restart from 0 when the
  *   browser pair turns out to need the fallback after all.
- * @returns {Promise<{blocks: string[], engine: "browser"|"nllb"}>}
+ * @returns {Promise<{blocks: string[], engine: "browser"|"opus-mt"|"nllb"}>}
  */
 // An error whose message was written for the reader, so translationErrorMessage
 // can pass it through instead of hiding it behind the generic line. `code`
@@ -256,11 +260,8 @@ export async function translateBlocks(blocks, options) {
     );
   }
 
-  const nllb = await loadNllb();
-  return {
-    blocks: await nllb.translateBlocks(blocks, options),
-    engine: "nllb",
-  };
+  const fallback = await loadFallback();
+  return fallback.translateBlocks(blocks, options);
 }
 
 /**

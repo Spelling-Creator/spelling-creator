@@ -183,6 +183,7 @@ apply the same rules. Each module is its own subpath export.
   git/remote            the /git/:lessonId endpoints (pack in R2)
   richText              rich-text policy: allow-list, link schemes, HTML→text
   translationLanguages  the languages comment translation covers: BCP-47 <-> FLORES-200
+  opusMtModels          the per-pair Opus-MT models the translation fallback prefers (into English)
   ydoc                  the Yjs lesson document: Y.Doc <-> doc model, remote apply, reconcile
   git/doc               pure doc helpers: canonical JSON, manifest, block map (no git)
   git/ops               diff two docs into block operations; render commit messages (no git)
@@ -215,8 +216,8 @@ the MCP server cannot reach it by accident:
   commonsImages         search Wikimedia Commons + download an image (no key, no proxy)
   presence              per-collaborator colour + selection presence helpers
   summarizer            browser Summarizer API wrapper (on-device summaries; fails closed)
-  translator            on-device comment translation: browser Translator API with an NLLB fallback
-  nllbTranslator        the fallback itself: NLLB-200 via transformers.js, a lazy chunk only a click ever loads
+  translator            on-device comment translation: browser Translator API with an in-page fallback
+  fallbackTranslator    the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
   git/fs                LightningFS — the IndexedDB filesystem the repos live on
   git/sync              fork (= clone the repo) and merge-with-original flows
 ```

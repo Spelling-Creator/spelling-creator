@@ -19,8 +19,9 @@
 // Moderators can delete a comment but not rewrite it — see handleCommentEdit.
 //
 // Any comment can be translated into the reader's language, entirely on their
-// device: the browser's built-in Translator API where it exists, the NLLB model
-// via transformers.js where it doesn't (@spelling-creator/core/browser/translator).
+// device: the browser's built-in Translator API where it exists, an in-page
+// model via transformers.js where it doesn't (Opus-MT or NLLB; see
+// @spelling-creator/core/browser/translator).
 // The translated text replaces the body in place, with the original one click
 // away and nothing sent to any server.
 
@@ -437,9 +438,9 @@ export default function CommentsSection({ lessonId, onRated }) {
   };
 
   // Translate a comment into the reader's language, on their device. The
-  // browser's built-in Translator API does the work where it can; elsewhere the
-  // NLLB model runs in the page instead, which on its first use downloads a
-  // large model. Hence the progress line, and hence this only ever running
+  // browser's built-in Translator API does the work where it can; elsewhere a
+  // translation model (Opus-MT or NLLB) runs in the page instead, which on its
+  // first use downloads a large model. Hence the progress line, and hence this only ever running
   // from a click (the built-in API also wants a user gesture for downloads).
   // See @spelling-creator/core/browser/translator.
   //

@@ -20,21 +20,36 @@ engines:
 1. **The browser's built-in [Translator API](https://developer.mozilla.org/en-US/docs/Web/API/Translator_API)**
    (Chromium 138+). Fast, free, local; the browser fetches a small language pack
    per pair on first use.
-2. **[NLLB-200 (distilled, 600M)](https://huggingface.co/Xenova/nllb-200-distilled-600M)
-   running in the page with [transformers.js](https://huggingface.co/docs/transformers.js)**,
-   for every other browser, and for pairs the built-in API turns down. Still
-   local, since the model runs in the tab, but the first use downloads a
-   **~600 MB quantised model** (then cached in browser storage, so it's a
-   one-time cost per device). A progress bar under the comment shows the
-   download.
+2. **A translation model running in the page with
+   [transformers.js](https://huggingface.co/docs/transformers.js)**, for every
+   other browser, and for pairs the built-in API turns down. Still local,
+   since the model runs in the tab, but the first use downloads a quantised
+   model (then cached in browser storage, so it's a one-time cost per device).
+   A progress bar under the comment shows the download. Which model depends on
+   the pair:
+   - **Translating into English** from a language with a verified
+     [Opus-MT](https://huggingface.co/Xenova/opus-mt-de-en) conversion (22 of
+     them, listed in `core/opusMtModels.js`): that pair's own small model, a
+     **~110-140 MB** download.
+   - **Everything else**:
+     [NLLB-200 (distilled, 600M)](https://huggingface.co/Xenova/nllb-200-distilled-600M),
+     a **~600 MB** download, but a single one that covers the whole language
+     table in both directions.
+
+   Opus-MT only handles into-English pairs on purpose: into English is both
+   the best-covered direction among the hub's transformers.js conversions and
+   the one the 2020-era Opus-MT models are reliably good at, while their
+   out-of-English and cross-language quality varies too much to prefer them
+   over NLLB.
 
 ## How it works
 
 ```
 CommentsSection.jsx                    the Translate action, per-comment state, skeleton + progress
   └── core/browser/translator          blocks from HTML, detection, engine choice (no React)
-        └── core/browser/nllbTranslator  the fallback: transformers.js + NLLB + an XLM-RoBERTa detector
-              (lazy: dynamic import(), its own chunk, never in the main bundle)
+        └── core/browser/fallbackTranslator  the fallback: transformers.js + Opus-MT/NLLB + an XLM-RoBERTa detector
+              (lazy: dynamic import(), its own chunk, never in the main bundle;
+               the Opus-MT pair table itself is core/opusMtModels.js)
 ```
 
 1. **Blocks, not markup.** Comments are stored as sanitized
@@ -56,8 +71,9 @@ CommentsSection.jsx                    the Translate action, per-comment state, 
    [Picking the language by hand](#picking-the-language-by-hand)).
 3. **Pick the engine.** `Translator.availability({sourceLanguage, targetLanguage})`
    decides: anything usable runs in the browser's own translator, everything
-   else falls through to NLLB. The target language is the app language
-   (i18next's `resolvedLanguage`, see
+   else falls through to the in-page fallback, which in turn picks Opus-MT
+   when `opusMtModelFor()` names a model for the pair and NLLB otherwise. The
+   target language is the app language (i18next's `resolvedLanguage`, see
    [internationalization](./internationalization.md)).
 4. **Translate.** Block by block, showing a [skeleton](./overview.md) where the
    body was. Results live in component state only; translations are per-reader
@@ -95,6 +111,16 @@ NLLB's two hundred. Adding a language is adding a row;
 `translationLanguages.test.js` checks the table stays consistent and covers
 every label the detector can answer with.
 
+The Opus-MT fast path has a table of its own, `core/opusMtModels.js`: source
+tag to model id, into English only, keyed by the main table's canonical tags
+(which is why Simplified Chinese is covered and Traditional is not: the zh
+model was trained mostly on Simplified text, so `zh-Hant` stays on NLLB,
+which models it in its own right). Every id in it was verified to carry the
+exact files transformers.js fetches at the `q8` dtype; several hub
+conversions ship without them, so adding a pair means checking the files
+exist first, as the module comment describes. `opusMtModels.test.js` keeps
+the two tables consistent.
+
 A language is only a possible _source_ when a detector can name it: the
 browser's LanguageDetector covers the whole table, while the fallback detector
 classifies twenty languages. A comment in, say, Ukrainian still translates
@@ -109,13 +135,13 @@ for the fallback, and for the "already in your language" check.
 ## Keeping the heavy path out of every bundle
 
 transformers.js and its ONNX runtime are far too big to ride along with the app.
-`nllbTranslator.js` is therefore reached **only** through a memoised dynamic
+`fallbackTranslator.js` is therefore reached **only** through a memoised dynamic
 `import()` inside `translator.js` (the same pattern as the
 [export pipeline](./export-pipeline.md)'s `lib/exports/load.js`, and with the
 same rule: a failed load isn't cached, so the next click retries). Three guards
 keep it contained:
 
-- Nothing may static-import `nllbTranslator.js`. That would pull the library
+- Nothing may static-import `fallbackTranslator.js`. That would pull the library
   into the main bundle for every visitor.
 - `vite.config.js` lists it in `SSR_UNREACHABLE`, so the Worker's
   [server-rendering](./server-rendering.md) build ships a stub instead of an
@@ -157,6 +183,8 @@ delete window.LanguageDetector;
 ```
 
 Expect the first fallback run to download for a while; that's the detector and
-the translation model arriving, once per device. transformers.js caches them in the browser's
-Cache Storage (look for `transformers-cache` under the Application panel in
-devtools).
+the translation model arriving, once per device (an Opus-MT pair model when
+the app language is English and the pair has one, NLLB otherwise; switching
+the app language to something other than English forces the NLLB path).
+transformers.js caches them in the browser's Cache Storage (look for
+`transformers-cache` under the Application panel in devtools).
