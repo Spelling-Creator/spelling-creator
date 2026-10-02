@@ -4,6 +4,7 @@ import {
   TRANSLATION_LANGUAGES,
   languageForTag,
   sameTranslationLanguage,
+  sourceLanguageChoices,
 } from "./translationLanguages.js";
 
 // The languages the fallback's XLM-RoBERTa detector classifies (its labels,
@@ -73,5 +74,26 @@ describe("sameTranslationLanguage", () => {
   it("compares bare subtags when a language is outside the table", () => {
     expect(sameTranslationLanguage("cy", "cy-GB")).toBe(true);
     expect(sameTranslationLanguage("cy", "en")).toBe(false);
+  });
+});
+
+describe("sourceLanguageChoices", () => {
+  it("offers every table language except the reader's own", () => {
+    const choices = sourceLanguageChoices("en-GB");
+    expect(choices).not.toContain("en");
+    expect(choices).toContain("es");
+    expect(choices).toHaveLength(TRANSLATION_LANGUAGES.length - 1);
+  });
+
+  it("keeps the other Chinese script on offer", () => {
+    const choices = sourceLanguageChoices("zh-TW");
+    expect(choices).not.toContain("zh-Hant");
+    expect(choices).toContain("zh");
+  });
+
+  it("offers the whole table when the reader's language is outside it", () => {
+    expect(sourceLanguageChoices("cy")).toHaveLength(
+      TRANSLATION_LANGUAGES.length,
+    );
   });
 });

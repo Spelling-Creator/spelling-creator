@@ -51,7 +51,9 @@ CommentsSection.jsx                    the Translate action, per-comment state, 
    transformers.js) running in the lazy fallback chunk. That detector is a
    quantised ~280 MB one-time download of its own, reported through the same
    progress bar and cached the same way. If the comment is already in the
-   reader's language, a toast says so and nothing is translated.
+   reader's language, a toast says so and nothing is translated. Detection is
+   a guess, so the reader can always overrule it (see
+   [Picking the language by hand](#picking-the-language-by-hand)).
 3. **Pick the engine.** `Translator.availability({sourceLanguage, targetLanguage})`
    decides: anything usable runs in the browser's own translator, everything
    else falls through to NLLB. The target language is the app language
@@ -60,6 +62,27 @@ CommentsSection.jsx                    the Translate action, per-comment state, 
 4. **Translate.** Block by block, showing a [skeleton](./overview.md) where the
    body was. Results live in component state only; translations are per-reader
    and per-visit, never stored.
+
+## Picking the language by hand
+
+Short comments, mixed-language comments and closely related languages all trip
+detectors up, so the reader gets a language picker (a shadcn `Select` under the
+original comment) whenever detection lets them down:
+
+| What happened                                                                       | What the reader sees                                                         |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| No detector could decide                                                            | The picker opens straight away with "Couldn't tell what language this is in" |
+| The comment was translated, but from the wrong language                             | A **Wrong language?** action next to **Show original** opens the picker      |
+| Detection said "already in your language" and it isn't                              | The toast has a **Pick language** action                                     |
+| Detection named a language translation doesn't cover (`SOURCE_LANGUAGE_ERROR` code) | The error toast has a **Pick language** action                               |
+
+Picking a language skips detection and translates from that language.
+Cancelling puts back whatever was there before, including an earlier
+translation, and so does a re-translation that fails. The choices come from `sourceLanguageChoices()` in
+`@spelling-creator/core/translationLanguages`: every row of the language table
+below except the reader's own, named and sorted in the reader's language with
+`Intl.DisplayNames`. The pick isn't remembered; like translations themselves,
+it's per-reader and per-visit.
 
 ## The language table
 
@@ -76,8 +99,9 @@ A language is only a possible _source_ when a detector can name it: the
 browser's LanguageDetector covers the whole table, while the fallback detector
 classifies twenty languages. A comment in, say, Ukrainian still translates
 wherever the LanguageDetector API exists, even when the translation itself runs
-on NLLB; without that API the detector can't name the source and translation
-says so.
+on NLLB; without that API the detector can't name the source, so the reader
+[picks it](#picking-the-language-by-hand) instead. The picker offers the whole
+table, so a hand-picked source is never limited to what a detector knows.
 
 The built-in Translator API is not limited by this table. It's only consulted
 for the fallback, and for the "already in your language" check.

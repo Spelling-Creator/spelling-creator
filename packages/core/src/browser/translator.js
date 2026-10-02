@@ -28,9 +28,18 @@ import { isRichTextHtml } from "../richText.js";
 import {
   languageForTag,
   sameTranslationLanguage,
+  sourceLanguageChoices,
 } from "../translationLanguages.js";
 
-export { sameTranslationLanguage };
+export { sameTranslationLanguage, sourceLanguageChoices };
+
+/**
+ * The `code` on errors that came from the source language: detection couldn't
+ * name it, or named one translation doesn't cover. Detection is a guess, so a
+ * wrong guess lands here too, and the reader can recover by choosing the source
+ * themselves (see sourceLanguageChoices).
+ */
+export const SOURCE_LANGUAGE_ERROR = "source-language";
 
 // The APIs are exposed as globals; reach them through `globalThis` so importing
 // this module never throws on browsers that don't ship them.
@@ -190,7 +199,8 @@ async function translateWithBrowser(blocks, options) {
  *
  * @param {string[]} blocks  From textBlocksForTranslation().
  * @param {object} options
- * @param {string} options.sourceLanguage  BCP-47, from detectLanguage().
+ * @param {string} options.sourceLanguage  BCP-47, from detectLanguage() or
+ *   picked by the reader (sourceLanguageChoices).
  * @param {string} options.targetLanguage  BCP-47, the reader's language.
  * @param {AbortSignal} [options.signal]
  * @param {(loaded: number) => void} [options.onDownloadProgress]  0–1 fraction,
@@ -199,17 +209,22 @@ async function translateWithBrowser(blocks, options) {
  * @returns {Promise<{blocks: string[], engine: "browser"|"nllb"}>}
  */
 // An error whose message was written for the reader, so translationErrorMessage
-// can pass it through instead of hiding it behind the generic line.
-function readerError(message) {
+// can pass it through instead of hiding it behind the generic line. `code`
+// marks the errors a reader can fix by picking the source language themselves.
+function readerError(message, code) {
   const error = new Error(message);
   error.readerFacing = true;
+  if (code) error.code = code;
   return error;
 }
 
 export async function translateBlocks(blocks, options) {
   const { sourceLanguage, targetLanguage } = options;
   if (!sourceLanguage) {
-    throw readerError("Couldn't tell what language this comment is in.");
+    throw readerError(
+      "Couldn't tell what language this comment is in.",
+      SOURCE_LANGUAGE_ERROR,
+    );
   }
 
   const availability = await browserPairAvailability(
@@ -237,6 +252,7 @@ export async function translateBlocks(blocks, options) {
   if (!languageForTag(sourceLanguage)) {
     throw readerError(
       "This comment's language isn't supported for translation.",
+      SOURCE_LANGUAGE_ERROR,
     );
   }
 

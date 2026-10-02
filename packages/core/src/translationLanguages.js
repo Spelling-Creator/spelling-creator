@@ -94,3 +94,18 @@ export function sameTranslationLanguage(a, b) {
   const baseB = (b || "").trim().toLowerCase().split("-")[0];
   return Boolean(baseA) && baseA === baseB;
 }
+
+/**
+ * The languages a reader can pick as a comment's source when detection gets it
+ * wrong or can't decide: every row of the table except the reader's own
+ * language, since translating into itself does nothing. As BCP-47 tags, in
+ * table order; the UI sorts them by display name.
+ *
+ * @param {string} targetLanguage  BCP-47, the reader's language.
+ * @returns {string[]}
+ */
+export function sourceLanguageChoices(targetLanguage) {
+  return TRANSLATION_LANGUAGES.map((language) => language.tag).filter(
+    (tag) => !sameTranslationLanguage(tag, targetLanguage),
+  );
+}
