@@ -33,6 +33,13 @@ import { Button } from "./ui/button.jsx";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert.jsx";
 import { Avatar, AvatarFallback } from "./ui/avatar.jsx";
 import { Progress } from "./ui/progress.jsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select.jsx";
 import { Spinner } from "./ui/spinner.jsx";
 import { StarRating } from "./ui/star-rating.jsx";
 import {
@@ -59,12 +66,15 @@ import {
   richTextLength,
 } from "@spelling-creator/core/richText";
 import {
+  SOURCE_LANGUAGE_ERROR,
   detectLanguage,
   sameTranslationLanguage,
+  sourceLanguageChoices,
   textBlocksForTranslation,
   translateBlocks,
   translationErrorMessage,
 } from "@spelling-creator/core/browser/translator";
+import { languageForTag } from "@spelling-creator/core/translationLanguages";
 import { banName } from "@spelling-creator/core/moderation";
 
 // How deep replies are allowed to indent before they stop nesting further. Deeper
@@ -145,6 +155,20 @@ export default function CommentsSection({ lessonId, onRated }) {
   const { t, i18n } = useTranslation("lesson");
   const navigate = useNavigate();
   const { enabled: authEnabled, user, accessToken, isModerator } = useAuth();
+  // The language comments translate into, and the one language names show in.
+  const targetLanguage = i18n.resolvedLanguage || i18n.language || "en";
+  // What the source language picker offers, alphabetical by the name the
+  // reader sees rather than by tag.
+  const sourceLanguageOptions = useMemo(
+    () =>
+      sourceLanguageChoices(targetLanguage)
+        .map((tag) => ({
+          tag,
+          name: languageDisplayName(tag, targetLanguage),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, targetLanguage)),
+    [targetLanguage],
+  );
 
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -184,6 +208,10 @@ export default function CommentsSection({ lessonId, onRated }) {
   // means untranslated; a failed run toasts and removes its entry, so the
   // Translate button comes back. `progress` is the 0–1 model-download fraction,
   // 0 until a download actually starts (most translations never need one).
+  // { status: "picking", reason, previous } asks the reader for the source
+  // language, either because detection couldn't decide (reason "undetected")
+  // or because the reader says it guessed wrong ("wrong"); `previous` is the
+  // translation to restore if they cancel.
   const [translations, setTranslations] = useState(() => new Map());
   // One controller shared by every in-flight translation; leaving the lesson
   // (or the page) aborts them all rather than letting a model download run on.
@@ -413,12 +441,15 @@ export default function CommentsSection({ lessonId, onRated }) {
   // large model. Hence the progress line, and hence this only ever running
   // from a click (the built-in API also wants a user gesture for downloads).
   // See @spelling-creator/core/browser/translator.
-  const handleTranslate = async (c) => {
+  //
+  // Detection is only a guess, so `pickedLanguage` lets the reader overrule it:
+  // when it's set (from the source language picker) detection is skipped and
+  // the comment is translated from that language instead.
+  const handleTranslate = async (c, pickedLanguage = null) => {
     if (!translateAbortRef.current) {
       translateAbortRef.current = new AbortController();
     }
     const { signal } = translateAbortRef.current;
-    const targetLanguage = i18n.resolvedLanguage || i18n.language || "en";
     // Every write below is tied to this run. Editing the comment mid-run clears
     // its entry (submitEdit), and without the check a slow run would write the
     // old body's translation back over the edited comment when it finished, and
@@ -434,7 +465,11 @@ export default function CommentsSection({ lessonId, onRated }) {
         return next;
       });
     };
-    patchTranslation(c.id, { status: "translating", progress: 0, runId });
+    // A fresh entry, not a merge: re-translating a translated comment with a
+    // picked language shouldn't carry the old run's fields along.
+    setTranslations((prev) =>
+      new Map(prev).set(c.id, { status: "translating", progress: 0, runId }),
+    );
     try {
       const blocks = textBlocksForTranslation(c.body);
       // No text survived extraction (a whitespace-only body): nothing to do.
@@ -444,18 +479,28 @@ export default function CommentsSection({ lessonId, onRated }) {
       }
       // Detection may itself download a model (the fallback's detector), so it
       // reports through the same progress line as the translation download.
-      const sourceLanguage = await detectLanguage(blocks.join("\n"), {
-        signal,
-        onDownloadProgress: (loaded) => patchRun({ progress: loaded }),
-      });
+      const sourceLanguage =
+        pickedLanguage ||
+        (await detectLanguage(blocks.join("\n"), {
+          signal,
+          onDownloadProgress: (loaded) => patchRun({ progress: loaded }),
+        }));
+      if (signal.aborted) return;
+      // Detection couldn't decide: ask the reader instead of giving up.
+      if (!sourceLanguage) {
+        patchRun({ status: "picking", reason: "undetected" });
+        return;
+      }
       // Already in the reader's language: say so rather than "translating" it
-      // into itself.
-      if (
-        sourceLanguage &&
-        sameTranslationLanguage(sourceLanguage, targetLanguage)
-      ) {
+      // into itself. The guess may be wrong, so the toast offers the picker.
+      if (sameTranslationLanguage(sourceLanguage, targetLanguage)) {
         patchRun(null);
-        toast(t("comments.alreadyInYourLanguage"));
+        toast(t("comments.alreadyInYourLanguage"), {
+          action: {
+            label: t("comments.pickLanguage"),
+            onClick: () => openLanguagePicker(c.id),
+          },
+        });
         return;
       }
       const { blocks: translated } = await translateBlocks(blocks, {
@@ -475,8 +520,47 @@ export default function CommentsSection({ lessonId, onRated }) {
       patchRun(null);
       // An abort is us leaving the page, not a failure worth a toast.
       if (signal.aborted || err?.name === "AbortError") return;
-      toast(translationErrorMessage(err));
+      // A source language translation can't use may just be a bad guess, so
+      // let the reader pick the right one.
+      toast(
+        translationErrorMessage(err),
+        err?.code === SOURCE_LANGUAGE_ERROR
+          ? {
+              action: {
+                label: t("comments.pickLanguage"),
+                onClick: () => openLanguagePicker(c.id),
+              },
+            }
+          : undefined,
+      );
     }
+  };
+
+  // Show the source language picker in place of the comment's footer. A
+  // translation already on screen is kept as `previous`, so cancelling puts it
+  // back rather than throwing it away.
+  const openLanguagePicker = (id) => {
+    setTranslations((prev) => {
+      const current = prev.get(id);
+      // Never interrupt a run in flight; its own outcome decides what's next.
+      if (current?.status === "translating") return prev;
+      return new Map(prev).set(id, {
+        status: "picking",
+        reason: "wrong",
+        previous: current?.status === "done" ? current : null,
+      });
+    });
+  };
+
+  const cancelLanguagePicker = (id) => {
+    setTranslations((prev) => {
+      const current = prev.get(id);
+      if (current?.status !== "picking") return prev;
+      const next = new Map(prev);
+      if (current.previous) next.set(id, current.previous);
+      else next.delete(id);
+      return next;
+    });
   };
 
   // Render a comment and, recursively, its replies. A function (not a component)
@@ -487,6 +571,7 @@ export default function CommentsSection({ lessonId, onRated }) {
     const translation = translations.get(c.id);
     const translating = translation?.status === "translating";
     const translated = translation?.status === "done";
+    const picking = translation?.status === "picking";
     // Anyone may translate (reading is public), so this sits outside the auth
     // gate below. Hidden while a translation is in flight or on screen; the
     // footer under the translated text takes over from there.
@@ -625,7 +710,7 @@ export default function CommentsSection({ lessonId, onRated }) {
                     {t("comments.translatedFrom", {
                       language: languageDisplayName(
                         translation.sourceLanguage,
-                        i18n.resolvedLanguage || i18n.language || "en",
+                        targetLanguage,
                       ),
                     })}
                   </p>
@@ -643,6 +728,59 @@ export default function CommentsSection({ lessonId, onRated }) {
                   {translation.showOriginal
                     ? t("comments.showTranslation")
                     : t("comments.showOriginal")}
+                </Button>
+                {/* Detection is a guess; the reader can overrule it. */}
+                {!translation.showOriginal && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto min-w-0 px-1 py-0.5"
+                    onClick={() => openLanguagePicker(c.id)}
+                  >
+                    {t("comments.wrongLanguage")}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Asking the reader which language the comment is in, under the
+                original text so they can see what they're choosing for. */}
+            {picking && editing !== c.id && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {translation.reason === "undetected"
+                    ? t("comments.couldNotDetectLanguage")
+                    : t("comments.pickSourceLanguage")}
+                </p>
+                <Select
+                  value={
+                    languageForTag(translation.previous?.sourceLanguage)?.tag
+                  }
+                  onValueChange={(tag) => handleTranslate(c, tag)}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    aria-label={t("comments.sourceLanguageLabel")}
+                  >
+                    <SelectValue
+                      placeholder={t("comments.sourceLanguagePlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72">
+                    {sourceLanguageOptions.map(({ tag, name }) => (
+                      <SelectItem key={tag} value={tag}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto min-w-0 px-1 py-0.5"
+                  onClick={() => cancelLanguagePicker(c.id)}
+                >
+                  {t("comments.cancel")}
                 </Button>
               </div>
             )}

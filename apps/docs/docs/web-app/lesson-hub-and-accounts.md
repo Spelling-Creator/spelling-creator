@@ -44,7 +44,8 @@ rewrite one; see [Moderation](./moderation.md).
 language, on the reader's device: the browser's built-in Translator API where
 it exists, an in-page NLLB model everywhere else. No sign-in is needed (comments
 read publicly, so they translate publicly too), nothing is sent to a server, and
-the original is always one click away. See
+the original is always one click away. If the language guess is wrong, or there
+isn't one, the reader picks the comment's language themselves. See
 [Comment translation](./comment-translation.md).
 
 A commenter can also leave a **1-5 star rating** for the lesson (a star-rating
