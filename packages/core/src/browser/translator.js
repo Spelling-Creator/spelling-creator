@@ -1,4 +1,4 @@
-// On-device translation for comments, in two layers.
+// On-device translation for comments and lessons, in two layers.
 //
 // The first choice is the browser's built-in Translator API (with its companion
 // LanguageDetector API): Chromium-only, local, free, in the same family as the
@@ -226,7 +226,7 @@ export async function translateBlocks(blocks, options) {
   const { sourceLanguage, targetLanguage } = options;
   if (!sourceLanguage) {
     throw readerError(
-      "Couldn't tell what language this comment is in.",
+      "Couldn't tell what language this is in.",
       SOURCE_LANGUAGE_ERROR,
     );
   }
@@ -255,7 +255,7 @@ export async function translateBlocks(blocks, options) {
   }
   if (!languageForTag(sourceLanguage)) {
     throw readerError(
-      "This comment's language isn't supported for translation.",
+      "This language isn't supported for translation.",
       SOURCE_LANGUAGE_ERROR,
     );
   }
@@ -275,8 +275,8 @@ export function translationErrorMessage(error) {
     case "NetworkError":
       return "The translation model download didn't finish. Check your connection and try again.";
     case "QuotaExceededError":
-      return "This comment is too long for on-device translation.";
+      return "This text is too long for on-device translation.";
     default:
-      return "Couldn't translate this comment.";
+      return "Couldn't translate this.";
   }
 }

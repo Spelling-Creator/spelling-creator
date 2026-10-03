@@ -26,7 +26,7 @@ import PageBody from "../../components/layout/PageBody.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Spinner } from "../../components/ui/spinner.jsx";
 import LessonSummary from "../../components/LessonSummary.jsx";
-import LessonView from "../../components/LessonView.jsx";
+import TranslatableLesson from "../../components/LessonTranslation.jsx";
 import MyLessonAnswers from "../../components/MyLessonAnswers.jsx";
 import { useLesson } from "./LessonLayout.jsx";
 
@@ -56,13 +56,13 @@ export default function LessonOverview() {
             Summarizer API. */}
         <LessonSummary doc={lesson.doc} />
 
-        {/* LessonView draws the lesson in the app's theme, light or dark, the
+        {/* The lesson itself, with on-device translation wrapped around it:
+            LessonView draws the lesson in the app's theme, light or dark, the
             same way interactive mode does — the bordered frame around it makes
             it read as a document set into the page rather than as more page.
-            The printout look lives in the docx/PDF export, not here. */}
-        <div className="overflow-hidden rounded-panel border border-border bg-card">
-          <LessonView doc={lesson.doc} />
-        </div>
+            The printout look lives in the docx/PDF export, not here, and the
+            exports always use the lesson as written (see LessonTranslation). */}
+        <TranslatableLesson doc={lesson.doc} />
 
         {/* The reader's own saved run-throughs of this lesson, visible to
             nobody else — including the lesson's author. Renders nothing when

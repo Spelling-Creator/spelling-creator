@@ -99,6 +99,23 @@
     "copySummary": "Copy summary",
     "idleNotice": "The first summary downloads your browser's on-device model, which can take a while. Nothing is sent to a server."
   },
+  "lessonTranslation": {
+    "translate": "Translate",
+    "translating": "Translating on your device... {{done}} of {{total}} parts done.",
+    "cancel": "Cancel",
+    "downloadingTranslationModel": "Downloading the translation model... {{percent}}%",
+    "translatedFrom": "Translated from {{language}} on your device.",
+    "showOriginal": "Show original",
+    "showTranslation": "Show translation",
+    "wrongLanguage": "Wrong language?",
+    "alreadyInYourLanguage": "This lesson is already in your language.",
+    "pickLanguage": "Pick language",
+    "couldNotDetectLanguage": "Couldn't tell what language this lesson is in. Which is it?",
+    "pickSourceLanguage": "What language is this lesson in?",
+    "sourceLanguageLabel": "Lesson language",
+    "sourceLanguagePlaceholder": "Pick a language",
+    "keepsOriginalWords": "Spelling words and question answers stay in the lesson's own language: they are the material being spelled, so they are never translated."
+  },
   "pulls": {
     "heading": "Proposed changes",
     "status": {
