@@ -51,6 +51,7 @@ import {
 import {
   lessonLanguageSample,
   lessonTranslationBatches,
+  sameTranslationSource,
 } from "@spelling-creator/core/lessonTranslation";
 
 export default function TranslatableLesson({ doc }) {
@@ -86,6 +87,26 @@ export default function TranslatableLesson({ doc }) {
   const abortRef = useRef(null);
   // Abort any in-flight translation (and its model download) on unmount.
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // A translation only means anything over the text it was made from, because
+  // translated strings are keyed by position (lessonSegmentKey). Navigating to
+  // another lesson unmounts this component and takes its state with it, but one
+  // swap happens underneath a mounted page: LessonLayout re-fetches a
+  // server-rendered lesson quietly once a signed-in reader's token resolves, and
+  // hands down a brand-new document object holding the same lesson. So identity
+  // can't be what decides — wiping on it would throw away the translation of a
+  // reader who pressed Translate while that re-fetch was still in the air.
+  // Comparing the text keeps a translation (and a run in flight) through that
+  // swap, and drops one the document has moved out from under.
+  const sourceRef = useRef(batches);
+  useEffect(() => {
+    const previous = sourceRef.current;
+    sourceRef.current = batches;
+    if (sameTranslationSource(previous, batches)) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setState(null);
+  }, [batches]);
 
   // Translate the lesson, batch by batch. Only ever runs from a click: the
   // built-in API wants a user gesture for downloads, and the fallback's

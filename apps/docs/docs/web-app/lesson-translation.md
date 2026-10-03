@@ -70,9 +70,13 @@ LessonView.jsx                      renders doc + optional Map of translated seg
 
 1. **Segments, keyed.** `lessonTranslationBatches(doc)` walks the document and
    emits `{ key, text }` segments for everything in the "translated" column
-   above. Keys (`lessonSegmentKey`) are index-based (`s0.b2.prompt`), which is
-   safe because translation only ever runs against a published document that
-   can't change underneath it.
+   above. Keys (`lessonSegmentKey`) are index-based (`s0.b2.prompt`), so a
+   translation is only ever laid over the text it was made from: when the
+   document object changes, `sameTranslationSource` compares the segments and
+   throws the translation away if the text moved. Comparing the text rather
+   than the object is what keeps a reader's translation through the quiet
+   re-fetch the lesson page runs for a signed-in reader, which rebuilds the
+   same lesson as a new object.
 2. **Detect, or ask.** The source language comes from `detectLanguage` on the
    sample, and everything a wrong guess can cause works as it does for
    comments: an "already in your language" toast, a picker when detection

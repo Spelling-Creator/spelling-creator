@@ -33,10 +33,10 @@
 import { vaktText } from "./vakt.js";
 
 /**
- * Stable lookup keys for a lesson's translatable segments. Index-based, which
- * is safe because translation only ever runs against a published document
- * that cannot change under it; a re-render always sees the same doc the
- * segments were built from.
+ * Stable lookup keys for a lesson's translatable segments. Index-based, so a
+ * translated string only means anything while the document still says what it
+ * said when it was translated; sameTranslationSource is what holds the
+ * renderer to that.
  */
 export const lessonSegmentKey = {
   title: () => "title",
@@ -111,6 +111,32 @@ export function lessonTranslationBatches(doc) {
     if (segments.length) batches.push(segments);
   });
   return batches;
+}
+
+/**
+ * Do two batch lists describe the same text, segment for segment?
+ *
+ * Translated strings are keyed by position, so one must never outlive the text
+ * it was made from. Object identity can't decide that on its own: the lesson
+ * page re-fetches a server-rendered lesson quietly once a signed-in reader's
+ * token resolves, which hands the renderer a brand-new document object holding
+ * the same lesson. Comparing the segments keeps a reader's translation through
+ * that swap, and drops one that would otherwise be laid over text it doesn't
+ * describe.
+ *
+ * @param {{key: string, text: string}[][]} a  From lessonTranslationBatches().
+ * @param {{key: string, text: string}[][]} b
+ * @returns {boolean}
+ */
+export function sameTranslationSource(a, b) {
+  if (a === b) return true;
+  const left = (a || []).flat();
+  const right = (b || []).flat();
+  if (left.length !== right.length) return false;
+  return left.every(
+    (segment, i) =>
+      segment.key === right[i].key && segment.text === right[i].text,
+  );
 }
 
 /**

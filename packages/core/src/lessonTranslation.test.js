@@ -9,6 +9,7 @@ import {
   lessonSegmentKey,
   lessonTranslationBatches,
   questionStepsWithText,
+  sameTranslationSource,
 } from "./lessonTranslation.js";
 
 const doc = {
@@ -121,6 +122,51 @@ describe("lessonSegmentKey", () => {
       lessonSegmentKey.vakt(0, 1),
     ];
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe("sameTranslationSource", () => {
+  it("holds across a re-fetch that rebuilds the same lesson", () => {
+    // What the lesson page does for a signed-in reader: the same lesson comes
+    // back as a brand-new object, so a reader's translation must survive it.
+    const refetched = JSON.parse(JSON.stringify(doc));
+    expect(
+      sameTranslationSource(
+        lessonTranslationBatches(doc),
+        lessonTranslationBatches(refetched),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects text that changed under the same keys", () => {
+    const edited = JSON.parse(JSON.stringify(doc));
+    edited.sections[0].blocks[0].text = "Magma rises.\n\nIt cools into glass.";
+    expect(
+      sameTranslationSource(
+        lessonTranslationBatches(doc),
+        lessonTranslationBatches(edited),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects a document with segments added or removed", () => {
+    const shorter = JSON.parse(JSON.stringify(doc));
+    // The VAKT section, the one whose removal actually drops a segment: the
+    // last section is blank and never contributed one.
+    shorter.sections.splice(1, 1);
+    expect(
+      sameTranslationSource(
+        lessonTranslationBatches(doc),
+        lessonTranslationBatches(shorter),
+      ),
+    ).toBe(false);
+  });
+
+  it("treats the same array, and two empty ones, as unchanged", () => {
+    const batches = lessonTranslationBatches(doc);
+    expect(sameTranslationSource(batches, batches)).toBe(true);
+    expect(sameTranslationSource([], [])).toBe(true);
+    expect(sameTranslationSource(null, [])).toBe(true);
   });
 });
 
