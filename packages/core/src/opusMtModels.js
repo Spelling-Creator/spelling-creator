@@ -16,14 +16,27 @@
 // onnx/decoder_model_merged_quantized.onnx, tokenizer.json, config.json).
 // The Xenova org carries all of these pairs with proper q8 files at roughly
 // half the size of the onnx-community conversions, several of which ship no
-// quantised files at all. Adding a pair means verifying those files first.
+// quantised files at all.
+//
+// Files existing is not enough, though. The hub conversions approximate
+// Marian's SentencePiece tokenizer with a tokenizer.json whose scores don't
+// always reproduce the original segmentation (transformers.js warns as much
+// when it loads one), and a Marian model fed a segmentation it never saw in
+// training can output anything at all. Danish was the worst case: the
+// converted tokenizer split "prinsessen" differently from the model's own
+// source.spm, and the model answered with chained profanity and repetition
+// loops where the upstream Helsinki-NLP checkpoint translates the same
+// sentences cleanly. Czech and Dutch failed the same comparison on core
+// vocabulary (both orgs' conversions share the defect, so there is no better
+// id to swap in), which is why da, cs and nl are absent below and ride NLLB
+// instead. So adding a pair means verifying the files exist AND comparing the
+// converted tokenizer's ids against the Python MarianTokenizer on a few
+// sentences, then spot-checking translations against the upstream model.
 
 import { languageForTag } from "./translationLanguages.js";
 
 export const OPUS_MT_TO_ENGLISH = {
   ar: "Xenova/opus-mt-ar-en",
-  cs: "Xenova/opus-mt-cs-en",
-  da: "Xenova/opus-mt-da-en",
   de: "Xenova/opus-mt-de-en",
   es: "Xenova/opus-mt-es-en",
   fi: "Xenova/opus-mt-fi-en",
@@ -34,7 +47,6 @@ export const OPUS_MT_TO_ENGLISH = {
   it: "Xenova/opus-mt-it-en",
   ja: "Xenova/opus-mt-ja-en",
   ko: "Xenova/opus-mt-ko-en",
-  nl: "Xenova/opus-mt-nl-en",
   pl: "Xenova/opus-mt-pl-en",
   ru: "Xenova/opus-mt-ru-en",
   sv: "Xenova/opus-mt-sv-en",

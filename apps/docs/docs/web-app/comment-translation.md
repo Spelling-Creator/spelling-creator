@@ -29,7 +29,7 @@ engines:
    A progress bar under the comment shows the download. Which model depends on
    the pair:
    - **Translating into English** from a language with a verified
-     [Opus-MT](https://huggingface.co/Xenova/opus-mt-de-en) conversion (22 of
+     [Opus-MT](https://huggingface.co/Xenova/opus-mt-de-en) conversion (19 of
      them, listed in `core/opusMtModels.js`): that pair's own small model, a
      **~110-140 MB** download.
    - **Everything else**:
@@ -118,9 +118,17 @@ tag to model id, into English only, keyed by the main table's canonical tags
 model was trained mostly on Simplified text, so `zh-Hant` stays on NLLB,
 which models it in its own right). Every id in it was verified to carry the
 exact files transformers.js fetches at the `q8` dtype; several hub
-conversions ship without them, so adding a pair means checking the files
-exist first, as the module comment describes. `opusMtModels.test.js` keeps
-the two tables consistent.
+conversions ship without them. That check alone turned out not to be enough:
+the hub conversions approximate Marian's SentencePiece tokenizer, and where
+the approximation segments words differently from the model's own
+`source.spm`, the model can answer with outright garbage. Danish, Czech and
+Dutch all failed that way (Danish worst, turning a children's fairy tale
+profane), so those three stay on NLLB even though their conversions exist.
+Adding a pair therefore means checking the files exist AND comparing the
+converted tokenizer's output against the Python `MarianTokenizer`, then
+spot-checking translations against the upstream model, as the module comment
+describes. `opusMtModels.test.js` keeps the two tables consistent and pins
+the excluded pairs.
 
 A language is only a possible _source_ when a detector can name it: the
 browser's LanguageDetector covers the whole table, while the fallback detector

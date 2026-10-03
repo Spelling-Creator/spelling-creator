@@ -49,4 +49,14 @@ describe("opusMtModelFor", () => {
     expect(opusMtModelFor("el", "en")).toBeNull();
     expect(opusMtModelFor("tlh", "en")).toBeNull();
   });
+
+  it("keeps Danish, Czech and Dutch on NLLB", () => {
+    // Their hub conversions mis-tokenize core vocabulary against the model's
+    // own SentencePiece segmentation, and the models answer the unfamiliar
+    // segmentations with garbage (Danish famously with profanity). See the
+    // module comment; don't re-add a pair without re-running that comparison.
+    expect(opusMtModelFor("da", "en")).toBeNull();
+    expect(opusMtModelFor("cs", "en")).toBeNull();
+    expect(opusMtModelFor("nl", "en")).toBeNull();
+  });
 });
