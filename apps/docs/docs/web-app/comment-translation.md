@@ -13,7 +13,8 @@ it came from and a **Show original** toggle, so the real comment is never more
 than a click away.
 
 Like [lesson summaries](./lesson-summaries.md), this runs on browser-local
-models. Unlike summaries, it doesn't hide when the browser can't do it (not
+models. The same engines also translate the lesson itself; what differs there
+is covered in [Lesson translation](./lesson-translation.md). Unlike summaries, it doesn't hide when the browser can't do it (not
 being able to read a comment at all is worth a heavier fallback), so it has two
 engines:
 

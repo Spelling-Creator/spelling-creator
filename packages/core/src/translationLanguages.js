@@ -109,3 +109,23 @@ export function sourceLanguageChoices(targetLanguage) {
     (tag) => !sameTranslationLanguage(tag, targetLanguage),
   );
 }
+
+/**
+ * "es" as "Spanish", named in the reader's own language. Intl carries the
+ * names, so no locale file is involved; the bare tag is the fallback when
+ * Intl doesn't know the tag or the platform lacks DisplayNames.
+ *
+ * @param {string} tag  BCP-47, the language to name.
+ * @param {string} displayLanguage  BCP-47, the language to name it in.
+ * @returns {string}
+ */
+export function languageDisplayName(tag, displayLanguage) {
+  try {
+    return (
+      new Intl.DisplayNames([displayLanguage], { type: "language" }).of(tag) ||
+      tag
+    );
+  } catch {
+    return tag;
+  }
+}

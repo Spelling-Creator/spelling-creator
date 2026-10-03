@@ -75,7 +75,10 @@ import {
   translateBlocks,
   translationErrorMessage,
 } from "@spelling-creator/core/browser/translator";
-import { languageForTag } from "@spelling-creator/core/translationLanguages";
+import {
+  languageDisplayName,
+  languageForTag,
+} from "@spelling-creator/core/translationLanguages";
 import { banName } from "@spelling-creator/core/moderation";
 
 // How deep replies are allowed to indent before they stop nesting further. Deeper
@@ -104,19 +107,6 @@ function initial(name) {
 // Whether a rich-text draft can be submitted: it must say something, and must fit.
 function isSubmittable(html) {
   return !isRichTextEmpty(html) && richTextLength(html) <= COMMENT_MAX;
-}
-
-// "es" as "Spanish", named in the reader's own language. Intl carries the
-// names, so nothing here needs a locale file; the bare tag is the fallback.
-function languageDisplayName(tag, displayLanguage) {
-  try {
-    return (
-      new Intl.DisplayNames([displayLanguage], { type: "language" }).of(tag) ||
-      tag
-    );
-  } catch {
-    return tag;
-  }
 }
 
 // A dismissible post/reply/edit notice. `severity: "warning"` is an expected,

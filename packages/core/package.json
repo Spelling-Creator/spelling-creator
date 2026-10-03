@@ -50,6 +50,7 @@
     "./lessonLayout": "./src/lessonLayout.js",
     "./lessonResponses": "./src/lessonResponses.js",
     "./lessonSearch": "./src/lessonSearch.js",
+    "./lessonTranslation": "./src/lessonTranslation.js",
     "./lessons": "./src/lessons.js",
     "./mcpOAuth": "./src/mcpOAuth.js",
     "./moderation": "./src/moderation.js",

@@ -28,6 +28,10 @@ import {
   questionMeta,
 } from "@spelling-creator/core/questions";
 import {
+  lessonSegmentKey,
+  questionStepsWithText,
+} from "@spelling-creator/core/lessonTranslation";
+import {
   SPELLING_COLOR,
   SPELLING_WORD_SEPARATOR,
 } from "@spelling-creator/core/spelling";
@@ -114,10 +118,15 @@ const LESSON_STYLES = `
 `;
 
 // Render a text block: each newline becomes its own paragraph, matching how the
-// docx export splits lines into separate paragraphs.
-function TextBlock({ block }) {
+// docx export splits lines into separate paragraphs. Each line is also one
+// translation segment, so a translated line swaps in at the same index.
+function TextBlock({ block, si, bi, translation }) {
   const lines = (block.text || "").split("\n");
-  return lines.map((line, i) => <p key={i}>{line || " "}</p>);
+  return lines.map((line, i) => (
+    <p key={i}>
+      {translation?.get(lessonSegmentKey.textLine(si, bi, i)) ?? (line || " ")}
+    </p>
+  ));
 }
 
 // The figure margins that place the image left / center / right — the same rule
@@ -177,11 +186,14 @@ function ImageBlock({ block }) {
 // A question reads the way it prints: the prompt in the colour of its type, then
 // its answer in the body colour on the same line. Nothing is labelled — the
 // colour is what marks the type — so this matches the exported lesson exactly.
-function QuestionBlock({ block }) {
+// Translation swaps the prompt and steps only: the answer is what the speller
+// spells out, so it stays in the lesson's own language on purpose (see
+// @spelling-creator/core/lessonTranslation).
+function QuestionBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
   const meta = questionMeta(block.questionType);
   const answer = questionAnswerText(block);
-  const steps = (block.steps || []).filter((s) => (s.text || "").trim());
+  const steps = questionStepsWithText(block);
 
   return (
     <>
@@ -195,14 +207,16 @@ function QuestionBlock({ block }) {
             fontStyle: meta.italic ? "italic" : undefined,
           }}
         >
-          {block.prompt || t("lessonView.noQuestionText")}
+          {translation?.get(lessonSegmentKey.prompt(si, bi)) ??
+            (block.prompt || t("lessonView.noQuestionText"))}
         </span>
         {answer ? `${ANSWER_GAP}${answer}` : null}
       </p>
 
       {steps.map((step, i) => (
         <p key={step.id} style={{ marginLeft: "24px" }}>
-          {i + 1}. {step.text}
+          {i + 1}.{" "}
+          {translation?.get(lessonSegmentKey.step(si, bi, i)) ?? step.text}
         </p>
       ))}
     </>
@@ -234,9 +248,12 @@ function SpellingBlock({ block }) {
 // not just the label, since a regulation break is an instruction to whoever is
 // running the lesson rather than one more prompt in the colour-coded run — then
 // its picture and its links underneath. This matches what the export prints.
-function VaktBlock({ block }) {
+// Translation swaps the activity text; link labels name external resources and
+// stay as written (see @spelling-creator/core/lessonTranslation).
+function VaktBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
-  const text = vaktText(block);
+  const text =
+    translation?.get(lessonSegmentKey.vakt(si, bi)) ?? vaktText(block);
   const links = vaktLinks(block);
   const hasImage = Boolean(block.image || block.src);
 
@@ -273,25 +290,45 @@ function VaktBlock({ block }) {
   );
 }
 
-function Block({ block }) {
-  if (block.type === "text") return <TextBlock block={block} />;
+// `si`/`bi` are the section and block indexes, which is how translated text is
+// keyed (lessonSegmentKey); image captions and spelling words never translate,
+// so those two blocks don't take the map at all.
+function Block({ block, si, bi, translation }) {
+  if (block.type === "text")
+    return (
+      <TextBlock block={block} si={si} bi={bi} translation={translation} />
+    );
   if (block.type === "image" && (block.image || block.src))
     return <ImageBlock block={block} />;
-  if (block.type === "question") return <QuestionBlock block={block} />;
+  if (block.type === "question")
+    return (
+      <QuestionBlock block={block} si={si} bi={bi} translation={translation} />
+    );
   if (block.type === "spelling") return <SpellingBlock block={block} />;
-  if (block.type === "vakt") return <VaktBlock block={block} />;
+  if (block.type === "vakt")
+    return (
+      <VaktBlock block={block} si={si} bi={bi} translation={translation} />
+    );
   return null;
 }
 
 // Render a whole lesson document read-only. `doc` is the lesson body:
-// { title, sections: [{ name, blocks: [...] }] }.
-export default function LessonView({ doc }) {
+// { title, sections: [{ name, blocks: [...] }] }. `translation`, when given,
+// is a Map from lessonSegmentKey keys to translated strings (built by
+// LessonTranslation on the public lesson page); any segment it covers renders
+// translated, anything else renders as written, which is what lets a partial
+// map show the lesson translating top-down while later sections are still
+// being worked on.
+export default function LessonView({ doc, translation }) {
   const { t } = useTranslation("lesson");
   const sections = doc?.sections || [];
   return (
     <div className="s2c-lesson-root p-4 text-foreground sm:p-6">
       <style>{LESSON_STYLES}</style>
-      <h1>{doc?.title || t("lessonView.untitledLesson")}</h1>
+      <h1>
+        {translation?.get(lessonSegmentKey.title()) ??
+          (doc?.title || t("lessonView.untitledLesson"))}
+      </h1>
       {sections.map((section, si) => (
         // data-section-id and scroll-mt are the same anchor contract SectionCard
         // publishes in the editor, so the section outline can scroll to a
@@ -308,7 +345,13 @@ export default function LessonView({ doc }) {
           className="scroll-mt-(--header-h)"
         >
           {(section.blocks || []).map((block, bi) => (
-            <Block key={block.id || bi} block={block} />
+            <Block
+              key={block.id || bi}
+              block={block}
+              si={si}
+              bi={bi}
+              translation={translation}
+            />
           ))}
         </section>
       ))}
