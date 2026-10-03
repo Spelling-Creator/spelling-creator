@@ -40,9 +40,11 @@ there the browser refuses to run it unless the machine clears a hardware bar
 for the one-time download). Firefox and Safari don't ship it at all. The Gemma
 fallback applies an equivalent bar of its own, so a device is never offered a
 3 GB model it can't run or shouldn't fetch: **WebGPU with f16 shader support**,
-adapter buffer limits large enough to hold the quantised weights (which rules
-out phones and most integrated GPUs, not just pre-WebGPU hardware), and, where
-the browser can tell (the Network Information API), not a metered connection.
+adapter buffer limits of at least 1 GiB (enough to turn away phone-class
+adapters, and deliberately no higher: desktop browsers cap the limits they
+report a few bytes short of 2 GiB however capable the GPU, so a bigger bar
+would shut out the very browsers the fallback exists for), and, where the
+browser can tell (the Network Information API), not a metered connection.
 
 So the card is **capability-gated**: on mount it probes
 `summarizerAvailability()`, which asks the built-in API first and, when that
@@ -219,7 +221,7 @@ an unmetered connection:
 ```js
 const adapter = await navigator.gpu?.requestAdapter();
 adapter?.features.has("shader-f16") &&
-  adapter.limits.maxBufferSize >= 2 * 1024 ** 3 &&
+  adapter.limits.maxBufferSize >= 1024 ** 3 &&
   adapter.limits.maxStorageBufferBindingSize >= 1024 ** 3;
 ```
 
@@ -249,7 +251,8 @@ window.Summarizer = {
 
 The Gemma path can be exercised the same way without the 3 GB download: stub
 `navigator.gpu` so the probe says yes (an object whose `requestAdapter()`
-resolves to `{ features: new Set(["shader-f16"]), limits: { maxBufferSize: 2 ** 31, maxStorageBufferBindingSize: 2 ** 30 } }`), make sure
+resolves to `{ features: new Set(["shader-f16"]), limits: { maxBufferSize: 2147483644, maxStorageBufferBindingSize: 2147483644 } }`,
+the limits real desktop browsers report), make sure
 `window.Summarizer` is absent, and serve a stub module in place of
 `fallbackSummarizer.js` with your browser driver's network mocking (it only
 needs `createFallbackSummarizer` returning the session shape above plus

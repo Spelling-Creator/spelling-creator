@@ -91,13 +91,19 @@ function loadFallback() {
   return fallbackPromise;
 }
 
-// The hardware bar for the Gemma fallback's GPU adapter. The q4f16 weights
-// load as a handful of large GPU buffers, the biggest on the order of 2 GB;
-// an adapter that can't allocate and bind buffers of that size (most phones,
-// older integrated GPUs) would download all 3 GB only to fail, or crash the
-// tab, at load time. Checked on the adapter's limits, which report what the
-// hardware CAN raise them to, not the small WebGPU defaults.
-const FALLBACK_MIN_BUFFER_BYTES = 2 * 1024 ** 3;
+// The hardware bar for the Gemma fallback's GPU adapter, there to turn away
+// phone-class adapters that would download all 3 GB only to fail, or crash
+// the tab, loading the weights. Checked on the adapter's limits, which
+// report what the hardware CAN raise them to, not the small WebGPU defaults.
+//
+// 1 GiB, and not more: desktop browsers cap both limits a few bytes short
+// of 2 GiB however capable the hardware (Firefox and Safari both report
+// 2147483644 on machines that run the model fine), so any higher bar would
+// shut out the browsers this fallback exists for. A naive 2 GiB reading of
+// the model size did exactly that, by 4 bytes. Phone-class adapters sit far
+// below this line (storage bindings of 128 or 256 MiB are typical), which
+// is the distinction the bar is drawing.
+const FALLBACK_MIN_BUFFER_BYTES = 1024 ** 3;
 const FALLBACK_MIN_STORAGE_BINDING_BYTES = 1024 ** 3;
 
 // Chromium's Network Information API, absent elsewhere; where it's missing we
