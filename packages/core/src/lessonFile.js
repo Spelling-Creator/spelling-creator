@@ -11,6 +11,10 @@ export const LESSON_FILE_VERSION = 1;
 
 /**
  * Wrap a doc in the importable lesson-file envelope.
+ *
+ * Only the lesson itself goes in the file. `trustedCollaborators` is left out
+ * on purpose: it is a list of email addresses, and a file is something people
+ * hand to each other.
  * @param {object} doc
  * @returns {{format: string, version: number, doc: object}}
  */
@@ -18,7 +22,11 @@ export function buildLessonFile(doc) {
   return {
     format: LESSON_FILE_FORMAT,
     version: LESSON_FILE_VERSION,
-    doc: { title: doc.title, sections: doc.sections },
+    doc: {
+      title: doc.title,
+      ...(doc.ageRange ? { ageRange: doc.ageRange } : {}),
+      sections: doc.sections,
+    },
   };
 }
 

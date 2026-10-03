@@ -5,6 +5,7 @@
 // doc, ensure every section/block/word/answer has a stable id, drop anything we
 // don't recognise, and reject files that aren't structured as a lesson.
 
+import { AGE_RANGES } from "./ageRanges.js";
 import { newId } from "./id.js";
 import { QUESTION_TYPES } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
@@ -29,8 +30,8 @@ export class JsonImportError extends Error {
 const QUESTION_KEYS = new Set(Object.keys(QUESTION_TYPES));
 
 // Read a .json File and rebuild a lesson document ready for the editor. Resolves
-// to { title, sections }; rejects (JsonImportError) when the file isn't a usable
-// lesson.
+// to { title, ageRange?, sections }; rejects (JsonImportError) when the file
+// isn't a usable lesson.
 export async function importJsonFile(file) {
   if (!file) throw new JsonImportError("No file was selected.");
   if (!/\.json$/i.test(file.name || "")) {
@@ -101,7 +102,16 @@ function normalizeDoc(docLike) {
       ? docLike.title
       : "Imported lesson";
 
-  return { title, sections };
+  // Only a range the editor offers survives. Anything else would leave the age
+  // picker showing a value it has no option for, so it reads as "any age".
+  const ageRange =
+    typeof docLike.ageRange === "string" ? docLike.ageRange.trim() : "";
+
+  return {
+    title,
+    ...(AGE_RANGES.includes(ageRange) ? { ageRange } : {}),
+    sections,
+  };
 }
 
 function normalizeSection(section) {

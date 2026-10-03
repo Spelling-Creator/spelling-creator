@@ -70,7 +70,11 @@ That is also how **import** recovers a question's type now that nothing in the
 visible text names it: `docxImport` asks mammoth for the same style map and reads
 the type off the `<span class="s2c-q-…">`. Section _divisions_ have nothing left
 to carry them, so a DOCX round trip collapses a lesson into a single section;
-Export/Import **JSON** is the lossless one.
+Export/Import **JSON** is the lossless one. It carries the title, the age range
+and every section. The one thing it leaves out on purpose is the lesson's
+trusted-collaborator list, because that is a list of email addresses and a
+lesson file is something people pass around. On import, an age range the editor
+doesn't offer is dropped and the lesson reads as "any age".
 
 The page number and the footer are drawn straight onto the finished PDF pages
 with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,
