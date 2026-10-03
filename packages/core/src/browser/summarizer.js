@@ -1,18 +1,27 @@
-// On-device lesson summaries via the browser's Summarizer API.
+// On-device lesson summaries, in two layers (the same shape as translator.js).
 //
 // Unlike the other AI helpers in this app (aiSuggest.js), nothing here talks to
-// the Worker: no Turnstile, no API key, no network round-trip. The browser runs a
-// local model, so a summary costs us nothing and the lesson text never leaves the
-// machine. The trade-off is that the API barely exists yet — it's Chromium-only,
-// desktop-only, and gated behind hardware minimums (free disk space, VRAM, an
-// unmetered connection for the one-time model download). Most visitors can't use
-// it, and the ones who can may need to download the model first.
+// the Worker: no Turnstile, no API key, no network round-trip. A local model
+// runs on the reader's device, so a summary costs us nothing and the lesson
+// text never leaves the machine.
 //
-// So every entry point here FAILS CLOSED: if the API is missing, the options
-// aren't supported, or the availability probe itself throws, we report
-// "unavailable" rather than surfacing an error. The UI (LessonSummary.jsx) then
-// renders nothing at all, and a browser without the API simply never sees the
-// feature instead of seeing a button that breaks.
+// The first choice is the browser's built-in Summarizer API. The trade-off is
+// that the API barely exists yet: it's Chromium-only, desktop-only, and gated
+// behind hardware minimums (free disk space, VRAM, an unmetered connection for
+// the one-time model download). For everyone else there is a second layer:
+// Gemma 4 running in the page with transformers.js (fallbackSummarizer.js),
+// offered only on hardware whose WebGPU can run it, because its one-time model
+// download is about 3 GB. The fallback is reached ONLY through a dynamic
+// import() from inside a click handler, and nothing here may static-import it.
+// That keeps transformers.js out of every bundle a visitor loads to read a
+// lesson, and out of the Worker's server build entirely (vite.config.js stubs
+// the chunk out of the SSR graph).
+//
+// With neither engine possible, every entry point here still FAILS CLOSED: we
+// report "unavailable" rather than surfacing an error. The UI
+// (LessonSummary.jsx) then renders nothing at all, and a browser that can't
+// summarise simply never sees the feature instead of seeing a button that
+// breaks.
 //
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
@@ -41,7 +50,9 @@ export const DEFAULT_SUMMARY_TYPE = "key-points";
 export const DEFAULT_SUMMARY_LENGTH = "short";
 
 // Steers the model: without it, a lesson full of question prompts and word lists
-// reads like a worksheet to summarise rather than a lesson to describe.
+// reads like a worksheet to summarise rather than a lesson to describe. The
+// fallback engine bakes the same instruction into its prompt
+// (fallbackSummarizer.js), so both engines summarise for the same reader.
 const SHARED_CONTEXT =
   "A spelling and literacy lesson written by a teacher, containing lesson text, " +
   "practice questions and spelling word lists. Summarise it for another teacher " +
@@ -64,6 +75,72 @@ export function summarizerSupported() {
   return Boolean(summarizerApi());
 }
 
+// The fallback chunk, fetched once on first use. Only a successful load is
+// memoised: caching a rejected promise would turn one flaky network moment
+// into "summaries are broken until you reload" (same reasoning as
+// translator.js).
+let fallbackPromise = null;
+
+function loadFallback() {
+  if (!fallbackPromise) {
+    fallbackPromise = import("./fallbackSummarizer.js").catch((err) => {
+      fallbackPromise = null;
+      throw err;
+    });
+  }
+  return fallbackPromise;
+}
+
+// The hardware bar for the Gemma fallback's GPU adapter. The q4f16 weights
+// load as a handful of large GPU buffers, the biggest on the order of 2 GB;
+// an adapter that can't allocate and bind buffers of that size (most phones,
+// older integrated GPUs) would download all 3 GB only to fail, or crash the
+// tab, at load time. Checked on the adapter's limits, which report what the
+// hardware CAN raise them to, not the small WebGPU defaults.
+const FALLBACK_MIN_BUFFER_BYTES = 2 * 1024 ** 3;
+const FALLBACK_MIN_STORAGE_BINDING_BYTES = 1024 ** 3;
+
+// Chromium's Network Information API, absent elsewhere; where it's missing we
+// assume the connection is fine rather than hiding the feature from every
+// non-Chromium browser. The built-in API refuses its (much smaller) download
+// on a metered connection, so a 3 GB one should show at least the same
+// manners rather than burning through someone's cellular data.
+function meteredConnection() {
+  const connection = globalThis.navigator?.connection;
+  if (!connection) return false;
+  return Boolean(connection.saveData) || connection.type === "cellular";
+}
+
+// Can this machine run the Gemma fallback? The built-in engine's hardware bar
+// (disk, VRAM, an unmetered connection) is applied by the browser; this probe
+// is the fallback's equivalent, so a device is never offered a 3 GB model it
+// can't run or shouldn't fetch. It needs WebGPU with f16 shader support (the
+// quantisation fallbackSummarizer.js loads is q4f16) on an adapter whose
+// limits can hold the weights. The probe is cheap and answerable without
+// loading the heavy chunk, and the adapter part is memoised because
+// requestAdapter() is async and that answer never changes within a page; the
+// connection check stays outside the memo because tethering can start
+// mid-visit. Fails closed, like the built-in probe above.
+let webGpuProbe = null;
+
+function fallbackPossible() {
+  if (!globalThis.navigator?.gpu) return Promise.resolve(false);
+  if (meteredConnection()) return Promise.resolve(false);
+  if (!webGpuProbe) {
+    webGpuProbe = navigator.gpu
+      .requestAdapter()
+      .then(
+        (adapter) =>
+          Boolean(adapter?.features?.has("shader-f16")) &&
+          adapter.limits.maxBufferSize >= FALLBACK_MIN_BUFFER_BYTES &&
+          adapter.limits.maxStorageBufferBindingSize >=
+            FALLBACK_MIN_STORAGE_BINDING_BYTES,
+      )
+      .catch(() => false);
+  }
+  return webGpuProbe;
+}
+
 // The options passed to both availability() and create(). We deliberately leave
 // the language options (expectedInputLanguages / outputLanguage) unset: naming a
 // language the local model doesn't have makes create() throw NotSupportedError,
@@ -78,17 +155,10 @@ function summarizerOptions({ type, length }) {
   };
 }
 
-/**
- * Can this browser summarise with these options, and is the model ready?
- *
- * @param {{type?: string, length?: string}} [options]
- * @returns {Promise<"available"|"downloadable"|"downloading"|"unavailable">}
- *   "available"   — ready to run now.
- *   "downloadable"— supported, but the first run downloads the model.
- *   "downloading" — supported, and a download is already in flight.
- *   "unavailable" — no API, unsupported options, or hardware below the minimums.
- */
-export async function summarizerAvailability(options = {}) {
+// What the built-in API says about these options, failing closed: a missing
+// API, unsupported options or a probe that throws all collapse to
+// "unavailable", which hands the decision to the fallback probe.
+async function builtInAvailability(options) {
   const api = summarizerApi();
   if (!api) return "unavailable";
   try {
@@ -96,41 +166,107 @@ export async function summarizerAvailability(options = {}) {
       (await api.availability(summarizerOptions(options))) || "unavailable"
     );
   } catch {
-    // A probe that throws means we can't use it — same outcome as "no".
     return "unavailable";
   }
 }
 
 /**
- * Create a Summarizer session.
+ * Can this device summarise with these options, with which engine, and is the
+ * model ready?
  *
- * Must be called from a user gesture (a click): the spec requires transient
- * activation, so this can't be kicked off from an effect on page load.
+ * @param {{type?: string, length?: string}} [options]
+ * @returns {Promise<{availability: string, engine: "browser"|"gemma"|null}>}
+ *   availability is one of:
+ *   "available":    ready to run now.
+ *   "downloadable": supported, but the first run downloads the model.
+ *   "downloading":  supported, and a download is already in flight.
+ *   "unavailable":  neither engine can run here.
+ *   engine is "browser" for the built-in Summarizer API, "gemma" for the
+ *   transformers.js fallback, null when unavailable. The fallback always
+ *   reports "downloadable": the first run's 3 GB download is the state worth
+ *   warning about, and we can't cheaply tell whether the browser still has it
+ *   cached (a cached model just makes that phase instant).
+ */
+export async function summarizerAvailability(options = {}) {
+  const builtIn = await builtInAvailability(options);
+  if (builtIn !== "unavailable") {
+    return { availability: builtIn, engine: "browser" };
+  }
+  if (await fallbackPossible()) {
+    return { availability: "downloadable", engine: "gemma" };
+  }
+  return { availability: "unavailable", engine: null };
+}
+
+/**
+ * Create a summariser session: the browser's built-in Summarizer when it can
+ * take these options, otherwise Gemma 4 in the page via the fallback chunk.
+ *
+ * Must be called from a user gesture (a click): the built-in API requires
+ * transient activation, and the fallback's download is far too heavy to start
+ * uninvited.
  *
  * @param {{type?: string, length?: string}} options
  * @param {object} [hooks]
- * @param {AbortSignal} [hooks.signal]  Aborts creation (and any model download).
- * @param {(loaded: number) => void} [hooks.onDownloadProgress]  Download fraction, 0–1.
- * @returns {Promise<object>} The Summarizer session. Call `.destroy()` when done.
+ * @param {AbortSignal} [hooks.signal]  Aborts creation. The built-in engine
+ *   also aborts its model download; the fallback's download can't be
+ *   interrupted once it has started, so there the signal is checked before
+ *   the download begins (an aborted run never starts a 3 GB fetch) and again
+ *   when it ends.
+ * @param {(loaded: number) => void} [hooks.onDownloadProgress]  Download fraction, 0-1.
+ * @param {(engine: "browser"|"gemma") => void} [hooks.onEngine]  Called with
+ *   the engine actually being opened, before that engine does any heavy
+ *   work. The built-in engine can pass the availability probe and still
+ *   refuse create(), in which case this fires again with "gemma" BEFORE the
+ *   fallback's 3 GB download starts: the caller's chance to switch its
+ *   wording, or to abort and wait for an informed click (what
+ *   LessonSummary.jsx does when the reader was never warned about the
+ *   download).
+ * @returns {Promise<object>} The session. Call `.destroy()` when done. A
+ *   fallback session carries `engine: "gemma"`; a built-in one has no engine
+ *   property.
  */
 export async function createSummarizer(options = {}, hooks = {}) {
-  const api = summarizerApi();
-  if (!api) throw new Error("This browser can't summarise on-device.");
-
-  return api.create({
-    ...summarizerOptions(options),
-    signal: hooks.signal,
-    monitor(monitor) {
-      monitor.addEventListener("downloadprogress", (event) => {
-        hooks.onDownloadProgress?.(event.loaded);
+  if ((await builtInAvailability(options)) !== "unavailable") {
+    hooks.onEngine?.("browser");
+    try {
+      return await summarizerApi().create({
+        ...summarizerOptions(options),
+        signal: hooks.signal,
+        monitor(monitor) {
+          monitor.addEventListener("downloadprogress", (event) => {
+            hooks.onDownloadProgress?.(event.loaded);
+          });
+        },
       });
-    },
-  });
+    } catch (err) {
+      if (err?.name === "AbortError") throw err;
+      // The probe said yes but create() said no (a download that failed, an
+      // option combination the model turned down): the fallback gets its
+      // chance below, if this machine can run it.
+      if (!(await fallbackPossible())) throw err;
+    }
+  }
+
+  if (!(await fallbackPossible())) {
+    throw new Error("This browser can't summarise on-device.");
+  }
+  // The engine is decided now: say so before any heavy work, so the caller
+  // can re-warn (or abort, which the next check honours) ahead of the
+  // fallback's download rather than find out when the session arrives.
+  hooks.onEngine?.("gemma");
+  if (hooks.signal?.aborted) {
+    throw new DOMException("Summary aborted.", "AbortError");
+  }
+  const fallback = await loadFallback();
+  return fallback.createFallbackSummarizer(options, hooks);
 }
 
 /**
  * Stream a summary of `text`, yielding each chunk as the model produces it, so
  * the UI can render the summary as it's written instead of after it's finished.
+ * Works on either engine's session: the built-in API returns a ReadableStream
+ * and the fallback an async generator, and both are async iterables.
  *
  * @param {object} summarizer  A session from createSummarizer().
  * @param {string} text

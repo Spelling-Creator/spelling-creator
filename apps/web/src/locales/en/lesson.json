@@ -92,12 +92,15 @@
     "regenerate": "Regenerate",
     "summarise": "Summarise",
     "downloadingModel": "Downloading the on-device model (one time)... {{percent}}%",
+    "downloadingModelGemma": "Downloading the Gemma model (one time, about 3 GB)... {{percent}}%",
     "truncatedNotice": "Summarised the first part of this lesson (it's too long for the on-device model). AI summaries can be wrong.",
     "generatedNotice": "Generated on your device by your browser's built-in AI, and it can be wrong. Read the lesson before using it.",
+    "generatedNoticeGemma": "Generated on your device by an open AI model (Gemma) running in your browser, and it can be wrong. Read the lesson before using it.",
     "copySummaryAriaLabel": "copy summary",
     "copied": "Copied",
     "copySummary": "Copy summary",
-    "idleNotice": "The first summary downloads your browser's on-device model, which can take a while. Nothing is sent to a server."
+    "idleNotice": "The first summary downloads your browser's on-device model, which can take a while. Nothing is sent to a server.",
+    "idleNoticeGemma": "The first summary downloads an open AI model (Gemma, about 3 GB) to run in your browser, which can take a while. Nothing is sent to a server."
   },
   "lessonTranslation": {
     "translate": "Translate",

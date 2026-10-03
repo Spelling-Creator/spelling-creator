@@ -29,6 +29,7 @@
 //     codes translationLanguages.js keys on)
 
 import { pipeline } from "@huggingface/transformers";
+import { createDownloadProgress } from "./downloadProgress.js";
 import { opusMtModelFor } from "../opusMtModels.js";
 import { languageForTag } from "../translationLanguages.js";
 
@@ -41,35 +42,11 @@ const DETECTION_MODEL_ID =
 // from a wrong source is worse than saying we couldn't tell.
 const MIN_DETECTION_SCORE = 0.5;
 
-// Download progress goes through a listener set rather than a callback bound at
-// pipeline creation, so a second comment translated during the first download
-// still sees progress.
-const progressListeners = new Set();
-
-// transformers.js reports per-file progress events, and a model is several
-// files (weights, tokenizer, config), so sum them into the single 0–1 fraction
-// the UI shows. Several models can download through here, so entries are keyed
-// per model AND per file. Files announce their totals as they start, which can
-// make the fraction dip when a new large file joins the denominator; harmless,
-// and truthful.
-const fileProgress = new Map();
-
-function reportProgress(event) {
-  if (event.status !== "progress" || !event.total) return;
-  fileProgress.set(`${event.name}/${event.file}`, {
-    loaded: event.loaded,
-    total: event.total,
-  });
-  let loaded = 0;
-  let total = 0;
-  for (const file of fileProgress.values()) {
-    loaded += file.loaded;
-    total += file.total;
-  }
-  if (!total) return;
-  const fraction = Math.min(loaded / total, 1);
-  for (const listener of progressListeners) listener(fraction);
-}
+// Several models download through here (the two translators and the
+// detector), each as several files; the shared helper sums them into the one
+// 0-1 fraction the UI shows, and keeps progress visible to a second comment
+// translated during the first download (downloadProgress.js).
+const { reportProgress, withProgress } = createDownloadProgress();
 
 // One pipeline per model per page, shared by every translation; different
 // pairs may want different translation models (opusMtModelFor decides), so
@@ -93,19 +70,6 @@ function getPipeline(task, modelId) {
     pipelinePromises.set(modelId, promise);
   }
   return promise;
-}
-
-// Subscribe `onDownloadProgress` for the duration of `run`, however it ends.
-async function withProgress(onDownloadProgress, run) {
-  const listener = onDownloadProgress
-    ? (fraction) => onDownloadProgress(fraction)
-    : null;
-  if (listener) progressListeners.add(listener);
-  try {
-    return await run();
-  } finally {
-    if (listener) progressListeners.delete(listener);
-  }
 }
 
 /**

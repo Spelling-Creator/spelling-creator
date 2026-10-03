@@ -1,16 +1,21 @@
-// "Summarise this lesson" card on the lesson page, powered by the browser's
-// built-in Summarizer API (see @spelling-creator/core/browser/summarizer). The model runs on the reader's
-// own device: no Worker call, no Turnstile, no cost, and the lesson text never
-// leaves the machine.
+// "Summarise this lesson" card on the lesson page, powered by on-device AI
+// (see @spelling-creator/core/browser/summarizer): the browser's built-in
+// Summarizer API where it exists, otherwise Gemma 4 running in the page with
+// transformers.js on browsers whose WebGPU can carry it. Either way the model
+// runs on the reader's own device: no Worker call, no Turnstile, no cost, and
+// the lesson text never leaves the machine.
 //
-// The API is Chromium-only and gated behind hardware minimums, so the card is
-// strictly opt-in on capability: we probe availability once on mount and render
-// NOTHING — no button, no "unsupported" notice — unless the browser can actually
-// run it. A reader on Firefox or an old laptop never learns the feature exists,
-// which is better than showing them a button that can't work.
+// Both engines are gated behind hardware minimums, so the card is strictly
+// opt-in on capability: we probe availability once on mount and render
+// NOTHING (no button, no "unsupported" notice) unless this device can
+// actually summarise. A reader on an old laptop never learns the feature
+// exists, which is better than showing them a button that can't work.
 //
-// Creating a session needs transient activation, so summarising is always driven
-// by the button click, never by an effect.
+// Creating a built-in session needs transient activation, and the fallback's
+// model download is far too heavy to start uninvited, so summarising is
+// always driven by the button click, never by an effect. The probe also says
+// which engine would answer, so the copy around the button can be honest
+// about the fallback's much larger one-time download.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -127,6 +132,12 @@ export default function LessonSummary({ doc }) {
   // it fades in when supported rather than flashing in and disappearing when not.
   const [availability, setAvailability] = useState("unavailable");
 
+  // Which engine answers: "browser" (built-in Summarizer API) or "gemma" (the
+  // transformers.js fallback). Set by the probe, then kept honest by the run
+  // itself through createSummarizer's onEngine hook, because the built-in
+  // engine can agree to a probe and still refuse the create.
+  const [engine, setEngine] = useState(null);
+
   // "idle" → "downloading" (first run only) → "summarizing" → "done".
   const [phase, setPhase] = useState("idle");
   const [progress, setProgress] = useState(0);
@@ -149,11 +160,13 @@ export default function LessonSummary({ doc }) {
     if (!worthSummarizing) return;
     let cancelled = false;
     (async () => {
-      const state = await summarizerAvailability({
+      const probe = await summarizerAvailability({
         type: DEFAULT_SUMMARY_TYPE,
         length: DEFAULT_SUMMARY_LENGTH,
       });
-      if (!cancelled) setAvailability(state);
+      if (cancelled) return;
+      setAvailability(probe.availability);
+      setEngine(probe.engine);
     })();
     return () => {
       cancelled = true;
@@ -181,6 +194,13 @@ export default function LessonSummary({ doc }) {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // Whether the reader has seen the fallback's 3 GB warning: the idle
+    // notice and the progress line both carry it whenever the engine on
+    // record is Gemma. A run that only discovers Gemma mid-flight (see
+    // onEngine below) must not start that download behind wording about the
+    // built-in engine.
+    const warnedOfGemma = engine === "gemma";
+
     setError("");
     setSummary("");
     setTruncated(false);
@@ -195,6 +215,31 @@ export default function LessonSummary({ doc }) {
         {
           signal: controller.signal,
           onDownloadProgress: (loaded) => setProgress(loaded),
+          // The engine the run actually opens, reported before it does any
+          // heavy work. The case that matters: the built-in engine passed
+          // the probe but refused the create, and the next engine in line is
+          // Gemma, whose first run is a 3 GB download nobody should trigger
+          // unwarned. If the reader hasn't seen the Gemma notice, stop the
+          // run here (createSummarizer checks the signal before the download
+          // starts) and re-offer the button with the honest wording, so the
+          // next click is an informed one.
+          onEngine: (nextEngine) => {
+            if (nextEngine === "gemma" && !warnedOfGemma) {
+              controller.abort();
+              setEngine("gemma");
+              setAvailability("downloadable");
+              setPhase("idle");
+              return;
+            }
+            setEngine(nextEngine);
+            if (nextEngine === "gemma") {
+              // The fallback's first run downloads, so the progress bar
+              // (with the Gemma wording) is what belongs on screen, not the
+              // summarising skeleton.
+              setProgress(0);
+              setPhase("downloading");
+            }
+          },
         },
       );
       if (controller.signal.aborted) {
@@ -202,6 +247,9 @@ export default function LessonSummary({ doc }) {
         return;
       }
       sessionRef.current = session;
+      // The session knows which engine it really is; a built-in session
+      // carries no engine property.
+      setEngine(session.engine || "browser");
       setPhase("summarizing");
 
       // A long lesson can overrun the model's input budget; trim it rather than
@@ -337,9 +385,12 @@ export default function LessonSummary({ doc }) {
       {phase === "downloading" && (
         <div className="mb-3">
           <p className="text-xs text-muted-foreground">
-            {t("lessonSummary.downloadingModel", {
-              percent: Math.round(progress * 100),
-            })}
+            {t(
+              engine === "gemma"
+                ? "lessonSummary.downloadingModelGemma"
+                : "lessonSummary.downloadingModel",
+              { percent: Math.round(progress * 100) },
+            )}
           </p>
           <Progress
             value={progress > 0 ? progress * 100 : 100}
@@ -365,7 +416,11 @@ export default function LessonSummary({ doc }) {
           <p className="flex-1 text-xs text-muted-foreground">
             {truncated
               ? t("lessonSummary.truncatedNotice")
-              : t("lessonSummary.generatedNotice")}
+              : t(
+                  engine === "gemma"
+                    ? "lessonSummary.generatedNoticeGemma"
+                    : "lessonSummary.generatedNotice",
+                )}
           </p>
           {summary && (
             <Tooltip>
@@ -394,13 +449,18 @@ export default function LessonSummary({ doc }) {
       )}
 
       {/* Nothing generated yet, and the model isn't on this machine — warn before
-          the click, not after it starts a large download. */}
+          the click, not after it starts a large download. The fallback's notice
+          names the size: 3 GB is a download nobody should trigger unwarned. */}
       {phase === "idle" &&
         !summary &&
         !error &&
         availability !== "available" && (
           <p className="mt-2 text-xs text-muted-foreground">
-            {t("lessonSummary.idleNotice")}
+            {t(
+              engine === "gemma"
+                ? "lessonSummary.idleNoticeGemma"
+                : "lessonSummary.idleNotice",
+            )}
           </p>
         )}
     </div>

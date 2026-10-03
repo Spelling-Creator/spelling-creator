@@ -13,10 +13,13 @@ it came from and a **Show original** toggle, so the real comment is never more
 than a click away.
 
 Like [lesson summaries](./lesson-summaries.md), this runs on browser-local
-models. The same engines also translate the lesson itself; what differs there
-is covered in [Lesson translation](./lesson-translation.md). Unlike summaries, it doesn't hide when the browser can't do it (not
-being able to read a comment at all is worth a heavier fallback), so it has two
-engines:
+models, and in the same two-layer shape: the browser's built-in API first,
+with a transformers.js fallback behind it. The same engines also translate
+the lesson itself; what differs there is covered in
+[Lesson translation](./lesson-translation.md). Unlike summaries, the feature
+never hides: its fallback models run on plain WASM, so every browser can
+translate (not being able to read a comment at all would be worth even a
+heavy fallback). The two engines are:
 
 1. **The browser's built-in [Translator API](https://developer.mozilla.org/en-US/docs/Web/API/Translator_API)**
    (Chromium 138+). Fast, free, local; the browser fetches a small language pack

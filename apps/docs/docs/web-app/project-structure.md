@@ -49,7 +49,7 @@ src/
     RichText.jsx          renders a stored comment/bio: sanitized HTML, or plain text for pre-rich-text values
     LiveField.jsx          debounced LiveInput/LiveTextarea (commit ~200ms after typing pauses, hold off remote updates while focused)
     LessonView.jsx        read-only renderer for the lesson page and the editor's preview mode (blocks straight to React, lazy images, drawn in the app's theme)
-    LessonSummary.jsx     on-device AI summary card on the lesson page (hidden unless the browser supports it)
+    LessonSummary.jsx     on-device AI summary card on the lesson page (hidden unless the device can run an engine)
     InteractiveLesson.jsx full-screen step-by-step walkthrough of a lesson, with a field per question, autosaved progress you can come back to, and optional read-aloud (see interactive-mode.md)
     MyLessonAnswers.jsx   the reader's own saved answers on the lesson page — private to them, rendered for nobody else
     SectionCard.jsx       a named section with its content blocks + add buttons; measures the pointer against its own rows during a block drag, but the drag itself is owned by EditorPage (blocks can move between sections)
@@ -215,9 +215,11 @@ the MCP server cannot reach it by accident:
   sanitizeRichText      the render-time DOMPurify pass (policy comes from ../richText)
   commonsImages         search Wikimedia Commons + download an image (no key, no proxy)
   presence              per-collaborator colour + selection presence helpers
-  summarizer            browser Summarizer API wrapper (on-device summaries; fails closed)
+  summarizer            on-device summaries: browser Summarizer API with an in-page fallback (fails closed when neither can run)
+  fallbackSummarizer    the fallback itself: Gemma 4 via transformers.js on WebGPU, a lazy chunk only a click ever loads
   translator            on-device comment translation: browser Translator API with an in-page fallback
   fallbackTranslator    the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
+  downloadProgress      shared by both fallbacks: transformers.js's per-file download events summed into the one 0-1 fraction the UI shows
   git/fs                LightningFS — the IndexedDB filesystem the repos live on
   git/sync              fork (= clone the repo) and merge-with-original flows
 ```
