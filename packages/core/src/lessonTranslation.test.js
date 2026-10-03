@@ -1,6 +1,6 @@
 // What lesson translation covers, and just as deliberately what it skips:
-// spelling words, question answers, image captions and VAKT link labels stay
-// in the lesson's own language (the module comment says why).
+// spelling words and VAKT link labels stay in the lesson's own language (the
+// module comment says why).
 
 import { describe, expect, it } from "vitest";
 
@@ -70,7 +70,12 @@ describe("lessonTranslationBatches", () => {
       [
         { key: "s0.b0.line0", text: "Magma rises." },
         { key: "s0.b0.line2", text: "It cools into rock." },
+        {
+          key: "s0.b1.caption",
+          text: "Image by Someone via Wikimedia Commons",
+        },
         { key: "s0.b2.prompt", text: "How hot is lava?" },
+        { key: "s0.b2.answer0", text: "700-1200 C" },
         { key: "s0.b2.step0", text: "Find the number in the text." },
         { key: "s0.b2.step1", text: "Say it in degrees." },
       ],
@@ -83,19 +88,57 @@ describe("lessonTranslationBatches", () => {
     ]);
   });
 
-  it("never emits spelling words, answers, captions or link labels", () => {
+  it("never emits spelling words or link labels", () => {
     const texts = lessonTranslationBatches(doc)
       .flat()
       .map((s) => s.text);
-    for (const kept of [
-      "pumice",
-      "basalt",
-      "700-1200 C",
-      "Wikimedia",
-      "Video",
-    ]) {
+    for (const kept of ["pumice", "basalt", "Video"]) {
       expect(texts.join("\n")).not.toContain(kept);
     }
+  });
+
+  it("gives each accepted answer of a multiple question its own segment", () => {
+    const batches = lessonTranslationBatches({
+      title: "",
+      sections: [
+        {
+          id: "m",
+          blocks: [
+            {
+              id: "q",
+              type: "question",
+              questionType: "multiple",
+              prompt: "Name a volcanic rock.",
+              answers: [
+                { id: "a1", text: "basalt" },
+                { id: "a2", text: "  " },
+                { id: "a3", text: "pumice" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(batches).toEqual([
+      [
+        { key: "s0.b0.prompt", text: "Name a volcanic rock." },
+        { key: "s0.b0.answer0", text: "basalt" },
+        { key: "s0.b0.answer1", text: "pumice" },
+      ],
+    ]);
+  });
+
+  it("skips the caption of an image block with nothing to draw", () => {
+    const batches = lessonTranslationBatches({
+      title: "",
+      sections: [
+        {
+          id: "s",
+          blocks: [{ id: "i", type: "image", caption: "A sourceless image" }],
+        },
+      ],
+    });
+    expect(batches).toEqual([]);
   });
 
   it("handles an empty or blank document", () => {

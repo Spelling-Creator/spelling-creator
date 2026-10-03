@@ -24,21 +24,30 @@ readable. `@spelling-creator/core/lessonTranslation` is the one list of what
 translation covers, shared by the renderer and the translation runner so the
 two can't drift apart:
 
-| Translated                       | Left as written                            |
-| -------------------------------- | ------------------------------------------ |
-| The document title               | Spelling words (they are the material)     |
-| Text blocks, line by line        | Question answers (what the speller spells) |
-| Question prompts and their steps | Image captions (mostly attribution)        |
-| VAKT activity text               | VAKT link labels (names of external sites) |
+| Translated                          | Left as written                            |
+| ----------------------------------- | ------------------------------------------ |
+| The document title                  | Spelling words (they are the material)     |
+| Text blocks, line by line           | VAKT link labels (names of external sites) |
+| Question prompts, answers and steps |                                            |
+| Image captions                      |                                            |
+| VAKT activity text                  |                                            |
 
-A note under a translated lesson says the word lists and answers stay in the
-lesson's own language, so an untranslated spelling list reads as the feature
-working, not failing.
+Spelling words are the one thing a translated lesson keeps as written: the
+lesson is "spell these words", and a translated word list would be a
+different lesson. A note under a translated lesson says so, so an
+untranslated spelling list reads as the feature working, not failing.
 
-This is also why the feature lives only on the lesson page's reading view:
-[interactive mode](./interactive-mode.md) scores what a speller types against
-the author's answers, and the [DOCX/PDF exports](./export-pipeline.md) print
-the lesson as written, so both always use the original document.
+A question's accepted answers translate one at a time rather than as the
+printed line (`questionAnswerItems`): the wide non-breaking gaps that
+separate several accepted answers would come back from a model as ordinary
+spaces and blur the list into one phrase, so the renderer translates the
+answers separately and joins them back itself.
+
+The reading view is also the whole of the feature, on purpose: nothing
+downstream consumes a translation. [Interactive mode](./interactive-mode.md)
+and the [DOCX/PDF exports](./export-pipeline.md) always read the original
+document, so working through, printing or forking a lesson is untouched by
+whatever language it was read in.
 
 ## Translating something 37 screens long
 
@@ -88,7 +97,7 @@ LessonView.jsx                      renders doc + optional Map of translated seg
    `translation` prop: any segment the Map covers renders translated, anything
    else renders as written. That one rule is what makes the partial state
    (translated down to section 5, original below) and the untranslatable
-   content (answers, spelling words) both fall out for free. No markup is
+   spelling words both fall out for free. No markup is
    involved anywhere: lesson text is plain strings, so unlike comments there
    is no rich-text flattening and **Show original** loses nothing.
 

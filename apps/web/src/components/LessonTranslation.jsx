@@ -16,11 +16,13 @@
 // counts batches so they can see it moving, and Cancel keeps whatever point
 // it reached from costing anything.
 //
-// Spelling words and question answers are never translated: they are the
-// material being spelled, not prose around it. The note under a finished
+// Spelling words are never translated: they ARE the material (the lesson is
+// "spell these words"), not prose around it. The note under a finished
 // translation says so, so an untranslated word list doesn't read as a bug.
-// This is also why the feature lives here, on the reading page only:
-// interactive mode and the DOCX/PDF exports always use the lesson as written.
+// Everything else a reader sees translates, answers and captions included,
+// because this page exists for comprehension and nothing consumes what it
+// shows: interactive mode and the DOCX/PDF exports always use the lesson as
+// written.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -94,7 +96,7 @@ export default function TranslatableLesson({ doc }) {
   // swap happens underneath a mounted page: LessonLayout re-fetches a
   // server-rendered lesson quietly once a signed-in reader's token resolves, and
   // hands down a brand-new document object holding the same lesson. So identity
-  // can't be what decides — wiping on it would throw away the translation of a
+  // can't be what decides: wiping on it would throw away the translation of a
   // reader who pressed Translate while that re-fetch was still in the air.
   // Comparing the text keeps a translation (and a run in flight) through that
   // swap, and drops one the document has moved out from under.

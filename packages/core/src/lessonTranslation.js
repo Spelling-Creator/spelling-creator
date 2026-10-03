@@ -4,25 +4,27 @@
 // A lesson translates with the same two engines as a comment (see
 // browser/translator.js): plain strings in, plain strings out. What differs is
 // what a lesson is for. A comment is all prose, but part of a lesson's content
-// is the language being taught: the spelling words are the material, and a
-// question's accepted answer is what the speller spells out. Translating
-// either would change the lesson instead of making it readable. So the
-// segments here are what a reader reads around the teaching material:
+// is the language being taught, and translating that part would change the
+// lesson instead of making it readable. The line sits exactly there, and
+// nowhere wider: the reading page exists for comprehension, and nothing
+// downstream consumes what it shows (interactive mode and the DOCX/PDF
+// exports both read the original document), so everything a reader reads
+// translates:
 //
 // - the document title
 // - text blocks, one segment per line (the renderer and the docx export both
 //   treat each line as its own paragraph)
-// - question prompts and their numbered steps
+// - question prompts, their printed answers and their numbered steps, with
+//   each accepted answer as its own segment (questionAnswerItems), so the
+//   non-breaking gaps that separate several accepted answers survive the
+//   round trip through a model that would fold them into ordinary spaces
+// - image captions
 // - VAKT activity text
 //
 // And deliberately not:
 //
-// - spelling words: they are the content being spelled
-// - question answers: interactive mode scores what the speller types against
-//   them, and the printed answer is the word to spell
-// - image captions: mostly attribution boilerplate ("Image by ... via
-//   Wikimedia Commons"), noise once translated (the same call
-//   lessonPlainText makes for the SEO description)
+// - spelling words: they ARE the material. The lesson is "spell these
+//   words", and a translated word list would be a different lesson
 // - VAKT link labels: names of external resources, which stay in whatever
 //   language the resource itself is in
 //
@@ -30,6 +32,7 @@
 // web app's renderer (LessonView) and its translation runner
 // (LessonTranslation), so the two agree on keys by construction.
 
+import { questionAnswerItems } from "./questions.js";
 import { vaktText } from "./vakt.js";
 
 /**
@@ -42,7 +45,9 @@ export const lessonSegmentKey = {
   title: () => "title",
   textLine: (si, bi, li) => `s${si}.b${bi}.line${li}`,
   prompt: (si, bi) => `s${si}.b${bi}.prompt`,
+  answer: (si, bi, i) => `s${si}.b${bi}.answer${i}`,
   step: (si, bi, i) => `s${si}.b${bi}.step${i}`,
+  caption: (si, bi) => `s${si}.b${bi}.caption`,
   vakt: (si, bi) => `s${si}.b${bi}.vakt`,
 };
 
@@ -95,12 +100,27 @@ export function lessonTranslationBatches(doc) {
             text: block.prompt,
           });
         }
+        questionAnswerItems(block).forEach((answer, i) => {
+          segments.push({
+            key: lessonSegmentKey.answer(si, bi, i),
+            text: answer,
+          });
+        });
         questionStepsWithText(block).forEach((step, i) => {
           segments.push({
             key: lessonSegmentKey.step(si, bi, i),
             text: step.text,
           });
         });
+      } else if (block.type === "image") {
+        // Mirrors the renderer: an image block without a source draws nothing,
+        // caption included, so there is nothing to translate for one.
+        if ((block.image || block.src) && (block.caption || "").trim()) {
+          segments.push({
+            key: lessonSegmentKey.caption(si, bi),
+            text: block.caption,
+          });
+        }
       } else if (block.type === "vakt") {
         const text = vaktText(block);
         if (text) {

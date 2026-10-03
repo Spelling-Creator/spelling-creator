@@ -24,7 +24,7 @@ import { DOCX_MAX_IMAGE_WIDTH } from "@spelling-creator/core/lessonLayout";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import {
   ANSWER_GAP,
-  questionAnswerText,
+  questionAnswerItems,
   questionMeta,
 } from "@spelling-creator/core/questions";
 import {
@@ -137,9 +137,14 @@ function figureMargin(align) {
   return "16px auto";
 }
 
-function ImageBlock({ block }) {
+// `si`/`bi` and the map are only handed in by the lesson page's own Block,
+// for the caption; the VAKT picture below renders through here without them
+// (a VAKT block has no caption to translate).
+function ImageBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
   const src = useImageSrc(block);
+  const caption =
+    translation?.get(lessonSegmentKey.caption(si, bi)) ?? block.caption;
   const align = block.align || "center";
   const { width, height } = fitWithin(
     block.width,
@@ -162,7 +167,7 @@ function ImageBlock({ block }) {
         // LESSON_STYLES `img` rule (width:100%;height:auto) fills the figure.
         <img
           src={src}
-          alt={block.caption || t("lessonView.imageAlt")}
+          alt={caption || t("lessonView.imageAlt")}
           width={Math.round(width)}
           height={Math.round(height)}
           loading="lazy"
@@ -178,7 +183,7 @@ function ImageBlock({ block }) {
       )}
       {/* Styled by LESSON_STYLES, so the caption follows the theme with the
           rest of the page. */}
-      {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+      {caption ? <figcaption>{caption}</figcaption> : null}
     </figure>
   );
 }
@@ -186,13 +191,17 @@ function ImageBlock({ block }) {
 // A question reads the way it prints: the prompt in the colour of its type, then
 // its answer in the body colour on the same line. Nothing is labelled — the
 // colour is what marks the type — so this matches the exported lesson exactly.
-// Translation swaps the prompt and steps only: the answer is what the speller
-// spells out, so it stays in the lesson's own language on purpose (see
-// @spelling-creator/core/lessonTranslation).
+// The answers translate one accepted answer at a time and are joined back here,
+// so the wide gaps separating them never pass through a model (see
+// questionAnswerItems); untranslated, the join is questionAnswerText verbatim.
 function QuestionBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
   const meta = questionMeta(block.questionType);
-  const answer = questionAnswerText(block);
+  const answer = questionAnswerItems(block)
+    .map(
+      (item, i) => translation?.get(lessonSegmentKey.answer(si, bi, i)) ?? item,
+    )
+    .join(ANSWER_GAP);
   const steps = questionStepsWithText(block);
 
   return (
@@ -291,15 +300,17 @@ function VaktBlock({ block, si, bi, translation }) {
 }
 
 // `si`/`bi` are the section and block indexes, which is how translated text is
-// keyed (lessonSegmentKey); image captions and spelling words never translate,
-// so those two blocks don't take the map at all.
+// keyed (lessonSegmentKey); spelling words never translate (they are the
+// material being spelled), so that one block doesn't take the map at all.
 function Block({ block, si, bi, translation }) {
   if (block.type === "text")
     return (
       <TextBlock block={block} si={si} bi={bi} translation={translation} />
     );
   if (block.type === "image" && (block.image || block.src))
-    return <ImageBlock block={block} />;
+    return (
+      <ImageBlock block={block} si={si} bi={bi} translation={translation} />
+    );
   if (block.type === "question")
     return (
       <QuestionBlock block={block} si={si} bi={bi} translation={translation} />

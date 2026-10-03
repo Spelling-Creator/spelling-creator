@@ -114,7 +114,7 @@
     "pickSourceLanguage": "What language is this lesson in?",
     "sourceLanguageLabel": "Lesson language",
     "sourceLanguagePlaceholder": "Pick a language",
-    "keepsOriginalWords": "Spelling words and question answers stay in the lesson's own language: they are the material being spelled, so they are never translated."
+    "keepsOriginalWords": "Spelling words stay in the lesson's own language: they are the material being spelled, so they are never translated."
   },
   "pulls": {
     "heading": "Proposed changes",

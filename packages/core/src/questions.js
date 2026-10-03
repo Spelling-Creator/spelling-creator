@@ -173,25 +173,37 @@ const SINGLE_ANSWER_TYPES = new Set(["number", "single", "background"]);
 // side still give the line somewhere to wrap.
 export const ANSWER_GAP = " \u00A0 ";
 
-// The answer text a printed lesson shows inline, immediately after the prompt
-// and in the body colour — the shape the exported lesson uses, where a question
-// is one line of coloured prompt followed by its answer in black.
-//
-// Returns "" when there is nothing to show: an unanswered question, or an
+// The answer strings a printed lesson shows, one per accepted answer: at most
+// one for the single-answer types, one per non-blank answer for the orange
+// (multiple-answer) types, and none for an unanswered question or an
 // `open`/`paraphrase`/`wyr` one, which is answered on the speller's own paper
 // and so prints as the prompt alone.
-export function questionAnswerText(block) {
-  if (!block) return "";
+//
+// Separate from questionAnswerText so each accepted answer stays its own
+// string where that matters: lesson translation translates them one at a
+// time, since a model fed the joined line would fold the non-breaking gaps
+// between answers into ordinary spaces and blur the list into one phrase.
+export function questionAnswerItems(block) {
+  if (!block) return [];
   if (SINGLE_ANSWER_TYPES.has(block.questionType)) {
-    return block.answer == null ? "" : String(block.answer).trim();
+    const answer = block.answer == null ? "" : String(block.answer).trim();
+    return answer ? [answer] : [];
   }
   if (isOrangeType(block.questionType)) {
     return (block.answers || [])
       .map((a) => (a.text || "").trim())
-      .filter(Boolean)
-      .join(ANSWER_GAP);
+      .filter(Boolean);
   }
-  return "";
+  return [];
+}
+
+// The answer text a printed lesson shows inline, immediately after the prompt
+// and in the body colour — the shape the exported lesson uses, where a question
+// is one line of coloured prompt followed by its answer in black.
+//
+// Returns "" when there is nothing to show (see questionAnswerItems).
+export function questionAnswerText(block) {
+  return questionAnswerItems(block).join(ANSWER_GAP);
 }
 
 export function questionMeta(questionType) {

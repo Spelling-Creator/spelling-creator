@@ -38,8 +38,8 @@ PDF printing.
   [Lesson summaries](./lesson-summaries.md)).
 - **Lesson translation** - read a published lesson in your own language,
   translated entirely on your device, section by section as it arrives.
-  Spelling words and question answers stay in the lesson's own language on
-  purpose: they are the material being spelled (see
+  Spelling words stay in the lesson's own language on purpose: they are the
+  material being spelled (see
   [Lesson translation](./lesson-translation.md)).
 - **Interactive lesson mode** - work through any published lesson instead of
   reading it: each section's material appears full-screen on its own, then its
