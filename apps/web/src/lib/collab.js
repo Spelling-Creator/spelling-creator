@@ -91,11 +91,20 @@ function shortId(slot) {
  * @param {object}   opts
  * @param {object}   opts.doc          The current editor document (watched for changes to broadcast).
  * @param {Function} opts.onRemoteDoc  Called with a document received from the room; should replace local state.
+ * @param {Function} [opts.onAdmitted] Guest only: called once the host admits us, before the room's
+ *                                     document reaches `onRemoteDoc`, to give the session a lesson of its
+ *                                     own. May return a promise; nothing is synced until it settles.
  * @param {object}   [opts.identity]   { uid, name, email, avatarUrl } describing the local user (used for our own chat bubbles, and so we never credit ourselves as a collaborator).
  * @param {string}   [opts.accessToken] The signed-in user's Supabase JWT; required to host or join.
  * @returns Collaboration state and actions (see the returned object).
  */
-export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
+export function useCollaboration({
+  doc,
+  onRemoteDoc,
+  onAdmitted,
+  identity,
+  accessToken,
+}) {
   // Connection role/status for the UI.
   const [status, setStatus] = useState("idle"); // 'idle' | 'connecting' | 'hosting' | 'joined' | 'error'
   const [role, setRole] = useState(null); // 'host' | 'guest' | null
@@ -143,7 +152,13 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
   const docRef = useRef(doc);
   const identityRef = useRef(identity);
   const onRemoteDocRef = useRef(onRemoteDoc);
+  const onAdmittedRef = useRef(onAdmitted);
   const roleRef = useRef(null);
+  // True while a newly admitted guest's editor is moving into the session's own
+  // lesson. Updates still merge into the Y.Doc meanwhile, but none reaches the
+  // editor, which is still holding the guest's previous lesson until the move
+  // is done (see the ADMITTED case).
+  const holdingRef = useRef(false);
   useEffect(() => {
     docRef.current = doc;
   }, [doc]);
@@ -153,6 +168,9 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
   useEffect(() => {
     onRemoteDocRef.current = onRemoteDoc;
   }, [onRemoteDoc]);
+  useEffect(() => {
+    onAdmittedRef.current = onAdmitted;
+  }, [onAdmitted]);
 
   const sendFrame = (b) => {
     const ws = wsRef.current;
@@ -182,15 +200,18 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
   // what comes back out has none — and for the **host** that would wipe theirs, so
   // it's put back from the doc they're holding, exactly as a git restore does.
   //
-  // Deliberately not for a guest. A guest's local document is whatever lesson they
-  // had open before joining, which may be an entirely different one, so its list
-  // is not this lesson's to graft on. They adopt the document without the field,
-  // which is the honest answer — it was never theirs to hold. Saving is
-  // unaffected: the Worker keeps the stored list when the field is absent.
+  // Deliberately not for a guest. A guest's editor holds a lesson made for the
+  // session (see the ADMITTED case), not the host's own, so the host's list is
+  // not theirs to graft on. They adopt the document without the field, which is
+  // the honest answer — it was never theirs to hold. Saving is unaffected: the
+  // Worker keeps the stored list when the field is absent.
   const mergeRemote = useCallback((bytes) => {
     const ydoc = ydocRef.current;
     if (!ydoc || bytes.length === 0) return;
     applyRemote(ydoc, bytes);
+    // A guest still moving into the session's lesson: keep the edit in the
+    // Y.Doc, where the editor picks it up once it has somewhere to put it.
+    if (holdingRef.current) return;
     const next = docFromY(ydoc);
     onRemoteDocRef.current?.(
       roleRef.current === "host"
@@ -300,9 +321,44 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
         }
         case T.ADMITTED: {
           // We're in. The payload is the room's whole document as a single Yjs
-          // update; adopt it, and only now start syncing our own edits.
-          mergeRemote(view.subarray(1));
-          startSyncing();
+          // update.
+          //
+          // It must not simply replace the editor's document. The editor is
+          // still on whatever lesson we had open before joining, and its library
+          // save and version history are tied to that lesson, so adopting the
+          // room's document there would overwrite it with the host's. So the
+          // editor first moves into a lesson of the session's own (onAdmitted),
+          // and edits arriving meanwhile wait in the Y.Doc (holdingRef). Only
+          // then does the room's document reach the editor and our own edits
+          // start syncing, both in the same tick, so the first thing we push is
+          // the session's lesson and never the one we left.
+          const ydoc = ydocRef.current;
+          if (!ydoc) break;
+          holdingRef.current = true;
+          applyRemote(ydoc, view.subarray(1));
+          Promise.resolve()
+            .then(() => onAdmittedRef.current?.(docFromY(ydoc)))
+            .then(
+              () => {
+                holdingRef.current = false;
+                // Left, removed or disconnected while the editor was moving.
+                if (ydocRef.current !== ydoc) return;
+                onRemoteDocRef.current?.(docFromY(ydoc));
+                startSyncing();
+              },
+              () => {
+                holdingRef.current = false;
+                if (ydocRef.current !== ydoc) return;
+                // Without a lesson of its own, the session would be written
+                // into the one we had open, which is exactly what this guards.
+                setError(
+                  "Couldn't open a lesson for this session, so you've left it. Please try joining again.",
+                );
+                cleanup();
+                setStatus("idle");
+                setRole(null);
+              },
+            );
           break;
         }
         case T.EDITED: {
@@ -598,6 +654,7 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
     // from a fresh one, so the previous lesson can't bleed into it.
     ydocRef.current?.destroy();
     ydocRef.current = null;
+    holdingRef.current = false;
     syncedRef.current = false;
     setSynced(false);
     setSelections({});
