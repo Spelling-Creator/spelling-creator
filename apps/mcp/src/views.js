@@ -39,8 +39,13 @@ export const IMAGE_PICKER_URI = "ui://spelling-creator/image-picker-1.html";
 export const PROPOSAL_DIFF_URI = "ui://spelling-creator/proposal-diff-1.html";
 
 // Commons thumbnails. A view may load nothing the server hasn't declared, so
-// without this the picker renders as a row of broken images.
-const IMAGE_HOSTS = ["https://upload.wikimedia.org"];
+// without this the picker renders as a row of broken images. The API hands out
+// thumbnails from thumb.wikimedia.org now, but still points `thumburl` at the
+// original on upload.wikimedia.org when it can't scale a file, so both stay.
+const IMAGE_HOSTS = [
+  "https://thumb.wikimedia.org",
+  "https://upload.wikimedia.org",
+];
 
 /**
  * The stable origin Claude gives this server's views, derived from the MCP

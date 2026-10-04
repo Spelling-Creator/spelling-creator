@@ -3,7 +3,8 @@
 // Unlike the Pixabay source (web/src/lib/pixabay.js), this needs no API key and
 // no Worker proxy: the MediaWiki action API answers anonymous cross-origin
 // requests when called with `origin=*`, and Commons' image CDN
-// (upload.wikimedia.org) serves images with `Access-Control-Allow-Origin: *`.
+// (thumb.wikimedia.org and upload.wikimedia.org) serves images with
+// `Access-Control-Allow-Origin: *`.
 // So both the search and the per-image byte download happen client-side, and no
 // Turnstile token is required.
 //
@@ -121,7 +122,7 @@ export async function searchWikimediaImages(query, opts = {}) {
  * Rather than the (possibly huge, multi-megabyte) original, this asks the API
  * for a scaled thumbnail capped at ~1600px — crisp enough for a lesson, small
  * enough to stay under the 8 MB upload cap — then fetches those bytes directly
- * from upload.wikimedia.org (which sends CORS headers, so the browser can read
+ * from Commons' image CDN (which sends CORS headers, so the browser can read
  * them). The bytes are returned for storeImageBytes to hash and store.
  *
  * @param {object} hit  A hit from searchWikimediaImages (needs `title`).

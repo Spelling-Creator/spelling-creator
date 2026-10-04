@@ -61,7 +61,10 @@ test("the picker declares the origin and the domains it needs", async () => {
   assert.match(ui.domain, /^[0-9a-f]{32}\.claudemcpcontent\.com$/);
   // Commons thumbnails are the whole point of the view; undeclared, they'd be
   // blocked by the sandbox CSP and the picker would render empty frames.
-  assert.deepEqual(ui.csp.resourceDomains, ["https://upload.wikimedia.org"]);
+  assert.deepEqual(ui.csp.resourceDomains, [
+    "https://thumb.wikimedia.org",
+    "https://upload.wikimedia.org",
+  ]);
 });
 
 test("search_images points at the picker, in both meta spellings", async () => {
@@ -86,7 +89,7 @@ const COMMONS_RESPONSE = {
             mime: "image/jpeg",
             width: 2400,
             height: 1600,
-            thumburl: "https://upload.wikimedia.org/thumb/Red_fox.jpg",
+            thumburl: "https://thumb.wikimedia.org/thumb/Red_fox.jpg",
             descriptionurl:
               "https://commons.wikimedia.org/wiki/File:Red_fox.jpg",
             extmetadata: {
