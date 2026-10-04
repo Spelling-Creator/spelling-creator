@@ -268,6 +268,11 @@ export default function LessonTextToolbar({
       underline: editor.isActive("underline"),
       footnote: editor.isActive("footnote"),
       footnoteAttrs: editor.getAttributes("footnote"),
+      // Which footnote is selected, by position, so the form below starts
+      // afresh when the selection moves to another one with the form open.
+      footnotePos: editor.isActive("footnote")
+        ? editor.state.selection.from
+        : null,
     }),
   });
 
@@ -337,6 +342,7 @@ export default function LessonTextToolbar({
         </PopoverTrigger>
         <PopoverContent className="w-80" align="start">
           <FootnoteForm
+            key={state.footnote ? `footnote-${state.footnotePos}` : "new"}
             initial={state.footnote ? state.footnoteAttrs : {}}
             editing={state.footnote}
             onSave={save}

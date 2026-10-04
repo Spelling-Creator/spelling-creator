@@ -161,12 +161,24 @@ export default function LessonTextInput({
     [extensions],
   );
 
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
+  // Typing within the last 200ms is still waiting on its commit when the
+  // editor goes away: the block unmounts (the page is left, a section folds) or
+  // the editor is rebuilt (its extensions change with the language). Commit it
+  // then rather than drop it. tiptap destroys an editor on a timeout, so this
+  // instance can still be read here.
+  useEffect(() => {
+    if (!editor) return undefined;
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
+      if (dirty.current) commit(editor);
+    };
+    // commit reads everything it needs through refs, so the one captured with
+    // this editor is never stale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
 
   // A change from elsewhere. Applied only while the block isn't being typed in,
   // and only when it really differs from what the editor shows, so a commit of

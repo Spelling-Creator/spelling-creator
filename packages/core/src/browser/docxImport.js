@@ -398,19 +398,37 @@ function readSource(el) {
     link && isSafeLink(link.getAttribute("href"))
       ? link.getAttribute("href")
       : "";
+  // The words between two points in the paragraph. The title and the link are
+  // found by where their elements sit, not by searching for their text, which
+  // could match inside the author ("Egypt Society" writing "Egypt").
+  const textBetween = (setStart, setEnd) => {
+    const range = el.ownerDocument.createRange();
+    range.selectNodeContents(el);
+    setStart?.(range);
+    setEnd?.(range);
+    return range.toString().replace(/\s+/g, " ");
+  };
+  const linkAfterTitle =
+    link && url && (!em || em.compareDocumentPosition(link) & 4) ? link : null;
+  const endAtLink = linkAfterTitle
+    ? (range) => range.setEndBefore(linkAfterTitle)
+    : null;
+
   let title = em ? em.textContent.trim() : "";
   let author = "";
-  let details = full;
+  let details;
   if (title) {
-    const at = full.indexOf(title);
-    author = full.slice(0, at).trim().replace(/\.$/, "");
-    details = full.slice(at + title.length);
-  } else if (!url) {
+    author = textBetween(null, (range) => range.setEndBefore(em))
+      .trim()
+      .replace(/\.$/, "");
+    details = textBetween((range) => range.setStartAfter(em), endAtLink);
+  } else if (url) {
+    details = textBetween(null, endAtLink);
+  } else {
     // No italics and no link: not one of ours. Keep the words as the title.
     title = full;
     details = "";
   }
-  if (url) details = details.replace(link.textContent, "");
   details = details.replace(/^[.\s]+|[.\s]+$/g, "");
 
   const comma = details.lastIndexOf(", ");
