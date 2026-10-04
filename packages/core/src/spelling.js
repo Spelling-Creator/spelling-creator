@@ -3,6 +3,7 @@
 // ContentBlock) and the docx exporter so the block shape stays in sync.
 
 import { ANSWER_GAP } from "./questions.js";
+import { textBlockPlain } from "./lessonText.js";
 
 // Accent colour for the spelling-words block (chip + docx label + left border).
 // Teal, distinct from every question-type colour in questions.js.
@@ -33,8 +34,8 @@ export function createSpellingBlock(newId) {
 export function extractCapitalizedWords(doc) {
   const text = (doc?.sections || [])
     .flatMap((s) => s.blocks || [])
-    .filter((b) => b.type === "text" && b.text)
-    .map((b) => b.text)
+    .filter((b) => b.type === "text")
+    .map(textBlockPlain)
     .join("\n");
 
   // A "word" is a run of letters, optionally with internal apostrophes or

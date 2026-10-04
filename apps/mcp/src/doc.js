@@ -8,13 +8,32 @@
 //   • packages/core/src/id.js         (id generation)
 //
 // The canonical doc is:
-//   { title, sections: [ { id, name, blocks: [ Block, ... ] } ] }
+//   { title, sources?, sections: [ { id, name, blocks: [ Block, ... ] } ] }
+//
+// Text blocks are written in a small markup (see "Markup" in
+// packages/core/src/lessonText.js): **bold**, *italic*, <u>underline</u>, and
+// footnotes as ^[a note] or ^[@sourceId, p. 12 | a note]. A block with none of
+// that is stored as a plain `text` string, exactly as before; one with any of it
+// is stored as a formatted `content` document. presentDoc turns stored blocks
+// back into the same markup, so what get_lesson shows can be sent straight back.
 // Blocks carry a stable `id`; we generate every id here so callers (and the AI
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
 import { IMAGE_ALIGNS } from "@spelling-creator/core/image";
 import { isSafeLink } from "@spelling-creator/core/richText";
+import {
+  markupToContent,
+  normalizeTextContent,
+  textBlockMarkup,
+  withTextBlockContent,
+} from "@spelling-creator/core/lessonText";
+import {
+  SOURCE_FIELDS,
+  isSourceId,
+  normalizeSource,
+  sourceHasContent,
+} from "@spelling-creator/core/sources";
 
 import { extFromMime } from "./images.js";
 
@@ -42,10 +61,19 @@ export function buildBlock(block, where) {
   }
   switch (block.type) {
     case "text": {
+      // `content` is the stored form, passed through when a block read some
+      // other way comes back unchanged; `text` is the markup an assistant writes.
+      const stored = normalizeTextContent(block.content);
+      if (stored && typeof block.text !== "string") {
+        return withTextBlockContent({ id: newId(), type: "text" }, stored);
+      }
       if (typeof block.text !== "string") {
         throw new Error(`${where}: a text block needs a "text" string.`);
       }
-      return { id: newId(), type: "text", text: block.text };
+      return withTextBlockContent(
+        { id: newId(), type: "text" },
+        markupToContent(block.text),
+      );
     }
 
     case "spelling": {
@@ -252,11 +280,116 @@ function buildImageBlock(block, where) {
 }
 
 /**
- * Build a full canonical doc from lesson input.
- * @param {{ title?: string, sections: Array<{ name?: string, blocks?: any[] }> }} input
- * @returns {{ title: string, sections: any[] }}
+ * The lesson's sources, from input: `{ id, title?, author?, publisher?, year?,
+ * url? }` each. The id is the assistant's own short key ("smith2020"), which
+ * its footnotes cite as ^[@smith2020].
+ *
+ * `existing` is the lesson's stored list, when there is one. A source passed
+ * back exactly as stored is kept as it is, unchecked: the web editor lets a
+ * person save a source half filled in (an empty row, a link with no scheme),
+ * and an assistant handing back the list it read must not be refused over rows
+ * it never touched. A new or changed source gets every check.
+ * @param {unknown} input
+ * @param {{ existing?: unknown }} [options]
+ * @returns {object[]}
  */
-export function buildDoc(input) {
+export function buildSources(input, { existing } = {}) {
+  if (input == null) return [];
+  if (!Array.isArray(input)) {
+    throw new Error(
+      '"sources" must be an array of { id, title, author, publisher, year, url }.',
+    );
+  }
+  const stored = new Map(
+    (Array.isArray(existing) ? existing : [])
+      .filter((s) => s && typeof s === "object" && isSourceId(s.id))
+      .map((s) => [s.id, s]),
+  );
+  const seen = new Set();
+  return input.map((raw, i) => {
+    const where = `Source ${i + 1}`;
+    if (!raw || typeof raw !== "object") {
+      throw new Error(`${where} must be an object.`);
+    }
+    if (!isSourceId(raw.id)) {
+      throw new Error(
+        `${where} needs an "id" of letters, digits, "-" or "_" (e.g. "smith2020"). Footnotes cite it as ^[@id].`,
+      );
+    }
+    if (seen.has(raw.id))
+      throw new Error(`${where}: the id "${raw.id}" is used twice.`);
+    seen.add(raw.id);
+    const before = stored.get(raw.id);
+    if (before && sameSource(raw, before)) return before;
+    const url = typeof raw.url === "string" ? raw.url.trim() : "";
+    if (url && !isSafeLink(url)) {
+      throw new Error(
+        `${where}: "url" must be an http:// or https:// address.`,
+      );
+    }
+    const source = normalizeSource(raw);
+    if (!sourceHasContent(source)) {
+      throw new Error(
+        `${where} needs at least a "title", an "author" or a "url".`,
+      );
+    }
+    for (const field of Object.keys(raw)) {
+      if (field !== "id" && !SOURCE_FIELDS.includes(field)) {
+        throw new Error(
+          `${where}: unknown field "${field}". A source has ${["id", ...SOURCE_FIELDS].join(", ")}.`,
+        );
+      }
+    }
+    return source;
+  });
+}
+
+// Whether an input source says exactly what a stored one does.
+function sameSource(raw, stored) {
+  const field = (source, key) =>
+    typeof source[key] === "string" ? source[key].trim() : "";
+  return (
+    Object.keys(raw).every(
+      (key) => key === "id" || SOURCE_FIELDS.includes(key),
+    ) && SOURCE_FIELDS.every((key) => field(raw, key) === field(stored, key))
+  );
+}
+
+/**
+ * A stored lesson as the tools present it to an assistant: the same document,
+ * with every text block as markup in `text` rather than as a stored `content`
+ * tree. Plain blocks come out escaped (a literal asterisk as \*), so any of
+ * them can be passed back to replace_block or update_lesson unchanged.
+ * @param {any} doc
+ */
+export function presentDoc(doc) {
+  if (!doc || typeof doc !== "object" || !Array.isArray(doc.sections))
+    return doc;
+  return {
+    ...doc,
+    sections: doc.sections.map((section) => ({
+      ...section,
+      blocks: (Array.isArray(section?.blocks) ? section.blocks : []).map(
+        (block) =>
+          block?.type === "text"
+            ? { id: block.id, type: "text", text: textBlockMarkup(block) }
+            : block,
+      ),
+    })),
+  };
+}
+
+/**
+ * Build a full canonical doc from lesson input.
+ *
+ * `existingSources` is the stored list of the lesson being replaced. With it,
+ * leaving `sources` out keeps that list exactly as it is, and sources passed
+ * back unchanged are accepted as stored (see buildSources).
+ * @param {{ title?: string, sources?: any[], sections: Array<{ name?: string, blocks?: any[] }> }} input
+ * @param {{ existingSources?: any[] }} [options]
+ * @returns {{ title: string, sources?: any[], sections: any[] }}
+ */
+export function buildDoc(input, { existingSources } = {}) {
   if (!input || typeof input !== "object") {
     throw new Error("Lesson must be an object with a title and sections.");
   }
@@ -284,7 +417,15 @@ export function buildDoc(input) {
     };
   });
 
-  return { title, sections: builtSections };
+  const sources =
+    input.sources === undefined && Array.isArray(existingSources)
+      ? existingSources
+      : buildSources(input.sources, { existing: existingSources });
+  return {
+    title,
+    ...(sources.length ? { sources } : {}),
+    sections: builtSections,
+  };
 }
 
 // The on-disk lesson-file format produced by create_lesson_file (here) and by

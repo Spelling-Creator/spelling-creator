@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 
+import { presentDoc } from "./doc.js";
 import { applyPatch } from "./patch.js";
 import { joinSession, canJoinSessions, NO_WEBSOCKET } from "./collab.js";
 
@@ -153,7 +154,7 @@ export function registerCollabTools(server, ctx) {
     },
     tool(async () => {
       const s = live();
-      return text({ doc: s.doc(), ...roomState(s) });
+      return text({ doc: presentDoc(s.doc()), ...roomState(s) });
     }),
   );
 

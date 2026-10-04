@@ -3,7 +3,7 @@
 // The whole point of the layout: **every block is its own file, named by its
 // block id**.
 //
-//   lesson.json            { title, ageRange, sections: [{ id, name, blocks: [blockId, ...] }] }
+//   lesson.json            { title, ageRange, sources?, sections: [{ id, name, blocks: [blockId, ...] }] }
 //   blocks/<blockId>.json  the block itself — { id, type, ... }
 //
 // `lesson.json` is a *manifest*: it holds the structure (which sections exist,
@@ -143,5 +143,8 @@ export async function readDocTree({ fs, gitdir, treeOid }) {
     })),
   };
   if (manifest.ageRange) doc.ageRange = manifest.ageRange;
+  if (Array.isArray(manifest.sources) && manifest.sources.length) {
+    doc.sources = manifest.sources;
+  }
   return doc;
 }

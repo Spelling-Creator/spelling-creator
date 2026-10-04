@@ -35,6 +35,10 @@ import {
 } from "lucide-react";
 import PageBar from "../components/layout/PageBar.jsx";
 import SectionOutline from "../components/editor/SectionOutline.jsx";
+import SourcesPanel from "../components/editor/SourcesPanel.jsx";
+import { LessonSourcesProvider } from "../lib/lessonSources.jsx";
+import { createSource } from "@spelling-creator/core/sources";
+import { removeSourceCitations } from "@spelling-creator/core/lessonText";
 import LessonPreview from "../components/editor/LessonPreview.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Badge } from "../components/ui/badge.jsx";
@@ -1038,6 +1042,38 @@ export default function EditorPage() {
   // lesson when published. Each entry is { email, name? }.
   const setTrustedCollaborators = (next) =>
     setDoc((d) => ({ ...d, trustedCollaborators: next }));
+
+  // The lesson's sources (see core/sources.js). Stable callbacks: addSource
+  // reaches every text block's footnote form through LessonSourcesProvider, and
+  // a new function each render would re-render all of them.
+  const addSource = useCallback((fields = {}) => {
+    const source = { ...createSource(newId), ...fields };
+    setDoc((d) => ({ ...d, sources: [...(d.sources || []), source] }));
+    return source.id;
+  }, []);
+  const addEmptySource = useCallback(() => addSource(), [addSource]);
+  const updateSource = useCallback(
+    (next) =>
+      setDoc((d) => ({
+        ...d,
+        sources: (d.sources || []).map((s) => (s.id === next.id ? next : s)),
+      })),
+    [],
+  );
+  // Removing a source also takes its citations out of the text, so no footnote
+  // is left pointing at a source the lesson no longer lists.
+  const removeSource = useCallback(
+    (id) =>
+      setDoc((d) => {
+        const next = removeSourceCitations(d, id);
+        const sources = (d.sources || []).filter((s) => s.id !== id);
+        if (sources.length) return { ...next, sources };
+        const { sources: _gone, ...rest } = next;
+        void _gone;
+        return rest;
+      }),
+    [],
+  );
 
   // Holds a section still on screen while it's being reordered past its
   // (screenfuls-tall) neighbours — see moveSection.
@@ -2949,48 +2985,62 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <>
-                  <div className="mt-4 flex flex-col gap-4">
-                    {/* eslint-disable-next-line react-hooks/refs -- capitalizedWords is a stable cached array, safe to read here */}
-                    {doc.sections.map((section, i) => (
-                      <SectionCard
-                        key={section.id}
-                        section={section}
-                        documentName={doc.title}
-                        index={i}
-                        onChange={updateSection}
-                        onDelete={deleteSection}
-                        onMove={moveSection}
-                        isFirst={i === 0}
-                        isLast={i === sectionCount - 1}
-                        onError={handleSectionError}
-                        capitalizedWords={capitalizedWords}
-                        // A plain boolean, so collapsing one section leaves every
-                        // other card's props identical and it stays memoized.
-                        collapsed={collapsedIds.has(section.id)}
-                        onToggleCollapse={toggleCollapse}
-                        springOpenMs={SPRING_OPEN_MS}
-                        // Drag state reaches each card as plain values scoped to that
-                        // card, so hovering one section doesn't re-render the others.
-                        dragBlockId={drag?.blockId ?? null}
-                        overId={
-                          drag?.overSectionId === section.id
-                            ? drag.overId
-                            : null
-                        }
-                        overPos={
-                          drag?.overSectionId === section.id
-                            ? drag.overPos
-                            : null
-                        }
-                        isDropSection={drag?.overSectionId === section.id}
-                        onBlockDragStart={startBlockDrag}
-                        onBlockDragOver={hoverBlockDrag}
-                        onBlockDragLeave={leaveBlockDrag}
-                        onBlockDrop={dropBlockDrag}
-                        onBlockDragEnd={endBlockDrag}
+                  <LessonSourcesProvider doc={doc} addSource={addSource}>
+                    <div className="mt-4 flex flex-col gap-4">
+                      {/* eslint-disable-next-line react-hooks/refs -- capitalizedWords is a stable cached array, safe to read here */}
+                      {doc.sections.map((section, i) => (
+                        <SectionCard
+                          key={section.id}
+                          section={section}
+                          documentName={doc.title}
+                          index={i}
+                          onChange={updateSection}
+                          onDelete={deleteSection}
+                          onMove={moveSection}
+                          isFirst={i === 0}
+                          isLast={i === sectionCount - 1}
+                          onError={handleSectionError}
+                          capitalizedWords={capitalizedWords}
+                          // A plain boolean, so collapsing one section leaves every
+                          // other card's props identical and it stays memoized.
+                          collapsed={collapsedIds.has(section.id)}
+                          onToggleCollapse={toggleCollapse}
+                          springOpenMs={SPRING_OPEN_MS}
+                          // Drag state reaches each card as plain values scoped to that
+                          // card, so hovering one section doesn't re-render the others.
+                          dragBlockId={drag?.blockId ?? null}
+                          overId={
+                            drag?.overSectionId === section.id
+                              ? drag.overId
+                              : null
+                          }
+                          overPos={
+                            drag?.overSectionId === section.id
+                              ? drag.overPos
+                              : null
+                          }
+                          isDropSection={drag?.overSectionId === section.id}
+                          onBlockDragStart={startBlockDrag}
+                          onBlockDragOver={hoverBlockDrag}
+                          onBlockDragLeave={leaveBlockDrag}
+                          onBlockDrop={dropBlockDrag}
+                          onBlockDragEnd={endBlockDrag}
+                        />
+                      ))}
+                    </div>
+                  </LessonSourcesProvider>
+
+                  {/* Where the list prints: after the last section. */}
+                  {sectionCount > 0 && (
+                    <div className="mt-4">
+                      <SourcesPanel
+                        doc={doc}
+                        onChangeSource={updateSource}
+                        onAddSource={addEmptySource}
+                        onRemoveSource={removeSource}
                       />
-                    ))}
-                  </div>
+                    </div>
+                  )}
 
                   {sectionCount === 0 &&
                     (editLoading ? (

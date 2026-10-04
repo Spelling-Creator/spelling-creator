@@ -12,7 +12,12 @@
 
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import { buildDoc, buildLessonFile, QUESTION_TYPES } from "./doc.js";
+import {
+  buildDoc,
+  buildLessonFile,
+  presentDoc,
+  QUESTION_TYPES,
+} from "./doc.js";
 import {
   forkLesson,
   mergeProposal,
@@ -32,6 +37,7 @@ import {
 import { registerCollabTools } from "./collabTools.js";
 import {
   formatFindings,
+  isFormattingFinding,
   inputBlocksFromOperations,
   inputBlocksFromSections,
   newFindings,
@@ -59,9 +65,23 @@ const blockSchema = z
       .string()
       .optional()
       .describe(
-        'For type "text": the paragraph. ALL-CAPS words are highlighted as spelling words. ' +
+        'For type "text": the paragraph. ALL-CAPS words are highlighted as spelling words. One line is one ' +
+          "paragraph.\n\n" +
+          "LEAVE IT PLAIN. A text block can carry **bold**, *italic* and <u>underline</u>, but lessons are " +
+          "read aloud and printed, and formatting sprinkled through a passage makes it look bloated and " +
+          "machine-written. ALL CAPS already marks the vocabulary. Use formatting only when a writing " +
+          "convention requires it (italics for the title of a book, film or ship, a scientific name, or a " +
+          "word from another language), or when the user asks. Never bold or underline for emphasis, never " +
+          "format a whole phrase or sentence, never format ALL-CAPS words. Heavy formatting is rejected on " +
+          "save.\n\n" +
+          "FOOTNOTES: ^[A short note.] adds a numbered footnote with your note; ^[@id] cites one of the " +
+          "lesson's `sources` by its id, ^[@id, p. 12] adds a page or section, and ^[@id, p. 12 | A note.] " +
+          "adds a note too. Put the marker straight after the word or sentence it belongs to. Cite only " +
+          "sources the user gave you or that you have actually checked, never invented ones, and keep " +
+          "free-text notes rare. A backslash makes a character literal (\\* for an asterisk).\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
-          'Write the activity ALONE — the "VAKT:" label is added when the lesson is rendered.',
+          'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
+          "or footnotes here.",
       ),
     links: z
       .array(
@@ -200,6 +220,36 @@ const blockSchema = z
   .passthrough()
   .describe("A lesson content block.");
 
+// The lesson's sources, for create/update. Footnotes in text blocks cite them
+// by id (^[@id]); they print as a Sources list at the end of the lesson.
+const sourcesSchema = z
+  .array(
+    z.object({
+      id: z
+        .string()
+        .describe(
+          'A short key you choose, letters, digits, "-" or "_" (e.g. "smith2020"). Footnotes cite it as ^[@smith2020].',
+        ),
+      title: z
+        .string()
+        .optional()
+        .describe("The title of the book, article or page."),
+      author: z.string().optional().describe("Who wrote it."),
+      publisher: z
+        .string()
+        .optional()
+        .describe("The publisher, or the website's name."),
+      year: z.string().optional().describe("When it was published."),
+      url: z.string().optional().describe("An http:// or https:// link to it."),
+    }),
+  )
+  .optional()
+  .describe(
+    "The lesson's sources: books, articles and websites the text draws on. They print as a Sources list at " +
+      "the end of the lesson, and footnotes cite them as ^[@id]. Only include sources the user gave you or " +
+      "that you have actually checked; never invent one. Omit when there are none.",
+  );
+
 const sectionSchema = z.object({
   name: z.string().optional().describe("Heading for this section."),
   blocks: z
@@ -246,6 +296,9 @@ const operationSchema = z
         "replace_block",
         "remove_block",
         "move_block",
+        "add_source",
+        "replace_source",
+        "remove_source",
       ])
       .describe("Which edit to make."),
     title: z
@@ -284,6 +337,25 @@ const operationSchema = z
       .array(blockSchema)
       .optional()
       .describe("Blocks for a new add_section."),
+    sourceId: z
+      .string()
+      .optional()
+      .describe(
+        "Target source id (from get_lesson). Required by replace_source/remove_source.",
+      ),
+    source: z
+      .object({
+        id: z.string().optional(),
+        title: z.string().optional(),
+        author: z.string().optional(),
+        publisher: z.string().optional(),
+        year: z.string().optional(),
+        url: z.string().optional(),
+      })
+      .optional()
+      .describe(
+        "For add_source (with the new source's `id`) / replace_source: the source, same shape as create_lesson's `sources`.",
+      ),
   })
   .describe("One edit operation, addressing sections/blocks by their id.");
 
@@ -440,7 +512,12 @@ function toWireWarnings(warnings) {
  * @param {{ doc: any, rawBlocks?: any[], baselineDoc?: any }} args
  * @returns {{ failures: import('./validate.js').Finding[], flags: import('./validate.js').Finding[] }}
  */
-function standardFindings({ doc, rawBlocks = [], baselineDoc = null }) {
+function standardFindings({
+  doc,
+  rawBlocks = [],
+  baselineDoc = null,
+  formattingBaselineDoc = null,
+}) {
   const { errors, warnings } = validateLesson(doc);
   let failures = [...validateInput(rawBlocks), ...errors];
   let flags = warnings;
@@ -449,6 +526,18 @@ function standardFindings({ doc, rawBlocks = [], baselineDoc = null }) {
     const before = validateLesson(baselineDoc);
     failures = newFindings(before.errors, failures);
     flags = newFindings(before.warnings, flags);
+  } else if (formattingBaselineDoc) {
+    // update_lesson owns every defect in what it writes, except formatting the
+    // lesson already had: a person who formatted their own lesson in the web
+    // editor shouldn't stop an assistant editing it. Formatting findings are
+    // keyed on a section's text, so text that came back unchanged matches.
+    const before = validateLesson(formattingBaselineDoc);
+    const keep = (prior, now) => {
+      const fresh = new Set(newFindings(prior, now));
+      return now.filter((f) => !isFormattingFinding(f) || fresh.has(f));
+    };
+    failures = keep(before.errors, failures);
+    flags = keep(before.warnings, flags);
   }
 
   return { failures, flags };
@@ -614,11 +703,13 @@ export function registerTools(server, ctx) {
     rawBlocks = [],
     skipValidation = false,
     baselineDoc = null,
+    formattingBaselineDoc = null,
   }) => {
     const { failures, flags } = standardFindings({
       doc,
       rawBlocks,
       baselineDoc,
+      formattingBaselineDoc,
     });
 
     if (!skipValidation) {
@@ -819,6 +910,7 @@ export function registerTools(server, ctx) {
             "Content you are composing, in create_lesson's shape — a whole lesson, or the one section you just " +
               "wrote. Omit when checking an existing lesson by `id`.",
           ),
+        sources: sourcesSchema,
         id: z
           .string()
           .optional()
@@ -835,7 +927,7 @@ export function registerTools(server, ctx) {
           ),
       },
     },
-    tool(async ({ title, sections, id, operations }) => {
+    tool(async ({ title, sections, sources, id, operations }) => {
       if (sections && id) {
         throw new Error(
           "Pass either `sections` (content you are composing) or `id` (a lesson on the hub), not both.",
@@ -856,7 +948,7 @@ export function registerTools(server, ctx) {
       // Composing: build exactly what create_lesson/update_lesson would build,
       // and check exactly what they would check.
       if (sections) {
-        const doc = buildDoc({ title, sections });
+        const doc = buildDoc({ title, sections, sources });
         const { failures, flags } = standardFindings({
           doc,
           rawBlocks: inputBlocksFromSections(sections),
@@ -936,6 +1028,7 @@ export function registerTools(server, ctx) {
       inputSchema: {
         title: z.string().describe("The lesson title / topic."),
         sections: sectionsSchema,
+        sources: sourcesSchema,
         published: z
           .boolean()
           .optional()
@@ -945,44 +1038,52 @@ export function registerTools(server, ctx) {
         skipValidation: skipValidationSchema,
       },
     },
-    tool(async ({ title, sections, published = false, skipValidation }) => {
-      const doc = buildDoc({ title, sections });
-      // Throws (and saves nothing) when the lesson breaks the standard.
-      const warnings = await checkStandard({
-        doc,
-        rawBlocks: inputBlocksFromSections(sections),
+    tool(
+      async ({
+        title,
+        sections,
+        sources,
+        published = false,
         skipValidation,
-      });
-      // Asked before the write, so a "no" saves a draft rather than publishing
-      // and retracting.
-      const publish = published ? await mayPublish(`"${doc.title}"`) : false;
-      const lesson = await api.createLesson({
-        title: doc.title,
-        doc,
-        published: publish,
-      });
-      const result = {
-        ...lesson,
-        url: hubUrl(lesson.id),
-        // A new lesson has nothing before it, so the first commit is the lesson
-        // arriving — named for what it is rather than as ninety separate adds.
-        history: await recordHistory({
-          lessonId: lesson.id,
+      }) => {
+        const doc = buildDoc({ title, sections, sources });
+        // Throws (and saves nothing) when the lesson breaks the standard.
+        const warnings = await checkStandard({
           doc,
-          summary: `Create "${doc.title}"`,
-        }),
-        note: publish
-          ? "Published to the public hub."
-          : published
-            ? "The user was asked about publishing and said no, so the lesson was saved as a PRIVATE DRAFT instead " +
-              "— nothing else about it changed, and no work was lost. Don't publish it unless they ask you to."
-            : "Saved as a private draft. Call set_lesson_published to share it.",
-      };
-      // Soft warnings: the lesson saved fine, but flag shape issues (e.g. a
-      // section with no question) so the assistant can offer to fix them.
-      if (warnings.length) result.warnings = warnings;
-      return text(result);
-    }),
+          rawBlocks: inputBlocksFromSections(sections),
+          skipValidation,
+        });
+        // Asked before the write, so a "no" saves a draft rather than publishing
+        // and retracting.
+        const publish = published ? await mayPublish(`"${doc.title}"`) : false;
+        const lesson = await api.createLesson({
+          title: doc.title,
+          doc,
+          published: publish,
+        });
+        const result = {
+          ...lesson,
+          url: hubUrl(lesson.id),
+          // A new lesson has nothing before it, so the first commit is the lesson
+          // arriving — named for what it is rather than as ninety separate adds.
+          history: await recordHistory({
+            lessonId: lesson.id,
+            doc,
+            summary: `Create "${doc.title}"`,
+          }),
+          note: publish
+            ? "Published to the public hub."
+            : published
+              ? "The user was asked about publishing and said no, so the lesson was saved as a PRIVATE DRAFT instead " +
+                "— nothing else about it changed, and no work was lost. Don't publish it unless they ask you to."
+              : "Saved as a private draft. Call set_lesson_published to share it.",
+        };
+        // Soft warnings: the lesson saved fine, but flag shape issues (e.g. a
+        // section with no question) so the assistant can offer to fix them.
+        if (warnings.length) result.warnings = warnings;
+        return text(result);
+      },
+    ),
   );
 
   server.registerTool(
@@ -1008,11 +1109,12 @@ export function registerTools(server, ctx) {
       inputSchema: {
         title: z.string().describe("The lesson title / topic."),
         sections: sectionsSchema,
+        sources: sourcesSchema,
         skipValidation: skipValidationSchema,
       },
     },
-    tool(async ({ title, sections, skipValidation }) => {
-      const doc = buildDoc({ title, sections });
+    tool(async ({ title, sections, sources, skipValidation }) => {
+      const doc = buildDoc({ title, sections, sources });
       const warnings = await checkStandard({
         doc,
         rawBlocks: inputBlocksFromSections(sections),
@@ -1043,11 +1145,13 @@ export function registerTools(server, ctx) {
         "including ones already in the lesson you fetched. Prefer patch_lesson for a small edit: it only holds you " +
         "to the problems your edit introduces.\n\n" +
         "The edit is committed to the lesson's version history, so the user can read the diff and revert it from " +
-        "the lesson's History tab. `history` in the result says what was recorded.",
+        "the lesson's History tab. `history` in the result says what was recorded.\n\n" +
+        "Omit `sources` to keep the lesson's sources as they are; pass them to replace the whole list.",
       inputSchema: {
         id: z.string().describe("The id of the lesson to update."),
         title: z.string().describe("The (possibly unchanged) lesson title."),
         sections: sectionsSchema,
+        sources: sourcesSchema,
         published: z
           .boolean()
           .optional()
@@ -1059,18 +1163,48 @@ export function registerTools(server, ctx) {
       },
     },
     tool(
-      async ({ id, title, sections, published, summary, skipValidation }) => {
-        const doc = buildDoc({ title, sections });
-        // A full replace, so the caller owns every defect in the result.
+      async ({
+        id,
+        title,
+        sections,
+        sources,
+        published,
+        summary,
+        skipValidation,
+      }) => {
+        // Read before writing, so the version history has a before-picture to
+        // diff against, so we know whether `published: true` is a change, and so
+        // omitted sources are kept rather than wiped. Only the write below
+        // decides whether the call succeeds.
+        //
+        // Left out, `sources` means "keep them", which needs the lesson
+        // actually read: the tolerant read would turn a failed fetch into a
+        // lesson with no sources, and the write would wipe the list.
+        let current;
+        if (sources === undefined) {
+          try {
+            current = await api.getLesson(id);
+          } catch (err) {
+            throw new Error(
+              `Couldn't read the lesson to keep its sources, so nothing was saved (${err.message || err}). ` +
+                "Try again, or pass `sources` explicitly.",
+            );
+          }
+        } else {
+          current = await currentLesson(id);
+        }
+        const doc = buildDoc(
+          { title, sections, sources },
+          { existingSources: current?.doc?.sources || [] },
+        );
+        // A full replace, so the caller owns every defect in the result, bar
+        // formatting the lesson already had (see standardFindings).
         const warnings = await checkStandard({
           doc,
           rawBlocks: inputBlocksFromSections(sections),
           skipValidation,
+          formattingBaselineDoc: current?.doc || null,
         });
-        // Read before writing, so the version history has a before-picture to
-        // diff against and so we know whether `published: true` is a change.
-        // Only the write below decides whether the call succeeds.
-        const current = await currentLesson(id);
         const visibility = await resolveVisibility({
           published,
           wasPublished: current?.published === true,
@@ -1123,7 +1257,10 @@ export function registerTools(server, ctx) {
         "• add_block { sectionId, block, index? }\n" +
         "• replace_block { blockId, block }         — keeps the block's id\n" +
         "• remove_block { blockId }\n" +
-        "• move_block { blockId, sectionId?, index? }\n\n" +
+        "• move_block { blockId, sectionId?, index? }\n" +
+        "• add_source { source }                    (the source carries its own `id`)\n" +
+        "• replace_source { sourceId, source }\n" +
+        "• remove_source { sourceId }               (also drops footnotes that only cited it)\n\n" +
         "`block`/`blocks` use the same shape as create_lesson. `index` is 0-based; omit it to append.\n\n" +
         "The patched lesson is checked against the authoring standard (see create_lesson), but only the defects " +
         "your edit introduces are held against you — pre-existing problems in a lesson written elsewhere won't " +
@@ -1635,10 +1772,18 @@ export function registerTools(server, ctx) {
       title: "Get a lesson",
       description:
         "Fetch one lesson including its full content document — use this to read a lesson before editing it, or to " +
-        "study an existing lesson's structure as a template.",
+        "study an existing lesson's structure as a template.\n\n" +
+        "Text blocks come back as the same markup you write them in (**bold**, *italic*, <u>underline</u>, " +
+        "^[footnotes]), with literal asterisks escaped, so a block can be passed straight back to replace_block or " +
+        "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.",
       inputSchema: { id: z.string().describe("The lesson id.") },
     },
-    tool(async ({ id }) => text(await api.getLesson(id))),
+    tool(async ({ id }) => {
+      const lesson = await api.getLesson(id);
+      return text(
+        lesson?.doc ? { ...lesson, doc: presentDoc(lesson.doc) } : lesson,
+      );
+    }),
   );
 
   server.registerTool(
@@ -2065,5 +2210,5 @@ export function registerTools(server, ctx) {
 // every client UI and bug report.
 export const SERVER_INFO = {
   name: "spelling-creator-hub",
-  version: "0.20.0",
+  version: "0.21.0",
 };

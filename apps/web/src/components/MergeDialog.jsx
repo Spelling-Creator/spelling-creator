@@ -41,10 +41,29 @@ import { Alert, AlertDescription } from "./ui/alert.jsx";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.jsx";
 import { cn } from "../lib/utils.js";
 import { questionMeta } from "@spelling-creator/core/questions";
+import {
+  textBlockFootnotes,
+  textBlockPlain,
+} from "@spelling-creator/core/lessonText";
 
 /** A contested value, rendered readably whatever shape it has. */
-function ValueText({ value }) {
+function ValueText({ value, field }) {
   const { t } = useTranslation("editorTools");
+  // A formatted text block's words, as text: what someone choosing between
+  // two versions needs to compare, rather than the document's JSON.
+  if (field === "content" && value && typeof value === "object") {
+    const footnotes = textBlockFootnotes({ content: value }).length;
+    return (
+      <p className="text-sm whitespace-pre-wrap">
+        {textBlockPlain({ content: value })}
+        {footnotes > 0 && (
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {t("mergeDialog.footnoteCount", { count: footnotes })}
+          </span>
+        )}
+      </p>
+    );
+  }
   if (value === null || value === undefined || value === "") {
     return (
       <p className="text-sm text-muted-foreground italic">
@@ -78,7 +97,7 @@ function blockLabel(block, t) {
 }
 
 // One side of a contested field, in a tinted panel.
-function Side({ label, value, chosen }) {
+function Side({ label, value, field, chosen }) {
   return (
     <div
       className={cn(
@@ -87,7 +106,7 @@ function Side({ label, value, chosen }) {
       )}
     >
       <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <ValueText value={value} />
+      <ValueText value={value} field={field} />
     </div>
   );
 }
@@ -149,16 +168,20 @@ function ConflictCard({ conflict, choice, onChoose, theirName }) {
           {conflict.fields.map((field) => (
             <div key={field.field}>
               <span className="mb-1 block text-xs text-muted-foreground">
-                {field.field}
+                {field.field === "content"
+                  ? t("mergeDialog.textField")
+                  : field.field}
               </span>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Side
                   label={t("mergeDialog.choice.mine")}
+                  field={field.field}
                   value={field.ours}
                   chosen={choice === "ours" || choice === "both"}
                 />
                 <Side
                   label={theirName}
+                  field={field.field}
                   value={field.theirs}
                   chosen={choice === "theirs" || choice === "both"}
                 />

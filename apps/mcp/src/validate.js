@@ -19,7 +19,11 @@
 // model reads the rejection and resubmits: "validation failed" buys a guess, a
 // specific message buys a correction in one round trip.
 
-import { richTextToPlain } from "@spelling-creator/core/richText";
+import {
+  textBlockFootnotes,
+  textBlockFormattedSpans,
+  textBlockPlain,
+} from "@spelling-creator/core/lessonText";
 
 /** The default lesson shape (see standards.md). Deviations are warnings. */
 export const SECTION_COUNT = 6;
@@ -189,13 +193,12 @@ function sectionLabel(section, index) {
 }
 
 // The prose a grounding check compares against: the section's own text blocks,
-// flattened out of rich text (a lesson round-tripped through the web editor
-// carries HTML here) and normalised once.
+// as plain words (formatting and footnote markers set aside) and normalised once.
 function sectionPassage(blocks) {
   return normalizeText(
     blocks
       .filter((b) => b?.type === "text")
-      .map((b) => richTextToPlain(b.text || ""))
+      .map(textBlockPlain)
       .join(" "),
   );
 }
@@ -222,7 +225,7 @@ function listTokens(sentence) {
 function passageSentences(blocks) {
   return blocks
     .filter((b) => b?.type === "text")
-    .map((b) => richTextToPlain(b.text || ""))
+    .map(textBlockPlain)
     .join(" ")
     .split(/[.!?]+(?=\s|$)/)
     .map(listTokens)
@@ -305,7 +308,7 @@ function nextListItemAfter(tokens, at) {
 function capsVocabulary(blocks) {
   const plain = blocks
     .filter((b) => b?.type === "text")
-    .map((b) => richTextToPlain(b.text || ""))
+    .map(textBlockPlain)
     .join(" ");
   const found = plain.match(/\b\p{Lu}[\p{Lu}'’-]+\b/gu) || [];
   return new Set(found.map(normalizeText).filter(Boolean));
@@ -1096,6 +1099,9 @@ export function validateLesson(doc) {
     }
   }
 
+  checkFormatting(context, error, warn);
+  checkCitations(doc, context, error);
+
   if (sections.length !== SECTION_COUNT) {
     warn(
       "W_SECTION_COUNT",
@@ -1110,6 +1116,165 @@ export function validateLesson(doc) {
     errors: findings.filter((f) => f.level === "error"),
     warnings: findings.filter((f) => f.level === "warning"),
   };
+}
+
+// ---- Formatting and footnotes ----------------------------------------------
+//
+// A lesson is read aloud to a speller and printed for a communication partner.
+// Plain prose is what both expect, ALL CAPS already marks the vocabulary, and
+// formatting scattered through a passage is the quickest way for one to read as
+// machine-written. So the standard asks assistants to leave text unformatted
+// unless a convention needs it (a book's title in italics, a scientific name),
+// and these checks hold them to it.
+//
+// The limits are per section, over all its text blocks together: a short block
+// that is mostly one italic title is fine, a passage that is a fifth bold is not.
+// Findings are keyed on the formatting itself (which words, with which marks),
+// not on where it sits or on the prose around it. patch_lesson (and, through
+// tools.js, update_lesson) only holds a write to findings it introduced, so
+// rewording a sentence in a section a person formatted in the web editor leaves
+// the key alone and the edit through. Adding formatting to that section does
+// change it, and is the write's to answer for.
+
+/** The most formatted spans a section's prose may carry. */
+export const FORMAT_MAX_SPANS = 3;
+/** The share of a section's prose that may be formatted. */
+export const FORMAT_MAX_SHARE = 0.1;
+/** The longest bold or underlined run, in words. Longer is a shouted sentence. */
+export const FORMAT_MAX_EMPHASIS_WORDS = 4;
+/** The longest italic run, in words. Long enough for a book's title. */
+export const FORMAT_MAX_ITALIC_WORDS = 10;
+
+// Every formatted span in a section's text blocks (textBlockFormattedSpans),
+// with the length of the prose they sit in.
+function formattedSpans(blocks) {
+  const spans = [];
+  let total = 0;
+  for (const block of blocks.filter((b) => b?.type === "text")) {
+    const found = textBlockFormattedSpans(block);
+    spans.push(...found.spans);
+    total += found.totalChars;
+  }
+  return { spans, total };
+}
+
+// A finding's identity: the spans it is about, as words and marks.
+function spanKey(spans) {
+  return spans
+    .map((s) => `${s.marks.join("+")}:${normalizeText(s.text)}`)
+    .sort()
+    .join("|");
+}
+
+function checkFormatting(context, error, warn) {
+  for (const ctx of context) {
+    const { spans, total } = formattedSpans(ctx.blocks);
+    if (!spans.length) continue;
+    const key = spanKey(spans);
+    const formatted = spans.reduce((sum, s) => sum + s.text.length, 0);
+    const quoted = (s) => `"${s.text}"`;
+
+    if (
+      spans.length > FORMAT_MAX_SPANS ||
+      formatted / Math.max(total, 1) > FORMAT_MAX_SHARE
+    ) {
+      error(
+        "E_FORMAT_HEAVY",
+        key,
+        ctx.number,
+        `${ctx.label}'s text has ${spans.length} formatted span${spans.length === 1 ? "" : "s"} ` +
+          `(${spans.slice(0, 4).map(quoted).join(", ")}${spans.length > 4 ? ", ..." : ""}). ` +
+          "Leave lesson prose plain: formatting scattered through a passage makes it look bloated and " +
+          "machine-written, and ALL CAPS already marks the vocabulary. Keep only formatting a convention " +
+          `requires (italics for a book's title or a scientific name), at most ${FORMAT_MAX_SPANS} spans a section.`,
+      );
+    }
+
+    for (const span of spans) {
+      const words = span.text.split(/\s+/).length;
+      const emphatic =
+        span.marks.includes("bold") || span.marks.includes("underline");
+      if (emphatic && words > FORMAT_MAX_EMPHASIS_WORDS) {
+        error(
+          "E_FORMAT_LONG_EMPHASIS",
+          spanKey([span]),
+          ctx.number,
+          `${ctx.label}: "${span.text}" is ${span.marks.includes("bold") ? "bold" : "underlined"} across ` +
+            `${words} words. Don't bold or underline a phrase or a sentence; write it plain, and let the ` +
+            "wording carry the weight.",
+        );
+      } else if (!emphatic && words > FORMAT_MAX_ITALIC_WORDS) {
+        error(
+          "E_FORMAT_LONG_ITALIC",
+          spanKey([span]),
+          ctx.number,
+          `${ctx.label}: "${span.text}" is italic across ${words} words. Italics are for a title or a ` +
+            "term, not a sentence; write it plain.",
+        );
+      }
+    }
+
+    const bold = spans.filter((s) => s.marks.includes("bold"));
+    if (bold.length) {
+      warn(
+        "W_FORMAT_BOLD",
+        spanKey(bold),
+        ctx.number,
+        `${ctx.label} uses bold (${bold.map(quoted).join(", ")}). ` +
+          "Bold is almost never needed in a lesson: ALL CAPS already marks the words being learned. " +
+          "Remove it unless the user asked for it.",
+      );
+    }
+    const underlined = spans.filter((s) => s.marks.includes("underline"));
+    if (underlined.length) {
+      warn(
+        "W_FORMAT_UNDERLINE",
+        spanKey(underlined),
+        ctx.number,
+        `${ctx.label} uses underlining (${underlined.map(quoted).join(", ")}). ` +
+          "On screen it reads as a link that goes nowhere. Remove it unless the user asked for it.",
+      );
+    }
+    const capsFormatted = spans.filter(
+      (s) => /^[\p{Lu}\s'’-]+$/u.test(s.text) && /\p{Lu}{2}/u.test(s.text),
+    );
+    if (capsFormatted.length) {
+      warn(
+        "W_FORMAT_CAPS",
+        spanKey(capsFormatted),
+        ctx.number,
+        `${ctx.label} formats ALL-CAPS vocabulary (${capsFormatted.map(quoted).join(", ")}). ` +
+          "The capitals already mark it; formatting it as well is doubling up.",
+      );
+    }
+  }
+}
+
+// A footnote citing a source the lesson doesn't list would print as "Source no
+// longer listed", which is never what was meant.
+function checkCitations(doc, context, error) {
+  const known = new Set(
+    (Array.isArray(doc?.sources) ? doc.sources : []).map((s) => s?.id),
+  );
+  for (const ctx of context) {
+    for (const block of ctx.blocks.filter((b) => b?.type === "text")) {
+      for (const footnote of textBlockFootnotes(block)) {
+        if (!footnote.sourceId || known.has(footnote.sourceId)) continue;
+        error(
+          "E_UNKNOWN_SOURCE",
+          footnote.sourceId,
+          ctx.number,
+          `${ctx.label} cites "@${footnote.sourceId}", which is not one of the lesson's sources. ` +
+            'Add it to `sources` (with that id) or fix the id in the "^[@id]" footnote.',
+        );
+      }
+    }
+  }
+}
+
+/** Whether a finding is one of the formatting checks above. */
+export function isFormattingFinding(finding) {
+  return /^[EW]_FORMAT_/.test(finding.code);
 }
 
 // The types that store no answer at all. `paraphrase` and `wyr` are

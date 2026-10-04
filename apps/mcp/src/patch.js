@@ -10,7 +10,8 @@
 // New blocks reuse the canonical builder from doc.js, so a patched block is
 // validated exactly like one created from scratch.
 
-import { buildBlock, newId } from "./doc.js";
+import { removeSourceCitations } from "@spelling-creator/core/lessonText";
+import { buildBlock, buildSources, newId } from "./doc.js";
 
 const OPS = [
   "set_title",
@@ -22,7 +23,30 @@ const OPS = [
   "replace_block",
   "remove_block",
   "move_block",
+  "add_source",
+  "replace_source",
+  "remove_source",
 ];
+
+function findSourceIndex(doc, sourceId, where) {
+  const idx = (doc.sources || []).findIndex((s) => s.id === sourceId);
+  if (idx === -1) {
+    throw new Error(
+      `${where}: no source with id "${sourceId}". Call get_lesson to see the lesson's sources.`,
+    );
+  }
+  return idx;
+}
+
+// One source from an operation, built and checked the way create_lesson builds
+// a lesson's list, with the error naming the operation.
+function buildOneSource(raw, where) {
+  try {
+    return buildSources([raw])[0];
+  } catch (err) {
+    throw new Error(`${where}: ${err.message.replace(/^Source 1:?\s*/, "")}`);
+  }
+}
 
 function findSectionIndex(doc, sectionId, where) {
   const idx = doc.sections.findIndex((s) => s.id === sectionId);
@@ -55,9 +79,9 @@ function insertAt(index, length) {
  * Apply `operations` to a copy of `originalDoc` and return the new doc.
  * Throws a descriptive Error (naming the operation) on any invalid op, leaving
  * the caller's lesson untouched since we only ever mutate the clone.
- * @param {{ title?: string, sections?: any[] }} originalDoc
+ * @param {{ title?: string, sources?: any[], sections?: any[] }} originalDoc
  * @param {any[]} operations
- * @returns {{ title: string, sections: any[] }}
+ * @returns {{ title: string, sources?: any[], sections: any[] }}
  */
 export function applyPatch(originalDoc, operations) {
   if (!Array.isArray(operations) || operations.length === 0) {
@@ -164,6 +188,36 @@ export function applyPatch(originalDoc, operations) {
             : sectionIndex;
         const blocks = doc.sections[targetIdx].blocks;
         blocks.splice(insertAt(op.index, blocks.length), 0, block);
+        break;
+      }
+
+      case "add_source": {
+        const source = buildOneSource(op.source, where);
+        doc.sources = Array.isArray(doc.sources) ? doc.sources : [];
+        if (doc.sources.some((s) => s.id === source.id)) {
+          throw new Error(
+            `${where}: the lesson already has a source "${source.id}". Use replace_source to change it.`,
+          );
+        }
+        doc.sources.push(source);
+        break;
+      }
+
+      case "replace_source": {
+        const idx = findSourceIndex(doc, op.sourceId, where);
+        const source = buildOneSource({ ...op.source, id: op.sourceId }, where);
+        doc.sources[idx] = source;
+        break;
+      }
+
+      // The source goes, and so do footnotes that only cited it; one that also
+      // carries a note keeps the note. The same as removing it in the editor.
+      case "remove_source": {
+        const idx = findSourceIndex(doc, op.sourceId, where);
+        const { sections } = removeSourceCitations(doc, op.sourceId);
+        doc.sections = sections;
+        doc.sources.splice(idx, 1);
+        if (!doc.sources.length) delete doc.sources;
         break;
       }
 

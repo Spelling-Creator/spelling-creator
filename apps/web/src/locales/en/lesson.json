@@ -81,7 +81,11 @@
     "noSpellingWords": "(no spelling words yet)",
     "imageAlt": "lesson image",
     "vaktLabel": "VAKT:",
-    "noVaktActivity": "(no activity yet)"
+    "noVaktActivity": "(no activity yet)",
+    "footnoteLabel": "Footnote {{number}}",
+    "backToText": "Back to where footnote {{number}} is used",
+    "notesHeading": "Notes",
+    "sourcesHeading": "Sources"
   },
   "lessonSummary": {
     "heading": "Summary",

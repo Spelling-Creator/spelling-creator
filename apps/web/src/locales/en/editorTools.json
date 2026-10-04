@@ -94,7 +94,10 @@
     "conflictsIntro_one": "{{count}} block was edited on both sides in the same place. Choose which to keep.",
     "conflictsIntro_other": "{{count}} blocks were edited on both sides in the same place. Choose which to keep.",
     "cancel": "Cancel",
-    "tryingNotice": "This goes into a variation of your own, not the lesson. Nothing anyone else sees changes, and the proposal stays open for you to decide on."
+    "tryingNotice": "This goes into a variation of your own, not the lesson. Nothing anyone else sees changes, and the proposal stays open for you to decide on.",
+    "textField": "text",
+    "footnoteCount_one": "Has 1 footnote",
+    "footnoteCount_other": "Has {{count}} footnotes"
   },
   "proposeDialog": {
     "defaultLessonName": "the original lesson",

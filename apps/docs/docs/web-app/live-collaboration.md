@@ -50,6 +50,11 @@ document mirroring the lesson, the room holds the authoritative copy, and only t
 The one deliberate limit: text is merged **per field**, not per character. If two
 people type into the **same** field at the same time, one of them still wins (both
 sides agree on which). Editing different blocks, the normal case, always merges.
+A formatted text block is one field too: its whole tiptap document is a single
+value, so the same rule applies to it (see
+[Formatting, footnotes & sources](./formatting-and-footnotes.md#collaboration-history-and-merging)).
+The lesson's sources are a list keyed by id, so two people editing different
+sources both keep their work.
 
 **What the room never carries.** The trusted list itself is stripped out of the
 document before it is reconciled into the Y.Doc, and so never reaches the room or
@@ -73,6 +78,19 @@ you can see where everyone is working. `useSelectionBroadcast`
 (`src/lib/useSelectionBroadcast.js`) reports the local selection, the hook exposes
 everyone else's via `collab.selections`, and `CollabCursors.jsx` renders the
 floating coloured carets/avatars over the editor.
+
+A selection travels as `{ field, start, end }` character offsets whatever kind
+of field it is in. Inputs and textareas report `selectionStart`/`selectionEnd`,
+and their caret is placed by mirroring the field off screen. A text block's body
+is a tiptap editor (a contenteditable) instead, so its offsets are counted over
+the block's plain text: each paragraph's words, one character for each break
+between paragraphs, and nothing for a footnote marker. Every collaborator holds
+the same plain text, so an offset taken on one screen lands on the same
+character on another, and the caret is placed with a DOM `Range` at that
+character (`contentEditableSelection` and `contentEditableCaretRect` in
+`@spelling-creator/core/browser/presence`). Since text blocks commit about 200ms
+after a pause, a caret can sit a few characters off for that moment while a
+collaborator is mid-word; an offset past the end of the block clamps to it.
 
 A caret is drawn only for a field that's actually on screen. Sections you have
 [collapsed](./navigating-large-lessons.md#collapsing-sections) are hidden with

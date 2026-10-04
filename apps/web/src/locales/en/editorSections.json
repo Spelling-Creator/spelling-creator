@@ -56,7 +56,12 @@
       "delete": "Delete block"
     },
     "text": {
-      "placeholder": "Type lesson text here..."
+      "placeholder": "Type lesson text here...",
+      "ariaLabel": "Lesson text",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "footnoteMarkerTitle": "Footnote. Click to edit it."
     },
     "image": {
       "altFallback": "lesson image",
@@ -118,6 +123,52 @@
       "linksHelp": "Links open in a new tab. A link with no text shows its address.",
       "uploadFileDescription": "Use a picture from your device",
       "searchOnlineDescription": "Find one on Pixabay or Wikimedia"
+    },
+    "footnote": {
+      "addButton": "Add a footnote",
+      "addButtonShort": "Footnote",
+      "editButton": "Edit this footnote",
+      "editButtonShort": "Edit footnote",
+      "sourceLabel": "Source",
+      "noSource": "No source, just a note",
+      "untitledSource": "Untitled source",
+      "newSource": "Add a new source",
+      "addSource": "Add source",
+      "cancel": "Cancel",
+      "locatorLabel": "Page or section (optional)",
+      "locatorPlaceholder": "p. 12",
+      "noteLabel": "Note",
+      "noteLabelOptional": "Note (optional)",
+      "notePlaceholder": "Anything the reader should know about this part of the text",
+      "insert": "Add footnote",
+      "update": "Save",
+      "remove": "Remove footnote"
+    }
+  },
+  "sources": {
+    "heading": "Sources",
+    "description": "Books, articles and websites this lesson draws on. They print in a list at the end of the lesson, and footnotes in the text can cite them.",
+    "empty": "No sources yet.",
+    "add": "Add source",
+    "remove": "Remove source",
+    "citedCount_one": "Cited once",
+    "citedCount_other": "Cited {{count}} times",
+    "notCited": "Not cited in the text",
+    "fields": {
+      "title": "Title",
+      "author": "Author",
+      "publisher": "Publisher or website",
+      "year": "Year",
+      "url": "Link",
+      "urlPlaceholder": "https://example.com"
+    },
+    "invalidUrl": "Links need to start with http://, https:// or mailto:, or they won't be shown.",
+    "confirmRemove": {
+      "title": "Remove this source?",
+      "description_one": "It is cited once in the text. That footnote will be removed, or kept as a plain note if it has one.",
+      "description_other": "It is cited {{count}} times in the text. Those footnotes will be removed, or kept as plain notes if they have one.",
+      "cancel": "Keep it",
+      "confirm": "Remove source"
     }
   }
 }

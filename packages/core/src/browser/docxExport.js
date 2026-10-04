@@ -7,6 +7,11 @@
 // type followed, in black, by its answer — the colour is the only thing marking
 // the type, so nothing is bracketed or labelled in the text.
 //
+// Text blocks keep their bold, italics and underlining, and their footnotes
+// become real Word footnotes, numbered in reading order at the foot of each
+// page. When the lesson lists sources they close the document under a
+// "Sources" line.
+//
 // pdfExport.js converts this document to HTML with mammoth and renders that, so
 // the PDF matches page for page; docxImport.js reads the same shape back.
 import {
@@ -21,14 +26,28 @@ import {
   Header,
   Footer,
   PageNumber,
+  FootnoteReferenceRun,
 } from "docx";
+import { footnoteParts, textBlockParagraphs } from "../lessonText.js";
+import { lessonSources, sourceEntryParts, sourcesById } from "../sources.js";
 import { fitWithin, imageSizeScale } from "../image.js";
 import { getImageBytes } from "./imageRef.js";
 import {
+  CAPTION_STYLE_ID,
+  CAPTION_STYLE_NAME,
   DOCX_MAX_IMAGE_WIDTH,
+  FOOTNOTE_LOCATOR_STYLE_ID,
+  FOOTNOTE_LOCATOR_STYLE_NAME,
+  FOOTNOTE_NOTE_STYLE_ID,
+  FOOTNOTE_NOTE_STYLE_NAME,
   LEGEND_SEPARATOR,
   QUESTION_LINE_STYLE_ID,
   QUESTION_LINE_STYLE_NAME,
+  SOURCE_ENTRY_STYLE_ID,
+  SOURCE_ENTRY_STYLE_NAME,
+  SOURCES_HEADING_STYLE_ID,
+  SOURCES_HEADING_STYLE_NAME,
+  SOURCES_HEADING_TEXT,
   TITLE_LINE_STYLE_ID,
   TITLE_LINE_STYLE_NAME,
   lessonCopyright,
@@ -83,15 +102,98 @@ function hex(color) {
   return color.replace("#", "");
 }
 
-function textBlockParagraphs(block) {
-  const lines = (block.text || "").split("\n");
-  return lines.map(
-    (line) =>
+// The character style a footnote run carries, by its role (see footnoteParts).
+const ROLE_STYLES = {
+  locator: FOOTNOTE_LOCATOR_STYLE_ID,
+  note: FOOTNOTE_NOTE_STYLE_ID,
+};
+
+// Runs ({ text, italic?, url?, role? }, from sources.js and lessonText.js) as
+// docx children: a link becomes a real hyperlink, everything else a plain run.
+function partRuns(parts, size) {
+  return parts.map((part) =>
+    part.url
+      ? new ExternalHyperlink({
+          link: part.url,
+          children: [
+            new TextRun({ text: part.text, style: "Hyperlink", size }),
+          ],
+        })
+      : new TextRun({
+          text: part.text,
+          italics: Boolean(part.italic),
+          style: ROLE_STYLES[part.role],
+          size,
+        }),
+  );
+}
+
+// Footnotes are collected as the body is built: each one takes the next number,
+// and its text goes into the document's footnotes part under that number.
+function createNotes(doc) {
+  return { sources: sourcesById(doc), footnotes: {}, next: 1 };
+}
+
+function footnoteRun(footnote, notes) {
+  const id = notes.next++;
+  notes.footnotes[id] = {
+    children: [
+      new Paragraph({
+        children: partRuns(footnoteParts(footnote, notes.sources), 20),
+      }),
+    ],
+  };
+  return new FootnoteReferenceRun(id);
+}
+
+function textBlockDocxParagraphs(block, notes) {
+  return textBlockParagraphs(block).map(
+    (runs) =>
       new Paragraph({
         spacing: { after: 120 },
-        children: [new TextRun({ text: line, size: BODY_SIZE })],
+        children: runs.length
+          ? runs.map((run) =>
+              run.type === "footnote"
+                ? footnoteRun(run, notes)
+                : new TextRun({
+                    text: run.text,
+                    bold: run.bold,
+                    italics: run.italic,
+                    underline: run.underline ? {} : undefined,
+                    size: BODY_SIZE,
+                  }),
+            )
+          : [new TextRun({ text: "", size: BODY_SIZE })],
       }),
   );
+}
+
+// The Sources list that closes the lesson, when it has any.
+function sourcesParagraphs(doc) {
+  const sources = lessonSources(doc);
+  if (!sources.length) return [];
+  return [
+    new Paragraph({
+      style: SOURCES_HEADING_STYLE_ID,
+      spacing: { before: 360, after: 80 },
+      children: [
+        new TextRun({
+          text: SOURCES_HEADING_TEXT,
+          bold: true,
+          size: BODY_SIZE,
+        }),
+      ],
+    }),
+    ...sources.map(
+      (source) =>
+        new Paragraph({
+          style: SOURCE_ENTRY_STYLE_ID,
+          spacing: { after: 60 },
+          indent: { left: 360, hanging: 360 },
+          children: partRuns(sourceEntryParts(source), 22),
+        }),
+    ),
+  ];
 }
 
 // `embedded` is an optional out-parameter: every picture that actually makes it
@@ -141,6 +243,7 @@ async function imageBlockParagraphs(block, embedded) {
   if (block.caption) {
     paragraphs.push(
       new Paragraph({
+        style: CAPTION_STYLE_ID,
         alignment,
         spacing: { after: 160 },
         children: [
@@ -311,11 +414,11 @@ async function vaktBlockParagraphs(block, embedded) {
 
 // A section's blocks, with no heading of its own. Section names are an
 // organising device inside the editor; a printed lesson runs straight through.
-async function sectionParagraphs(section, embedded) {
+async function sectionParagraphs(section, embedded, notes) {
   const paragraphs = [];
   for (const block of section.blocks) {
     if (block.type === "text") {
-      paragraphs.push(...textBlockParagraphs(block));
+      paragraphs.push(...textBlockDocxParagraphs(block, notes));
     } else if (block.type === "image" && (block.image || block.src)) {
       paragraphs.push(...(await imageBlockParagraphs(block, embedded)));
     } else if (block.type === "question") {
@@ -431,6 +534,19 @@ function colourCharacterStyles() {
       quickFormat: false,
       run: { color: hex(VAKT_COLOR) },
     },
+    // Unformatted on purpose: only the importer looks at these.
+    {
+      id: FOOTNOTE_LOCATOR_STYLE_ID,
+      name: FOOTNOTE_LOCATOR_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+    },
+    {
+      id: FOOTNOTE_NOTE_STYLE_ID,
+      name: FOOTNOTE_NOTE_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+    },
   ];
 }
 
@@ -438,7 +554,7 @@ function colourCharacterStyles() {
  * Build an in-memory docx Document from the lesson state. Async because image
  * bytes may need fetching from R2 for a lesson whose images aren't held locally.
  *
- * @param {object} doc   the lesson document ({ title, ageRange, sections })
+ * @param {object} doc   the lesson document ({ title, ageRange, sources, sections })
  * @param {{author?: string, published?: string|number|Date}} [meta]
  *   who the lesson is by and when it was published — used for the by-line and
  *   the footer's copyright line. Both lines are omitted when not supplied.
@@ -450,14 +566,17 @@ function colourCharacterStyles() {
  */
 export async function buildDocument(doc, meta = {}, embedded = undefined) {
   const children = titleParagraphs(doc, meta);
+  const notes = createNotes(doc);
 
   for (const section of doc.sections) {
-    children.push(...(await sectionParagraphs(section, embedded)));
+    children.push(...(await sectionParagraphs(section, embedded, notes)));
   }
+  children.push(...sourcesParagraphs(doc));
 
   return new Document({
     creator: meta.author || "Spelling Lesson Maker",
     title: doc.title || "Untitled Lesson",
+    footnotes: notes.footnotes,
     styles: {
       default: {
         document: {
@@ -475,6 +594,24 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
         {
           id: QUESTION_LINE_STYLE_ID,
           name: QUESTION_LINE_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: CAPTION_STYLE_ID,
+          name: CAPTION_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: SOURCES_HEADING_STYLE_ID,
+          name: SOURCES_HEADING_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: SOURCE_ENTRY_STYLE_ID,
+          name: SOURCE_ENTRY_STYLE_NAME,
           basedOn: "Normal",
           quickFormat: false,
         },

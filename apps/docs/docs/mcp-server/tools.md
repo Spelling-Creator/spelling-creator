@@ -294,7 +294,9 @@ For tweaks, prefer **`patch_lesson`**: `get_lesson` to read the current section/
 ```
 
 Ops: `set_title`, `set_section_name`, `add_section`, `remove_section`, `move_section`,
-`add_block`, `replace_block` (keeps the block id), `remove_block`, `move_block`. The
+`add_block`, `replace_block` (keeps the block id), `remove_block`, `move_block`,
+`add_source`, `replace_source` and `remove_source` (which also drops footnotes that only
+cited the source, keeping any that carry a note). The
 server fetches the lesson, applies the ops in order, and saves the result (the hub API
 itself only does full replaces, so the diff is applied server-side). Use `update_lesson`
 when you're rewriting the whole lesson anyway.
@@ -369,7 +371,9 @@ call `create_lesson` once the whole thing comes back clean. See
 A lesson is **sections** of **blocks**. Block types:
 
 - **`text`**: a paragraph. Put words you're teaching the spelling of in **ALL
-  CAPS**; the app highlights them as spelling words.
+  CAPS**; the app highlights them as spelling words. One line is one paragraph. The
+  text is a small markup, and assistants are told to leave it plain (see
+  [Formatting and footnotes](#formatting-and-footnotes) below).
 - **`spelling`**: an explicit word list: `{ "type": "spelling", "words": ["BECAUSE", "FRIEND"] }`.
 - **`question`**: a quiz question with a `questionType`:
   - `number` takes `answer` (numeric), plus optional `steps` (array of worked-solution steps, in order)
@@ -399,6 +403,41 @@ jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pair
   and off by default**: only add them when the user asks. When they do, a section gets one
   and it goes **last**, after that section's questions. See
   [VAKT activities](/web-app/vakt-activities).
+
+## Formatting and footnotes
+
+Text blocks are written, and read back from `get_lesson`, as one string in a small
+markup. It is Markdown where Markdown has an answer:
+
+| Markup                            | Means                              |
+| --------------------------------- | ---------------------------------- |
+| `**bold**`                        | Bold                               |
+| `*italic*`                        | Italic                             |
+| `<u>underline</u>`                | Underline                          |
+| `^[A note.]`                      | A footnote with a free-text note   |
+| `^[@smith2020]`                   | A footnote citing one of `sources` |
+| `^[@smith2020, p. 12]`            | The same, with a page or section   |
+| `^[@smith2020, p. 12 \| A note.]` | The same, with a note too          |
+
+A backslash makes the next character literal (`\*` for an asterisk). An unpaired `*` or
+an unclosed `^[` is read as the characters themselves, so prose that happens to hold an
+asterisk survives. `get_lesson` escapes whatever needs it, so a block it returns can be
+passed straight back to `replace_block` or `update_lesson`. A block with no markup in it
+is stored as the plain string it always was.
+
+The block's description, and the standard, tell assistants to **leave text plain**:
+lessons are read aloud and printed, ALL CAPS already marks the vocabulary, and formatting
+sprinkled through a passage reads as bloated and machine-written. Italics for a book's
+title or a scientific name are fine; bold and underline almost never are. The validator
+enforces it (see [Lesson validation](/mcp-server/lesson-validation#formatting)).
+
+`create_lesson`, `create_lesson_file`, `update_lesson` and `validate_lesson` take an
+optional `sources` array: `{ id, title?, author?, publisher?, year?, url? }`, where the
+`id` is a short key the assistant picks and its footnotes cite. They print as a Sources
+list at the end of the lesson. `update_lesson` keeps the lesson's existing sources when
+`sources` is left out. Assistants are told to cite only sources the user gave them or
+that they have actually checked. See
+[Formatting, footnotes & sources](/web-app/formatting-and-footnotes).
 
 ## Placing an image
 

@@ -14,6 +14,10 @@ import {
   LEGEND_SEPARATOR,
   QUESTION_LINE_CLASS,
   QUESTION_LINE_STYLE_NAME,
+  SOURCE_ENTRY_CLASS,
+  SOURCE_ENTRY_STYLE_NAME,
+  SOURCES_HEADING_CLASS,
+  SOURCES_HEADING_STYLE_NAME,
   TITLE_CLASS,
   TITLE_LINE_CLASS,
   TITLE_LINE_STYLE_NAME,
@@ -116,7 +120,38 @@ const STYLE_MAP = [
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
   `p[style-name='${QUESTION_LINE_STYLE_NAME}'] => p.${QUESTION_LINE_CLASS}:fresh`,
+  `p[style-name='${SOURCES_HEADING_STYLE_NAME}'] => p.${SOURCES_HEADING_CLASS}:fresh`,
+  `p[style-name='${SOURCE_ENTRY_STYLE_NAME}'] => p.${SOURCE_ENTRY_CLASS}:fresh`,
+  // mammoth drops underlining unless asked to keep it.
+  "u => u",
 ];
+
+// What the footnotes are headed with once they become a list at the end.
+const NOTES_HEADING_TEXT = "Notes";
+
+// mammoth turns the docx's footnotes into an <ol> at the very end of the HTML,
+// after the Sources list, with a "back to the text" arrow on each. A page has no
+// foot to put them at, so they print as endnotes: moved above the Sources list,
+// headed "Notes", and without the arrows, which link nowhere on paper.
+export function layoutNotes(html) {
+  const match = html.match(
+    /<ol>(?:(?!<ol>)[\s\S])*?<li id="footnote-1">[\s\S]*<\/ol>\s*$/,
+  );
+  if (!match) return html;
+  const list = match[0].replace(
+    /\s*<a href="#footnote-ref-\d+">[^<]*<\/a>/g,
+    "",
+  );
+  const notes = `<p class="s2c-notes-heading"><strong>${NOTES_HEADING_TEXT}</strong></p>${list.replace(
+    "<ol>",
+    '<ol class="s2c-notes">',
+  )}`;
+  const body = html.slice(0, match.index);
+  const sourcesAt = body.indexOf(`<p class="${SOURCES_HEADING_CLASS}">`);
+  return sourcesAt === -1
+    ? body + notes
+    : body.slice(0, sourcesAt) + notes + body.slice(sourcesAt);
+}
 
 // Build the docx in memory and convert it to HTML with mammoth, so the PDF
 // matches what the docx export produces. Returns an HTML string.
@@ -133,7 +168,7 @@ async function docToHtml(doc, meta) {
     { arrayBuffer },
     { styleMap: STYLE_MAP },
   );
-  return layoutImageFigures(html, embedded);
+  return layoutNotes(layoutImageFigures(html, embedded));
 }
 
 // Print styles applied to the mammoth-generated HTML before rendering to PDF.
@@ -175,6 +210,19 @@ const PRINT_STYLES = `
       `${type.italic ? " font-style: italic;" : ""} }`,
   ).join("\n  ")}
   .s2c-pdf-root .${VAKT_STYLE_CLASS} { color: ${VAKT_COLOR}; }
+  .s2c-pdf-root sup { font-size: 9px; line-height: 0; }
+  .s2c-pdf-root sup a { color: inherit; text-decoration: none; }
+  .s2c-pdf-root .s2c-notes-heading,
+  .s2c-pdf-root .${SOURCES_HEADING_CLASS} { margin: 18px 0 4px; }
+  .s2c-pdf-root .s2c-notes { margin: 0; padding-left: 22px; font-size: 11px; }
+  .s2c-pdf-root .s2c-notes p { margin: 0 0 2px; }
+  .s2c-pdf-root .${SOURCE_ENTRY_CLASS} {
+    margin: 0 0 3px;
+    padding-left: 22px;
+    text-indent: -22px;
+    font-size: 12px;
+  }
+  .s2c-pdf-root .${SOURCE_ENTRY_CLASS} a { color: inherit; }
 `;
 
 // Page geometry, shared by the html2pdf options and the footer drawing below.

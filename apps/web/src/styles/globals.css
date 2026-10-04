@@ -426,3 +426,33 @@
   color: var(--muted-foreground);
   pointer-events: none;
 }
+
+/* The lesson text editor (LessonTextInput.jsx). A paragraph there is one line
+   of the lesson, the way it was in the plain textarea it replaced, so lines sit
+   tight together and a blank line is an empty paragraph. */
+.lesson-text-editor p {
+  margin: 0;
+  min-height: 1.5em;
+}
+
+/* Footnote markers. The editor starts the counter at the number of footnotes
+   that come before its block (an inline counter-reset on the wrapper), so the
+   markers carry the numbers the printed lesson will. */
+.lesson-footnote {
+  counter-increment: lesson-footnote;
+  margin: 0 1px;
+  padding: 0 3px;
+  border-radius: 0.25em;
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.75em;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lesson-footnote::after {
+  content: counter(lesson-footnote);
+}
+.lesson-footnote.ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}

@@ -16,6 +16,12 @@
 // surface them as `<span class="s2c-q-…">`. Section *divisions* have nothing
 // left to carry them, so a document that uses no headings arrives as a single
 // section; Export/Import JSON is the lossless round trip.
+//
+// Text keeps its bold, italics and underlining, and Word footnotes (and
+// endnotes) come back as footnotes. The Sources list our exporter prints is
+// recognised by its paragraph styles and read back into the lesson's sources;
+// a footnote whose text is exactly how the exporter cites one of them becomes
+// a citation of it again, and any other footnote is kept as a note.
 import mammoth from "mammoth";
 import { newId } from "../id.js";
 import {
@@ -25,6 +31,24 @@ import {
 } from "../questions.js";
 import { SPELLING_LABEL } from "../spelling.js";
 import { isSafeLink } from "../richText.js";
+import {
+  CAPTION_CLASS,
+  CAPTION_STYLE_NAME,
+  FOOTNOTE_LOCATOR_CLASS,
+  FOOTNOTE_LOCATOR_STYLE_NAME,
+  FOOTNOTE_NOTE_CLASS,
+  FOOTNOTE_NOTE_STYLE_NAME,
+  SOURCE_ENTRY_CLASS,
+  SOURCE_ENTRY_STYLE_NAME,
+  SOURCES_HEADING_CLASS,
+  SOURCES_HEADING_STYLE_NAME,
+} from "../lessonLayout.js";
+import {
+  normalizeTextContent,
+  textBlockHasContent,
+  withTextBlockContent,
+} from "../lessonText.js";
+import { partsText, sourceCitationParts } from "../sources.js";
 import {
   VAKT_DEFAULT_IMAGE_ALIGN,
   VAKT_DEFAULT_IMAGE_SIZE,
@@ -57,6 +81,17 @@ const QUESTION_SPAN_SELECTOR = QUESTION_TYPE_LIST.map(
   (q) => `span.${questionStyleClass(q.key)}`,
 ).join(", ");
 
+const IMPORT_STYLE_MAP = [
+  ...questionStyleMap(),
+  `p[style-name='${SOURCES_HEADING_STYLE_NAME}'] => p.${SOURCES_HEADING_CLASS}:fresh`,
+  `p[style-name='${SOURCE_ENTRY_STYLE_NAME}'] => p.${SOURCE_ENTRY_CLASS}:fresh`,
+  `p[style-name='${CAPTION_STYLE_NAME}'] => p.${CAPTION_CLASS}:fresh`,
+  `r[style-name='${FOOTNOTE_LOCATOR_STYLE_NAME}'] => span.${FOOTNOTE_LOCATOR_CLASS}`,
+  `r[style-name='${FOOTNOTE_NOTE_STYLE_NAME}'] => span.${FOOTNOTE_NOTE_CLASS}`,
+  // mammoth drops underlining unless asked to keep it.
+  "u => u",
+];
+
 // Read a .docx File and rebuild a lesson document. Resolves to a doc shaped like
 // { title, sections } ready for the editor; rejects (DocxImportError) when the
 // file isn't a usable lesson.
@@ -75,7 +110,7 @@ export async function importDocxFile(file) {
     // now that nothing in the visible text names it.
     const result = await mammoth.convertToHtml(
       { arrayBuffer },
-      { styleMap: questionStyleMap() },
+      { styleMap: IMPORT_STYLE_MAP },
     );
     html = result.value || "";
   } catch {
@@ -101,7 +136,15 @@ export async function importDocxFile(file) {
 // paragraphs that follow their heading, so the loop index is advanced past them.
 function parseHtmlToDoc(html, fileName) {
   const dom = new DOMParser().parseFromString(html, "text/html");
+  // The footnote lists come out first: they aren't lesson content, they are
+  // what the footnote markers in the text point at.
+  const notes = takeNotes(dom);
   const nodes = Array.from(dom.body.children);
+  const sources = [];
+  // A file this app exported since captions were given their own style says
+  // which paragraphs are captions; an older one leaves it to the shape.
+  const styledCaptions = Boolean(dom.querySelector(`p.${CAPTION_CLASS}`));
+  const captionOf = (el) => captionText(el, styledCaptions);
 
   // Decide which heading levels act as section dividers. Our own exports use
   // `<h2>`; we also accept `<h3>`, and fall back to `<h1>` for documents that
@@ -128,12 +171,18 @@ function parseHtmlToDoc(html, fileName) {
     if (!current) startSection("Imported section");
     return current;
   };
-  const pushText = (text) => {
+  // Text blocks gather paragraphs as they go and become real blocks at the end
+  // (finishTextBlocks), once the sources their footnotes may cite are known.
+  const pushParagraph = (inline) => {
     const section = ensureSection();
     const last = section.blocks[section.blocks.length - 1];
-    if (last && last.type === "text") last.text += `\n${text}`;
-    else section.blocks.push({ id: newId(), type: "text", text });
+    if (last && last.type === "text" && last.paragraphs) {
+      last.paragraphs.push(inline);
+    } else {
+      section.blocks.push({ id: newId(), type: "text", paragraphs: [inline] });
+    }
   };
+  const pushText = (text) => pushParagraph([{ type: "text", text }]);
 
   for (let i = 0; i < nodes.length; i += 1) {
     const el = nodes[i];
@@ -161,7 +210,7 @@ function parseHtmlToDoc(html, fileName) {
     const img = el.querySelector?.("img");
     if (img?.getAttribute("src")) {
       ensureSection();
-      const caption = italicOnlyText(nodes[i + 1]);
+      const caption = captionOf(nodes[i + 1]);
       current.blocks.push(imageBlock(img, caption));
       if (caption) i += 1; // consume the caption paragraph
       continue;
@@ -182,7 +231,14 @@ function parseHtmlToDoc(html, fileName) {
       continue;
     }
 
-    if (!text) continue; // stray empty paragraph
+    if (el.classList.contains(SOURCES_HEADING_CLASS)) continue;
+    if (el.classList.contains(SOURCE_ENTRY_CLASS)) {
+      const source = readSource(el);
+      if (source) sources.push(source);
+      continue;
+    }
+
+    if (!text && !el.querySelector("sup")) continue; // stray empty paragraph
 
     // A leading bold-only paragraph before any content is the document title
     // (that's how the exporter emits it — Word's Title style, which mammoth
@@ -210,7 +266,7 @@ function parseHtmlToDoc(html, fileName) {
 
     if (isVaktHeading(text)) {
       ensureSection();
-      const { block, next } = readVakt(nodes, i);
+      const { block, next } = readVakt(nodes, i, captionOf);
       current.blocks.push(block);
       i = next;
       continue;
@@ -225,13 +281,208 @@ function parseHtmlToDoc(html, fileName) {
       continue;
     }
 
-    pushText(text);
+    pushParagraph(inlineContent(el, notes));
   }
 
+  finishTextBlocks(sections, sources);
   return {
     title: title || stripExtension(fileName) || "Imported lesson",
+    ...(sources.length ? { sources } : {}),
     sections,
   };
+}
+
+// Every footnote and endnote, keyed by the id its marker links to
+// ("footnote-1"), with the lists themselves removed from the document. Each is
+// { text } for a note from anywhere, plus { cite, locator, note } when the
+// exporter marked its parts with their styles (see footnoteParts), which is
+// what lets a citation be read back exactly.
+function takeNotes(dom) {
+  const notes = new Map();
+  const items = dom.body.querySelectorAll(
+    'li[id^="footnote-"], li[id^="endnote-"]',
+  );
+  const lists = new Set();
+  for (const li of items) {
+    // The arrow mammoth adds to lead back to the marker.
+    for (const back of li.querySelectorAll(
+      'a[href^="#footnote-ref-"], a[href^="#endnote-ref-"]',
+    )) {
+      back.remove();
+    }
+    notes.set(li.id, readNote(li));
+    if (li.parentElement) lists.add(li.parentElement);
+  }
+  for (const list of lists) list.remove();
+  return notes;
+}
+
+const squash = (text) => text.replace(/\s+/g, " ").trim();
+
+function readNote(li) {
+  const text = squash(li.textContent);
+  const locatorEl = li.querySelector(`span.${FOOTNOTE_LOCATOR_CLASS}`);
+  const noteEl = li.querySelector(`span.${FOOTNOTE_NOTE_CLASS}`);
+  if (!locatorEl && !noteEl) return { text };
+
+  // What's left once the locator and note are lifted out is the citation,
+  // closed by the full stop the exporter puts after it.
+  const rest = li.cloneNode(true);
+  for (const el of rest.querySelectorAll(
+    `span.${FOOTNOTE_LOCATOR_CLASS}, span.${FOOTNOTE_NOTE_CLASS}`,
+  )) {
+    el.remove();
+  }
+  return {
+    text,
+    cite: squash(rest.textContent).replace(/\.$/, ""),
+    locator: locatorEl
+      ? squash(locatorEl.textContent).replace(/^,\s*/, "")
+      : "",
+    note: noteEl ? squash(noteEl.textContent) : "",
+  };
+}
+
+// A paragraph's words as content: formatting from the tags mammoth writes, and
+// a footnote wherever a marker links into the notes.
+function inlineContent(el, notes) {
+  const out = [];
+  const walk = (node, marks) => {
+    if (node.nodeType === 3) {
+      if (node.nodeValue) {
+        out.push({
+          type: "text",
+          text: node.nodeValue,
+          marks: [...marks].map((type) => ({ type })),
+        });
+      }
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    const link = node.matches('a[href^="#footnote-"], a[href^="#endnote-"]')
+      ? node
+      : node.tagName === "SUP"
+        ? node.querySelector('a[href^="#footnote-"], a[href^="#endnote-"]')
+        : null;
+    if (link) {
+      const note = notes.get(link.getAttribute("href").slice(1));
+      if (note?.text) out.push({ type: "footnote", note });
+      return;
+    }
+    const next = new Set(marks);
+    const tag = node.tagName;
+    if (tag === "STRONG" || tag === "B") next.add("bold");
+    if (tag === "EM" || tag === "I") next.add("italic");
+    if (tag === "U") next.add("underline");
+    for (const child of node.childNodes) walk(child, next);
+  };
+  for (const child of el.childNodes) walk(child, new Set());
+
+  // Trim the paragraph's outer whitespace, as the plain-text path always has.
+  const first = out.find((node) => node.type === "text");
+  if (first) first.text = first.text.replace(/^\s+/, "");
+  const last = [...out].reverse().find((node) => node.type === "text");
+  if (last) last.text = last.text.replace(/\s+$/, "");
+  return out;
+}
+
+// One entry of the exporter's Sources list: "Author. Title. Publisher, Year.
+// https://...", with the title in italics and the address a link.
+function readSource(el) {
+  const em = el.querySelector("em, i");
+  const link = el.querySelector("a[href]");
+  const full = el.textContent.replace(/\s+/g, " ").trim();
+  if (!full) return null;
+
+  const url =
+    link && isSafeLink(link.getAttribute("href"))
+      ? link.getAttribute("href")
+      : "";
+  let title = em ? em.textContent.trim() : "";
+  let author = "";
+  let details = full;
+  if (title) {
+    const at = full.indexOf(title);
+    author = full.slice(0, at).trim().replace(/\.$/, "");
+    details = full.slice(at + title.length);
+  } else if (!url) {
+    // No italics and no link: not one of ours. Keep the words as the title.
+    title = full;
+    details = "";
+  }
+  if (url) details = details.replace(link.textContent, "");
+  details = details.replace(/^[.\s]+|[.\s]+$/g, "");
+
+  const comma = details.lastIndexOf(", ");
+  const tail = comma === -1 ? details : details.slice(comma + 2);
+  const hasYear = /^(?:c\.\s*)?\d{3,4}\b/.test(tail);
+  return {
+    id: newId(),
+    title,
+    author,
+    publisher: hasYear
+      ? comma === -1
+        ? ""
+        : details.slice(0, comma)
+      : details,
+    year: hasYear ? tail : "",
+    url,
+  };
+}
+
+// Turn each gathered text block into a stored one, matching footnotes against
+// the sources read off the end of the document.
+function finishTextBlocks(sections, sources) {
+  for (const section of sections) {
+    section.blocks = section.blocks.map((block) => {
+      if (block.type !== "text" || !block.paragraphs) return block;
+      const content = normalizeTextContent({
+        type: "doc",
+        content: block.paragraphs.map((inline) => ({
+          type: "paragraph",
+          content: inline.map((node) =>
+            node.type === "footnote"
+              ? { type: "footnote", attrs: citationFor(node.note, sources) }
+              : node,
+          ),
+        })),
+      });
+      return withTextBlockContent({ id: block.id, type: "text" }, content);
+    });
+  }
+}
+
+// A footnote read back as a citation of one of the sources, or as a note.
+//
+// A note whose parts the exporter styled (see readNote) is exact: the citation
+// either matches how one of the sources is cited or it doesn't. An unstyled
+// note (a file from before the styles, or from anywhere else) is only matched
+// in the two shapes that can't be misread: the citation alone, or the citation
+// then a note. A locator can't be told from a note without the styles ("p. 12"
+// has a full stop in it), so anything else stays a note with its words intact.
+function citationFor(note, sources) {
+  const citeOf = (source) =>
+    partsText(sourceCitationParts(source)).replace(/\.$/, "");
+
+  if (note.cite !== undefined) {
+    const source = note.cite
+      ? sources.find((s) => citeOf(s) && citeOf(s) === note.cite)
+      : null;
+    if (source) {
+      return { sourceId: source.id, locator: note.locator, note: note.note };
+    }
+    return { sourceId: null, note: note.text };
+  }
+
+  for (const source of sources) {
+    const cite = citeOf(source);
+    if (!cite) continue;
+    if (note.text === `${cite}.`) return { sourceId: source.id, note: "" };
+    if (note.text.startsWith(`${cite}. `)) {
+      return { sourceId: source.id, note: note.text.slice(cite.length + 2) };
+    }
+  }
+  return { sourceId: null, note: note.text };
 }
 
 // True when the paragraph's entire content is a single <strong> (our title and
@@ -240,11 +491,17 @@ function isBoldOnly(el) {
   return el.children.length === 1 && el.children[0].tagName === "STRONG";
 }
 
-// The text of a paragraph whose whole content is italic (an image caption in our
-// export), or "" if the next node isn't such a paragraph.
-function italicOnlyText(el) {
+// The text of the paragraph under a picture when it is that picture's caption,
+// or "". A file with styled captions says so outright. In an older one a caption
+// is a paragraph that is one italic run and nothing else, text nodes included:
+// counting only element children would take "*Felis catus* is the house cat."
+// for a caption, now that text blocks keep their italics.
+function captionText(el, styledCaptions) {
   if (!el || el.tagName !== "P") return "";
-  if (el.children.length === 1 && el.children[0].tagName === "EM") {
+  if (styledCaptions) {
+    return el.classList.contains(CAPTION_CLASS) ? el.textContent.trim() : "";
+  }
+  if (el.childNodes.length === 1 && el.firstChild.nodeName === "EM") {
     return el.textContent.trim();
   }
   return "";
@@ -393,7 +650,7 @@ function isVaktHeading(text) {
 // exporter writes underneath it: the activity's picture (with the italic caption
 // that may follow), and one paragraph per link. Returns { block, next } where
 // `next` is the index of the last node consumed.
-function readVakt(nodes, i) {
+function readVakt(nodes, i, captionOf) {
   const heading = nodes[i].textContent.trim();
   const text = heading.slice(VAKT_LABEL.length).trim();
   const block = {
@@ -410,7 +667,7 @@ function readVakt(nodes, i) {
 
   const img = nodes[k]?.querySelector?.("img");
   if (img?.getAttribute("src")) {
-    const caption = italicOnlyText(nodes[k + 1]);
+    const caption = captionOf(nodes[k + 1]);
     block.src = img.getAttribute("src");
     block.width = 0; // filled in by measureImages()
     block.height = 0;
@@ -489,7 +746,7 @@ function validateImportedDoc(doc) {
 }
 
 function blockHasContent(block) {
-  if (block.type === "text") return Boolean(block.text.trim());
+  if (block.type === "text") return textBlockHasContent(block);
   if (block.type === "image") return Boolean(block.image || block.src);
   if (block.type === "question") return Boolean(block.prompt);
   if (block.type === "spelling") {

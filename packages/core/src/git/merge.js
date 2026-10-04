@@ -22,12 +22,23 @@
 // expensive for one to adjudicate, so a reorder on both sides resolves to ours
 // and is reported in the summary instead.
 //
+// The lesson's sources merge the same quiet way, by id and field by field: a
+// source one side added or edited comes through, and where both sides changed
+// the same field of the same source, ours stands. A source is a reference, not
+// prose, so a disagreement over its year is not worth a dialog.
+//
 // This module is pure — no git, no fs, no React. It takes three docs and returns
 // a merged doc plus the conflicts. The caller (useLessonGit) fetches base/ours/
 // theirs out of git and commits the result with two parents.
 
 import { docBlocks } from "./doc.js";
 import { sameValue } from "./ops.js";
+import {
+  isPlainContent,
+  textBlockContent,
+  textBlockPlain,
+  withTextBlockContent,
+} from "../lessonText.js";
 
 /** Fields that identify a block rather than describe it — never merged. */
 const IDENTITY_FIELDS = new Set(["id", "type"]);
@@ -39,6 +50,51 @@ const IDENTITY_FIELDS = new Set(["id", "type"]);
  *          fields are left at *our* value so the block is always renderable.
  */
 export function mergeBlockFields(base, ours, theirs) {
+  // A text block keeps its words in `text` or in `content` depending on whether
+  // any of them are formatted (see lessonText.js), so one side formatting a word
+  // while the other fixes a typo would otherwise touch two different fields,
+  // merge "cleanly", and lose the typo fix behind the formatted copy. Merged as
+  // the one field they are, that is a conflict the user gets to see.
+  if ([base, ours, theirs].some((b) => b?.type === "text")) {
+    const asContent = (b) => (b ? withContentField(b) : b);
+    const merged = mergeFields(
+      asContent(base),
+      asContent(ours),
+      asContent(theirs),
+    );
+    return {
+      block: withTextBlockContent(merged.block, merged.block.content),
+      conflicts: merged.conflicts.map(asTextConflict),
+    };
+  }
+  return mergeFields(base, ours, theirs);
+}
+
+// Two plain versions of the words are still a disagreement about `text`, and
+// are reported as one, with the strings themselves to choose between.
+function asTextConflict(conflict) {
+  if (conflict.field !== "content") return conflict;
+  const sides = [conflict.ours, conflict.theirs, conflict.base];
+  if (!sides.every((side) => side === undefined || isPlainContent(side))) {
+    return conflict;
+  }
+  const plain = (side) =>
+    side === undefined ? undefined : textBlockPlain({ content: side });
+  return {
+    field: "text",
+    ours: plain(conflict.ours),
+    theirs: plain(conflict.theirs),
+    base: plain(conflict.base),
+  };
+}
+
+function withContentField(block) {
+  const out = { ...block, content: textBlockContent(block) };
+  delete out.text;
+  return out;
+}
+
+function mergeFields(base, ours, theirs) {
   const fields = new Set([
     ...Object.keys(ours || {}),
     ...Object.keys(theirs || {}),
@@ -326,7 +382,55 @@ function assemble(base, ours, theirs, resolved) {
   };
   const ageRange = mergeName(base?.ageRange, ours?.ageRange, theirs?.ageRange);
   if (ageRange) doc.ageRange = ageRange;
+  const sources = mergeSources(base, ours, theirs);
+  if (sources.length) doc.sources = sources;
   return doc;
+}
+
+function sourcesOf(doc) {
+  const map = new Map();
+  for (const source of Array.isArray(doc?.sources) ? doc.sources : []) {
+    if (source && typeof source.id === "string") map.set(source.id, source);
+  }
+  return map;
+}
+
+/**
+ * Three-way merge of the lesson's source lists. Never a conflict: see the note
+ * at the top of the file.
+ */
+function mergeSources(base, ours, theirs) {
+  const b = sourcesOf(base);
+  const o = sourcesOf(ours);
+  const t = sourcesOf(theirs);
+
+  const resolved = new Map();
+  for (const id of new Set([...o.keys(), ...t.keys()])) {
+    const before = b.get(id);
+    const mine = o.get(id);
+    const other = t.get(id);
+    if (mine && other) {
+      const fields = new Set([...Object.keys(mine), ...Object.keys(other)]);
+      const source = {};
+      for (const field of fields) {
+        source[field] = mergeName(before?.[field], mine[field], other[field]);
+      }
+      resolved.set(id, source);
+    } else if (mine) {
+      // Deleted on their side: gone, unless we edited it since.
+      if (!before || !sameValue(mine, before)) resolved.set(id, mine);
+    } else if (!before || !sameValue(other, before)) {
+      resolved.set(id, other);
+    }
+  }
+
+  const order = mergeIdList(
+    [...b.keys()],
+    [...o.keys()],
+    [...t.keys()],
+    new Set(resolved.keys()),
+  );
+  return order.map((id) => resolved.get(id));
 }
 
 /** Three-way merge of a scalar, preferring ours when both sides changed it. */
@@ -404,6 +508,14 @@ function keptSide(conflict) {
 function withFields(merged, conflict, side) {
   const block = { ...merged };
   for (const field of conflict.fields) block[field.field] = field[side];
+  // A contested text block was merged with its words in `content`; store it
+  // back in whichever shape fits what was chosen.
+  if (
+    block.type === "text" &&
+    conflict.fields.some((f) => f.field === "content")
+  ) {
+    return withTextBlockContent(block, block.content);
+  }
   return block;
 }
 

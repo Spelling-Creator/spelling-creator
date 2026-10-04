@@ -29,6 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "./ui/dropdown-menu.jsx";
+import { textBlockPlain } from "@spelling-creator/core/lessonText";
 import ContentBlock from "./ContentBlock.jsx";
 import { LiveInput } from "./LiveField.jsx";
 import IconActionButton from "./IconActionButton.jsx";
@@ -170,8 +171,9 @@ function SectionCard({
 
   // The section's existing text, used to ground AI question suggestions.
   const sectionText = section.blocks
-    .filter((b) => b.type === "text" && b.text)
-    .map((b) => b.text)
+    .filter((b) => b.type === "text")
+    .map(textBlockPlain)
+    .filter((text) => text.trim())
     .join("\n\n");
 
   // Prompts of the questions already in this section, sent to the AI so a newly

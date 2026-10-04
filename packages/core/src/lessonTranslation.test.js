@@ -3,6 +3,7 @@
 // module comment says why).
 
 import { describe, expect, it } from "vitest";
+import { markupToContent } from "./lessonText.js";
 
 import {
   lessonLanguageSample,
@@ -223,5 +224,32 @@ describe("lessonLanguageSample", () => {
   it("returns everything when the lesson is short of the cap", () => {
     expect(lessonLanguageSample([[{ key: "title", text: "Hi" }]])).toBe("Hi");
     expect(lessonLanguageSample([])).toBe("");
+  });
+});
+
+describe("formatted text blocks", () => {
+  it("translates each paragraph's words and each footnote note, not citations", () => {
+    const doc = {
+      title: "",
+      sections: [
+        {
+          blocks: [
+            {
+              type: "text",
+              content: markupToContent(
+                "Cats came to **Egypt**^[@smith, p. 2]\n\nThey stayed.^[A note.]",
+              ),
+            },
+          ],
+        },
+      ],
+    };
+    expect(lessonTranslationBatches(doc)).toEqual([
+      [
+        { key: lessonSegmentKey.textLine(0, 0, 0), text: "Cats came to Egypt" },
+        { key: lessonSegmentKey.textLine(0, 0, 2), text: "They stayed." },
+        { key: lessonSegmentKey.note(0, 0, 1), text: "A note." },
+      ],
+    ]);
   });
 });

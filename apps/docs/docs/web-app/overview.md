@@ -19,6 +19,12 @@ PDF printing.
 - **Document title** - name the whole lesson.
 - **Add sections** with the floating **+** button; each new section is named in a dialog.
 - **Text and image blocks** inside any section. Add, caption, reorder, or delete them.
+- **Formatting, footnotes and sources**: text blocks take bold, italics and
+  underlining, and footnotes that cite the lesson's sources (listed once, in a
+  Sources card at the end of the lesson), carry a note, or both. Footnotes are
+  numbered across the whole lesson, become real Word footnotes in the export,
+  and the lesson closes with its Notes and Sources (see
+  [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
 - **Search images** - find free Pixabay images from within a section and insert
   one with a click (see [Search images](./search-images.md)).
 - **Question blocks** - add structured questions in eight types (see [Question blocks](./question-blocks.md)).

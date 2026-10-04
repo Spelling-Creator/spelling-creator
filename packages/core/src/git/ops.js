@@ -8,6 +8,7 @@
 //   title.set / ageRange.set
 //   section.add | section.remove | section.rename | section.move
 //   block.add   | block.remove   | block.edit     | block.move
+//   source.add  | source.remove  | source.edit    | sources.reorder
 //
 // Because blocks carry stable ids (lib/id.js) this diff is exact where a textual
 // diff would only guess: a block dragged between sections is a `block.move`, not
@@ -94,6 +95,8 @@ export function diffDocs(prev, next) {
       to: next?.ageRange ?? null,
     });
   }
+
+  ops.push(...diffSources(prev, next));
 
   // ---- sections ----
   const prevSections = sectionIndex(prev);
@@ -204,6 +207,52 @@ export function diffDocs(prev, next) {
   return ops;
 }
 
+function sourceList(doc) {
+  return (Array.isArray(doc?.sources) ? doc.sources : []).filter(
+    (source) => source && typeof source.id === "string",
+  );
+}
+
+function sourceName(source) {
+  return (source?.title || source?.url || source?.author || "").trim();
+}
+
+// The lesson's sources, compared by id the way blocks are.
+function diffSources(prev, next) {
+  const ops = [];
+  const before = new Map(sourceList(prev).map((s) => [s.id, s]));
+  const after = new Map(sourceList(next).map((s) => [s.id, s]));
+
+  for (const [id, source] of after) {
+    const old = before.get(id);
+    if (!old) {
+      ops.push({ op: "source.add", sourceId: id, name: sourceName(source) });
+      continue;
+    }
+    const fields = changedFields(old, source);
+    if (fields.length) {
+      ops.push({
+        op: "source.edit",
+        sourceId: id,
+        name: sourceName(source),
+        fields,
+      });
+    }
+  }
+  for (const [id, source] of before) {
+    if (!after.has(id)) {
+      ops.push({ op: "source.remove", sourceId: id, name: sourceName(source) });
+    }
+  }
+
+  const kept = (list) =>
+    list.filter((s) => before.has(s.id) && after.has(s.id)).map((s) => s.id);
+  if (!sameValue(kept(sourceList(prev)), kept(sourceList(next)))) {
+    ops.push({ op: "sources.reorder" });
+  }
+  return ops;
+}
+
 // Human-readable names for block types, singular and plural.
 const TYPE_LABEL = {
   text: ["text block", "text blocks"],
@@ -268,6 +317,18 @@ export function describeOps(ops) {
   const sectionMoves = ops.filter((op) => op.op === "section.move").length;
   if (sectionMoves) parts.push("reorder sections");
 
+  for (const [kind, verb] of [
+    ["source.add", "add"],
+    ["source.edit", "edit"],
+    ["source.remove", "remove"],
+  ]) {
+    const n = ops.filter((op) => op.op === kind).length;
+    if (n) parts.push(`${verb} ${n} ${n === 1 ? "source" : "sources"}`);
+  }
+  if (ops.some((op) => op.op === "sources.reorder")) {
+    parts.push("reorder sources");
+  }
+
   const titleSet = ops.find((op) => op.op === "title.set");
   if (titleSet) parts.push("retitle the lesson");
   if (ops.some((op) => op.op === "ageRange.set"))
@@ -307,6 +368,14 @@ export function describeOp(op) {
       return `- edit ${label(op.blockType, 1)} ${op.blockId} (${op.fields.join(", ")})`;
     case "block.move":
       return `- move ${label(op.blockType, 1)} ${op.blockId}`;
+    case "source.add":
+      return `- add source "${op.name}"`;
+    case "source.remove":
+      return `- remove source "${op.name}"`;
+    case "source.edit":
+      return `- edit source "${op.name}" (${op.fields.join(", ")})`;
+    case "sources.reorder":
+      return "- reorder sources";
     default:
       return `- ${op.op}`;
   }

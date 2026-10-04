@@ -9,6 +9,10 @@ bios**, are rich text. Both are authored with a small [tiptap](https://tiptap.de
 editor (`RichTextInput.jsx`, built directly on `@tiptap/react` with a shadcn
 `ToggleGroup` toolbar) and stored as **sanitized HTML**.
 
+Lesson text blocks are formatted too, but differently: they are stored as a
+tiptap JSON document rather than HTML, and carry footnotes rather than links.
+See [Formatting, footnotes & sources](./formatting-and-footnotes.md).
+
 Users can format text and link out. They **cannot embed media**: no images, video,
 audio or frames, whether uploaded, dragged in, pasted, or hand-written into a
 request. That is a deliberate product rule, and most of this page is about where it

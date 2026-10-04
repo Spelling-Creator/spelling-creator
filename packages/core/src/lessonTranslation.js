@@ -12,8 +12,11 @@
 // translates:
 //
 // - the document title
-// - text blocks, one segment per line (the renderer and the docx export both
-//   treat each line as its own paragraph)
+// - text blocks, one segment per paragraph (the renderer and the docx export
+//   both draw each paragraph on its own). A segment is the paragraph's plain
+//   words: bold and italics don't survive a model, so a translated paragraph
+//   renders unformatted, with its footnote markers kept at its end
+// - footnote notes, one segment each
 // - question prompts, their printed answers and their numbered steps, with
 //   each accepted answer as its own segment (questionAnswerItems), so the
 //   non-breaking gaps that separate several accepted answers survive the
@@ -27,11 +30,14 @@
 //   words", and a translated word list would be a different lesson
 // - VAKT link labels: names of external resources, which stay in whatever
 //   language the resource itself is in
+// - source citations: an author, a title and a publisher are names, and a
+//   translated title would point the reader at a book that doesn't exist
 //
 // Everything here is pure string work on the document model, shared by the
 // web app's renderer (LessonView) and its translation runner
 // (LessonTranslation), so the two agree on keys by construction.
 
+import { textBlockFootnotes, textBlockLines } from "./lessonText.js";
 import { questionAnswerItems } from "./questions.js";
 import { vaktText } from "./vakt.js";
 
@@ -44,6 +50,7 @@ import { vaktText } from "./vakt.js";
 export const lessonSegmentKey = {
   title: () => "title",
   textLine: (si, bi, li) => `s${si}.b${bi}.line${li}`,
+  note: (si, bi, i) => `s${si}.b${bi}.note${i}`,
   prompt: (si, bi) => `s${si}.b${bi}.prompt`,
   answer: (si, bi, i) => `s${si}.b${bi}.answer${i}`,
   step: (si, bi, i) => `s${si}.b${bi}.step${i}`,
@@ -85,11 +92,19 @@ export function lessonTranslationBatches(doc) {
     const segments = [];
     (section.blocks || []).forEach((block, bi) => {
       if (block.type === "text") {
-        (block.text || "").split("\n").forEach((line, li) => {
+        textBlockLines(block).forEach((line, li) => {
           if (line.trim()) {
             segments.push({
               key: lessonSegmentKey.textLine(si, bi, li),
               text: line,
+            });
+          }
+        });
+        textBlockFootnotes(block).forEach((footnote, i) => {
+          if (footnote.note) {
+            segments.push({
+              key: lessonSegmentKey.note(si, bi, i),
+              text: footnote.note,
             });
           }
         });
