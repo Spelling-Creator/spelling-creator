@@ -44,7 +44,8 @@
       "env": { "browser": true },
       "rules": {
         "react-hooks/rules-of-hooks": "error",
-        "react-hooks/exhaustive-deps": "warn"
+        "react-hooks/exhaustive-deps": "warn",
+        "react/set-state-in-effect": "off"
         // The ESLint config also switched off `react/prop-types` and
         // `react-hooks/set-state-in-effect`. Oxlint implements neither rule, so
         // there is nothing to disable here. If `set-state-in-effect` ever lands,

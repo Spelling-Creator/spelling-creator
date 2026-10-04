@@ -28,8 +28,8 @@ function escapeField(value) {
 
 export default function CollabCursors({ selections }) {
   const { t } = useTranslation("collab");
-  // A ticking counter that forces a re-measure each frame while cursors exist.
-  const [, setTick] = useState(0);
+  // A ticking timestamp that forces a re-measure each frame while cursors exist.
+  const [now, setNow] = useState(() => Date.now());
 
   const cursors = Object.values(selections || {}).filter((c) => c && c.field);
   const activeCount = cursors.length;
@@ -37,15 +37,13 @@ export default function CollabCursors({ selections }) {
   useEffect(() => {
     if (activeCount === 0) return undefined;
     let raf = requestAnimationFrame(function loop() {
-      setTick((t) => (t + 1) % 1000000);
+      setNow(Date.now());
       raf = requestAnimationFrame(loop);
     });
     return () => cancelAnimationFrame(raf);
   }, [activeCount]);
 
   if (activeCount === 0) return null;
-
-  const now = Date.now();
   const markers = [];
   for (const c of cursors) {
     if (now - (c.ts || 0) > STALE_MS) continue;

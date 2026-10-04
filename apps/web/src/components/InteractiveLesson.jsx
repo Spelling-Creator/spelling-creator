@@ -788,6 +788,18 @@ export default function InteractiveLesson({
   // what the walkthrough claims on the way out.
   const [resumed, setResumed] = useState(false);
   const [progressStored, setProgressStored] = useState(true);
+  // Read the current step aloud when speech is on. Keyed on which step was last
+  // spoken rather than on the effect's inputs: changing voice or pace mid-step
+  // should take effect on the *next* thing said, not restart the sentence the
+  // learner is listening to.
+  const [spokenKey, setSpokenKey] = useState(null);
+  // What has actually been stored, so finishing twice doesn't file the same
+  // run-through twice. Reaching the summary, going Back to fix nothing, and
+  // pressing Finish again is a normal thing to do, and it would otherwise spend
+  // the learner's saved-run-through allowance on duplicates. Written only on a
+  // successful save, so a failed or impossible one leaves the next Finish free
+  // to try again.
+  const [savedFingerprint, setSavedFingerprint] = useState(null);
 
   // Progress is kept per learner as well as per lesson: a shared classroom
   // machine is the normal case here, and resuming into the answers of whoever
@@ -881,7 +893,8 @@ export default function InteractiveLesson({
     setSaveError("");
     setShowAnswers(false);
     setProgressStored(true);
-    savedFingerprint.current = null;
+    setSavedFingerprint(null);
+    setSpokenKey(null);
   }, [open, authLoading, lesson?.id, owner, steps]);
 
   // Autosave. Debounced so typing doesn't hit storage on every keystroke, but
@@ -902,22 +915,17 @@ export default function InteractiveLesson({
     return () => clearTimeout(timer);
   }, [open, runOwner, phase, lesson?.id, started, stepKey, answers]);
 
-  // Read the current step aloud when speech is on. Keyed on which step was last
-  // spoken rather than on the effect's inputs: changing voice or pace mid-step
-  // should take effect on the *next* thing said, not restart the sentence the
-  // learner is listening to.
-  const spokenKey = useRef(null);
   useEffect(() => {
     if (!open || !speech.enabled || phase !== "running" || !step) return;
-    if (spokenKey.current === step.key) return;
-    spokenKey.current = step.key;
+    if (spokenKey === step.key) return;
+    setSpokenKey(step.key);
     speech.speak(stepSpeechText(step));
-  }, [open, phase, speech, step]);
+  }, [open, phase, speech, step, spokenKey]);
 
   // Nothing should still be talking once it's closed.
   useEffect(() => {
     if (open) return;
-    spokenKey.current = null;
+    setSpokenKey(null);
     speech.stop();
   }, [open, speech]);
 
@@ -925,14 +933,6 @@ export default function InteractiveLesson({
     () => collectResponses(steps, answers),
     [steps, answers],
   );
-
-  // What has actually been stored, so finishing twice doesn't file the same
-  // run-through twice. Reaching the summary, going Back to fix nothing, and
-  // pressing Finish again is a normal thing to do, and it would otherwise spend
-  // the learner's saved-run-through allowance on duplicates. Written only on a
-  // successful save, so a failed or impossible one leaves the next Finish free
-  // to try again.
-  const savedFingerprint = useRef(null);
 
   // Drop the browser's copy of the run-through. Called once it has been filed to
   // the learner's account, and when they choose to throw it away — either by
@@ -975,7 +975,7 @@ export default function InteractiveLesson({
     setSaveError("");
     try {
       await saveLessonResponses(lesson.id, payload, accessToken);
-      savedFingerprint.current = JSON.stringify(payload);
+      setSavedFingerprint(JSON.stringify(payload));
       setSaveState("saved");
       // Filed. It is a finished run-through now, not one in progress, and
       // leaving it in the resume cache would offer the lesson back as unfinished
@@ -991,7 +991,7 @@ export default function InteractiveLesson({
 
   const finish = () => {
     speech.stop();
-    spokenKey.current = null;
+    setSpokenKey(null);
     setPhase("summary");
     // A read-through of a lesson with no questions has nothing to store, and
     // answers already stored unchanged have nothing to store again. Either way
@@ -1000,7 +1000,7 @@ export default function InteractiveLesson({
       forgetProgress();
       return;
     }
-    if (savedFingerprint.current === JSON.stringify(responses)) {
+    if (savedFingerprint === JSON.stringify(responses)) {
       forgetProgress();
       return;
     }
@@ -1031,8 +1031,8 @@ export default function InteractiveLesson({
     setSaveState("idle");
     setSaveError("");
     setProgressStored(true);
-    spokenKey.current = null;
-    savedFingerprint.current = null;
+    setSpokenKey(null);
+    setSavedFingerprint(null);
     forgetProgress();
   };
 
