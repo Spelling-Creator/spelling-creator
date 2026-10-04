@@ -104,6 +104,7 @@ import {
   listLessons,
   getLesson,
   createLesson,
+  deleteLesson,
   saveLessonDoc,
   saveLessonMeta,
   getCurrentLessonId,
@@ -734,12 +735,28 @@ export default function EditorPage() {
   // own rather than updating the host's. An untouched lesson is reused rather
   // than leaving an empty one behind. Bumping openRequestRef also stops any
   // lesson open still in flight from landing on top of the session.
+  //
+  // The reverse can happen too: the guest opens or starts another lesson while
+  // this is still saving. Their choice wins, but the session can't then simply
+  // carry on, because the room's document would land in the lesson they just
+  // opened, which is the very overwrite this exists to prevent. So the move
+  // fails instead, and the guest leaves the session with an error (see
+  // onAdmitted in lib/collab.js). A session lesson already made by then is
+  // removed again rather than left in the library unopened.
   const openSessionLesson = useCallback(
     async (sessionDoc) => {
-      ++openRequestRef.current;
+      const request = ++openRequestRef.current;
       if (inUntouchedLesson()) return;
+      const superseded = () =>
+        new Error("Another lesson was opened while joining the session.");
       await flushCurrentLesson();
-      adoptRecord(await createLesson({ doc: sessionDoc }));
+      if (request !== openRequestRef.current) throw superseded();
+      const record = await createLesson({ doc: sessionDoc });
+      if (request !== openRequestRef.current) {
+        await deleteLesson(record.id).catch(() => {});
+        throw superseded();
+      }
+      adoptRecord(record);
     },
     [adoptRecord, flushCurrentLesson, inUntouchedLesson],
   );

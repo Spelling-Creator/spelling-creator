@@ -51,7 +51,10 @@ and the guest sends nothing until the move is done, so their own lesson is
 never overwritten and never merged into the host's. The session's copy stays in
 their library after the session ends. It isn't attached to the host's hub
 lesson: publishing it makes a new lesson rather than updating the host's. If
-the move fails, the guest leaves the session with an error instead.
+the move fails, the guest leaves the session with an error instead. That
+includes the guest opening or starting another lesson while the move is still
+saving: their choice wins, and since the session then has nowhere safe to go,
+they leave it rather than have it land in the lesson they just opened.
 
 `useCollaboration` takes this as `onAdmitted`, which `EditorPage` answers with
 `openSessionLesson`.
