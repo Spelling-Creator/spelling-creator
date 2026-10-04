@@ -104,6 +104,7 @@ import {
   listLessons,
   getLesson,
   createLesson,
+  deleteLesson,
   saveLessonDoc,
   saveLessonMeta,
   getCurrentLessonId,
@@ -409,9 +410,18 @@ export default function EditorPage() {
     }),
     [user],
   );
+  // When we join someone else's session, the editor moves into a lesson made for
+  // it before the host's document arrives (see openSessionLesson below, which is
+  // defined after the library helpers it needs, hence the ref).
+  const openSessionLessonRef = useRef(null);
+  const onAdmitted = useCallback(
+    (sessionDoc) => openSessionLessonRef.current?.(sessionDoc),
+    [],
+  );
   const collab = useCollaboration({
     doc,
     onRemoteDoc: setDoc,
+    onAdmitted,
     identity,
     accessToken,
   });
@@ -686,25 +696,73 @@ export default function EditorPage() {
     [adoptRecord, flushCurrentLesson, localId],
   );
 
+  // Whether the open lesson is one nobody has started: no sections, no hub
+  // lesson behind it, and the title still exactly as the editor wrote it. A
+  // lesson somebody has named is one they have started, however empty it still
+  // looks.
+  const inUntouchedLesson = useCallback(() => {
+    const current = docRef.current;
+    return (
+      !editingIdRef.current &&
+      (current?.sections?.length ?? 0) === 0 &&
+      (!current?.title || current.title === t("defaultDoc.title"))
+    );
+  }, [t]);
+
   const startNewLesson = useCallback(async () => {
     // Already in an untouched lesson? That *is* the new lesson. Making another
     // would leave a trail of untitled empties behind every time someone pressed
-    // the button twice. "Untouched" means no sections, no hub lesson behind it,
-    // and the title still exactly as the editor wrote it — a lesson somebody has
-    // named is one they have started, however empty it still looks.
-    const current = docRef.current;
-    const untouched =
-      !editingIdRef.current &&
-      (current?.sections?.length ?? 0) === 0 &&
-      (!current?.title || current.title === t("defaultDoc.title"));
-    if (untouched) return null;
+    // the button twice.
+    if (inUntouchedLesson()) return null;
     const request = ++openRequestRef.current;
     await flushCurrentLesson();
     const record = await createLesson({ doc: createInitialDoc(t) });
     if (request !== openRequestRef.current) return record;
     adoptRecord(record);
     return record;
-  }, [adoptRecord, flushCurrentLesson, t]);
+  }, [adoptRecord, flushCurrentLesson, inUntouchedLesson, t]);
+
+  // Joining someone else's live session: give it a lesson of its own in this
+  // device's library before the host's document lands in the editor. Without
+  // this, the room's document replaced whatever lesson was open, and the
+  // library save and version history (both tied to that lesson) wrote the host's
+  // lesson over the guest's own. The lesson left behind is saved and
+  // checkpointed on the way out, as when opening any other lesson, and the
+  // session's copy stays in the library after the session ends.
+  //
+  // It is a fresh, unattached lesson: the room doesn't say which hub lesson the
+  // host is editing, and publishing from here makes a new lesson of the guest's
+  // own rather than updating the host's. An untouched lesson is reused rather
+  // than leaving an empty one behind. Bumping openRequestRef also stops any
+  // lesson open still in flight from landing on top of the session.
+  //
+  // The reverse can happen too: the guest opens or starts another lesson while
+  // this is still saving. Their choice wins, but the session can't then simply
+  // carry on, because the room's document would land in the lesson they just
+  // opened, which is the very overwrite this exists to prevent. So the move
+  // fails instead, and the guest leaves the session with an error (see
+  // onAdmitted in lib/collab.js). A session lesson already made by then is
+  // removed again rather than left in the library unopened.
+  const openSessionLesson = useCallback(
+    async (sessionDoc) => {
+      const request = ++openRequestRef.current;
+      if (inUntouchedLesson()) return;
+      const superseded = () =>
+        new Error("Another lesson was opened while joining the session.");
+      await flushCurrentLesson();
+      if (request !== openRequestRef.current) throw superseded();
+      const record = await createLesson({ doc: sessionDoc });
+      if (request !== openRequestRef.current) {
+        await deleteLesson(record.id).catch(() => {});
+        throw superseded();
+      }
+      adoptRecord(record);
+    },
+    [adoptRecord, flushCurrentLesson, inUntouchedLesson],
+  );
+  useEffect(() => {
+    openSessionLessonRef.current = openSessionLesson;
+  }, [openSessionLesson]);
 
   // Deep links into the library: ?local=<id> opens a lesson on this device, and
   // the "New lesson" buttons (the header's and LibraryPage's) link here with

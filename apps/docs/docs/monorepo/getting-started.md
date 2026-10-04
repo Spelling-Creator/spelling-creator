@@ -153,8 +153,13 @@ self-hosting bug, and the cheapest moment to find one is when it is introduced.
 `pnpm test` is `pnpm -r test`, which runs each workspace's own suite:
 `packages/core` and `apps/api` under vitest (the Worker's through
 `@cloudflare/vitest-pool-workers`, so its platform-adapter tests run against real
-R2 and KV), and `apps/mcp` under `node --test`. `apps/docs` has no test script and
-is skipped.
+R2 and KV), `apps/web` under vitest too, and `apps/mcp` under `node --test`.
+`apps/docs` has no test script and is skipped.
+
+`apps/web`'s tests run in Node by default. One that needs a DOM (to mount a hook
+in a real React root, say) opts in with a `// @vitest-environment happy-dom`
+comment on its first line; `src/lib/collab.test.js` is the example, driving the
+live-collaboration hook against a stub WebSocket.
 
 `apps/api`'s `test` script builds `apps/web`'s SSR bundle first, the same way its
 `dev`, `start` and `deploy` scripts do. That is not incidental: `routes/ssr.js`

@@ -86,6 +86,7 @@ are. `repoIdFor(lessonId, localId)` is the one place that decides. See
 | **Fork into a new lesson** (in the editor) | The same, from the lesson you're in, which stays in the list, still attached to its hub row.                                                                                   |
 | **Import** a Word or JSON file             | A new lesson, with a history that starts at the import.                                                                                                                        |
 | **Save to cloud** on a device-only lesson  | Attaches it to the hub lesson it creates, and takes its history up with it.                                                                                                    |
+| **Join** someone's live session            | Once the host adds you, a new lesson holding the session's document (or the untouched one you're in). It stays in the list after the session ends.                             |
 
 ## What this does not do
 

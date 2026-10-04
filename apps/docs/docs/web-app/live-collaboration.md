@@ -40,6 +40,25 @@ guest the moment they're added.
    session's document, re-broadcasts it to the other admitted collaborators, and a
    presence roster shows everyone in the lesson.
 
+**Where a guest's copy lives.** A guest joins from their own editor, which has
+one of their own lessons open, and that lesson's library entry and version
+history are tied to whatever the editor holds. So when the host adds them, the
+editor first saves and checkpoints the lesson they had open, then moves them
+into a new lesson in [their library](./local-lessons.md) for the session (or
+reuses the open one if it is untouched), and only then shows the host's
+document. Edits that arrive during the move wait in the session's Yjs document,
+and the guest sends nothing until the move is done, so their own lesson is
+never overwritten and never merged into the host's. The session's copy stays in
+their library after the session ends. It isn't attached to the host's hub
+lesson: publishing it makes a new lesson rather than updating the host's. If
+the move fails, the guest leaves the session with an error instead. That
+includes the guest opening or starting another lesson while the move is still
+saving: their choice wins, and since the session then has nowhere safe to go,
+they leave it rather than have it land in the lesson they just opened.
+
+`useCollaboration` takes this as `onAdmitted`, which `EditorPage` answers with
+`openSessionLesson`.
+
 **Conflict handling (CRDT).** Edits are merged with a **CRDT** ([Yjs](https://yjs.dev)),
 not applied last-write-wins. Two people working on **different blocks, sections or
 fields** both keep their work; previously the document was synced whole, so
@@ -62,8 +81,8 @@ anyone in it. Those are email addresses, and the host admits people who aren't o
 the list; there is no reason for a guest to receive everyone else's address to
 edit a lesson. Nobody in the session needs it: only the host reads it, to
 auto-admit trusted guests, from their own copy. The host puts it back on each
-document they adopt from the room; a guest doesn't, because their local copy
-belongs to whatever lesson they had open before joining, not to this one. See
+document they adopt from the room; a guest doesn't, because their local copy is
+a lesson of their own made for the session, not the host's lesson. See
 [Version history](/monorepo/version-history#what-is-deliberately-not-versioned-or-shared-at-all).
 
 **Binary wire protocol.** Messages are sent as **binary WebSocket frames** for
