@@ -143,3 +143,34 @@ export const TITLE_CLASS = "s2c-title";
 export const QUESTION_LINE_STYLE_ID = "s2cQuestionLine";
 export const QUESTION_LINE_STYLE_NAME = "S2C Question Line";
 export const QUESTION_LINE_CLASS = "s2c-question-line";
+
+// The Sources list at the end of a printed lesson: a heading line, then one
+// paragraph per source. Not a Word heading, because the importer reads headings
+// as section breaks and this is not a section. Named styles instead, which give
+// the PDF a class to style and give the importer a way to recognise the list
+// and read it back into the lesson's sources.
+export const SOURCES_HEADING_STYLE_ID = "s2cSourcesHeading";
+export const SOURCES_HEADING_STYLE_NAME = "S2C Sources Heading";
+export const SOURCES_HEADING_CLASS = "s2c-sources-heading";
+export const SOURCE_ENTRY_STYLE_ID = "s2cSourceEntry";
+export const SOURCE_ENTRY_STYLE_NAME = "S2C Source Entry";
+export const SOURCE_ENTRY_CLASS = "s2c-source-entry";
+
+// What the list is headed with, in print and on the lesson page.
+export const SOURCES_HEADING_TEXT = "Sources";
+
+// Inside a footnote, the locator ("p. 12") and the note each get a character
+// style, and an image's caption a paragraph style. Word and the PDF ignore them;
+// they are there for the importer, which otherwise has to guess. A locator
+// usually has a full stop in it ("p. 12"), so "where does the locator end and
+// the note begin" can't be read off the text, and a caption is just an italic
+// paragraph, as an ordinary italic sentence can be too.
+export const FOOTNOTE_LOCATOR_STYLE_ID = "s2cFootnoteLocator";
+export const FOOTNOTE_LOCATOR_STYLE_NAME = "S2C Footnote Locator";
+export const FOOTNOTE_LOCATOR_CLASS = "s2c-fn-locator";
+export const FOOTNOTE_NOTE_STYLE_ID = "s2cFootnoteNote";
+export const FOOTNOTE_NOTE_STYLE_NAME = "S2C Footnote Note";
+export const FOOTNOTE_NOTE_CLASS = "s2c-fn-note";
+export const CAPTION_STYLE_ID = "s2cCaption";
+export const CAPTION_STYLE_NAME = "S2C Caption";
+export const CAPTION_CLASS = "s2c-caption";

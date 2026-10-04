@@ -36,9 +36,16 @@ function sortKeys(value) {
 /**
  * The structure-only manifest for a doc: sections in order, each listing its
  * block ids in order. Block *content* is excluded — it lives in blocks/.
+ *
+ * The lesson's sources ride here too. They are lesson-level metadata, like the
+ * title, rather than content a section holds. They are written only when there
+ * are some, so a lesson without sources keeps the exact manifest bytes (and so
+ * the blob oid) it always had, and are stored as the editor holds them: the
+ * renderers normalise them on the way out, and normalising here would make a
+ * half-typed source differ from its own commit forever.
  */
 export function docManifest(doc) {
-  return {
+  const manifest = {
     title: typeof doc?.title === "string" ? doc.title : "",
     ageRange: doc?.ageRange ?? null,
     sections: (doc?.sections || []).map((section) => ({
@@ -47,6 +54,10 @@ export function docManifest(doc) {
       blocks: (section.blocks || []).map((block) => block.id),
     })),
   };
+  if (Array.isArray(doc?.sources) && doc.sources.length) {
+    manifest.sources = doc.sources;
+  }
+  return manifest;
 }
 
 /** Every block in a doc, flattened to a Map of blockId -> block. */

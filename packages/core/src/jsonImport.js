@@ -12,6 +12,13 @@ import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
 import { isSafeLink } from "./richText.js";
 import {
+  normalizeTextContent,
+  removeSourceCitations,
+  textBlockFootnotes,
+  withTextBlockContent,
+} from "./lessonText.js";
+import { normalizeSources } from "./sources.js";
+import {
   vaktHasContent,
   vaktImageAlign,
   vaktImageSize,
@@ -30,7 +37,7 @@ export class JsonImportError extends Error {
 const QUESTION_KEYS = new Set(Object.keys(QUESTION_TYPES));
 
 // Read a .json File and rebuild a lesson document ready for the editor. Resolves
-// to { title, ageRange?, sections }; rejects (JsonImportError) when the file
+// to { title, ageRange?, sources?, sections }; rejects (JsonImportError) when the file
 // isn't a usable lesson.
 export async function importJsonFile(file) {
   if (!file) throw new JsonImportError("No file was selected.");
@@ -107,11 +114,33 @@ function normalizeDoc(docLike) {
   const ageRange =
     typeof docLike.ageRange === "string" ? docLike.ageRange.trim() : "";
 
-  return {
+  const sources = normalizeSources(docLike.sources, { dropEmpty: true });
+  const doc = {
     title,
     ...(AGE_RANGES.includes(ageRange) ? { ageRange } : {}),
+    ...(sources.length ? { sources } : {}),
     sections,
   };
+  return withoutUnknownCitations(doc, sources);
+}
+
+// A footnote citing a source the file doesn't list would print as "Source no
+// longer listed", so a note-carrying one keeps its note and a bare citation goes.
+function withoutUnknownCitations(doc, sources) {
+  const known = new Set(sources.map((source) => source.id));
+  const cited = new Set(
+    doc.sections
+      .flatMap((section) => section.blocks)
+      .filter((block) => block.type === "text")
+      .flatMap((block) => textBlockFootnotes(block))
+      .map((footnote) => footnote.sourceId)
+      .filter(Boolean),
+  );
+  let out = doc;
+  for (const id of cited) {
+    if (!known.has(id)) out = removeSourceCitations(out, id);
+  }
+  return out;
 }
 
 function normalizeSection(section) {
@@ -131,9 +160,19 @@ function normalizeSection(section) {
 function normalizeBlock(block) {
   if (!block || typeof block !== "object") return null;
   switch (block.type) {
-    case "text":
+    case "text": {
+      // Formatted blocks carry a tiptap document in `content`; plain ones a
+      // string in `text`. Either is accepted, and stored in the smaller shape.
+      const content = normalizeTextContent(block.content);
+      if (content) {
+        return withTextBlockContent(
+          { id: keepId(block.id), type: "text" },
+          content,
+        );
+      }
       if (typeof block.text !== "string") return null;
       return { id: keepId(block.id), type: "text", text: block.text };
+    }
 
     case "spelling": {
       const words = (Array.isArray(block.words) ? block.words : [])

@@ -18,13 +18,18 @@ every block already carries a stable id (`@spelling-creator/core/id`). The repos
 like this:
 
 ```
-lesson.json            { title, ageRange, sections: [{ id, name, blocks: ["<blockId>", ...] }] }
+lesson.json            { title, ageRange, sources?, sections: [{ id, name, blocks: ["<blockId>", ...] }] }
 blocks/<blockId>.json  { id, type: "text" | "spelling" | "question" | "image" | "vakt", ... }
 ```
 
 `lesson.json` is a **manifest**: it holds the structure (which sections exist,
 what they're called, which blocks they contain and in what order) but no block
 content. Content lives one-block-per-file under `blocks/`, named by block id.
+
+The lesson's [sources](/web-app/formatting-and-footnotes) ride in the manifest
+too: like the title, they belong to the lesson rather than to a section. They
+are written only when a lesson has some, so a lesson without sources keeps
+exactly the manifest bytes (and blob oid) it always had.
 
 This is what makes git do the work:
 
@@ -54,6 +59,7 @@ the next one, keyed by block id, and expressing the difference as operations
 title.set / ageRange.set
 section.add | section.remove | section.rename | section.move
 block.add   | block.remove   | block.edit     | block.move
+source.add  | source.remove  | source.edit    | sources.reorder
 ```
 
 Because blocks have stable ids, this is exact where a textual diff could only
@@ -252,6 +258,20 @@ A conflict offers three ways out, per block:
 Structure (which section a block sits in, and in what order) is merged separately
 and never raises a dialog: order is cheap for a human to fix and expensive for
 one to adjudicate, so a reorder on both sides resolves to ours.
+
+A text block's words count as **one field**, whichever of its two shapes they
+are stored in (a plain `text` string, or a formatted `content` document; see
+[Formatting, footnotes & sources](/web-app/formatting-and-footnotes)). Without
+that, one side bolding a word while the other fixed a typo would touch two
+different fields, merge "cleanly", and leave the typo fix hidden behind the
+formatted copy. As one field it is a conflict, and the dialog shows both
+versions as readable text. Two plain versions are still reported as a
+disagreement about `text`.
+
+The lesson's sources merge quietly, by id and field by field, like structure: a
+source either side added or edited comes through, a delete the other side
+didn't touch is honoured, and where both sides changed the same field of the
+same source, ours stands.
 
 The result is committed with **two parents**, which genuinely joins the two
 histories, so the next merge can find _this_ commit as its base.

@@ -1173,3 +1173,104 @@ test("a VAKT activity is silent at the end of its section and flagged anywhere e
   assert.deepEqual(codes(middle.errors), []);
   assert.deepEqual(codes(middle.warnings), ["W_VAKT_NOT_LAST"]);
 });
+
+// ---- Formatting and footnotes ---------------------------------------------
+
+// The first paragraph of section 1, rewritten. Grounding reads the plain words,
+// so formatting and footnote markers must not cost a green answer its match.
+function withFirstParagraph(text) {
+  return check((input) => {
+    input.sections[0].blocks[0].text = text;
+  });
+}
+
+const RIVER =
+  "A river begins as a TRICKLE high in the hills. Sort what the water carries and it comes out as " +
+  "boulder, cobble, and silt, each size dropped where the flow can no longer lift it. The stream " +
+  "cuts a channel through soft ground, shifting the gravel in its bed, and that channel deepens a " +
+  "little more each year.";
+
+test("one italic title and a footnote pass clean, and grounding still matches", () => {
+  const { errors, warnings } = withFirstParagraph(
+    RIVER.replace("high in the hills", "high in *The Pennines*") +
+      "^[Measured in 2020.]",
+  );
+  assert.deepEqual(codes(errors), []);
+  assert.deepEqual(codes(warnings), []);
+});
+
+test("formatting scattered through a section is rejected", () => {
+  const { errors } = withFirstParagraph(
+    RIVER.replace("river", "*river*")
+      .replace("hills", "*hills*")
+      .replace("water", "*water*")
+      .replace("stream", "*stream*"),
+  );
+  assert.ok(codes(errors).includes("E_FORMAT_HEAVY"));
+  assert.match(
+    errors.find((e) => e.code === "E_FORMAT_HEAVY").message,
+    /Leave lesson prose plain/,
+  );
+});
+
+test("a bolded phrase is rejected, and any bold is flagged", () => {
+  const { errors, warnings } = withFirstParagraph(
+    RIVER.replace(
+      "each size dropped where the flow",
+      "**each size dropped where the flow**",
+    ),
+  );
+  assert.ok(codes(errors).includes("E_FORMAT_LONG_EMPHASIS"));
+  assert.ok(codes(warnings).includes("W_FORMAT_BOLD"));
+});
+
+test("an italic sentence is rejected", () => {
+  const long = withFirstParagraph(
+    RIVER.replace(
+      "The stream cuts a channel through soft ground, shifting the gravel in its bed",
+      "*The stream cuts a channel through soft ground, shifting the gravel in its bed*",
+    ),
+  );
+  assert.ok(codes(long.errors).includes("E_FORMAT_LONG_ITALIC"));
+});
+
+test("underlining and formatted ALL-CAPS words are flagged, not rejected", () => {
+  const { errors, warnings } = withFirstParagraph(
+    RIVER.replace("TRICKLE", "*TRICKLE*").replace("hills", "<u>hills</u>"),
+  );
+  assert.deepEqual(codes(errors), []);
+  assert.ok(codes(warnings).includes("W_FORMAT_UNDERLINE"));
+  assert.ok(codes(warnings).includes("W_FORMAT_CAPS"));
+});
+
+test("a footnote citing an unknown source is rejected", () => {
+  const { errors } = withFirstParagraph(`${RIVER}^[@nobody, p. 3]`);
+  assert.ok(codes(errors).includes("E_UNKNOWN_SOURCE"));
+});
+
+test("a footnote citing a listed source passes", () => {
+  const input = lessonInput();
+  input.sources = [{ id: "rivers", title: "Rivers of Britain" }];
+  input.sections[0].blocks[0].text = `${RIVER}^[@rivers, p. 3]`;
+  const { errors } = validateLesson(buildDoc(input));
+  assert.deepEqual(codes(errors), []);
+});
+
+test("a patch is only held to formatting it adds", () => {
+  const input = lessonInput();
+  input.sections[0].blocks[0].text = RIVER.replace(
+    "each size dropped where the flow",
+    "**each size dropped where the flow**",
+  );
+  const before = buildDoc(input);
+  const untouched = applyPatch(before, [{ op: "set_title", title: "Renamed" }]);
+  assert.deepEqual(
+    codes(
+      newFindings(
+        validateLesson(before).errors,
+        validateLesson(untouched).errors,
+      ),
+    ),
+    [],
+  );
+});

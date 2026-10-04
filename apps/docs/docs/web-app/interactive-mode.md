@@ -53,6 +53,11 @@ The rules that turn a document into steps:
 | A section with nothing in it                      | Nothing.                                                                |
 | A lesson with no questions at all                 | A read-through: every content step, no answer fields, nothing saved.    |
 
+Text blocks keep their bold, italics and underlining, but not their footnote
+markers: this is the screen the speller reads, and a superscript number with
+nowhere on the screen to lead to is clutter there. The voice reads the plain
+words (see [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
+
 Questions are numbered from 1 within each section, matching the editor's `Q7`
 numbering (see [Navigating large lessons](./navigating-large-lessons.md#question-numbering)).
 

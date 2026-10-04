@@ -37,6 +37,9 @@ src/
     editor/
       SectionOutline.jsx  the editor's left-hand section list (52rem+ of page column) — jump to a section, collapse them all; `readOnly` reuses it beside the preview
       LessonPreview.jsx   what the editor's document column holds while Preview is on — the eyebrow, the narrow-screen exit, and LessonView in a panel frame
+      LessonTextInput.jsx a text block's tiptap editor: bold/italic/underline and footnotes, committed like LiveField (see formatting-and-footnotes.md)
+      LessonTextToolbar.jsx its toolbar and the footnote form (cite a source, add a note, or both; add a new source on the spot)
+      SourcesPanel.jsx    the lesson's Sources card at the end of the editor, with how often each source is cited
     InstallAppButton.jsx  the "install app" button in the header's utility cluster; renders nothing unless the app is installable (see pwa-and-offline.md)
     NotificationBell.jsx  header bell that polls for and shows the user's notifications
     DisplayNameGate.jsx   makes a signed-in user pick a display name before using the app
@@ -48,12 +51,13 @@ src/
     RichTextToolbar.jsx   its shadcn ToggleGroup toolbar (bold/italic/underline/lists/link/etc.)
     RichText.jsx          renders a stored comment/bio: sanitized HTML, or plain text for pre-rich-text values
     LiveField.jsx          debounced LiveInput/LiveTextarea (commit ~200ms after typing pauses, hold off remote updates while focused)
+    TextRuns.jsx          draws a text block's formatted runs and a footnote's or source's citation as React elements (no innerHTML)
     LessonView.jsx        read-only renderer for the lesson page and the editor's preview mode (blocks straight to React, lazy images, drawn in the app's theme)
     LessonSummary.jsx     on-device AI summary card on the lesson page (hidden unless the device can run an engine)
     InteractiveLesson.jsx full-screen step-by-step walkthrough of a lesson, with a field per question, autosaved progress you can come back to, and optional read-aloud (see interactive-mode.md)
     MyLessonAnswers.jsx   the reader's own saved answers on the lesson page — private to them, rendered for nobody else
     SectionCard.jsx       a named section with its content blocks + add buttons; measures the pointer against its own rows during a block drag, but the drag itself is owned by EditorPage (blocks can move between sections)
-    ContentBlock.jsx      a single text, spelling, image, or question block; owns BLOCK_LAYOUT, the responsive content/controls split (see mobile-layout.md)
+    ContentBlock.jsx      a single text, spelling, image, VAKT or question block; owns BLOCK_LAYOUT, the responsive content/controls split (see mobile-layout.md)
     IconActionButton.jsx  the icon + tooltip button behind every block/section control; the tooltip doubles as its aria-label
     AiTextDialog.jsx       Turnstile-verified "suggest text with AI" dialog
     AiQuestionDialog.jsx   Turnstile-verified "suggest a question with AI" dialog
@@ -74,6 +78,8 @@ src/
     languages.js           LANGUAGES registry backing the settings page's language switcher (English only today)
     colorScheme.jsx        ColorSchemeProvider + useColorScheme (light/dark/system, persisted, applied as data-theme on <html>)
     useLiveField.js        shared debounce/commit buffering behind LiveField.jsx
+    lessonSources.jsx      LessonSourcesProvider: hands text block editors the lesson's sources and their footnote numbering
+    footnoteExtension.js   the tiptap footnote node (an inline atom numbered by a CSS counter)
     collab.js             useCollaboration hook (one WebSocket to the CollabRoom Durable Object; doc sync, cursors, chat)
     useSelectionBroadcast.js broadcasts the local editor selection to peers
     useDragAutoScroll.js  scrolls the page while a block drag hovers near a window edge (the browser only auto-scrolls a native drag while the pointer keeps moving)

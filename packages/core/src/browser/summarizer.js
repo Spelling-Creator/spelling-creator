@@ -25,6 +25,7 @@
 //
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
+import { textBlockPlain } from "../lessonText.js";
 import { VAKT_LABEL, vaktText } from "../vakt.js";
 
 /**
@@ -343,8 +344,8 @@ export function lessonSummaryText(doc) {
   for (const section of doc?.sections || []) {
     if (section.name) parts.push(`## ${section.name}`);
     for (const block of section.blocks || []) {
-      if (block.type === "text" && block.text) {
-        parts.push(block.text);
+      if (block.type === "text" && textBlockPlain(block).trim()) {
+        parts.push(textBlockPlain(block));
       } else if (block.type === "question" && block.prompt) {
         parts.push(`Question: ${block.prompt}`);
       } else if (block.type === "spelling") {

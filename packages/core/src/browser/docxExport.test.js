@@ -152,3 +152,62 @@ describe("the embedded-picture list", () => {
     ).resolves.toBeTruthy();
   });
 });
+
+describe("formatted text, footnotes and sources", () => {
+  // Read back through mammoth, the converter the PDF path uses, so this checks
+  // what both the Word file and the printout end up carrying.
+  async function html(doc) {
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const buffer = await Packer.toBuffer(await buildDocument(doc));
+    const { value } = await mammoth.convertToHtml(
+      { buffer },
+      { styleMap: ["u => u"] },
+    );
+    return value;
+  }
+
+  it("writes marks, real footnotes in reading order, and the Sources list", async () => {
+    const { markupToContent } = await import("../lessonText.js");
+    const out = await html({
+      title: "t",
+      sources: [{ id: "smith", title: "Cats of Egypt", author: "Jane Smith" }],
+      sections: [
+        {
+          id: "s1",
+          name: "One",
+          blocks: [
+            {
+              id: "b1",
+              type: "text",
+              content: markupToContent("**Bold**^[First note.]"),
+            },
+            {
+              id: "b2",
+              type: "text",
+              content: markupToContent("*Italic* <u>under</u>^[@smith, p. 12]"),
+            },
+          ],
+        },
+      ],
+    });
+    expect(out).toContain("<strong>Bold</strong>");
+    expect(out).toContain("<em>Italic</em>");
+    expect(out).toContain("<u>under</u>");
+    expect(out.indexOf('href="#footnote-1"')).toBeLessThan(
+      out.indexOf('href="#footnote-2"'),
+    );
+    expect(out).toContain("<strong>Sources</strong>");
+    expect(out).toContain("Jane Smith. <em>Cats of Egypt</em>.");
+    expect(out).toMatch(/<li id="footnote-1"><p>First note\./);
+    expect(out).toMatch(
+      /<li id="footnote-2"><p>Jane Smith, <em>Cats of Egypt<\/em>, p\. 12\./,
+    );
+  });
+
+  it("adds no Sources list to a lesson without sources", async () => {
+    const out = await html(lesson([{ id: "b1", type: "text", text: "Plain" }]));
+    expect(out).not.toContain("Sources");
+    expect(out).not.toContain("footnote");
+  });
+});

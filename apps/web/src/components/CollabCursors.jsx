@@ -7,7 +7,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar.jsx";
-import { getCaretCoordinates } from "@spelling-creator/core/browser/presence";
+import {
+  contentEditableCaretRect,
+  getCaretCoordinates,
+} from "@spelling-creator/core/browser/presence";
 
 // Drop a collaborator's marker if we haven't heard a fresh selection from them
 // in this long — guards against a stale cursor lingering after a disconnect.
@@ -69,6 +72,31 @@ export default function CollabCursors({ selections }) {
     }
 
     const index = typeof c.end === "number" ? c.end : 0;
+
+    // A text block's editor: the offset is over the block's plain text, and the
+    // caret is measured straight off the rendered text with a Range. The editor
+    // grows to fit its text, so there is no scrolled-away caret to hide.
+    if (el.isContentEditable) {
+      let caret;
+      try {
+        caret = contentEditableCaretRect(el, index);
+      } catch {
+        continue;
+      }
+      if (!caret) continue;
+      markers.push({
+        key: c.uid,
+        color: c.color || "#1e88e5",
+        name: c.name || c.email || t("cursors.collaboratorFallback"),
+        avatarUrl: c.avatarUrl || undefined,
+        label: initials(c),
+        x: caret.left,
+        y: caret.top,
+        h: caret.height,
+      });
+      continue;
+    }
+
     let coords;
     try {
       coords = getCaretCoordinates(el, index);

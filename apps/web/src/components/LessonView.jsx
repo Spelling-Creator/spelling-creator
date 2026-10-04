@@ -18,10 +18,24 @@
 // pdfExport.js), the only two paths that build a Word file.
 
 import { useTranslation } from "react-i18next";
+import { ArrowUpIcon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton.jsx";
+import { CitationParts, TextRuns } from "./TextRuns.jsx";
 import { fitWithin, imageSizeScale } from "@spelling-creator/core/image";
 import { DOCX_MAX_IMAGE_WIDTH } from "@spelling-creator/core/lessonLayout";
 import { useImageSrc } from "../lib/useImageSrc.js";
+import {
+  footnoteParts,
+  footnoteStarts,
+  lessonFootnotes,
+  textBlockParagraphs,
+  textBlockPlain,
+} from "@spelling-creator/core/lessonText";
+import {
+  lessonSources,
+  sourceEntryParts,
+  sourcesById,
+} from "@spelling-creator/core/sources";
 import {
   ANSWER_GAP,
   questionAnswerItems,
@@ -107,6 +121,32 @@ const LESSON_STYLES = `
   .s2c-lesson-root .s2c-label {
     color: color-mix(in oklab, var(--s2c-label) 78%, black);
   }
+  .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
+  .s2c-lesson-root sup.s2c-fn a {
+    color: var(--primary);
+    text-decoration: none;
+    padding: 0 1px;
+  }
+  .s2c-lesson-root .s2c-endmatter {
+    margin-top: 28px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .s2c-lesson-root .s2c-endmatter h2 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 12px 0 6px;
+  }
+  .s2c-lesson-root .s2c-notes { margin: 0; padding-left: 22px; list-style: decimal; }
+  .s2c-lesson-root .s2c-notes li { margin: 0 0 4px; }
+  .s2c-lesson-root .s2c-sources { margin: 0; padding: 0; list-style: none; }
+  .s2c-lesson-root .s2c-sources li {
+    margin: 0 0 4px;
+    padding-left: 22px;
+    text-indent: -22px;
+  }
+  .s2c-lesson-root .s2c-endmatter a { color: var(--primary); text-underline-offset: 2px; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .s2c-lesson-root .s2c-label {
       color: color-mix(in oklab, var(--s2c-label) 60%, white);
@@ -117,16 +157,115 @@ const LESSON_STYLES = `
   }
 `;
 
-// Render a text block: each newline becomes its own paragraph, matching how the
-// docx export splits lines into separate paragraphs. Each line is also one
-// translation segment, so a translated line swaps in at the same index.
-function TextBlock({ block, si, bi, translation }) {
-  const lines = (block.text || "").split("\n");
-  return lines.map((line, i) => (
-    <p key={i}>
-      {translation?.get(lessonSegmentKey.textLine(si, bi, i)) ?? (line || " ")}
-    </p>
-  ));
+// A footnote's marker in the text: its number, linking down to the note.
+function FootnoteMark({ number }) {
+  const { t } = useTranslation("lesson");
+  return (
+    <sup className="s2c-fn">
+      <a
+        href={`#fn-${number}`}
+        id={`fnref-${number}`}
+        aria-label={t("lessonView.footnoteLabel", { number })}
+      >
+        {number}
+      </a>
+    </sup>
+  );
+}
+
+// Render a text block, one paragraph per <p>, the way the docx export splits
+// them. Each paragraph is also one translation segment, so a translated
+// paragraph swaps in at the same index. A model only hands back plain words, so
+// a translated paragraph loses its formatting and keeps its footnote markers at
+// its end, where they still lead to the right notes. An empty paragraph holds a
+// non-breaking space so it keeps its line, as a blank line always has.
+function TextBlock({ block, si, bi, translation, footnoteStart = 0 }) {
+  const mark = (run) => (
+    <FootnoteMark
+      key={`fn${run.index}`}
+      number={footnoteStart + run.index + 1}
+    />
+  );
+  return textBlockParagraphs(block).map((runs, i) => {
+    const translated = translation?.get(lessonSegmentKey.textLine(si, bi, i));
+    if (translated != null) {
+      return (
+        <p key={i}>
+          {translated}
+          {runs.filter((run) => run.type === "footnote").map(mark)}
+        </p>
+      );
+    }
+    return (
+      <p key={i}>
+        {runs.length ? <TextRuns runs={runs} renderFootnote={mark} /> : " "}
+      </p>
+    );
+  });
+}
+
+// The notes and sources that close a lesson: every footnote, numbered as the
+// markers are, then the Sources list. Notes translate (they are prose); the
+// citations in front of them and the Sources list stay as written.
+function EndMatter({ doc, translation }) {
+  const { t } = useTranslation("lesson");
+  const footnotes = lessonFootnotes(doc);
+  const sources = lessonSources(doc);
+  if (!footnotes.length && !sources.length) return null;
+  const byId = sourcesById(doc);
+
+  return (
+    <div className="s2c-endmatter">
+      {footnotes.length > 0 && (
+        <>
+          <h2>{t("lessonView.notesHeading")}</h2>
+          <ol className="s2c-notes">
+            {footnotes.map((footnote) => (
+              <li
+                key={footnote.number}
+                id={`fn-${footnote.number}`}
+                className="scroll-mt-(--header-h)"
+              >
+                <CitationParts
+                  parts={footnoteParts(footnote, byId, {
+                    note:
+                      translation?.get(
+                        lessonSegmentKey.note(
+                          footnote.si,
+                          footnote.bi,
+                          footnote.index,
+                        ),
+                      ) ?? undefined,
+                  })}
+                />{" "}
+                <a
+                  href={`#fnref-${footnote.number}`}
+                  aria-label={t("lessonView.backToText", {
+                    number: footnote.number,
+                  })}
+                  className="inline-flex align-middle"
+                >
+                  <ArrowUpIcon className="size-3" aria-hidden="true" />
+                </a>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+      {sources.length > 0 && (
+        <>
+          <h2>{t("lessonView.sourcesHeading")}</h2>
+          <ul className="s2c-sources">
+            {sources.map((source) => (
+              <li key={source.id}>
+                <CitationParts parts={sourceEntryParts(source)} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
 }
 
 // The figure margins that place the image left / center / right — the same rule
@@ -302,10 +441,16 @@ function VaktBlock({ block, si, bi, translation }) {
 // `si`/`bi` are the section and block indexes, which is how translated text is
 // keyed (lessonSegmentKey); spelling words never translate (they are the
 // material being spelled), so that one block doesn't take the map at all.
-function Block({ block, si, bi, translation }) {
+function Block({ block, si, bi, translation, footnoteStart }) {
   if (block.type === "text")
     return (
-      <TextBlock block={block} si={si} bi={bi} translation={translation} />
+      <TextBlock
+        block={block}
+        si={si}
+        bi={bi}
+        translation={translation}
+        footnoteStart={footnoteStart}
+      />
     );
   if (block.type === "image" && (block.image || block.src))
     return (
@@ -333,6 +478,7 @@ function Block({ block, si, bi, translation }) {
 export default function LessonView({ doc, translation }) {
   const { t } = useTranslation("lesson");
   const sections = doc?.sections || [];
+  const starts = footnoteStarts(doc);
   return (
     <div className="s2c-lesson-root p-4 text-foreground sm:p-6">
       <style>{LESSON_STYLES}</style>
@@ -362,10 +508,12 @@ export default function LessonView({ doc, translation }) {
               si={si}
               bi={bi}
               translation={translation}
+              footnoteStart={starts.get(block.id) ?? 0}
             />
           ))}
         </section>
       ))}
+      <EndMatter doc={doc} translation={translation} />
     </div>
   );
 }
@@ -380,8 +528,10 @@ export function lessonPlainText(doc) {
   const parts = [];
   for (const section of doc?.sections || []) {
     for (const block of section.blocks || []) {
-      if (block.type === "text" && block.text) parts.push(block.text);
-      else if (block.type === "question" && block.prompt)
+      if (block.type === "text") {
+        const text = textBlockPlain(block);
+        if (text.trim()) parts.push(text);
+      } else if (block.type === "question" && block.prompt)
         parts.push(block.prompt);
       else if (block.type === "spelling") {
         const words = (block.words || [])

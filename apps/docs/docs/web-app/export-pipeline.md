@@ -70,11 +70,27 @@ That is also how **import** recovers a question's type now that nothing in the
 visible text names it: `docxImport` asks mammoth for the same style map and reads
 the type off the `<span class="s2c-q-…">`. Section _divisions_ have nothing left
 to carry them, so a DOCX round trip collapses a lesson into a single section;
-Export/Import **JSON** is the lossless one. It carries the title, the age range
-and every section. The one thing it leaves out on purpose is the lesson's
+Export/Import **JSON** is the lossless one. It carries the title, the age range,
+the lesson's sources and every section. The one thing it leaves out on purpose is the lesson's
 trusted-collaborator list, because that is a list of email addresses and a
 lesson file is something people pass around. On import, an age range the editor
 doesn't offer is dropped and the lesson reads as "any age".
+
+### Formatting, footnotes and sources
+
+A text block's bold, italics and underlining become Word run formatting, and its
+footnotes become real Word footnotes, numbered in reading order at the foot of
+each page. The lesson's sources close the document under a "Sources" line,
+written with named paragraph styles rather than as a heading, because the
+importer reads headings as section breaks. mammoth drops underlining unless its
+style map asks for `u => u`, which both `pdfExport` and `docxImport` do.
+
+mammoth turns Word footnotes into a numbered list at the very end of its HTML,
+after the Sources list, with a back arrow on each. A page has no foot to put
+them at, so `layoutNotes` in `pdfExport` moves the list above the Sources list,
+heads it "Notes" and drops the arrows. On import, the footnotes come back as
+footnotes and the Sources list back into the lesson's sources. See
+[Formatting, footnotes & sources](./formatting-and-footnotes.md).
 
 The page number and the footer are drawn straight onto the finished PDF pages
 with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,

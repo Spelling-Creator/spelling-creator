@@ -70,3 +70,91 @@ describe("lesson file trusted collaborators", () => {
     expect("trustedCollaborators" in file.doc).toBe(false);
   });
 });
+
+describe("lesson file sources and formatted text", () => {
+  const content = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Penguins ", marks: [{ type: "bold" }] },
+          { type: "text", text: "swim." },
+          {
+            type: "footnote",
+            attrs: { sourceId: "nat", locator: "p. 4", note: "" },
+          },
+          {
+            type: "footnote",
+            attrs: { sourceId: "gone", locator: "", note: "" },
+          },
+          {
+            type: "footnote",
+            attrs: { sourceId: "gone", locator: "", note: "Kept." },
+          },
+        ],
+      },
+    ],
+  };
+  const file = buildLessonFile({
+    title: "Penguins",
+    sources: [
+      { id: "nat", title: "Penguins of the World", url: "https://example.com" },
+      { id: "empty" },
+    ],
+    sections: [
+      { id: "s1", name: "One", blocks: [{ id: "b1", type: "text", content }] },
+    ],
+  });
+
+  it("keeps the sources that say something", () => {
+    const doc = normalizeLessonFile(file);
+    expect(doc.sources.map((s) => s.id)).toEqual(["nat"]);
+  });
+
+  it("keeps formatting and drops citations of sources the file doesn't list", () => {
+    const block = normalizeLessonFile(file).sections[0].blocks[0];
+    expect(block.text).toBeUndefined();
+    expect(block.content.content[0].content).toEqual([
+      { type: "text", text: "Penguins ", marks: [{ type: "bold" }] },
+      { type: "text", text: "swim." },
+      {
+        type: "footnote",
+        attrs: { sourceId: "nat", locator: "p. 4", note: "" },
+      },
+      {
+        type: "footnote",
+        attrs: { sourceId: null, locator: "", note: "Kept." },
+      },
+    ]);
+  });
+
+  it("stores unformatted content as plain text", () => {
+    const doc = normalizeLessonFile({
+      title: "t",
+      sections: [
+        {
+          blocks: [
+            {
+              type: "text",
+              content: {
+                type: "doc",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Hi" }],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(doc.sections[0].blocks[0]).toMatchObject({
+      type: "text",
+      text: "Hi",
+    });
+    expect(doc).not.toHaveProperty("sources");
+  });
+});

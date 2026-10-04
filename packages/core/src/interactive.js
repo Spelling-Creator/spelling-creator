@@ -25,6 +25,7 @@
 // are shared with the Worker so the browser and server agree on what a valid
 // submission is.
 
+import { textBlockPlain } from "./lessonText.js";
 import { vaktText } from "./vakt.js";
 
 // Block types that make up a section's material, in the order the document has
@@ -174,7 +175,7 @@ export function stepSpeechText(step) {
 
   for (const block of step.blocks || []) {
     if (block.type === "text") {
-      const text = (block.text || "").trim();
+      const text = textBlockPlain(block).trim();
       if (text) lines.push(text);
     } else if (block.type === "image") {
       const caption = (block.caption || "").trim();

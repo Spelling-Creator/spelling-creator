@@ -25,6 +25,7 @@ import {
 } from "./ui/dropdown-menu.jsx";
 import { LiveInput, LiveTextarea } from "./LiveField.jsx";
 import IconActionButton from "./IconActionButton.jsx";
+import LessonTextInput from "./editor/LessonTextInput.jsx";
 import {
   fitWithin,
   imageSizeScale,
@@ -177,16 +178,15 @@ function ContentBlock({
     );
   }
 
-  // text block
+  // text block: formatting and footnotes (see editor/LessonTextInput.jsx)
   return (
     <div className="rounded-md border border-border bg-card p-4 text-card-foreground">
       <div className={BLOCK_LAYOUT}>
-        <LiveTextarea
+        <LessonTextInput
+          block={block}
+          onChange={onChange}
           placeholder={t("contentBlock.text.placeholder")}
-          value={block.text || ""}
-          onCommit={(text) => onChange({ ...block, text })}
-          data-collab-field={`block:${block.id}:text`}
-          className="min-h-16"
+          collabField={`block:${block.id}:text`}
         />
         {controls}
       </div>

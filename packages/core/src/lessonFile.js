@@ -25,6 +25,7 @@ export function buildLessonFile(doc) {
     doc: {
       title: doc.title,
       ...(doc.ageRange ? { ageRange: doc.ageRange } : {}),
+      ...(doc.sources?.length ? { sources: doc.sources } : {}),
       sections: doc.sections,
     },
   };

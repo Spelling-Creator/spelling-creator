@@ -3,12 +3,28 @@
 // `data-collab-field` attribute (the editor's title/section/block inputs); the
 // attribute's value is a stable key identifying that field across all peers.
 //
+// Inputs and textareas report their selectionStart/End. A lesson text block is
+// a tiptap contenteditable instead, and reports the same thing measured over the
+// block's plain text (see contentEditableSelection), so peers can place it.
+//
 // `onSelect` is called with { field, start, end } while editing such a field,
 // and with null when focus leaves it (so collaborators stop showing our
 // cursor). Events are coalesced through requestAnimationFrame and de-duped, so
 // a flurry of selectionchange events becomes at most one report per frame.
 
 import { useEffect, useRef } from "react";
+import { contentEditableSelection } from "@spelling-creator/core/browser/presence";
+
+// Where the caret is in a tagged field, or null if it can't be read.
+function selectionIn(el) {
+  const tag = el.nodeName ? el.nodeName.toLowerCase() : "";
+  if (tag === "textarea" || tag === "input") {
+    const start = el.selectionStart ?? 0;
+    return { start, end: el.selectionEnd ?? start };
+  }
+  if (el.isContentEditable) return contentEditableSelection(el);
+  return null;
+}
 
 export function useSelectionBroadcast({ active, onSelect }) {
   const onSelectRef = useRef(onSelect);
@@ -27,11 +43,10 @@ export function useSelectionBroadcast({ active, onSelect }) {
       const el = document.activeElement;
       const field =
         el && el.getAttribute ? el.getAttribute("data-collab-field") : null;
-      const tag = el && el.nodeName ? el.nodeName.toLowerCase() : "";
+      const selection = field ? selectionIn(el) : null;
 
-      if (field && (tag === "textarea" || tag === "input")) {
-        const start = el.selectionStart ?? 0;
-        const end = el.selectionEnd ?? start;
+      if (field && selection) {
+        const { start, end } = selection;
         if (last.field !== field || last.start !== start || last.end !== end) {
           last.field = field;
           last.start = start;

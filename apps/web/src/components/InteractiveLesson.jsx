@@ -102,6 +102,8 @@ import { saveLessonResponses } from "@spelling-creator/core/lessonResponses";
 import { hasApi } from "@spelling-creator/core/config";
 import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
+import { textBlockParagraphs } from "@spelling-creator/core/lessonText";
+import { TextRuns } from "./TextRuns.jsx";
 import { SPEECH_RATES } from "../lib/speechPrefs.js";
 import { useSpeech } from "../lib/useSpeech.js";
 import { useAuth } from "../lib/auth.jsx";
@@ -402,12 +404,18 @@ function ResumeNotice({ onRestart }) {
   );
 }
 
-// A text block, at reading size. Each newline is its own paragraph, matching how
-// the lesson page and the export both treat a text block.
+// A text block, at reading size, one paragraph per <p> as the lesson page and
+// the export draw it. Formatting shows; footnote markers don't. This is the
+// screen the speller reads from, and a superscript number in the middle of a
+// sentence is clutter there, with nowhere on the screen for it to lead to.
 function TextBlock({ block }) {
-  return (block.text || "").split("\n").map((line, index) => (
+  return textBlockParagraphs(block).map((runs, index) => (
     <p key={index} className="mb-4 text-lg leading-relaxed last:mb-0">
-      {line || " "}
+      {runs.some((run) => run.type === "text") ? (
+        <TextRuns runs={runs} />
+      ) : (
+        "\u00a0"
+      )}
     </p>
   ));
 }

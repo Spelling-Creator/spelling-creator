@@ -28,6 +28,36 @@ rule. Handle mental illness, war, death, and disability factually and with digni
 euphemism or tragedy-framing. Verify anything time-sensitive (records, prices, "world's largest
 X") before writing it down.
 
+## Formatting
+
+Leave passages plain. A text block CAN carry `**bold**`, `*italic*` and `<u>underline</u>`, but a
+lesson is read aloud to the speller and printed for whoever runs it, and formatting scattered
+through prose makes it look bloated and machine-written. ALL CAPS already marks the vocabulary, so
+there is nothing left for bold to do.
+
+Format only where a writing convention calls for it: italics for the title of a book, film, ship
+or artwork, a scientific name (_Felis catus_), or a word from another language. Or when the user
+asks. Never bold or underline for emphasis, never format a whole phrase or sentence, never format
+an ALL-CAPS word, and don't reach for formatting to make a passage feel lively. Most sections
+need none at all.
+
+## Sources and footnotes
+
+A lesson can list its `sources` (books, articles, websites), which print as a Sources list at the
+end. Give each an `id` you choose ("smith2020") and as much of `title`, `author`, `publisher`,
+`year` and `url` as you know. Footnotes in a text block cite them:
+
+- `^[@smith2020]` cites a source
+- `^[@smith2020, p. 12]` adds a page or section
+- `^[@smith2020, p. 12 | A short note.]` adds a note too
+- `^[A short note.]` is a note with no source
+
+Put the marker straight after the word or sentence it belongs to. Cite only sources the user gave
+you or that you have actually checked; an invented citation is worse than none. Free-text notes
+are for something the reader of the printed lesson genuinely needs (a pronunciation, a date
+convention), not commentary, so keep them rare. Don't add sources or footnotes to a lesson unless
+the user wants them or gave you the sources.
+
 ## Spelling
 
 Exactly 4 words per section, each 6-9 letters. Thematically related to the topic but NOT drawn
@@ -332,6 +362,9 @@ Rejected (errors):
 - the same numeric answer given by two different questions
 - an open, paraphrase or wyr question carrying an answer, answers, or exampleAnswer
 - a pink question using the retired "...one word that comes to mind..." stem
+- a section whose text has more than 3 formatted spans, or more than a tenth of its prose formatted
+- bold or underlining across more than 4 words, or italics across more than 10
+- a footnote citing a source id the lesson's `sources` doesn't have
 
 Flagged but allowed (warnings, returned with the saved lesson): a section count other than 6, a
 section with no questions at all, a section whose 15 questions differ in type or order from the
@@ -341,8 +374,13 @@ no answers at all, a `multiple` prompt that doesn't blank out the list it is ask
 `multiple_open` question asked before a `multiple` one in the same section, a section without
 exactly 4 spelling words, a word problem with no steps, a pink, `wyr` or `multiple_open` prompt
 that names another question's recall answer, a `wyr` prompt that doesn't read as a "Would you
-rather… or…" choice or chains several "or"s, a spelling word that is also ALL-CAPS vocabulary in the same section, and a
-VAKT activity that isn't last in its section.
+rather… or…" choice or chains several "or"s, a spelling word that is also ALL-CAPS vocabulary in the same section, a
+VAKT activity that isn't last in its section, any bold, any underlining, and formatting on an
+ALL-CAPS word.
+
+The formatting checks only count formatting your write adds. Formatting a person put on their own
+lesson in the web editor is theirs: rewording around it never blocks an edit, though adding more
+formatting to a section that already has plenty is yours to answer for.
 
 If the user deliberately wants a lesson the standard forbids — a 3-section lesson, questions in a
 different order — pass "skipValidation": true, which turns the errors off. Don't reach for it to

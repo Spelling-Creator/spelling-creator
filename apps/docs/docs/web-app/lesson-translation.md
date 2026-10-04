@@ -27,7 +27,8 @@ two can't drift apart:
 | Translated                          | Left as written                            |
 | ----------------------------------- | ------------------------------------------ |
 | The document title                  | Spelling words (they are the material)     |
-| Text blocks, line by line           | VAKT link labels (names of external sites) |
+| Text blocks, paragraph by paragraph | VAKT link labels (names of external sites) |
+| Footnote notes                      | Source citations and the Sources list      |
 | Question prompts, answers and steps |                                            |
 | Image captions                      |                                            |
 | VAKT activity text                  |                                            |
@@ -36,6 +37,13 @@ Spelling words are the one thing a translated lesson keeps as written: the
 lesson is "spell these words", and a translated word list would be a
 different lesson. A note under a translated lesson says so, so an
 untranslated spelling list reads as the feature working, not failing.
+
+A text block translates one paragraph at a time, as its plain words. A model
+hands back plain text, so a translated paragraph shows without its bold or
+italics, and keeps its footnote markers at its end, where they still lead to
+the right notes. A footnote's note translates; the citation in front of it, and
+the Sources list, are names (an author, a title, a publisher) and stay as
+written. See [Formatting, footnotes & sources](./formatting-and-footnotes.md).
 
 A question's accepted answers translate one at a time rather than as the
 printed line (`questionAnswerItems`): the wide non-breaking gaps that
@@ -97,9 +105,9 @@ LessonView.jsx                      renders doc + optional Map of translated seg
    `translation` prop: any segment the Map covers renders translated, anything
    else renders as written. That one rule is what makes the partial state
    (translated down to section 5, original below) and the untranslatable
-   spelling words both fall out for free. No markup is
-   involved anywhere: lesson text is plain strings, so unlike comments there
-   is no rich-text flattening and **Show original** loses nothing.
+   spelling words both fall out for free. Segments are plain words, taken
+   from each paragraph by `textBlockLines`, and **Show original** brings the
+   formatting back along with the original words.
 
 Everything stays in component state. Leaving the page aborts any run in
 flight, along with whichever model download it started.

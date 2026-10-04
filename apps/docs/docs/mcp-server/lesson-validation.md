@@ -85,6 +85,10 @@ accepts either in either slot and `W_ORANGE_ORDER` carries the ordering rule ins
 | `E_NUMBER_DUPLICATE`        | Two questions resolve to the same number.                                                                                                                                                                                                                                                                                                                                 |
 | `E_OPEN_HAS_ANSWER`         | An `open`, `paraphrase` or `wyr` question carries `answer`, `answers` or `exampleAnswer`. All three store no answer at all, and `buildBlock` drops the field silently, so the write is refused instead.                                                                                                                                                                   |
 | `E_RETIRED_STEM`            | A pink question uses the retired "...one word that comes to mind..." stem.                                                                                                                                                                                                                                                                                                |
+| `E_FORMAT_HEAVY`            | A section's text has more than 3 formatted spans, or more than a tenth of its prose is formatted. See [Formatting](#formatting).                                                                                                                                                                                                                                          |
+| `E_FORMAT_LONG_EMPHASIS`    | Bold or underlining runs across more than 4 words: a phrase or sentence shouted rather than written.                                                                                                                                                                                                                                                                      |
+| `E_FORMAT_LONG_ITALIC`      | Italics run across more than 10 words. Long enough for a book's title, not for a sentence.                                                                                                                                                                                                                                                                                |
+| `E_UNKNOWN_SOURCE`          | A footnote cites a source id (`^[@id]`) that isn't in the lesson's `sources`.                                                                                                                                                                                                                                                                                             |
 
 A rejection names the section, the offending value and the fix, because the model reads it
 and resubmits: `"validation failed"` buys a guess, a specific message buys a correction in
@@ -123,10 +127,36 @@ Returned as a `warnings` array on the successful result:
 | `W_SPELLING_IN_CAPS`     | A spelling word is also ALL-CAPS learning vocabulary in the same passage. A warning rather than an error because acronyms trip it legitimately.                                                                                                                                                                                                                          |
 | `W_ANSWER_REVEALED_OPEN` | A pink, `wyr` or `multiple_open` prompt names another question's recall answer. The same defect `E_ANSWER_REVEALED_CROSS` rejects elsewhere, but these exist to make the speller talk about a particular word: "In your own words, explain how a delta forms" cannot avoid DELTA without going vague, and "Give a synonym for DELTA" has to say it outright.             |
 | `W_WYR_SHAPE`            | A `wyr` prompt doesn't read as a choice: it should start "Would you rather" and join two options with one "or" (a short list, "Paris, London, or New York", is fine). Also fires when the prompt chains several "or"s ("a train or a bus or a bike"); idioms such as "an hour or so" don't count. A warning because the wording is a convention, not a correctness rule. |
+| `W_FORMAT_BOLD`          | A section uses bold at all. ALL CAPS already marks the vocabulary, so bold is almost never needed.                                                                                                                                                                                                                                                                       |
+| `W_FORMAT_UNDERLINE`     | A section uses underlining, which reads on screen as a link that goes nowhere.                                                                                                                                                                                                                                                                                           |
+| `W_FORMAT_CAPS`          | Formatting on an ALL-CAPS word, which the capitals already mark.                                                                                                                                                                                                                                                                                                         |
 | `W_VAKT_NOT_LAST`        | A section's VAKT activity isn't last; there is other content after it. VAKT activities are optional, so nothing is ever said about a section that has none; this only fires on a misplaced one, and only as a warning, since a break mid-section is a legitimate thing to want.                                                                                          |
 
 These are warnings and not errors because a legitimate lesson can trip each one: a user who
 asks for four sections gets `W_SECTION_COUNT` and should not be blocked by it.
+
+## Formatting
+
+The assistant is asked to leave lesson text plain unless a writing convention calls for
+formatting (italics for a title, a scientific name, a word from another language) or the
+user asks for it. The `E_FORMAT_*` and `W_FORMAT_*` checks hold it to that, because the
+failure they catch is the one an assistant drifts into: a word bolded here, a phrase
+italicised there, until the passage reads as machine-written. The limits are counted per
+section, over all its text blocks together, so a short block that is mostly one italic
+title is fine.
+
+They are only ever held against formatting the write adds. Findings are keyed on the
+formatting itself (which words, with which marks), not on where it sits or on the prose
+around it, so `patch_lesson`'s usual before-and-after filter covers them, and
+`update_lesson`, which otherwise owns every defect in what it writes, compares the
+formatting findings against the lesson as it stood. Rewording a sentence in a section a
+person formatted in the web editor leaves the key alone, and the edit goes through. Adding
+formatting to that section changes it, and is the write's to answer for.
+
+`update_lesson` also keeps the lesson's `sources` when they are left out, and accepts a
+source passed back exactly as stored without checking it, since the web editor lets a
+person save one half filled in. If the lesson can't be read to keep its sources, nothing is
+written.
 
 ## Checking before you write
 
@@ -233,7 +263,8 @@ sorted before it becomes a key; otherwise reordering the sections swaps which en
 walk reaches first and rewrites the identity of a defect nobody touched.
 
 `update_lesson` replaces the whole document, so it gets no such exemption: whatever the
-result contains, the caller sent. That is a reason to prefer `patch_lesson` for small
+result contains, the caller sent. The one exception is formatting the lesson already had
+(see [Formatting](#formatting)). That is a reason to prefer `patch_lesson` for small
 edits.
 
 ## Comparison rules
