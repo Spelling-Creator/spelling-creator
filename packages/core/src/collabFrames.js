@@ -24,6 +24,7 @@
 //     ADMITTED [5][yjs state]                     you were added; here's the lesson
 //     REMOVED  [6][utf8 reason]                   declined / removed / host left
 //     ERROR    [7][utf8 message]                  fatal error before/while joining
+//     EDITED   [10][senderSlot u16]               the next UPDATE is this peer's
 //   client -> server
 //     UPDATE   [1][yjs update]                     I edited the document
 //     CURSOR   [2][utf8 cursor]                     my caret moved
@@ -35,6 +36,14 @@
 // an entire document is just a large update, and Y.applyUpdate treats it exactly
 // like an incremental one. So the host's initial seed, a late joiner's ADMITTED
 // payload and a single keystroke all travel the same path.
+//
+// EDITED is how a peer learns who made an edit, which version history needs to
+// credit everyone in a session (see coAuthorTrailers in git/repo.js). It is a
+// frame of its own, sent just before the UPDATE it describes, rather than a
+// slot added to UPDATE itself. A client that predates it skips a frame type it
+// doesn't know; one handed an UPDATE with two extra bytes at the front would
+// feed them to Yjs as part of the update instead. Like CURSOR and CHAT, the slot
+// is stamped by the room, so nobody can claim someone else's edit.
 
 /** Frame type bytes. The wire format's only magic numbers. */
 export const T = {
@@ -48,6 +57,7 @@ export const T = {
   ERROR: 7,
   ADMIT: 8,
   REMOVE: 9,
+  EDITED: 10,
 };
 
 const encoder = new TextEncoder();

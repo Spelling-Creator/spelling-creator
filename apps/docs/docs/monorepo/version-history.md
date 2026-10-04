@@ -77,6 +77,43 @@ Add 1 image, edit 2 questions, remove 1 text block
 - remove text block c40a...
 ```
 
+## Who made a version
+
+A commit is signed with the editor's display name and an address built from
+their **account id**, never their email:
+
+```
+Alex <6f1c2d3e-...@users.spelling-creator.invalid>
+```
+
+A published lesson's pack is public (that is what makes forking public), and
+every signature in it goes with it, so a real address would give every
+contributor's email to anyone who clones the lesson. The account id is stable,
+so one person's commits still group together, and it is already public on
+their profile. The domain is a `.invalid` one, which can never resolve.
+`authorFrom` and `commitEmail` in `@spelling-creator/core/git/repo` build it,
+and both the editor and the MCP server sign through them. Lessons committed
+before this have the author's real email in their older commits, since history
+is never rewritten.
+
+A commit taken during a [live session](/web-app/live-collaboration#who-gets-credit-in-version-history)
+can hold other people's edits too, and credits them the way git does, with a
+`Co-authored-by:` trailer each, in the same form:
+
+```
+Edit 2 questions
+
+- edit question 4b7d... (prompt, answer)
+- edit question 91ce... (prompt)
+
+Co-authored-by: Sam <0a9b8c7d-...@users.spelling-creator.invalid>
+Co-authored-by: Priya <5e4f3a2b-...@users.spelling-creator.invalid>
+```
+
+`history` reads the trailers back as `coAuthors`, and both history views show
+them ("Alex, with Sam and Priya"). Because these are ordinary git trailers,
+`git interpret-trailers` and `git log --format=%(trailers)` read them as well.
+
 ## Periodic commits
 
 A commit per keystroke would be unreadable history and would thrash IndexedDB.

@@ -71,7 +71,29 @@ speed: a one-byte type tag followed by the payload. Cursor and chat payloads are
 UTF-8 JSON; document payloads are opaque Yjs update bytes, which the room relays
 without parsing. A participant is identified by a server-assigned numeric **slot**
 rather than by name in every packet; the client maps slot to identity from the
-presence roster to label cursors and chat.
+presence roster to label cursors and chat. The frame shapes are defined once, in
+`@spelling-creator/core/collabFrames`.
+
+**Who gets credit in version history.** Everyone's editor keeps committing the
+lesson as usual while a session runs, so the commit that picks up a guest's
+edits is taken in the host's editor and signed by the host. To make sure the
+guest isn't left out, the room sends an `EDITED` frame naming the sender's slot
+just ahead of every update it relays (stamped by the room, like a cursor's slot,
+so nobody can claim someone else's edit). The client looks that slot up in the
+roster, which carries each participant's account id, and keeps a list of who
+has edited since the last commit. The next commit credits each of them with a
+standard git `Co-authored-by:` trailer, and the history then reads "Alex, with
+Sam and Priya".
+
+Only people whose edits actually arrived are credited. Someone who only watched
+isn't. Neither is the author themselves, which also covers an assistant
+connected on the author's own account. The trailer holds the account id rather
+than an email address, because a published lesson's history is public; see
+[Version history](/monorepo/version-history#who-made-a-version).
+
+`EDITED` is a frame of its own rather than a slot added to `UPDATE`, so an
+editor or MCP server built before it existed simply skips it and goes on
+working; its commits just don't credit anyone.
 
 **Live cursors.** Each collaborator's text selection is relayed to the others, so
 you can see where everyone is working. `useSelectionBroadcast`
@@ -142,5 +164,11 @@ SQLite so it survives hibernation, and relays updates) and `handleCollab` in
 `apps/api/src/index.js` (the JWT gate, connection rate limits, and forwarding to
 the room).
 
+`collab.coAuthors` is how the session hands its list of editors to version
+history: `useLessonGit` reads it (`peek`) when it takes a checkpoint and drops
+the people it credited (`clear`) once the commit is written. Someone who edits
+again while that commit is being written stays on the list for the next one.
+
 Yjs is used **only for the live session**. Lessons are still stored as plain JSON,
-so nothing about saving, exporting, forking or version history changes.
+so nothing about saving, exporting or forking changes, and version history
+changes only in who a commit credits.

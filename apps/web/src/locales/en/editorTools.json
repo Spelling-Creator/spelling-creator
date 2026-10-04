@@ -16,6 +16,7 @@
       "moved": "moved"
     },
     "title": "Version history",
+    "authorWith": "{{author}}, with {{others}}",
     "dismiss": "Dismiss",
     "restoreError": "Could not restore that version.",
     "pendingChanges_one": "You have {{count}} change since the last saved version. They'll be saved automatically in a moment.",

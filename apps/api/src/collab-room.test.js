@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 // Frame types — must match T in collab-room.js.
-const T = { HELLO: 0, UPDATE: 1, PRESENCE: 4, ADMITTED: 5, ADMIT: 8 };
+const T = { HELLO: 0, UPDATE: 1, PRESENCE: 4, ADMITTED: 5, ADMIT: 8, EDITED: 10 };
 
 const decoder = new TextDecoder();
 
@@ -224,5 +224,37 @@ describe('CollabRoom', () => {
 		Y.applyUpdate(guestPeer.ydoc, admitted.subarray(1), 'remote');
 
 		expect(read(guestPeer.ydoc).blocks[0].text).toBe('edited before you joined');
+	});
+
+	it('says whose edit an update is, so version history can credit them', async () => {
+		const host = await join('room-credit', { create: true, uid: 'host' });
+		const hello = await host.nextOf(T.HELLO);
+		const hostSlot = (hello[1] << 8) | hello[2];
+
+		const hostPeer = peer();
+		seed(hostPeer.ydoc);
+		host.send(frame(T.UPDATE, Y.encodeStateAsUpdate(hostPeer.ydoc)));
+
+		const guest = await join('room-credit', { uid: 'guest-uid', email: 'g@school.org' });
+		await guest.nextOf(T.HELLO);
+		const pending = await host.nextRequest();
+		host.send(slotFrame(T.ADMIT, pending.slot));
+		await guest.nextOf(T.ADMITTED);
+
+		// The roster carries the account id, which is what a commit credits.
+		for (;;) {
+			const roster = JSON.parse(decoder.decode((await guest.nextOf(T.PRESENCE)).subarray(1)));
+			if (roster.participants.length === 2) {
+				expect(roster.participants.map((p) => p.uid).sort()).toEqual(['guest-uid', 'host']);
+				break;
+			}
+		}
+
+		// The room stamps the sender's slot on an EDITED frame just ahead of the update.
+		host.send(frame(T.UPDATE, edit(hostPeer, 'b1', 'host edited')));
+		const edited = await guest.nextOf(T.EDITED);
+		expect((edited[1] << 8) | edited[2]).toBe(hostSlot);
+		expect(edited.length).toBe(3);
+		await guest.nextOf(T.UPDATE);
 	});
 });

@@ -43,7 +43,10 @@ function worthCommitting(doc) {
  * @param {string}  [opts.editingId] The hub lesson being edited, if any.
  * @param {string}  [opts.localId]   The lesson's id in this device's library —
  *                                   the repository it uses until it's published.
- * @param {object}  [opts.identity]  { name, email } — stamped on commits.
+ * @param {object}  [opts.identity]  { uid, name } — stamped on commits.
+ * @param {object}  [opts.coAuthors] A live session's `coAuthors` (lib/collab.js):
+ *                                   who else's edits a commit holds, credited
+ *                                   with a `Co-authored-by` trailer each.
  * @param {boolean} [opts.enabled]   Set false to disable version control entirely.
  */
 export function useLessonGit({
@@ -51,6 +54,7 @@ export function useLessonGit({
   editingId,
   localId,
   identity,
+  coAuthors,
   enabled = true,
 }) {
   const repoId = repoIdFor(editingId, localId);
@@ -85,12 +89,16 @@ export function useLessonGit({
   // The doc, mirrored for the timer callbacks, which outlive any single render.
   const docRef = useRef(doc);
   const identityRef = useRef(identity);
+  const coAuthorsRef = useRef(coAuthors);
   useEffect(() => {
     docRef.current = doc;
   }, [doc]);
   useEffect(() => {
     identityRef.current = identity;
   }, [identity]);
+  useEffect(() => {
+    coAuthorsRef.current = coAuthors;
+  }, [coAuthors]);
 
   const run = useCallback((task) => {
     const next = queue.current.then(task, task);
@@ -221,15 +229,27 @@ export function useLessonGit({
 
         try {
           const engine = await loadGitEngine();
+          // Everyone in a live session whose edits arrived since the last commit.
+          // Only this, the ordinary checkpoint, credits them: it is the commit
+          // that picks up what the session did. A restore, undo or merge is the
+          // local user's own decision.
+          const credited = coAuthorsRef.current?.peek() || [];
           const result = await engine.commitDoc({
             ...engine.repoCtx(repoId),
             doc: current,
             author: identityRef.current,
+            coAuthors: credited,
           });
           // Whatever happened, the doc now matches HEAD — clear the dirty state.
           dirtySince.current = null;
           setPending(0);
-          if (result) setLastCommit({ oid: result.oid, at: Date.now() });
+          if (result) {
+            setLastCommit({ oid: result.oid, at: Date.now() });
+            // Forgotten only once a commit has actually named them. With nothing
+            // to commit, their edit hasn't reached the document yet (or was
+            // undone), so they wait for the commit that does hold it.
+            coAuthorsRef.current?.clear(credited);
+          }
           return result;
         } catch (err) {
           setError(err.message || "Could not save a version.");

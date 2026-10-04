@@ -62,6 +62,27 @@ export function timeAgo(ts) {
 }
 
 /**
+ * Who made a version: its author, plus anyone a live session credited on it
+ * ("Alex, with Sam and Priya"). See coAuthorTrailers in git/repo.js.
+ */
+export function commitAuthors(commit) {
+  const others = commit.coAuthors || [];
+  if (!others.length) return commit.author;
+  let names;
+  try {
+    names = new Intl.ListFormat(i18n.language, { type: "conjunction" }).format(
+      others,
+    );
+  } catch {
+    names = others.join(", ");
+  }
+  return i18n.t("editorTools:historyDialog.authorWith", {
+    author: commit.author,
+    others: names,
+  });
+}
+
+/**
  * @param {object}   props.git       The useLessonGit controller.
  * @param {Function} props.onRestore Called with the restored doc; the editor adopts it.
  * @param {Function} props.onUndo    Called with a commit oid to undo just that
@@ -226,7 +247,7 @@ export default function HistoryDialog({
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {i === 0 ? t("historyDialog.currentPrefix") : ""}
-                      {timeAgo(commit.timestamp)} · {commit.author}
+                      {timeAgo(commit.timestamp)} · {commitAuthors(commit)}
                     </p>
                   </button>
                 ))}

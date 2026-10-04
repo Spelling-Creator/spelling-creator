@@ -76,7 +76,7 @@ import { PULL_BODY_MAX, PULL_TITLE_MAX } from "@spelling-creator/core/pulls";
  */
 async function commitAuthor(api) {
   const me = await api.whoami().catch(() => null);
-  return authorFrom({ name: me?.displayName, email: me?.email });
+  return authorFrom({ uid: me?.id, name: me?.displayName });
 }
 
 /** Trim to a limit on a word boundary where there is one nearby. */

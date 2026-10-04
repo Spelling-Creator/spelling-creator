@@ -75,15 +75,106 @@ export const pullRef = (pullId) => `refs/remotes/pull/${pullId}`;
 
 const DEFAULT_AUTHOR = { name: "Spelling Creator", email: "lessons@local" };
 
-/** The signature to stamp commits with, derived from the signed-in user. */
+// A commit's address is never anyone's real email. A published lesson's pack
+// is public (that is what makes forking public), and every signature in it
+// travels with it, so a real address would hand everyone who ever touched a
+// lesson to whoever clones it. The account id stands in instead: stable, so
+// one person's commits still group together, and already public on their
+// profile. The domain is a `.invalid` one, reserved so it can never resolve,
+// for the reason usernames use one (see ../username.js).
+export const COMMIT_EMAIL_DOMAIN = "users.spelling-creator.invalid";
+
+// An account id is interpolated into a signature, so only the characters a
+// Supabase id is made of get through. Anything else (a `>` or a newline above
+// all) could break out of the address and forge a trailer.
+const UID_RE = /^[A-Za-z0-9-]{1,64}$/;
+
+/** The address a commit is signed with for this account, or null without one. */
+export function commitEmail(uid) {
+  const id = String(uid || "").trim();
+  return UID_RE.test(id) ? `${id.toLowerCase()}@${COMMIT_EMAIL_DOMAIN}` : null;
+}
+
+/** A name made safe to sit in a signature: one line, no angle brackets. */
+function signatureName(name) {
+  return String(name || "")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * The signature to stamp commits with, derived from the signed-in user.
+ *
+ * `identity` is `{ uid, name }`. An `email` on it is ignored on purpose; see
+ * COMMIT_EMAIL_DOMAIN.
+ */
 export function authorFrom(identity) {
-  const name = (identity?.name || "").trim();
-  const email = (identity?.email || "").trim();
+  const name = signatureName(identity?.name);
+  const email = commitEmail(identity?.uid);
   if (!name && !email) return DEFAULT_AUTHOR;
   return {
-    name: name || email,
+    name: name || DEFAULT_AUTHOR.name,
     email: email || DEFAULT_AUTHOR.email,
   };
+}
+
+// Git's own convention for crediting more than one person with a commit, read
+// by GitHub, GitLab and `git interpret-trailers` alike.
+const CO_AUTHOR_KEY = "Co-authored-by";
+const CO_AUTHOR_RE = /^co-authored-by:\s*(.*?)\s*<([^<>\s]+)>\s*$/i;
+
+/**
+ * The `Co-authored-by` lines for the people who edited alongside a commit's
+ * author in a live session.
+ *
+ * Each one needs an account id, since that is what the address is made from;
+ * anyone without one is skipped rather than credited under a made-up address.
+ * The author is never credited twice (an assistant connected on their own
+ * account edits under their id), and nor is anyone listed twice.
+ *
+ * @param {Array<{ uid: string, name?: string }>} coAuthors
+ * @param {{ email: string }} author  The commit's own signature.
+ * @returns {string[]}
+ */
+export function coAuthorTrailers(coAuthors, author) {
+  const seen = new Set([author?.email]);
+  const lines = [];
+  for (const person of Array.isArray(coAuthors) ? coAuthors : []) {
+    const email = commitEmail(person?.uid);
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    const name = signatureName(person.name) || "A collaborator";
+    lines.push(`${CO_AUTHOR_KEY}: ${name} <${email}>`);
+  }
+  return lines;
+}
+
+/** Add trailers to a commit message, as git expects: after a blank line, last. */
+function withTrailers(message, trailers) {
+  if (!trailers.length) return message;
+  return `${message.trimEnd()}\n\n${trailers.join("\n")}\n`;
+}
+
+/**
+ * Who a commit's message credits besides its author, read back from its
+ * trailers. Only the final paragraph counts, which is where git looks too, so
+ * a line in the body that happens to start the same way is not mistaken for
+ * one.
+ *
+ * @returns {Array<{ name: string, email: string }>}
+ */
+export function readCoAuthors(message) {
+  const paragraphs = String(message || "")
+    .trimEnd()
+    .split(/\n\s*\n/);
+  const last = paragraphs.length > 1 ? paragraphs[paragraphs.length - 1] : "";
+  const people = [];
+  for (const line of last.split("\n")) {
+    const match = CO_AUTHOR_RE.exec(line.trim());
+    if (match) people.push({ name: match[1], email: match[2] });
+  }
+  return people;
 }
 
 /** Create the repository if it isn't there yet. Safe to call on every open. */
@@ -169,13 +260,24 @@ export async function readHeadDoc({ fs, gitdir }) {
  * a lesson that hasn't changed never gains an empty commit.
  *
  * @param {object}   args.doc       The document to commit.
- * @param {object}   [args.author]  { name, email } — defaults to a generic signature.
+ * @param {object}   [args.author]  { uid, name } — defaults to a generic signature.
+ * @param {object[]} [args.coAuthors] { uid, name } for each person whose edits
+ *                                  from a live session this commit holds; each
+ *                                  becomes a `Co-authored-by` trailer.
  * @param {string}   [args.message] Overrides the message derived from the ops.
  * @param {string[]} [args.parents] Overrides the parents (a merge passes two).
  * @returns {Promise<{ oid: string, ops: object[] } | null>} null when there was
  *          nothing to commit.
  */
-export async function commitDoc({ fs, gitdir, doc, author, message, parents }) {
+export async function commitDoc({
+  fs,
+  gitdir,
+  doc,
+  author,
+  coAuthors,
+  message,
+  parents,
+}) {
   await ensureRepo({ fs, gitdir });
 
   // Whatever HEAD points at — the lesson itself, or the variation being tried
@@ -212,8 +314,10 @@ export async function commitDoc({ fs, gitdir, doc, author, message, parents }) {
       parent: parentOids,
       author: signature,
       committer: signature,
-      message:
+      message: withTrailers(
         message || (ops.length ? describeOps(ops) : "Update the lesson\n"),
+        coAuthorTrailers(coAuthors, signature),
+      ),
     },
   });
 
@@ -231,7 +335,11 @@ export async function commitDoc({ fs, gitdir, doc, author, message, parents }) {
  * local commits that were never pushed. So a caller may pass any ref or oid,
  * and the public lesson page passes the published head (see LessonHistory.jsx).
  *
- * @returns {Promise<Array<{ oid, message, summary, author, timestamp, parents, isMerge }>>}
+ * `coAuthors` names the people a commit's trailers credit alongside its author
+ * (see coAuthorTrailers), so a commit taken during a live session can say who
+ * was editing.
+ *
+ * @returns {Promise<Array<{ oid, message, summary, author, coAuthors, timestamp, parents, isMerge }>>}
  */
 export async function history({ fs, gitdir, depth = 100, ref }) {
   // Only the implicit case needs the "is there anything here yet" guard: an
@@ -245,6 +353,7 @@ export async function history({ fs, gitdir, depth = 100, ref }) {
     message: commit.message,
     summary: commit.message.split("\n")[0].trim(),
     author: commit.author.name,
+    coAuthors: readCoAuthors(commit.message).map((person) => person.name),
     timestamp: commit.author.timestamp * 1000,
     parents: commit.parent,
     isMerge: commit.parent.length > 1,

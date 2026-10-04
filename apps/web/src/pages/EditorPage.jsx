@@ -393,6 +393,9 @@ export default function EditorPage() {
   // the WebSocket (only signed-in users may host or join).
   const identity = useMemo(
     () => ({
+      // The account id, which version history signs commits with in place of
+      // the email (see authorFrom in @spelling-creator/core/git/repo).
+      uid: user?.id || "",
       name:
         user?.user_metadata?.display_name ||
         user?.user_metadata?.full_name ||
@@ -422,6 +425,7 @@ export default function EditorPage() {
     editingId,
     localId,
     identity,
+    coAuthors: collab.coAuthors,
     enabled: hydrated,
   });
 
