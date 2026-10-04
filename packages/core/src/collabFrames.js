@@ -43,7 +43,9 @@
 // slot added to UPDATE itself. A client that predates it skips a frame type it
 // doesn't know; one handed an UPDATE with two extra bytes at the front would
 // feed them to Yjs as part of the update instead. Like CURSOR and CHAT, the slot
-// is stamped by the room, so nobody can claim someone else's edit.
+// is stamped by the room, so nobody can claim someone else's edit, and it is
+// sent only for an update that changed the room's document, so replaying one it
+// already holds claims nothing either.
 
 /** Frame type bytes. The wire format's only magic numbers. */
 export const T = {

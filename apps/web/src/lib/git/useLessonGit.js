@@ -107,10 +107,40 @@ export function useLessonGit({
     return next;
   }, []);
 
+  /**
+   * Commit the document being edited, crediting everyone in a live session
+   * whose edits arrived since the last commit. Every path that checkpoints the
+   * live document goes through here, so whichever of them picks a session's
+   * edits up is the one that names who made them. A restore, undo or merge
+   * doesn't: those are the local user's own decision.
+   *
+   * The people it checked are forgotten whether or not there was anything to
+   * commit. A commit holds their edits; finding nothing means the document
+   * already matches HEAD, so their edits are in an earlier commit or were
+   * undone, and either way they have nothing left to be credited for. Only a
+   * failed commit leaves them waiting.
+   */
+  const commitLive = useCallback(async (engine, ctx, doc = docRef.current) => {
+    const credited = coAuthorsRef.current?.peek() || [];
+    const result = await engine.commitDoc({
+      ...ctx,
+      doc,
+      author: identityRef.current,
+      coAuthors: credited,
+    });
+    coAuthorsRef.current?.clear(credited);
+    return result;
+  }, []);
+
   // ---- repository setup ----------------------------------------------------
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+
+    // A different lesson's repository. Whatever was still waiting for credit
+    // belongs to the lesson being left, which was checkpointed on the way out,
+    // so none of it may land on this one.
+    coAuthorsRef.current?.discard();
 
     setReady(false);
     run(async () => {
@@ -229,34 +259,22 @@ export function useLessonGit({
 
         try {
           const engine = await loadGitEngine();
-          // Everyone in a live session whose edits arrived since the last commit.
-          // Only this, the ordinary checkpoint, credits them: it is the commit
-          // that picks up what the session did. A restore, undo or merge is the
-          // local user's own decision.
-          const credited = coAuthorsRef.current?.peek() || [];
-          const result = await engine.commitDoc({
-            ...engine.repoCtx(repoId),
-            doc: current,
-            author: identityRef.current,
-            coAuthors: credited,
-          });
+          const result = await commitLive(
+            engine,
+            engine.repoCtx(repoId),
+            current,
+          );
           // Whatever happened, the doc now matches HEAD — clear the dirty state.
           dirtySince.current = null;
           setPending(0);
-          if (result) {
-            setLastCommit({ oid: result.oid, at: Date.now() });
-            // Forgotten only once a commit has actually named them. With nothing
-            // to commit, their edit hasn't reached the document yet (or was
-            // undone), so they wait for the commit that does hold it.
-            coAuthorsRef.current?.clear(credited);
-          }
+          if (result) setLastCommit({ oid: result.oid, at: Date.now() });
           return result;
         } catch (err) {
           setError(err.message || "Could not save a version.");
           return null;
         }
       }),
-    [repoId, run],
+    [repoId, run, commitLive],
   );
 
   // ---- the periodic trigger ------------------------------------------------
@@ -430,11 +448,7 @@ export function useLessonGit({
         const engine = await loadGitEngine();
         const ctx = engine.repoCtx(repoId);
 
-        await engine.commitDoc({
-          ...ctx,
-          doc: docRef.current,
-          author: identityRef.current,
-        });
+        await commitLive(engine, ctx);
 
         const result = await engine.checkoutBranch({ ...ctx, name });
         dirtySince.current = null;
@@ -445,7 +459,7 @@ export function useLessonGit({
         setLastCommit(head ? { oid: head, at: Date.now() } : null);
         return result.doc;
       }),
-    [repoId, run],
+    [repoId, run, commitLive],
   );
 
   /**
@@ -464,11 +478,7 @@ export function useLessonGit({
         const engine = await loadGitEngine();
         const ctx = engine.repoCtx(repoId);
 
-        await engine.commitDoc({
-          ...ctx,
-          doc: docRef.current,
-          author: identityRef.current,
-        });
+        await commitLive(engine, ctx);
 
         await engine.createBranch({ ...ctx, name });
         dirtySince.current = null;
@@ -477,7 +487,7 @@ export function useLessonGit({
         setBranches(await engine.listBranches(ctx));
         return name;
       }),
-    [repoId, run],
+    [repoId, run, commitLive],
   );
 
   const renameVariation = useCallback(
@@ -518,16 +528,10 @@ export function useLessonGit({
         // the case for every save after the first.
         if (!lessonId || repoId === lessonId) return;
         const engine = await loadGitEngine();
-        await engine
-          .commitDoc({
-            ...engine.repoCtx(repoId),
-            doc: docRef.current,
-            author: identityRef.current,
-          })
-          .catch(() => null);
+        await commitLive(engine, engine.repoCtx(repoId)).catch(() => null);
         await engine.adoptDraftRepo(lessonId, repoId);
       }),
-    [repoId, run],
+    [repoId, run, commitLive],
   );
 
   return {

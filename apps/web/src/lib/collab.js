@@ -122,8 +122,9 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
   // Everyone whose edits have reached us since version history last committed,
   // by account id: uid -> { uid, name, seq }. Version history reads this to
   // credit them on the commit that holds their work (see `coAuthors` below).
-  // Deliberately not cleared when a session ends: edits that arrived just before
-  // someone left are still theirs when the next commit is taken.
+  // Not cleared by the socket teardown, since edits that arrived just before a
+  // session ended are still theirs: the editor checkpoints the moment a session
+  // ends instead, and that commit credits them or finds nothing to credit.
   const contributorsRef = useRef(new Map());
   const contributionSeq = useRef(0);
   // This session's CRDT document, and whether we're syncing into it yet.
@@ -671,10 +672,12 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
 
   // Who version history should credit on its next commit, for useLessonGit.
   // `peek` lists everyone whose edits arrived since the last commit; `clear`
-  // forgets the people a commit has now credited. An entry whose seq changed in
-  // between (they edited again while the commit was being written) is kept,
-  // because that later edit may not be in the commit that was just taken. Made
-  // once and stable across renders; it only reads a ref.
+  // forgets the people a commit attempt has dealt with. An entry whose seq
+  // changed in between (they edited again while the commit was being written) is
+  // kept, because that later edit may not be in the commit that was just taken.
+  // `discard` forgets everyone, for when the editor moves to another lesson and
+  // whatever is still pending belongs to the one it left. Made once and stable
+  // across renders; it only reads a ref.
   const [coAuthors] = useState(() => ({
     peek: () => [...contributorsRef.current.values()],
     clear: (credited) => {
@@ -684,6 +687,7 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
         }
       }
     },
+    discard: () => contributorsRef.current.clear(),
   }));
 
   const active =

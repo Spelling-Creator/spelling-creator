@@ -49,6 +49,7 @@ function participant(ws) {
 
 	return {
 		send: (bytes) => ws.send(bytes),
+		next,
 		async nextOf(type) {
 			for (;;) {
 				const f = await next();
@@ -251,10 +252,23 @@ describe('CollabRoom', () => {
 		}
 
 		// The room stamps the sender's slot on an EDITED frame just ahead of the update.
-		host.send(frame(T.UPDATE, edit(hostPeer, 'b1', 'host edited')));
+		const update = edit(hostPeer, 'b1', 'host edited');
+		host.send(frame(T.UPDATE, update));
 		const edited = await guest.nextOf(T.EDITED);
 		expect((edited[1] << 8) | edited[2]).toBe(hostSlot);
 		expect(edited.length).toBe(3);
 		await guest.nextOf(T.UPDATE);
+
+		// Sending the same update again changes nothing, so it is relayed but earns
+		// no credit: the next frame is the bare UPDATE, and the EDITED after it
+		// belongs to the real edit that follows.
+		host.send(frame(T.UPDATE, update));
+		host.send(frame(T.UPDATE, edit(hostPeer, 'b2', 'a real change')));
+		const types = [];
+		while (types.length < 3) {
+			const f = await guest.next();
+			if (f[0] === T.UPDATE || f[0] === T.EDITED) types.push(f[0]);
+		}
+		expect(types).toEqual([T.UPDATE, T.EDITED, T.UPDATE]);
 	});
 });

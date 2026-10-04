@@ -86,7 +86,8 @@ standard git `Co-authored-by:` trailer, and the history then reads "Alex, with
 Sam and Priya".
 
 Only people whose edits actually arrived are credited. Someone who only watched
-isn't. Neither is the author themselves, which also covers an assistant
+isn't, and the room sends `EDITED` only for an update that changed its
+document, so re-sending an update the room already holds earns nobody credit. Neither is the author themselves, which also covers an assistant
 connected on the author's own account. The trailer holds the account id rather
 than an email address, because a published lesson's history is public; see
 [Version history](/monorepo/version-history#who-made-a-version).
@@ -165,9 +166,15 @@ SQLite so it survives hibernation, and relays updates) and `handleCollab` in
 the room).
 
 `collab.coAuthors` is how the session hands its list of editors to version
-history: `useLessonGit` reads it (`peek`) when it takes a checkpoint and drops
-the people it credited (`clear`) once the commit is written. Someone who edits
-again while that commit is being written stays on the list for the next one.
+history. Every path in `useLessonGit` that commits the live document (the
+regular checkpoint, switching or starting a variation, and first publishing)
+reads it (`peek`) and then drops the people it checked (`clear`), whether or
+not there turned out to be anything to commit: finding nothing means their
+edits are already in a commit or were undone. Someone who edits again while
+that commit is being written stays on the list for the next one. Moving to
+another lesson empties the list (`discard`), and the editor takes a checkpoint
+the moment a session ends, so a session's edits are never credited on work done
+after it.
 
 Yjs is used **only for the live session**. Lessons are still stored as plain JSON,
 so nothing about saving, exporting or forking changes, and version history

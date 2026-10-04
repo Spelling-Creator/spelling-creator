@@ -642,6 +642,17 @@ export default function EditorPage() {
   // the `git` object, which is rebuilt every render.
   const commitNow = git.commitNow;
 
+  // Checkpoint the moment a live session ends, however it ended. The session's
+  // edits then land in a commit that credits the people who made them, rather
+  // than waiting for the next pause and sharing a commit with whatever the user
+  // does on their own afterwards.
+  const collabActive = collab.active;
+  const wasCollaboratingRef = useRef(false);
+  useEffect(() => {
+    if (wasCollaboratingRef.current && !collabActive) commitNow();
+    wasCollaboratingRef.current = collabActive;
+  }, [collabActive, commitNow]);
+
   // Get the open lesson fully onto disk: the debounced document save, then a
   // version-control checkpoint. Both are skipped when there's nothing new —
   // committing an unchanged document is already a no-op (see repo.js).

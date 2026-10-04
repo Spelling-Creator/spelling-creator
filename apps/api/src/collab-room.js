@@ -322,16 +322,28 @@ export class CollabRoom extends DurableObject {
 				// update itself to the other admitted peers. Relaying the raw bytes (not
 				// a re-encode of our state) keeps this cheap and keeps every peer's Yjs
 				// document converging on exactly the same history.
+				// Yjs emits 'update' only for a transaction that changed something, so
+				// this says whether the update was news to the room or one it already
+				// held (a resend, or something already merged from someone else).
+				let changed = false;
+				const markChanged = () => {
+					changed = true;
+				};
+				this.ydoc.on('update', markChanged);
 				try {
 					Y.applyUpdate(this.ydoc, payload);
 				} catch {
 					return; // a malformed update must not be able to take the room down
+				} finally {
+					this.ydoc.off('update', markChanged);
 				}
 				this.persist();
 				// Say whose edit it is first, so a peer knows by the time the update
 				// lands. Stamped here, like a cursor's slot, so it can't be claimed
-				// by anyone else. Version history credits people from it.
-				this.relay(s.slot, frameWithSlot(T.EDITED, s.slot, null), true);
+				// by anyone else. Version history credits people from it, so it goes
+				// out only for an update that changed the lesson: replaying one the
+				// room already holds must not earn anybody credit for a commit.
+				if (changed) this.relay(s.slot, frameWithSlot(T.EDITED, s.slot, null), true);
 				this.relay(s.slot, frameBytes(T.UPDATE, payload), true);
 				break;
 			}
