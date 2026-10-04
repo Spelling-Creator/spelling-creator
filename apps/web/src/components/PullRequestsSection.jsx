@@ -272,21 +272,19 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
 
           {(canClose || (isOpen && pull.ready && canReview)) && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {isOpen &&
-                pull.ready &&
-                canReview && (
-                  // Not while it's being closed: leaving for the editor mid-close
-                  // would send the reviewer to merge something that is about to
-                  // stop being open.
-                  <Button
-                    size="sm"
-                    onClick={() => review(pull)}
-                    disabled={closing}
-                  >
-                    <GitMergeIcon data-icon="inline-start" />
-                    {t("pulls.review")}
-                  </Button>
-                )}
+              {isOpen && pull.ready && canReview && (
+                // Not while it's being closed: leaving for the editor mid-close
+                // would send the reviewer to merge something that is about to
+                // stop being open.
+                <Button
+                  size="sm"
+                  onClick={() => review(pull)}
+                  disabled={closing}
+                >
+                  <GitMergeIcon data-icon="inline-start" />
+                  {t("pulls.review")}
+                </Button>
+              )}
               {canClose && (
                 <Button
                   size="sm"

@@ -373,38 +373,37 @@ export default function HubPage() {
           )}
         </div>
 
-        {hasApi() &&
-          drafts.length > 0 && (
-            // The heading moved inside the box, onto a tinted strip, and it is
-            // the pattern every listing on the page now follows: the box has an
-            // edge, and the strip says what is in it and how much. Stacked
-            // headings floating above borderless grids were exactly what stopped
-            // scaling once the hub held more than a screenful.
-            <div className="mb-6 overflow-hidden rounded-panel border border-border bg-card">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-muted px-4 py-2.5">
-                <CloudIcon className="size-4 shrink-0 text-focus" />
-                <h2 className="text-sm font-semibold">{t("drafts.heading")}</h2>
-                <span className="text-xs text-muted-foreground">
-                  {t("list.count", { count: drafts.length })}
-                </span>
-                <p className="w-full text-xs text-muted-foreground sm:w-auto">
-                  {t("drafts.description")}
-                </p>
-              </div>
-              <div className="flex flex-col divide-y divide-border">
-                {drafts.map((lesson) => (
-                  <LessonRow
-                    key={lesson.id}
-                    lesson={lesson}
-                    draft
-                    editable
-                    onEdit={editLesson}
-                    onDelete={askDelete}
-                  />
-                ))}
-              </div>
+        {hasApi() && drafts.length > 0 && (
+          // The heading moved inside the box, onto a tinted strip, and it is
+          // the pattern every listing on the page now follows: the box has an
+          // edge, and the strip says what is in it and how much. Stacked
+          // headings floating above borderless grids were exactly what stopped
+          // scaling once the hub held more than a screenful.
+          <div className="mb-6 overflow-hidden rounded-panel border border-border bg-card">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface-muted px-4 py-2.5">
+              <CloudIcon className="size-4 shrink-0 text-focus" />
+              <h2 className="text-sm font-semibold">{t("drafts.heading")}</h2>
+              <span className="text-xs text-muted-foreground">
+                {t("list.count", { count: drafts.length })}
+              </span>
+              <p className="w-full text-xs text-muted-foreground sm:w-auto">
+                {t("drafts.description")}
+              </p>
             </div>
-          )}
+            <div className="flex flex-col divide-y divide-border">
+              {drafts.map((lesson) => (
+                <LessonRow
+                  key={lesson.id}
+                  lesson={lesson}
+                  draft
+                  editable
+                  onEdit={editLesson}
+                  onDelete={askDelete}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Present while loading too, disabled — not gated on `!loading`.
             There is nothing to search yet, but the field is 52px of layout and
