@@ -8,6 +8,12 @@ An assistant can join a [live collaboration session](/web-app/live-collaboration
 participant, the same way a second teacher would: it gets a slot in the room, its edits
 appear on everyone's screen as it makes them, and the host can remove it at any moment.
 
+Its edits are credited in the lesson's version history like anyone else's: the host's
+next commit names the account the assistant is signed in as in a `Co-authored-by`
+trailer. When that is the host's own account there is nobody new to credit, so the
+commit is simply the host's. See
+[who gets credit](/web-app/live-collaboration#who-gets-credit-in-version-history).
+
 ## Why not just edit the lesson
 
 Because while a session is running, **the lesson on the hub is not the lesson**. A

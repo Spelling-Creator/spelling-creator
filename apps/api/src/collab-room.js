@@ -18,6 +18,9 @@
 // whole-document last-write-wins model silently dropped one of them. See
 // apps/web/src/lib/ydoc.js for the document model and the plain-JSON bridge.
 //
+// Every relayed update is preceded by an EDITED frame naming its sender's slot,
+// which is how version history knows whom to credit for a session's edits.
+//
 // Wire protocol — binary frames for speed, defined once in
 // packages/core/src/collabFrames.js and spoken by all three ends (this room, the
 // browser in apps/web/src/lib/collab.js, and the MCP server in
@@ -168,6 +171,10 @@ export class CollabRoom extends DurableObject {
 			if (!s) continue;
 			const entry = {
 				slot: s.slot,
+				// The account id, verified by the Worker. Version history signs a
+				// collaborator's credit with it rather than with their email, and it
+				// is already public on their profile.
+				uid: s.uid,
 				name: s.name,
 				email: s.email,
 				avatarUrl: s.avatarUrl,
@@ -315,12 +322,28 @@ export class CollabRoom extends DurableObject {
 				// update itself to the other admitted peers. Relaying the raw bytes (not
 				// a re-encode of our state) keeps this cheap and keeps every peer's Yjs
 				// document converging on exactly the same history.
+				// Yjs emits 'update' only for a transaction that changed something, so
+				// this says whether the update was news to the room or one it already
+				// held (a resend, or something already merged from someone else).
+				let changed = false;
+				const markChanged = () => {
+					changed = true;
+				};
+				this.ydoc.on('update', markChanged);
 				try {
 					Y.applyUpdate(this.ydoc, payload);
 				} catch {
 					return; // a malformed update must not be able to take the room down
+				} finally {
+					this.ydoc.off('update', markChanged);
 				}
 				this.persist();
+				// Say whose edit it is first, so a peer knows by the time the update
+				// lands. Stamped here, like a cursor's slot, so it can't be claimed
+				// by anyone else. Version history credits people from it, so it goes
+				// out only for an update that changed the lesson: replaying one the
+				// room already holds must not earn anybody credit for a commit.
+				if (changed) this.relay(s.slot, frameWithSlot(T.EDITED, s.slot, null), true);
 				this.relay(s.slot, frameBytes(T.UPDATE, payload), true);
 				break;
 			}

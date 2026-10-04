@@ -40,7 +40,7 @@ import { GitCommitVerticalIcon, GitMergeIcon } from "lucide-react";
 import PageBody from "../../components/layout/PageBody.jsx";
 import { Alert, AlertDescription } from "../../components/ui/alert.jsx";
 import { HistorySkeleton } from "../../components/Skeletons.jsx";
-import { timeAgo } from "../../components/HistoryDialog.jsx";
+import { commitAuthors, timeAgo } from "../../components/HistoryDialog.jsx";
 import { loadGitEngine } from "../../lib/git/load.js";
 import { fetchPack, fetchRefs } from "@spelling-creator/core/git/remote";
 import { repoIdFor } from "@spelling-creator/core/git/doc";
@@ -151,7 +151,7 @@ export default function LessonHistory() {
                 {commit.summary || t("history.noMessage")}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {commit.author} · {timeAgo(commit.timestamp)} ·{" "}
+                {commitAuthors(commit)} · {timeAgo(commit.timestamp)} ·{" "}
                 <code className="text-xs">{commit.oid.slice(0, 7)}</code>
               </p>
             </div>

@@ -393,6 +393,9 @@ export default function EditorPage() {
   // the WebSocket (only signed-in users may host or join).
   const identity = useMemo(
     () => ({
+      // The account id, which version history signs commits with in place of
+      // the email (see authorFrom in @spelling-creator/core/git/repo).
+      uid: user?.id || "",
       name:
         user?.user_metadata?.display_name ||
         user?.user_metadata?.full_name ||
@@ -422,6 +425,7 @@ export default function EditorPage() {
     editingId,
     localId,
     identity,
+    coAuthors: collab.coAuthors,
     enabled: hydrated,
   });
 
@@ -637,6 +641,17 @@ export default function EditorPage() {
   // commitNow keeps a stable identity (it is keyed to the repository), unlike
   // the `git` object, which is rebuilt every render.
   const commitNow = git.commitNow;
+
+  // Checkpoint the moment a live session ends, however it ended. The session's
+  // edits then land in a commit that credits the people who made them, rather
+  // than waiting for the next pause and sharing a commit with whatever the user
+  // does on their own afterwards.
+  const collabActive = collab.active;
+  const wasCollaboratingRef = useRef(false);
+  useEffect(() => {
+    if (wasCollaboratingRef.current && !collabActive) commitNow();
+    wasCollaboratingRef.current = collabActive;
+  }, [collabActive, commitNow]);
 
   // Get the open lesson fully onto disk: the debounced document save, then a
   // version-control checkpoint. Both are skipped when there's nothing new —

@@ -56,6 +56,7 @@ import {
   T,
   frameBytes as frame,
   frameJson as jsonFrame,
+  readSlot,
   slotFrame,
 } from "@spelling-creator/core/collabFrames";
 
@@ -90,7 +91,7 @@ function shortId(slot) {
  * @param {object}   opts
  * @param {object}   opts.doc          The current editor document (watched for changes to broadcast).
  * @param {Function} opts.onRemoteDoc  Called with a document received from the room; should replace local state.
- * @param {object}   [opts.identity]   { name, email, avatarUrl } describing the local user (used for our own chat bubbles).
+ * @param {object}   [opts.identity]   { uid, name, email, avatarUrl } describing the local user (used for our own chat bubbles, and so we never credit ourselves as a collaborator).
  * @param {string}   [opts.accessToken] The signed-in user's Supabase JWT; required to host or join.
  * @returns Collaboration state and actions (see the returned object).
  */
@@ -115,9 +116,17 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
   // Live objects kept in refs (not state) so re-renders don't churn the socket.
   const wsRef = useRef(null);
   const mySlotRef = useRef(null); // our server-assigned slot for this session
-  // slot -> { name, email, avatarUrl, host } so we can label cursors/chat from
-  // the presence roster rather than trusting per-message identity.
+  // slot -> { uid, name, email, avatarUrl, host } so we can label cursors/chat
+  // from the presence roster rather than trusting per-message identity.
   const rosterRef = useRef(new Map());
+  // Everyone whose edits have reached us since version history last committed,
+  // by account id: uid -> { uid, name, seq }. Version history reads this to
+  // credit them on the commit that holds their work (see `coAuthors` below).
+  // Not cleared by the socket teardown, since edits that arrived just before a
+  // session ended are still theirs: the editor checkpoints the moment a session
+  // ends instead, and that commit credits them or finds nothing to credit.
+  const contributorsRef = useRef(new Map());
+  const contributionSeq = useRef(0);
   // This session's CRDT document, and whether we're syncing into it yet.
   const ydocRef = useRef(null);
   const syncedRef = useRef(false);
@@ -296,6 +305,18 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
           startSyncing();
           break;
         }
+        case T.EDITED: {
+          // The update that follows is this peer's. Noted now, before it lands,
+          // so the commit that picks their work up is the one that credits them.
+          const info = rosterRef.current.get(readSlot(view));
+          if (!info?.uid || info.uid === identityRef.current?.uid) break;
+          contributorsRef.current.set(info.uid, {
+            uid: info.uid,
+            name: info.name || "",
+            seq: ++contributionSeq.current,
+          });
+          break;
+        }
         case T.UPDATE: {
           mergeRemote(view.subarray(1));
           break;
@@ -359,6 +380,7 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
           for (const p of [...list, ...reqs]) {
             map.set(p.slot, {
               bot: Boolean(p.bot),
+              uid: p.uid || "",
               name: p.name,
               email: p.email,
               avatarUrl: p.avatarUrl,
@@ -648,6 +670,26 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
     return () => clearTimeout(id);
   }, [doc, synced, pushLocal]);
 
+  // Who version history should credit on its next commit, for useLessonGit.
+  // `peek` lists everyone whose edits arrived since the last commit; `clear`
+  // forgets the people a commit attempt has dealt with. An entry whose seq
+  // changed in between (they edited again while the commit was being written) is
+  // kept, because that later edit may not be in the commit that was just taken.
+  // `discard` forgets everyone, for when the editor moves to another lesson and
+  // whatever is still pending belongs to the one it left. Made once and stable
+  // across renders; it only reads a ref.
+  const [coAuthors] = useState(() => ({
+    peek: () => [...contributorsRef.current.values()],
+    clear: (credited) => {
+      for (const person of credited) {
+        if (contributorsRef.current.get(person.uid)?.seq === person.seq) {
+          contributorsRef.current.delete(person.uid);
+        }
+      }
+    },
+    discard: () => contributorsRef.current.clear(),
+  }));
+
   const active =
     status === "hosting" || status === "joined" || status === "connecting";
 
@@ -662,6 +704,7 @@ export function useCollaboration({ doc, onRemoteDoc, identity, accessToken }) {
     selections,
     messages,
     myId: mySlotRef.current == null ? null : String(mySlotRef.current),
+    coAuthors,
     startHosting,
     joinSession,
     admit,
