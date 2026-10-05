@@ -23,10 +23,12 @@
 // and in apps/docs/docs/mcp-server/tools.md to match.
 //
 // That text carries the half of the standard that needs judgement. The half a
-// script can decide is enforced on write by validate.js, whose error messages are
-// written to be self-correcting on their own — so a client that shows the model
-// none of this still produces lessons that hold the line. Keep the two in step:
-// a rule stated there that validate.js also checks should describe the same thing.
+// script can decide is enforced on write by the checks in
+// @spelling-creator/core/lessonChecks (through validate.js), whose error messages
+// are written to be self-correcting on their own, so a client that shows the
+// model none of this still produces lessons that hold the line. Keep the two in
+// step: a rule stated there that the checks also cover should describe the same
+// thing.
 import markdown from "#standards-md";
 
 export const LESSON_STANDARDS = markdown;

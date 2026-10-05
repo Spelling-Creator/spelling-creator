@@ -13,15 +13,25 @@ when the model never read it. Server `instructions` are optional in the MCP spec
 clients drop them (claude.ai's connector UI is the notable one), and a tool description is
 advice the model may or may not follow. Validation does not depend on either.
 
-The split between the two halves of the standard lives in two files:
+The split between the two halves of the standard lives in these files:
 
-| File                        | Holds                                                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp/src/standards.md` | The rules that need judgement: tone, difficulty, what makes a tight open easy. Sent as MCP `instructions` and embedded in `create_lesson`'s description. |
-| `apps/mcp/src/validate.js`  | The rules a script can decide. Enforced on write, whatever the client showed the model.                                                                  |
+| File                                | Holds                                                                                                                                                    |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp/src/standards.md`         | The rules that need judgement: tone, difficulty, what makes a tight open easy. Sent as MCP `instructions` and embedded in `create_lesson`'s description. |
+| `packages/core/src/lessonChecks.js` | The rules a script can decide (`validateLesson`). Enforced on write, whatever the client showed the model.                                               |
+| `apps/mcp/src/validate.js`          | What only a write path needs on top: `E_OPEN_HAS_ANSWER` (read off the raw input), the rejection message, and `patch_lesson`'s before-and-after filter.  |
 
 Keep them in step: a rule stated in one that the other also covers should describe the
 same thing.
+
+The checks live in core rather than in the MCP server because the web editor runs them
+too, as the author types: see [Lesson checks](/web-app/lesson-checks). There they never
+block anything; errors show as problems and warnings as suggestions. One copy is what
+keeps an author and an assistant held to the same rules. Each finding carries, beside the
+`message` written for the model, a `params` object, a `sectionId` and a `blockId`, which
+the editor uses to word the finding for a person and to jump to it. The tools send only
+`code`, `section` and `message`, so none of that reaches the model. A new check needs its
+`params` and a line in the editor's `checks.json`; a test fails until it has both.
 
 ## The two orange types
 
