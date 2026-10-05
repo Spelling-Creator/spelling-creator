@@ -27,6 +27,12 @@
 // and the outline would be spending width the document needs; "collapse all"
 // (the cheap way to see a lesson's shape on any screen) therefore stays on the
 // document panel as well as in this header.
+//
+// It also shows where the lesson checks found problems (see lib/lessonChecks):
+// a count beside each section that has any, so the shape of what's left to fix
+// is visible without opening the Check panel. Problems only. Suggestions are
+// the usual shape of a lesson, and a count on every section of a deliberately
+// short lesson would make the outline look broken when nothing is.
 
 import { useTranslation } from "react-i18next";
 import { ChevronsDownUpIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
@@ -46,8 +52,10 @@ export default function SectionOutline({
   onToggleAll,
   onAddSection,
   readOnly = false,
+  checks,
 }) {
   const { t } = useTranslation("editor");
+  const { t: tChecks } = useTranslation("checks");
 
   const goTo = (id) => {
     const el = document.querySelector(idSelector("data-section-id", id));
@@ -89,33 +97,47 @@ export default function SectionOutline({
         <p className="text-sm text-muted-foreground">{t("outline.empty")}</p>
       ) : (
         <ol className="m-0 flex max-h-[calc(100dvh-var(--header-h)-9rem)] list-none flex-col gap-0.5 overflow-y-auto p-0">
-          {sections.map((section, i) => (
-            <li key={section.id}>
-              <button
-                type="button"
-                onClick={() => goTo(section.id)}
-                className={cn(
-                  "flex w-full cursor-pointer items-baseline gap-2 rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm",
-                  "text-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                <span className="w-4 shrink-0 text-xs text-muted-foreground tabular-nums">
-                  {i + 1}
-                </span>
-                <span className="min-w-0 flex-1 truncate">
-                  {section.name || t("outline.untitledSection", { n: i + 1 })}
-                </span>
-                {/* A collapsed section is folded away in the document, so the
+          {sections.map((section, i) => {
+            const problems = checks?.bySection.get(section.id)?.problems ?? 0;
+            return (
+              <li key={section.id}>
+                <button
+                  type="button"
+                  onClick={() => goTo(section.id)}
+                  className={cn(
+                    "flex w-full cursor-pointer items-baseline gap-2 rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm",
+                    "text-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+                  )}
+                >
+                  <span className="w-4 shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {section.name || t("outline.untitledSection", { n: i + 1 })}
+                  </span>
+                  {problems > 0 && (
+                    <span
+                      className="shrink-0 self-center rounded-full bg-destructive/10 px-1.5 text-xs font-medium text-destructive tabular-nums"
+                      title={tChecks("sectionProblems", { count: problems })}
+                    >
+                      <span aria-hidden>{problems}</span>
+                      <span className="sr-only">
+                        {tChecks("sectionProblems", { count: problems })}
+                      </span>
+                    </span>
+                  )}
+                  {/* A collapsed section is folded away in the document, so the
                     outline is the only place it's visible at all — worth
                     saying which ones those are. */}
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {collapsedIds?.has(section.id)
-                    ? t("outline.collapsed")
-                    : blockCount(section)}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {collapsedIds?.has(section.id)
+                      ? t("outline.collapsed")
+                      : blockCount(section)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
       )}
 

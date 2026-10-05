@@ -12,18 +12,18 @@ pnpm --filter @spelling-creator/mcp build:views  # rebuild the interactive views
 
 ## Where things live
 
-| File               | Responsibility                                                                                     |
-| ------------------ | -------------------------------------------------------------------------------------------------- |
-| `src/tools.js`     | Tool definitions and handlers, transport-agnostic.                                                 |
-| `src/doc.js`       | Builds the canonical editor document; throws on input it can't turn into one.                      |
-| `src/patch.js`     | Applies id-addressed edit operations to an existing document.                                      |
-| `src/standards.md` | The authoring standard's prose half: the rules that need judgement.                                |
-| `src/validate.js`  | The authoring standard's enforceable half. See [Lesson validation](/mcp-server/lesson-validation). |
-| `src/api.js`       | The hub client (the same Worker endpoints the web app uses).                                       |
-| `src/git.js`       | Version history: committing edits, forking, proposing, and reviewing or merging a proposal.        |
-| `src/auth.js`      | Supabase token rotation.                                                                           |
-| `src/views.js`     | The `ui://` resources behind [interactive views](/mcp-server/interactive-views).                   |
-| `views/`           | Source for those views (markup + script), built into `src/views/*.html`.                           |
+| File               | Responsibility                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/tools.js`     | Tool definitions and handlers, transport-agnostic.                                                                                                     |
+| `src/doc.js`       | Builds the canonical editor document; throws on input it can't turn into one.                                                                          |
+| `src/patch.js`     | Applies id-addressed edit operations to an existing document.                                                                                          |
+| `src/standards.md` | The authoring standard's prose half: the rules that need judgement.                                                                                    |
+| `src/validate.js`  | The write path's side of validation, over the checks in `@spelling-creator/core/lessonChecks`. See [Lesson validation](/mcp-server/lesson-validation). |
+| `src/api.js`       | The hub client (the same Worker endpoints the web app uses).                                                                                           |
+| `src/git.js`       | Version history: committing edits, forking, proposing, and reviewing or merging a proposal.                                                            |
+| `src/auth.js`      | Supabase token rotation.                                                                                                                               |
+| `src/views.js`     | The `ui://` resources behind [interactive views](/mcp-server/interactive-views).                                                                       |
+| `views/`           | Source for those views (markup + script), built into `src/views/*.html`.                                                                               |
 
 `src/standards.md` is prose, so it is edited as a document rather than as an escaped
 JavaScript string, and `src/standards.js` is only the seam that loads it. Getting a

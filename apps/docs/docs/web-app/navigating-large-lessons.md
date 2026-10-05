@@ -302,6 +302,11 @@ Three deliberate limits:
 A collapsed section shows "hidden" instead of its block count: folded away in
 the document, the outline is the only place it appears at all.
 
+A section the [lesson checks](./lesson-checks.md) found problems in shows how
+many, in red, before the block count. Problems only: suggestions describe the
+usual shape of a lesson, and a count on every section of a deliberately short
+lesson would make the outline look broken when nothing is.
+
 The same outline stands beside the editor's **Preview**, with `readOnly` set:
 collapse-all and add-section drop away, and the list keeps working unchanged.
 It can, because it addresses a section by `data-section-id` and `LessonView`

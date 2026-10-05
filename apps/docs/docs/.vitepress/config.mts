@@ -130,6 +130,7 @@ export default defineConfig({
             text: "Formatting, footnotes & sources",
             link: "/web-app/formatting-and-footnotes",
           },
+          { text: "Lesson checks", link: "/web-app/lesson-checks" },
           { text: "AI text suggestions", link: "/web-app/ai-text-suggestions" },
           {
             text: "AI question suggestions",

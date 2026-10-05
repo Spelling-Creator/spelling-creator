@@ -46,6 +46,7 @@
     "./imagesClient": "./src/imagesClient.js",
     "./interactive": "./src/interactive.js",
     "./jsonImport": "./src/jsonImport.js",
+    "./lessonChecks": "./src/lessonChecks.js",
     "./lessonFile": "./src/lessonFile.js",
     "./lessonLayout": "./src/lessonLayout.js",
     "./lessonResponses": "./src/lessonResponses.js",

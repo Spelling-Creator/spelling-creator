@@ -8,6 +8,7 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 import enAiDialogs from "../locales/en/aiDialogs.json";
+import enChecks from "../locales/en/checks.json";
 import enCollab from "../locales/en/collab.json";
 import enCommon from "../locales/en/common.json";
 import enEditor from "../locales/en/editor.json";
@@ -47,6 +48,7 @@ export const namespaces = [
   "richText",
   "collab",
   "aiDialogs",
+  "checks",
 ];
 
 export const resources = {
@@ -68,6 +70,7 @@ export const resources = {
     richText: enRichText,
     collab: enCollab,
     aiDialogs: enAiDialogs,
+    checks: enChecks,
   },
 };
 

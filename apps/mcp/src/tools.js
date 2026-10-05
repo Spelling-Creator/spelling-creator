@@ -173,10 +173,6 @@ const blockSchema = z
           "fill-in-the-blank number question, whose answer is quoted from the passage rather than computed — the " +
           "absence of steps is what marks it as the fill-in-the-blank one.",
       ),
-    background: z
-      .string()
-      .optional()
-      .describe('The prior-knowledge context for a "background" question.'),
     image: z
       .object({
         hash: z.string(),
@@ -555,20 +551,40 @@ function standardFindings({
  */
 function verdict({ checked, failures, flags, preexisting }) {
   const ok = failures.length === 0;
+  let note = ok
+    ? flags.length
+      ? "No errors — a write of this would be accepted. The warnings would ride along with it: worth fixing, " +
+        "but they don't block."
+      : "Clean — a write of this would be accepted with nothing to report."
+    : `A write of this would be REJECTED. Fix the ${failures.length} error${failures.length === 1 ? "" : "s"} ` +
+      "above and check again. Nothing has been saved either way.";
+  // A patch is only held to what it adds, so a lesson can be full of errors and
+  // still get ok: true here. Said plainly, because "Clean" over a lesson with
+  // twenty-three errors in it is exactly what a model repeats to the user, who
+  // then opens the editor's Check panel and finds them all.
+  if (preexisting?.errors) {
+    note = ok
+      ? `This edit adds no errors of its own, so a write of it would be accepted. The lesson is NOT clean, ` +
+        `though: ${preexistingSummary(preexisting.errors)}`
+      : `${note} ${preexistingSummary(preexisting.errors)}`;
+  }
   return {
     ok,
     checked,
     errors: toWireWarnings(failures),
     warnings: toWireWarnings(flags),
     ...(preexisting ? { preexisting } : {}),
-    note: ok
-      ? flags.length
-        ? "No errors — a write of this would be accepted. The warnings would ride along with it: worth fixing, " +
-          "but they don't block."
-        : "Clean — a write of this would be accepted with nothing to report."
-      : `A write of this would be REJECTED. Fix the ${failures.length} error${failures.length === 1 ? "" : "s"} ` +
-        "above and check again. Nothing has been saved either way.",
+    note,
   };
+}
+
+/** What to tell the model about errors a lesson already had before an edit. */
+function preexistingSummary(count) {
+  return (
+    `it already breaks the standard in ${count} place${count === 1 ? "" : "s"} (counted under ` +
+    "`preexisting`). The user sees those as problems in the editor's Check panel, so don't tell them the " +
+    "lesson passes. Call validate_lesson with just the `id` to list them."
+  );
 }
 
 /**
@@ -893,8 +909,10 @@ export function registerTools(server, ctx) {
         "• `id` — a lesson that already exists on the hub. Add `operations` (patch_lesson's shape) to see what " +
         "that patch WOULD produce, without applying it.\n\n" +
         "`errors` are what would be rejected; `warnings` are what would be reported alongside a successful write. " +
-        "When you pass `id`, defects already in the stored lesson are counted under `preexisting` instead of being " +
-        "held against you — exactly as patch_lesson treats them.\n\n" +
+        "When you pass `id` with `operations`, defects already in the stored lesson are counted under " +
+        "`preexisting` instead of being held against your patch, exactly as patch_lesson treats them. They are " +
+        "still defects: `ok` only says the patch adds none, not that the lesson passes, and the user sees every " +
+        "one of them in the editor's Check panel. `id` alone checks the whole lesson.\n\n" +
         LESSON_STANDARDS,
       inputSchema: {
         title: z
@@ -1320,6 +1338,15 @@ export function registerTools(server, ctx) {
       };
       if (visibility.note) result.note = visibility.note;
       if (warnings.length) result.warnings = warnings;
+      // The patch was only held to what it added, so say what it left behind:
+      // otherwise a successful patch reads as a lesson that passes.
+      const remaining = skipValidation ? 0 : validateLesson(doc).errors.length;
+      if (remaining) {
+        result.preexisting = {
+          errors: remaining,
+          note: `Saved, and this patch added no errors. But ${preexistingSummary(remaining)}`,
+        };
+      }
       return text(result);
     }),
   );

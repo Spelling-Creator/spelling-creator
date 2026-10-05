@@ -13,15 +13,26 @@ when the model never read it. Server `instructions` are optional in the MCP spec
 clients drop them (claude.ai's connector UI is the notable one), and a tool description is
 advice the model may or may not follow. Validation does not depend on either.
 
-The split between the two halves of the standard lives in two files:
+The split between the two halves of the standard lives in these files:
 
-| File                        | Holds                                                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp/src/standards.md` | The rules that need judgement: tone, difficulty, what makes a tight open easy. Sent as MCP `instructions` and embedded in `create_lesson`'s description. |
-| `apps/mcp/src/validate.js`  | The rules a script can decide. Enforced on write, whatever the client showed the model.                                                                  |
+| File                                | Holds                                                                                                                                                    |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp/src/standards.md`         | The rules that need judgement: tone, difficulty, what makes a tight open easy. Sent as MCP `instructions` and embedded in `create_lesson`'s description. |
+| `packages/core/src/lessonChecks.js` | The rules a script can decide (`validateLesson`). Enforced on write, whatever the client showed the model.                                               |
+| `apps/mcp/src/validate.js`          | What only a write path needs on top: `E_OPEN_HAS_ANSWER` (read off the raw input), the rejection message, and `patch_lesson`'s before-and-after filter.  |
 
 Keep them in step: a rule stated in one that the other also covers should describe the
 same thing.
+
+The checks live in core rather than in the MCP server because the web editor runs them
+too, as the author types: see [Lesson checks](/web-app/lesson-checks). There they never
+block anything; errors show as problems and warnings as suggestions. One copy is what
+keeps an author and an assistant held to the same rules. Each finding carries, beside the
+`message` written for the model, a `params` object, a `sectionId`, a `blockId` and an
+`itemId`, which the editor uses to word the finding for a person and to jump to it. The
+tools send only `code`, `section` and `message`, so none of that reaches the model. A new
+check needs its `params` and a line in the editor's `checks.json`. A test fails until the
+wording exists; add a case to its fixture so the `params` are exercised too.
 
 ## The two orange types
 
@@ -77,7 +88,6 @@ accepts either in either slot and `W_ORANGE_ORDER` carries the ordering rule ins
 | `E_GROUNDING_NUMBER_FILL`   | A fill-in-the-blank `number` answer (one with no `steps`) is not in the passage.                                                                                                                                                                                                                                                                                          |
 | `E_ANSWER_REVEALED_CROSS`   | A green, `multiple`, purple or blue prompt names another question's recall answer from the same section (a green answer or a `multiple` option), so the speller can copy it across instead of recalling it. A topic word whose own question wants a _number_ back is exempt, since it gives nothing away; pink and `wyr` prompts warn instead (`W_ANSWER_REVEALED_OPEN`). |
 | `E_BACKGROUND_IN_TEXT`      | A blue (`background`) answer **does** appear in its own passage, defeating the point of the type.                                                                                                                                                                                                                                                                         |
-| `E_BACKGROUND_NO_CONTEXT`   | A `background` question has no `background` field.                                                                                                                                                                                                                                                                                                                        |
 | `E_SPELLING_LENGTH`         | A spelling word is outside 6-9 letters.                                                                                                                                                                                                                                                                                                                                   |
 | `E_SPELLING_DUPLICATE`      | A spelling word is used in two sections (or twice in one).                                                                                                                                                                                                                                                                                                                |
 | `E_SPELLING_COLLISION`      | A spelling word appears **inside** an answer anywhere in the lesson: `PRISON` within "the prisoner's dilemma". Matched as a raw substring, which is the point.                                                                                                                                                                                                            |
@@ -247,6 +257,16 @@ only to the difference. Without that, a one-line tweak to a lesson written in th
 editor (or written before these rules existed) would be blocked by defects the patch
 never touched and the assistant may have no mandate to change. The filter applies to
 **warnings as well as errors**, so a patch reports only what its own edit introduced.
+
+Not being held to a defect is not the same as the lesson having none, and the results
+say so. When the lesson still breaks the standard after the edit, `patch_lesson`'s
+result carries `preexisting: { errors, note }`, and `validate_lesson` previewing a patch
+replaces its "Clean" note with one saying the edit adds nothing but the lesson is not
+clean, how many errors it has, and that the user sees them in the editor's
+[Check panel](/web-app/lesson-checks). This was a real failure: a six-section lesson
+with 23 errors came back from a patch preview marked "Clean" with nothing to report, the
+assistant told the user the lesson passed, and the editor then showed all 23. `validate_lesson` with `id` alone checks the whole lesson
+and lists them.
 
 Findings are matched on the defect's identity rather than its message, which has to hold
 two properties at once:

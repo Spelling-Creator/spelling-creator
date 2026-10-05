@@ -60,7 +60,6 @@ test("buildDoc maps every block type to the stored shape with ids", () => {
             type: "question",
             questionType: "background",
             prompt: "Why?",
-            background: "ctx",
             answer: "heat",
           },
         ],
@@ -96,7 +95,7 @@ test("buildDoc maps every block type to the stored shape with ids", () => {
   assert.equal(openB.type, "question");
   assert.equal(openB.questionType, "open");
   assert.equal(openB.prompt, "Explain");
-  assert.equal(bgB.background, "ctx");
+  assert.equal("background" in bgB, false, "no background note is stored");
   assert.equal(bgB.answer, "heat");
 
   // Every id is unique.
@@ -545,6 +544,14 @@ test("patch_lesson only blocks on defects the patch introduced", async () => {
   });
   assert.equal(harmless.isError, undefined);
   assert.equal(put.title, "Renamed");
+  // Saved, but the result doesn't read as a lesson that passes: the defect it
+  // inherited is still there, and the user will see it in the editor.
+  const saved = JSON.parse(harmless.content[0].text);
+  assert.equal(saved.preexisting.errors, 1);
+  assert.match(
+    saved.preexisting.note,
+    /already breaks the standard in 1 place/,
+  );
 
   // A patch that adds its own ungrounded answer is rejected, and reports only
   // that one — not the defect it inherited.
@@ -704,6 +711,24 @@ test("validate_lesson previews a patch without applying it, and discounts inheri
   // The inherited defect is still counted, so the model knows it's there.
   assert.equal(payload.preexisting.errors, 1);
   assert.equal(stored.title, "T", "the stored doc was not mutated");
+
+  // A patch that adds nothing wrong passes, but over a lesson with errors in it
+  // the note must not call it clean: that is what a model repeats to the user.
+  const harmless = JSON.parse(
+    (
+      await client.callTool({
+        name: "validate_lesson",
+        arguments: {
+          id: "L2",
+          operations: [{ op: "set_title", title: "Renamed" }],
+        },
+      })
+    ).content[0].text,
+  );
+  assert.equal(harmless.ok, true);
+  assert.doesNotMatch(harmless.note, /Clean/);
+  assert.match(harmless.note, /NOT clean/);
+  assert.match(harmless.note, /1 place/);
 
   await client.close();
   await server.close();
