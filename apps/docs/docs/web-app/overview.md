@@ -39,7 +39,7 @@ PDF printing.
 - **AI lesson ideas** - get a batch of lesson topic suggestions for an age range
   to start from a blank document (see [AI lesson ideas](./ai-lesson-ideas.md)).
 - **Lesson summaries** - summarise a published lesson with the browser's built-in
-  AI, or with Gemma 4 running in the page where the browser has none, entirely
+  AI, or with LFM2.5 running in the page where the browser has none, entirely
   on the reader's own device (no server, no cost). Only appears on devices
   that can actually run one of the two (see
   [Lesson summaries](./lesson-summaries.md)).

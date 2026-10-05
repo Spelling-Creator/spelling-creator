@@ -80,9 +80,9 @@ const SSR_UNREACHABLE = [
   // storage. Nothing about it can run in the Worker, and bundling it would be
   // the export pipeline story again, several times over.
   "../../packages/core/src/browser/fallbackTranslator.js",
-  // The summarisation fallback (Gemma 4 via transformers.js), same story:
+  // The summarisation fallback (LFM2.5 via transformers.js), same story:
   // reached only through the dynamic import() in core/browser/summarizer.js,
-  // from a click on Summarise, and its model download is ~3 GB on WebGPU.
+  // from a click on Summarise, and its model download is ~760 MB on WebGPU.
   "../../packages/core/src/browser/fallbackSummarizer.js",
 ];
 

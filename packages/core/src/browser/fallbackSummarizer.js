@@ -1,14 +1,16 @@
 // The summarisation fallback, for browsers without the built-in Summarizer
-// API: Gemma 4 (E2B, instruction-tuned) running in the page with
+// API: Liquid AI's LFM2.5 (1.2B, instruction-tuned) running in the page with
 // transformers.js, on WebGPU.
 //
-// The model repo is multimodal, but loading it through Gemma4ForCausalLM puts
-// transformers.js in text-only mode, so only the text components are fetched:
-// the embedding and decoder weights, about 3 GB at q4f16, skipping the vision
-// and audio encoders entirely. That is five times the NLLB translation
-// fallback, which is why summarizer.js only reports the fallback as available
-// on WebGPU hardware that can actually run it, and why the UI warns about the
-// download before the click.
+// The weights are about 760 MB at q4f16, a quarter of the Gemma 4 E2B model
+// this replaced. That is still a big download, which is why summarizer.js only
+// reports the fallback as available on WebGPU hardware that can actually run
+// it, and why the UI warns about the download before the click.
+// lesson-summaries.md has the other models tried and how each did.
+//
+// Licence: the LFM Open License v1.0, free to use for anyone under $10M a year
+// in revenue. Readers' browsers fetch the weights straight from Hugging Face,
+// so the app never redistributes them itself.
 //
 // This module is HEAVY: transformers.js pulls in an ONNX runtime on top of the
 // model download above. transformers.js caches the model in the browser's
@@ -18,17 +20,20 @@
 // vite.config.js additionally stubs it out of the Worker's SSR build, where it
 // could never run anyway.
 //
-// Model: https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX
+// Model: https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX
 
 import {
-  AutoProcessor,
-  Gemma4ForCausalLM,
+  AutoModelForCausalLM,
+  AutoTokenizer,
   InterruptableStoppingCriteria,
   TextStreamer,
 } from "@huggingface/transformers";
 import { createDownloadProgress } from "./downloadProgress.js";
 
-const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX";
+// Pinned to a commit, so a later push to the repo can't change what readers
+// download without someone here choosing to move the pin.
+const MODEL_ID = "LiquidAI/LFM2.5-1.2B-Instruct-ONNX";
+const MODEL_REVISION = "10f72e70abf67ac0fd7ebf15bc5854726891d864";
 
 // The session's input budget, in tokens (what measureInputUsage reports). The
 // model's context window is far larger, but prefill time and KV-cache memory
@@ -46,49 +51,64 @@ const MAX_NEW_TOKENS = 512;
 // the dropdowns mean the same thing whichever engine answers.
 const SUMMARY_SHAPES = {
   "key-points": {
-    short: "a markdown bulleted list of the 3 most important points",
-    medium: "a markdown bulleted list of the 5 most important points",
-    long: "a markdown bulleted list of the 7 most important points",
+    short: "exactly 3 markdown bullet points, one short sentence each",
+    medium: "exactly 5 markdown bullet points, one short sentence each",
+    long: "exactly 7 markdown bullet points, one short sentence each",
   },
   tldr: {
-    short: "a one-sentence summary",
-    medium: "a summary of about three sentences",
-    long: "a summary of about five sentences",
+    short: "one sentence",
+    medium: "three sentences in one paragraph",
+    long: "five sentences in one paragraph",
   },
   teaser: {
-    short:
-      "a one-sentence teaser that makes a teacher curious about the lesson",
+    short: "one sentence that makes a teacher curious about the lesson",
     medium:
-      "a teaser of about three sentences that makes a teacher curious about the lesson",
-    long: "a teaser of about five sentences that makes a teacher curious about the lesson",
+      "three sentences in one paragraph that make a teacher curious about the lesson",
+    long: "five sentences in one paragraph that make a teacher curious about the lesson",
   },
   headline: {
-    short: "a single headline of at most 12 words",
-    medium: "a single headline of at most 17 words",
-    long: "a single headline of at most 22 words",
+    short: "one headline of at most 12 words",
+    medium: "one headline of at most 17 words",
+    long: "one headline of at most 22 words",
   },
 };
 
-// Same instruction the built-in engine gets as sharedContext (summarizer.js),
+// The same framing the built-in engine gets as sharedContext (summarizer.js),
 // for the same reason: without it, a lesson full of question prompts and word
 // lists reads like a worksheet to fill in rather than a lesson to describe.
-function summaryPrompt({ type, length }, text) {
+// Small models need it spelled out more firmly than the built-in engine does.
+// Left to themselves they answer the lesson's questions ("What surprised me
+// most was..."), so the system message forbids that. They also lose track of
+// an instruction that sits before three thousand tokens of lesson, so the
+// shape is repeated after it, where the model reads it last.
+function summaryMessages({ type, length }, text) {
   const shape =
     SUMMARY_SHAPES[type]?.[length] || SUMMARY_SHAPES["key-points"].short;
-  return (
-    "The text below is a spelling and literacy lesson written by a teacher, " +
-    "containing lesson text, practice questions and spelling word lists. " +
-    `Summarise it for another teacher deciding whether the lesson suits their class, as ${shape}. ` +
-    "Write the summary in the same language as the lesson. " +
-    "Reply with the summary only.\n\n" +
-    `Lesson:\n\n${text}`
-  );
+  return [
+    {
+      role: "system",
+      content:
+        "You summarise spelling and literacy lessons for teachers who are " +
+        "deciding whether a lesson suits their class. A lesson has reading " +
+        "passages, practice questions and spelling word lists. Describe what " +
+        "the lesson covers. Never answer its questions, never do its " +
+        "exercises, and never write as a student. Write in the language the " +
+        "lesson is written in, even when that is not English. Reply with the " +
+        "summary only.",
+    },
+    {
+      role: "user",
+      content:
+        `<lesson>\n${text}\n</lesson>\n\n` +
+        `Summarise the lesson above for a teacher, as ${shape}.`,
+    },
+  ];
 }
 
-// The model is several files (embedding weights, decoder weights, tokenizer,
-// configs); the shared helper sums them into the single 0-1 fraction the UI
-// shows, and keeps progress visible to a second summary started during the
-// first download (downloadProgress.js).
+// The model is several files (the weights, tokenizer, configs); the shared
+// helper sums them into the single 0-1 fraction the UI shows, and keeps
+// progress visible to a second summary started during the first download
+// (downloadProgress.js).
 const { reportProgress, withProgress } = createDownloadProgress();
 
 // One model per page, shared by every summary. Only a successful load is
@@ -99,21 +119,21 @@ let modelPromise = null;
 function loadModel() {
   if (!modelPromise) {
     modelPromise = (async () => {
-      const [processor, model] = await Promise.all([
-        AutoProcessor.from_pretrained(MODEL_ID, {
+      const [tokenizer, model] = await Promise.all([
+        AutoTokenizer.from_pretrained(MODEL_ID, {
+          revision: MODEL_REVISION,
           progress_callback: reportProgress,
         }),
-        // The ForCausalLM class on a multimodal repo is what selects
-        // transformers.js's text-only session set; q4f16 is the quantisation
-        // the model card demos, and it needs the WebGPU f16 support that
-        // summarizer.js probes for before offering this engine.
-        Gemma4ForCausalLM.from_pretrained(MODEL_ID, {
+        // q4f16 keeps the download smallest, and it needs the WebGPU f16
+        // support that summarizer.js probes for before offering this engine.
+        AutoModelForCausalLM.from_pretrained(MODEL_ID, {
+          revision: MODEL_REVISION,
           dtype: "q4f16",
           device: "webgpu",
           progress_callback: reportProgress,
         }),
       ]);
-      return { processor, model };
+      return { tokenizer, model };
     })().catch((err) => {
       modelPromise = null;
       throw err;
@@ -131,13 +151,15 @@ let generationTurn = Promise.resolve();
 // Bridge model.generate()'s callback-based streamer to the async iterable the
 // summary card consumes (the same shape the built-in API's
 // summarizeStreaming() returns).
-async function* generateStream({ processor, model, stopper, prompt, signal }) {
-  const chat = processor.apply_chat_template(
-    [{ role: "user", content: [{ type: "text", text: prompt }] }],
-    { add_generation_prompt: true, enable_thinking: false },
-  );
-  const inputs = await processor(chat, null, null, {
-    add_special_tokens: false,
+async function* generateStream({
+  tokenizer,
+  model,
+  stopper,
+  messages,
+  signal,
+}) {
+  const inputs = tokenizer.apply_chat_template(messages, {
+    add_generation_prompt: true,
   });
 
   const queue = [];
@@ -149,7 +171,7 @@ async function* generateStream({ processor, model, stopper, prompt, signal }) {
     wake = null;
   };
 
-  const streamer = new TextStreamer(processor.tokenizer, {
+  const streamer = new TextStreamer(tokenizer, {
     skip_prompt: true,
     skip_special_tokens: true,
     callback_function: (chunk) => {
@@ -173,7 +195,10 @@ async function* generateStream({ processor, model, stopper, prompt, signal }) {
       return model.generate({
         ...inputs,
         max_new_tokens: MAX_NEW_TOKENS,
+        // Greedy, with the light repetition penalty Liquid recommends for this
+        // model: without it a small model can loop on the same bullet.
         do_sample: false,
+        repetition_penalty: 1.05,
         streamer,
         stopping_criteria: stopper,
       });
@@ -210,16 +235,16 @@ async function* generateStream({ processor, model, stopper, prompt, signal }) {
 }
 
 /**
- * Create a summariser session backed by Gemma 4 running in the page. Same
+ * Create a summariser session backed by LFM2.5 running in the page. Same
  * shape as a built-in Summarizer session as far as summarizer.js and the
  * summary card use one: summarizeStreaming(), inputQuota, measureInputUsage()
  * and destroy(), plus `engine` so the UI can say which model wrote the
- * summary. The first call downloads the model (about 3 GB, one time, cached
+ * summary. The first call downloads the model (about 760 MB, one time, cached
  * by the browser afterwards).
  *
  * destroy() stops the session's generation; the loaded model itself stays
  * cached for the page's lifetime, like the translation pipelines, because
- * reloading 3 GB of weights per summary would make Regenerate unusable.
+ * reloading 760 MB of weights per summary would make Regenerate unusable.
  *
  * @param {{type?: string, length?: string}} options
  * @param {object} [hooks]
@@ -231,7 +256,7 @@ async function* generateStream({ processor, model, stopper, prompt, signal }) {
 export async function createFallbackSummarizer(options = {}, hooks = {}) {
   const { signal, onDownloadProgress } = hooks;
   // Before loadModel(): a run aborted while the chunk was being fetched must
-  // never start the 3 GB download, because once started it runs to the end.
+  // never start the 760 MB download, because once started it runs to the end.
   if (signal?.aborted) {
     throw new DOMException("Summary aborted.", "AbortError");
   }
@@ -240,28 +265,28 @@ export async function createFallbackSummarizer(options = {}, hooks = {}) {
     throw new DOMException("Summary aborted.", "AbortError");
   }
 
-  const { processor, model } = loaded;
+  const { tokenizer, model } = loaded;
   const stopper = new InterruptableStoppingCriteria();
 
   return {
-    engine: "gemma",
+    engine: "lfm",
     inputQuota: INPUT_QUOTA_TOKENS,
 
     // In tokens, the unit inputQuota is in. Measures the lesson text alone;
     // the prompt around it is a fixed hundred-odd tokens that the quota's
     // headroom absorbs.
     async measureInputUsage(text) {
-      const { input_ids } = processor.tokenizer(text || "");
+      const { input_ids } = tokenizer(text || "");
       return input_ids.dims.at(-1);
     },
 
     summarizeStreaming(text, { signal: runSignal } = {}) {
       stopper.reset();
       return generateStream({
-        processor,
+        tokenizer,
         model,
         stopper,
-        prompt: summaryPrompt(options, text),
+        messages: summaryMessages(options, text),
         signal: runSignal,
       });
     },

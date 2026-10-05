@@ -1,6 +1,6 @@
 // "Summarise this lesson" card on the lesson page, powered by on-device AI
 // (see @spelling-creator/core/browser/summarizer): the browser's built-in
-// Summarizer API where it exists, otherwise Gemma 4 running in the page with
+// Summarizer API where it exists, otherwise LFM2.5 running in the page with
 // transformers.js on browsers whose WebGPU can carry it. Either way the model
 // runs on the reader's own device: no Worker call, no Turnstile, no cost, and
 // the lesson text never leaves the machine.
@@ -132,7 +132,7 @@ export default function LessonSummary({ doc }) {
   // it fades in when supported rather than flashing in and disappearing when not.
   const [availability, setAvailability] = useState("unavailable");
 
-  // Which engine answers: "browser" (built-in Summarizer API) or "gemma" (the
+  // Which engine answers: "browser" (built-in Summarizer API) or "lfm" (the
   // transformers.js fallback). Set by the probe, then kept honest by the run
   // itself through createSummarizer's onEngine hook, because the built-in
   // engine can agree to a probe and still refuse the create.
@@ -194,12 +194,12 @@ export default function LessonSummary({ doc }) {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    // Whether the reader has seen the fallback's 3 GB warning: the idle
+    // Whether the reader has seen the fallback's 760 MB warning: the idle
     // notice and the progress line both carry it whenever the engine on
-    // record is Gemma. A run that only discovers Gemma mid-flight (see
+    // record is LFM. A run that only discovers LFM mid-flight (see
     // onEngine below) must not start that download behind wording about the
     // built-in engine.
-    const warnedOfGemma = engine === "gemma";
+    const warnedOfLfm = engine === "lfm";
 
     setError("");
     setSummary("");
@@ -218,23 +218,23 @@ export default function LessonSummary({ doc }) {
           // The engine the run actually opens, reported before it does any
           // heavy work. The case that matters: the built-in engine passed
           // the probe but refused the create, and the next engine in line is
-          // Gemma, whose first run is a 3 GB download nobody should trigger
-          // unwarned. If the reader hasn't seen the Gemma notice, stop the
+          // LFM, whose first run is a 760 MB download nobody should trigger
+          // unwarned. If the reader hasn't seen the LFM notice, stop the
           // run here (createSummarizer checks the signal before the download
           // starts) and re-offer the button with the honest wording, so the
           // next click is an informed one.
           onEngine: (nextEngine) => {
-            if (nextEngine === "gemma" && !warnedOfGemma) {
+            if (nextEngine === "lfm" && !warnedOfLfm) {
               controller.abort();
-              setEngine("gemma");
+              setEngine("lfm");
               setAvailability("downloadable");
               setPhase("idle");
               return;
             }
             setEngine(nextEngine);
-            if (nextEngine === "gemma") {
+            if (nextEngine === "lfm") {
               // The fallback's first run downloads, so the progress bar
-              // (with the Gemma wording) is what belongs on screen, not the
+              // (with the LFM wording) is what belongs on screen, not the
               // summarising skeleton.
               setProgress(0);
               setPhase("downloading");
@@ -386,8 +386,8 @@ export default function LessonSummary({ doc }) {
         <div className="mb-3">
           <p className="text-xs text-muted-foreground">
             {t(
-              engine === "gemma"
-                ? "lessonSummary.downloadingModelGemma"
+              engine === "lfm"
+                ? "lessonSummary.downloadingModelLfm"
                 : "lessonSummary.downloadingModel",
               { percent: Math.round(progress * 100) },
             )}
@@ -417,8 +417,8 @@ export default function LessonSummary({ doc }) {
             {truncated
               ? t("lessonSummary.truncatedNotice")
               : t(
-                  engine === "gemma"
-                    ? "lessonSummary.generatedNoticeGemma"
+                  engine === "lfm"
+                    ? "lessonSummary.generatedNoticeLfm"
                     : "lessonSummary.generatedNotice",
                 )}
           </p>
@@ -450,15 +450,15 @@ export default function LessonSummary({ doc }) {
 
       {/* Nothing generated yet, and the model isn't on this machine — warn before
           the click, not after it starts a large download. The fallback's notice
-          names the size: 3 GB is a download nobody should trigger unwarned. */}
+          names the size: 760 MB is a download nobody should trigger unwarned. */}
       {phase === "idle" &&
         !summary &&
         !error &&
         availability !== "available" && (
           <p className="mt-2 text-xs text-muted-foreground">
             {t(
-              engine === "gemma"
-                ? "lessonSummary.idleNoticeGemma"
+              engine === "lfm"
+                ? "lessonSummary.idleNoticeLfm"
                 : "lessonSummary.idleNotice",
             )}
           </p>

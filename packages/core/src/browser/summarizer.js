@@ -9,9 +9,9 @@
 // that the API barely exists yet: it's Chromium-only, desktop-only, and gated
 // behind hardware minimums (free disk space, VRAM, an unmetered connection for
 // the one-time model download). For everyone else there is a second layer:
-// Gemma 4 running in the page with transformers.js (fallbackSummarizer.js),
+// LFM2.5 running in the page with transformers.js (fallbackSummarizer.js),
 // offered only on hardware whose WebGPU can run it, because its one-time model
-// download is about 3 GB. The fallback is reached ONLY through a dynamic
+// download is about 760 MB. The fallback is reached ONLY through a dynamic
 // import() from inside a click handler, and nothing here may static-import it.
 // That keeps transformers.js out of every bundle a visitor loads to read a
 // lesson, and out of the Worker's server build entirely (vite.config.js stubs
@@ -92,8 +92,8 @@ function loadFallback() {
   return fallbackPromise;
 }
 
-// The hardware bar for the Gemma fallback's GPU adapter, there to turn away
-// phone-class adapters that would download all 3 GB only to fail, or crash
+// The hardware bar for the LFM fallback's GPU adapter, there to turn away
+// phone-class adapters that would download all 760 MB only to fail, or crash
 // the tab, loading the weights. Checked on the adapter's limits, which
 // report what the hardware CAN raise them to, not the small WebGPU defaults.
 //
@@ -110,7 +110,7 @@ const FALLBACK_MIN_STORAGE_BINDING_BYTES = 1024 ** 3;
 // Chromium's Network Information API, absent elsewhere; where it's missing we
 // assume the connection is fine rather than hiding the feature from every
 // non-Chromium browser. The built-in API refuses its (much smaller) download
-// on a metered connection, so a 3 GB one should show at least the same
+// on a metered connection, so a 760 MB one should show at least the same
 // manners rather than burning through someone's cellular data.
 function meteredConnection() {
   const connection = globalThis.navigator?.connection;
@@ -118,9 +118,9 @@ function meteredConnection() {
   return Boolean(connection.saveData) || connection.type === "cellular";
 }
 
-// Can this machine run the Gemma fallback? The built-in engine's hardware bar
+// Can this machine run the LFM fallback? The built-in engine's hardware bar
 // (disk, VRAM, an unmetered connection) is applied by the browser; this probe
-// is the fallback's equivalent, so a device is never offered a 3 GB model it
+// is the fallback's equivalent, so a device is never offered a 760 MB model it
 // can't run or shouldn't fetch. It needs WebGPU with f16 shader support (the
 // quantisation fallbackSummarizer.js loads is q4f16) on an adapter whose
 // limits can hold the weights. The probe is cheap and answerable without
@@ -182,15 +182,15 @@ async function builtInAvailability(options) {
  * model ready?
  *
  * @param {{type?: string, length?: string}} [options]
- * @returns {Promise<{availability: string, engine: "browser"|"gemma"|null}>}
+ * @returns {Promise<{availability: string, engine: "browser"|"lfm"|null}>}
  *   availability is one of:
  *   "available":    ready to run now.
  *   "downloadable": supported, but the first run downloads the model.
  *   "downloading":  supported, and a download is already in flight.
  *   "unavailable":  neither engine can run here.
- *   engine is "browser" for the built-in Summarizer API, "gemma" for the
+ *   engine is "browser" for the built-in Summarizer API, "lfm" for the
  *   transformers.js fallback, null when unavailable. The fallback always
- *   reports "downloadable": the first run's 3 GB download is the state worth
+ *   reports "downloadable": the first run's 760 MB download is the state worth
  *   warning about, and we can't cheaply tell whether the browser still has it
  *   cached (a cached model just makes that phase instant).
  */
@@ -200,14 +200,14 @@ export async function summarizerAvailability(options = {}) {
     return { availability: builtIn, engine: "browser" };
   }
   if (await fallbackPossible()) {
-    return { availability: "downloadable", engine: "gemma" };
+    return { availability: "downloadable", engine: "lfm" };
   }
   return { availability: "unavailable", engine: null };
 }
 
 /**
  * Create a summariser session: the browser's built-in Summarizer when it can
- * take these options, otherwise Gemma 4 in the page via the fallback chunk.
+ * take these options, otherwise LFM2.5 in the page via the fallback chunk.
  *
  * Must be called from a user gesture (a click): the built-in API requires
  * transient activation, and the fallback's download is far too heavy to start
@@ -218,19 +218,19 @@ export async function summarizerAvailability(options = {}) {
  * @param {AbortSignal} [hooks.signal]  Aborts creation. The built-in engine
  *   also aborts its model download; the fallback's download can't be
  *   interrupted once it has started, so there the signal is checked before
- *   the download begins (an aborted run never starts a 3 GB fetch) and again
+ *   the download begins (an aborted run never starts a 760 MB fetch) and again
  *   when it ends.
  * @param {(loaded: number) => void} [hooks.onDownloadProgress]  Download fraction, 0-1.
- * @param {(engine: "browser"|"gemma") => void} [hooks.onEngine]  Called with
+ * @param {(engine: "browser"|"lfm") => void} [hooks.onEngine]  Called with
  *   the engine actually being opened, before that engine does any heavy
  *   work. The built-in engine can pass the availability probe and still
- *   refuse create(), in which case this fires again with "gemma" BEFORE the
- *   fallback's 3 GB download starts: the caller's chance to switch its
+ *   refuse create(), in which case this fires again with "lfm" BEFORE the
+ *   fallback's 760 MB download starts: the caller's chance to switch its
  *   wording, or to abort and wait for an informed click (what
  *   LessonSummary.jsx does when the reader was never warned about the
  *   download).
  * @returns {Promise<object>} The session. Call `.destroy()` when done. A
- *   fallback session carries `engine: "gemma"`; a built-in one has no engine
+ *   fallback session carries `engine: "lfm"`; a built-in one has no engine
  *   property.
  */
 export async function createSummarizer(options = {}, hooks = {}) {
@@ -261,7 +261,7 @@ export async function createSummarizer(options = {}, hooks = {}) {
   // The engine is decided now: say so before any heavy work, so the caller
   // can re-warn (or abort, which the next check honours) ahead of the
   // fallback's download rather than find out when the session arrives.
-  hooks.onEngine?.("gemma");
+  hooks.onEngine?.("lfm");
   if (hooks.signal?.aborted) {
     throw new DOMException("Summary aborted.", "AbortError");
   }
