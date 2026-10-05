@@ -24,6 +24,7 @@ import {
   GitPullRequestIcon,
   HistoryIcon,
   LibraryIcon,
+  ListChecksIcon,
   PencilIcon,
   PlusIcon,
   PrinterIcon,
@@ -36,6 +37,8 @@ import {
 import PageBar from "../components/layout/PageBar.jsx";
 import SectionOutline from "../components/editor/SectionOutline.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
+import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
+import { useLessonChecks } from "../lib/lessonChecks.js";
 import { LessonSourcesProvider } from "../lib/lessonSources.jsx";
 import { createSource } from "@spelling-creator/core/sources";
 import { removeSourceCitations } from "@spelling-creator/core/lessonText";
@@ -233,7 +236,11 @@ function applyBlockDrag(
 
 export default function EditorPage() {
   const { t } = useTranslation("editor");
+  const { t: tChecks } = useTranslation("checks");
   const [doc, setDoc] = useState(() => createInitialDoc(t));
+  // The lesson standard's checks, rerun as the lesson changes. Shown in the
+  // outline and the Check panel; never in the way of saving or exporting.
+  const checks = useLessonChecks(doc);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [ideaDialogOpen, setIdeaDialogOpen] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
@@ -341,6 +348,7 @@ export default function EditorPage() {
   const historyOpen = panel === "history";
   const collabOpen = panel === "collaborate";
   const variationsOpen = panel === "variations";
+  const checkOpen = panel === "check";
   //
   // Opening pushes; closing *replaces*. Both pushing would leave the history as
   // [/editor, /editor/history, /editor], so Back from a panel you had just
@@ -836,6 +844,43 @@ export default function EditorPage() {
       return out;
     });
   }, []);
+
+  // Go to what a lesson check found, from the Check panel. Out of preview and
+  // into the section if it is folded away, since the block has to be on the
+  // page to be scrolled to; then into the block's first field, so fixing it is
+  // one step rather than two. Unlike the restore below, this does expand a
+  // collapsed section: choosing a finding is asking to see it.
+  const goToFinding = useCallback(
+    (finding) => {
+      setPreviewing(false);
+      if (finding.sectionId) toggleCollapse(finding.sectionId, false);
+      // Two frames: one for React to render the editor and the section, one
+      // for them to be laid out.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const block =
+            finding.blockId &&
+            document.querySelector(
+              idSelector("data-block-id", finding.blockId),
+            );
+          const target =
+            block ||
+            (finding.sectionId &&
+              document.querySelector(
+                idSelector("data-section-id", finding.sectionId),
+              ));
+          if (!target) return;
+          scrollToElement(target, { block: block ? "center" : "start" });
+          block
+            ?.querySelector(
+              "textarea, input:not([type=hidden]), [contenteditable=true]",
+            )
+            ?.focus({ preventScroll: true });
+        }),
+      );
+    },
+    [toggleCollapse],
+  );
 
   // Remember which block the user was last typing in.
   //
@@ -2346,6 +2391,8 @@ export default function EditorPage() {
   // The small "N collaborators online" dot, overlaid on whichever trigger
   // shows it (the mobile overflow menu, the desktop Collaborate button).
   const collabCount = collab.active ? collab.participants.length : 0;
+  // Problems only, as in the outline: suggestions are not a count to chase.
+  const problemCount = checks.problems.length;
   const CollabDot = collabCount > 0 && (
     <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-success text-[10px] font-medium text-success-foreground">
       {collabCount}
@@ -2455,6 +2502,15 @@ export default function EditorPage() {
             >
               <PreviewToggleIcon />
               {previewToggleLabel}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openPanel("check")}>
+              <ListChecksIcon />
+              {tChecks("menuItem")}
+              {problemCount > 0 && (
+                <span className="ml-auto text-xs text-destructive">
+                  {tChecks("problemCount", { count: problemCount })}
+                </span>
+              )}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={openImportWarning}
@@ -2591,6 +2647,28 @@ export default function EditorPage() {
                 ? t("header.backToEditingTooltip")
                 : t("header.previewTooltip")}
             </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={() => openPanel("check")}
+                className={headerGhostButton}
+              >
+                <ListChecksIcon data-icon="inline-start" />
+                {tChecks("button")}
+                {problemCount > 0 && (
+                  <Badge variant="destructive" className="tabular-nums">
+                    <span aria-hidden>{problemCount}</span>
+                    <span className="sr-only">
+                      {tChecks("problemCount", { count: problemCount })}
+                    </span>
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{tChecks("buttonTooltip")}</TooltipContent>
           </Tooltip>
 
           <DropdownMenu>
@@ -2740,6 +2818,7 @@ export default function EditorPage() {
           allCollapsed={allCollapsed}
           onToggleAll={toggleAllCollapsed}
           onAddSection={openAddDialog}
+          checks={checks}
         />
 
         {/* min-w-0 is load-bearing: without it this flex item is sized by its
@@ -3329,6 +3408,15 @@ export default function EditorPage() {
         git={git}
         onSwitch={(next) => next && setDoc(next)}
         onBringIn={handleBringVariationIn}
+      />
+
+      {/* What the lesson checks found, each one a way to the block it's about. */}
+      <LessonChecksSheet
+        open={checkOpen}
+        onClose={() => openPanel(null)}
+        checks={checks}
+        sections={doc.sections}
+        onGoTo={goToFinding}
       />
 
       {/* The lesson's own version history, read out of its git repository. */}
