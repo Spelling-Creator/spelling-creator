@@ -198,10 +198,11 @@ under [Availability](#availability-the-feature-hides-itself).
 
 The model is under the [LFM Open License v1.0](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX/blob/main/LICENSE),
 not an OSI licence: it's free to use for any organisation under $10M a year in
-revenue (and for qualifying non-profits), with no commercial licence above
-that. Readers' browsers fetch the weights straight from Hugging Face, so the
-app never redistributes them itself. If Spelling Creator ever crosses that
-line, this model has to go.
+revenue, with no commercial licence above that. Qualifying non-profits are
+exempt from that limit only for non-commercial or research use. Readers'
+browsers fetch the weights straight from Hugging Face, so the app never
+redistributes them itself. If Spelling Creator ever passes $10M a year, this
+model has to go.
 
 The module presents the same session surface the card already speaks
 (`summarizeStreaming()`, `inputQuota`, `measureInputUsage()`, `destroy()`), so
