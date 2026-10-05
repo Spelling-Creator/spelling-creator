@@ -200,9 +200,9 @@ function buildQuestionBlock(block, where) {
       return { ...base, answer: block.answer };
 
     // The two semi-open types store the same thing and mean different things by
-    // it — an exhaustive accepted set for `multiple`, a set of suggestions for
-    // `multiple_open` — which is decided in core's lessonChecks, not here. The block
-    // shape is identical.
+    // it: an exhaustive accepted set for `multiple`, a set of suggestions for
+    // `multiple_open`. The difference is decided in core's lessonChecks, not
+    // here, and the block shape is identical.
     case "multiple":
     case "multiple_open": {
       const raw = Array.isArray(block.answers) ? block.answers : [];
@@ -230,12 +230,7 @@ function buildQuestionBlock(block, where) {
           `${where}: a background question needs an "answer" string.`,
         );
       }
-      return {
-        ...base,
-        background:
-          typeof block.background === "string" ? block.background : "",
-        answer: block.answer,
-      };
+      return { ...base, answer: block.answer };
 
     default:
       return base;

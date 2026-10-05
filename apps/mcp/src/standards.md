@@ -163,8 +163,7 @@ hold too much in mind and to spell long strings on a letterboard.
 
 ### 8 · `background` (blue)
 
-Prior knowledge the passage deliberately does NOT contain; always include the "background" field
-with that context.
+Prior knowledge the passage deliberately does NOT contain.
 
 ### 9-12 · `open` (pink)
 
@@ -355,8 +354,7 @@ Rejected (errors):
 - a fill-in-the-blank purple answer (a number question with no steps) that is not in the passage
 - a green, `multiple`, purple or blue prompt that names another question's recall answer (a green
   answer or a `multiple` option) from the same section — rephrase around the word
-- a blue (background) answer that DOES appear in its own section's passage, or a blue question
-  with no "background" field
+- a blue (background) answer that DOES appear in its own section's passage
 - a spelling word outside 6-9 letters, repeated in another section, or appearing inside any answer
 - the same answer word used by two different questions, anywhere, at any length
 - the same numeric answer given by two different questions

@@ -389,7 +389,7 @@ A lesson is **sections** of **blocks**. Block types:
   - `open` is a free response (no answer field; just the `prompt`)
   - `wyr` is a "Would you rather… or…?" choice between two options, opinion only
     (no answer field; just the `prompt`)
-  - `background` takes `background` + `answer` (needs prior knowledge)
+  - `background` takes `answer` (needs prior knowledge)
 
 - **`image`**: a picture. Don't write these by hand; use `search_images` to find a
   freely-licensed Wikimedia Commons image, then `add_image` with its `ref` to download

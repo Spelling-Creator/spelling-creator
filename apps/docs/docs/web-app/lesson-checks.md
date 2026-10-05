@@ -57,12 +57,18 @@ The full list of codes and what trips each one is in
 | `apps/web/src/components/editor/SectionOutline.jsx`    | The per-section counts.                                                                                     |
 
 `validateLesson` takes the canonical document, which is the shape the editor
-already holds in state, so the editor passes it `doc` with no conversion. The
-hook runs it through `useDeferredValue`: a long lesson never makes typing wait,
-because React reruns the checks once it has nothing more urgent to render. It is
-also wrapped so that a bug in one check logs an error and shows nothing, rather
-than taking the editor down. An empty lesson is not checked at all; its only
-finding would be "0 sections", greeting everyone who opens the editor.
+already holds in state, so the editor passes it `doc` with no conversion.
+
+The checks are cheap (about a millisecond on a full six-section lesson). What
+isn't cheap is the page that calls the hook, which is the whole editor, so the
+hook is built to avoid rendering it again. It reruns the checks once editing has
+paused for 300ms, and replaces its result only when a finding actually changed.
+Most edits (typing inside a passage, say) change none, so they cost no render
+beyond their own. A test in `lessonChecks.test.js` holds it to that.
+
+It is also wrapped so that a bug in one check logs an error and shows nothing,
+rather than taking the editor down. An empty lesson is not checked at all; its
+only finding would be "0 sections", greeting everyone who opens the editor.
 
 ### Two descriptions of every finding
 
@@ -77,21 +83,36 @@ carry:
   question, a spelling word's at its spelling block, a formatting finding at the
   text block holding the first offending span. Findings about a section's shape
   point at its first relevant question.
+- `itemId`: within that block, the one spelling word or orange answer the
+  finding is about. The editor focuses the field whose `data-collab-field` ends
+  in that id, so a finding about "ash" lands on "ash", not on the first word in
+  the list, even when the same word appears twice.
+
+Values quoted from the passage keep the passage's own casing. The checks compare
+uppercased text, but a word shown back as SILT would read as vocabulary, which
+is what ALL CAPS means in a lesson.
 
 The editor ignores `message` and renders `t("codes.<code>", params)` from the
 `checks` namespace. The MCP server sends only `code`, `section` and `message` to
 the model (`toWireWarnings` in `apps/mcp/src/tools.js`), so the extra fields
 never reach it.
 
-A code with more than one wording uses an i18next context, picked in
-`describeFinding`: `E_SPELLING_DUPLICATE_same` for a word listed twice in one
-section, `E_ANSWER_WORD_REUSED_inside` for an answer found inside a longer one,
-and so on. A collision with a question in the same section names it as
-"question 2" rather than "section 1, question 2".
+A code with more than one wording uses an i18next context, chosen by the
+`CONTEXTS` table in `lib/lessonChecks.js`: `E_SPELLING_DUPLICATE_same` for a word
+listed twice in one section, `E_ANSWER_WORD_REUSED_inside` for an answer found
+inside a longer one, `E_FORMAT_HEAVY_share` when a section broke the share limit
+rather than the span count (core says which, in `params.tooMany`), and so on. A
+collision with a question in the same section names it as "question 2" rather
+than "section 1, question 2".
 
 ### Keeping the wording in step
 
 `apps/web/src/lib/lessonChecks.test.js` reads every `E_`/`W_` code out of the
-core source and fails if `checks.json` has no wording for one, or still has
-wording for a code core no longer reports. Adding a check to core therefore
-means adding its `params` and a line to `checks.json` in the same change.
+core source and fails if `checks.json` is missing the base wording for one (the
+one a finding falls back to when no context applies), is missing a wording for
+any context in `CONTEXTS`, or still has wording for a code core no longer
+reports.
+
+It checks that the wording exists, not that a finding's `params` fill it in.
+That is only exercised for the codes its fixture lesson trips, so a new check
+needs its `params`, a line in `checks.json`, and a case in that fixture.

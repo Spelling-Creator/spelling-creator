@@ -12,7 +12,7 @@
 // "suggestions": a person writing a three-section lesson on purpose should see
 // that it's unusual, and then be left alone.
 
-import { useDeferredValue, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { validateLesson } from "@spelling-creator/core/lessonChecks";
 
 const EMPTY = Object.freeze({
@@ -40,6 +40,7 @@ export function checkLesson(doc) {
     console.error("Lesson checks failed", err);
     return EMPTY;
   }
+  const { errors: problems, warnings: suggestions } = result;
   const bySection = new Map();
   const tally = (finding, field) => {
     if (!finding.sectionId) return;
@@ -50,42 +51,79 @@ export function checkLesson(doc) {
     entry[field] += 1;
     bySection.set(finding.sectionId, entry);
   };
-  result.errors.forEach((f) => tally(f, "problems"));
-  result.warnings.forEach((f) => tally(f, "suggestions"));
-  return {
-    problems: result.errors,
-    suggestions: result.warnings,
-    bySection,
-  };
+  problems.forEach((f) => tally(f, "problems"));
+  suggestions.forEach((f) => tally(f, "suggestions"));
+  return { problems, suggestions, bySection };
+}
+
+// Everything a finding says, in one string, so two runs can be compared.
+function signature({ problems, suggestions }) {
+  return [...problems, ...suggestions]
+    .map((f) => `${f.key}\u0000${f.blockId}\u0000${f.itemId}\u0000${f.message}`)
+    .join("\u0001");
+}
+
+/** How long editing has to pause before the checks rerun. */
+const SETTLE_MS = 300;
+
+/**
+ * The checks for the document being edited.
+ *
+ * Every edit produces a new `doc`, and the page that calls this is the whole
+ * editor, so the cost to avoid is rendering that page again per keystroke, not
+ * the checks themselves (about a millisecond on a full lesson). They rerun once
+ * editing pauses, and the result only replaces the last one when a finding
+ * actually changed: most edits (typing inside a passage, say) change none, and
+ * cost no extra render at all.
+ */
+export function useLessonChecks(doc) {
+  const [checks, setChecks] = useState(EMPTY);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = checkLesson(doc);
+      setChecks((prev) => (signature(prev) === signature(next) ? prev : next));
+    }, SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [doc]);
+  return checks;
 }
 
 /**
- * The checks for the document being edited. Deferred, so a long lesson never
- * makes typing wait on them: React runs them once it has nothing more urgent to
- * render.
+ * The codes with more than one wording, and when each applies. i18next looks
+ * for `<code>_<context>` first and falls back to `<code>`, so every code here
+ * needs its base wording as well as one per context (lessonChecks.test.js
+ * checks both).
  */
-export function useLessonChecks(doc) {
-  const deferred = useDeferredValue(doc);
-  return useMemo(() => checkLesson(deferred), [deferred]);
+export const CONTEXTS = {
+  E_SPELLING_DUPLICATE: { same: (p) => p.otherSection == null },
+  E_ANSWER_WORD_REUSED: { inside: (p) => Boolean(p.otherAnswer) },
+  E_FORMAT_LONG_EMPHASIS: { bold: (p) => Boolean(p.bold) },
+  E_FORMAT_HEAVY: { share: (p) => p.tooMany === false },
+  W_ORANGE_ANSWER_COUNT: { open: (p) => Boolean(p.open) },
+  W_WYR_SHAPE: { many: (p) => p.ors > 1 },
+};
+
+function contextOf({ code, params }) {
+  const rules = CONTEXTS[code];
+  if (!rules) return undefined;
+  return Object.keys(rules).find((context) => rules[context](params));
 }
 
-// Which wording a code takes, for the codes with more than one. i18next looks
-// for `<code>_<context>` first and falls back to `<code>`.
-function contextOf({ code, params }) {
-  switch (code) {
-    case "E_SPELLING_DUPLICATE":
-      return params.otherSection == null ? "same" : undefined;
-    case "E_ANSWER_WORD_REUSED":
-      return params.otherAnswer ? "inside" : undefined;
-    case "E_FORMAT_LONG_EMPHASIS":
-      return params.bold ? "bold" : undefined;
-    case "W_ORANGE_ANSWER_COUNT":
-      return params.open ? "open" : undefined;
-    case "W_WYR_SHAPE":
-      return params.ors > 1 ? "many" : undefined;
-    default:
-      return undefined;
+// One formatter per language: describeFinding runs for every finding each time
+// the panel renders.
+const listFormats = new Map();
+function formatList(language, items) {
+  if (!listFormats.has(language)) {
+    let format = null;
+    try {
+      format = new Intl.ListFormat(language, { type: "conjunction" });
+    } catch {
+      // An unknown tag; fall back to commas below.
+    }
+    listFormats.set(language, format);
   }
+  const format = listFormats.get(language);
+  return format ? format.format(items) : items.join(", ");
 }
 
 /**
@@ -95,31 +133,30 @@ function contextOf({ code, params }) {
  */
 export function describeFinding(t, finding, language) {
   const params = finding.params || {};
-  const list = (items) => {
-    try {
-      return new Intl.ListFormat(language, { type: "conjunction" }).format(
-        items,
-      );
-    } catch {
-      return items.join(", ");
-    }
-  };
-  const quoted = (items = []) => list(items.map((item) => `"${item}"`));
+  const quoted = (items = []) =>
+    formatList(
+      language,
+      items.map((item) => `"${item}"`),
+    );
+  const values = { ...params, context: contextOf(finding) };
+  if (params.answers) values.answers = quoted(params.answers);
+  if (params.spans) values.spans = quoted(params.spans);
+  if (params.leaks) {
+    values.leaks = formatList(
+      language,
+      params.leaks.map((leak) => t("leak", leak)),
+    );
+  }
   // The other question a collision names. "Section 1, question 2" read from
   // inside section 1 sends you looking for a section you're already in.
-  const other =
-    params.otherSection === finding.section
-      ? t("otherHere", { question: params.otherQuestion })
-      : t("otherElsewhere", {
-          section: params.otherSection,
-          question: params.otherQuestion,
-        });
-  return t(`codes.${finding.code}`, {
-    ...params,
-    context: contextOf(finding),
-    answers: quoted(params.answers),
-    spans: quoted(params.spans),
-    leaks: list((params.leaks || []).map((leak) => t("leak", leak))),
-    other,
-  });
+  if (params.otherQuestion != null) {
+    values.other =
+      params.otherSection === finding.section
+        ? t("otherHere", { question: params.otherQuestion })
+        : t("otherElsewhere", {
+            section: params.otherSection,
+            question: params.otherQuestion,
+          });
+  }
+  return t(`codes.${finding.code}`, values);
 }

@@ -1,25 +1,38 @@
+// @vitest-environment happy-dom
+
 // The editor words every finding itself (see lessonChecks.js), so a check added
 // to core without a string in checks.json would show the panel a bare i18n key.
-// These keep the two in step.
+// These keep the two in step, and cover how often the checks rerun.
 
-import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { act, createElement, useEffect } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import i18next from "i18next";
 import {
   markupToContent,
   withTextBlockContent,
 } from "@spelling-creator/core/lessonText";
 
+// The source as text, through Vite: under happy-dom, import.meta.url isn't a
+// file URL that node:fs can read.
+import coreSource from "../../../../packages/core/src/lessonChecks.js?raw";
 import checks from "../locales/en/checks.json";
-import { checkLesson, describeFinding } from "./lessonChecks.js";
+import {
+  CONTEXTS,
+  checkLesson,
+  describeFinding,
+  useLessonChecks,
+} from "./lessonChecks.js";
 
-const coreSource = readFileSync(
-  new URL("../../../../packages/core/src/lessonChecks.js", import.meta.url),
-  "utf8",
-);
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
 const codesInCore = [...new Set(coreSource.match(/"[EW]_[A-Z_]+"/g))].map(
   (quoted) => quoted.slice(1, -1),
 );
+
+// Whether checks.json can word `key`: as written, or through its plural forms.
+const keys = new Set(Object.keys(checks.codes));
+const hasWording = (key) => keys.has(key) || keys.has(`${key}_other`);
 
 const t = await (async () => {
   const instance = i18next.createInstance();
@@ -86,15 +99,18 @@ const messy = {
 describe("lesson checks in the editor", () => {
   it("has wording for every code core can report", () => {
     expect(codesInCore.length).toBeGreaterThan(30);
-    const keys = Object.keys(checks.codes);
-    const missing = codesInCore.filter(
-      (code) => !keys.some((key) => key === code || key.startsWith(`${code}_`)),
+    // The base wording, which is what a finding falls back to whenever none of
+    // its contexts apply, so a context variant alone is not enough.
+    expect(codesInCore.filter((code) => !hasWording(code))).toEqual([]);
+    // And one for every context CONTEXTS can pick.
+    const contexts = Object.entries(CONTEXTS).flatMap(([code, rules]) =>
+      Object.keys(rules).map((context) => `${code}_${context}`),
     );
-    expect(missing).toEqual([]);
+    expect(contexts.filter((key) => !hasWording(key))).toEqual([]);
   });
 
   it("has no wording left over for a code core no longer reports", () => {
-    const stale = Object.keys(checks.codes).filter(
+    const stale = [...keys].filter(
       (key) =>
         !codesInCore.some((code) => key === code || key.startsWith(`${code}_`)),
     );
@@ -141,5 +157,55 @@ describe("lesson checks in the editor", () => {
     const { problems, suggestions } = checkLesson({ title: "", sections: [] });
     expect(problems).toEqual([]);
     expect(suggestions).toEqual([]);
+  });
+});
+
+describe("useLessonChecks", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("reruns once editing pauses, and re-renders only when a finding changed", () => {
+    vi.useFakeTimers();
+    // Filled in from an effect, which runs once per commit: the count of
+    // commits is the count of renders that reached the page.
+    const seen = { commits: 0, checks: null };
+    function Harness({ doc }) {
+      const checks = useLessonChecks(doc);
+      useEffect(() => {
+        seen.commits += 1;
+        seen.checks = checks;
+      });
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    const render = (doc) =>
+      act(() => root.render(createElement(Harness, { doc })));
+
+    render(messy);
+    act(() => vi.advanceTimersByTime(300));
+    const first = seen.checks;
+    expect(first.problems.length).toBeGreaterThan(0);
+
+    // Three quick edits that change no finding: no rerun until they stop, and
+    // then no new result, so nothing renders beyond the edits themselves.
+    const before = seen.commits;
+    const retitled = (title) => ({ ...messy, title });
+    render(retitled("A"));
+    act(() => vi.advanceTimersByTime(100));
+    render(retitled("AB"));
+    act(() => vi.advanceTimersByTime(100));
+    render(retitled("ABC"));
+    act(() => vi.advanceTimersByTime(300));
+    expect(seen.commits - before).toBe(3);
+    expect(seen.checks).toBe(first);
+
+    // An edit that fixes something does come through.
+    const fixed = structuredClone(messy);
+    fixed.sections[0].blocks[2].words = [{ id: "w1", text: "meadow" }];
+    render(fixed);
+    act(() => vi.advanceTimersByTime(300));
+    expect(seen.checks).not.toBe(first);
+    expect(seen.checks.problems.length).toBeLessThan(first.problems.length);
+
+    act(() => root.unmount());
   });
 });

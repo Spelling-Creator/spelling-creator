@@ -89,11 +89,59 @@ describe("validateLesson finding locations", () => {
     });
   });
 
-  it("carries the item a partial list left out", () => {
+  it("carries the item a partial list left out, as the passage wrote it", () => {
     expect(find(errors, "E_ORANGE_PARTIAL_LIST")).toMatchObject({
       blockId: "q2",
-      params: { question: 2, next: "SILT" },
+      params: { question: 2, next: "silt" },
     });
+  });
+
+  it("points a spelling word's finding at that word, even when repeated", () => {
+    const doc = lesson();
+    doc.sections[0].blocks.push({
+      id: "sp2",
+      type: "spelling",
+      words: [{ id: "w9", text: "ash" }],
+    });
+    const found = validateLesson(doc).errors.filter(
+      (f) => f.code === "E_SPELLING_LENGTH",
+    );
+    expect(found.map((f) => [f.blockId, f.itemId])).toEqual([
+      ["sp1", "w1"],
+      ["sp2", "w9"],
+    ]);
+  });
+
+  it("says which limit a heavily formatted section broke", () => {
+    const doc = lesson();
+    doc.sections[0].blocks[0] = {
+      id: "t1",
+      type: "text",
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "A river carries " },
+              {
+                type: "text",
+                text: "SEDIMENT down",
+                marks: [{ type: "italic" }],
+              },
+              {
+                type: "text",
+                text: " to the sea. It drops boulder, cobble, and silt.",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const heavy = validateLesson(doc).errors.find(
+      (f) => f.code === "E_FORMAT_HEAVY",
+    );
+    expect(heavy?.params).toMatchObject({ count: 1, tooMany: false });
   });
 
   it("leaves lesson-wide findings without a section", () => {

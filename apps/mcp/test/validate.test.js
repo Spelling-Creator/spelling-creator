@@ -208,7 +208,6 @@ function sectionInput(spec) {
         type: "question",
         questionType: "background",
         prompt: "What do you already know?",
-        background: "Prior knowledge the passage does not supply.",
         answer: spec.background,
       },
       ...TIGHT_OPENS.map((prompt) => ({
@@ -393,7 +392,8 @@ test("accepting only part of the passage's list is rejected", () => {
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_PARTIAL_LIST"]);
   assert.match(errors[0].message, /runs on past/);
-  assert.match(errors[0].message, /"SILT"/);
+  // Quoted as the passage wrote it: in a lesson, ALL CAPS means vocabulary.
+  assert.match(errors[0].message, /"silt"/);
 
   // Same defect without the Oxford comma, where the run ends at the conjunction
   // itself rather than at a comma.
@@ -417,7 +417,7 @@ test("a repeated conjunction doesn't hide the rest of the list", () => {
     question(input, 0, 5).answers = ["cats", "dogs"];
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_PARTIAL_LIST"]);
-  assert.match(errors[0].message, /"RABBITS"/);
+  assert.match(errors[0].message, /"rabbits"/);
 
   const whole = check((input) => {
     input.sections[0].blocks[0].text +=
@@ -780,13 +780,6 @@ test("a background answer sitting in the passage is rejected", () => {
   );
 });
 
-test("a background question with no context field is rejected", () => {
-  const { errors } = check((input) => {
-    question(input, 2, 7).background = "   ";
-  });
-  assert.deepEqual(codes(errors), ["E_BACKGROUND_NO_CONTEXT"]);
-});
-
 test("spelling words must be 6-9 letters", () => {
   const { errors } = check((input) => {
     input.sections[0].blocks[2].words = [
@@ -1081,7 +1074,6 @@ test("a new defect matching a pre-existing one's code and value is still reporte
             type: "question",
             questionType: "background",
             prompt: "Q1",
-            background: "ctx",
             answer: "delta",
           },
         ],
@@ -1103,7 +1095,6 @@ test("a new defect matching a pre-existing one's code and value is still reporte
         type: "question",
         questionType: "background",
         prompt: "Q2",
-        background: "ctx",
         answer: "delta",
       },
     },

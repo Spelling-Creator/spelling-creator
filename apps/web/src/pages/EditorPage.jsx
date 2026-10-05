@@ -871,11 +871,22 @@ export default function EditorPage() {
               ));
           if (!target) return;
           scrollToElement(target, { block: block ? "center" : "start" });
-          block
-            ?.querySelector(
+          if (!block) return;
+          // The word or answer the finding is about, when it names one (its
+          // field ends in that item's id, as in block:<id>:word:<wordId>), so
+          // "ash is too short" lands on ash and not on the list's first word.
+          // Otherwise the block's first field.
+          const item =
+            finding.itemId &&
+            [...block.querySelectorAll("[data-collab-field]")].find((el) =>
+              el.dataset.collabField.endsWith(`:${finding.itemId}`),
+            );
+          (
+            item ||
+            block.querySelector(
               "textarea, input:not([type=hidden]), [contenteditable=true]",
             )
-            ?.focus({ preventScroll: true });
+          )?.focus({ preventScroll: true });
         }),
       );
     },

@@ -153,6 +153,8 @@ function wyrSeparators(prompt) {
  * @property {string|null} sectionId  That section's id, when it has one.
  * @property {string|null} blockId    The block to go to for this finding (a question or a
  *                                    spelling block), or null when it is about the section.
+ * @property {string|null} itemId     Within that block, the one spelling word or answer the
+ *                                    finding is about, when there is one.
  * @property {Record<string, unknown>} params
  *                                    The finding's facts as data (the answer, the word, which
  *                                    question), for a UI to word itself. See checks.json in
@@ -220,20 +222,24 @@ function sectionPassage(blocks) {
 // One sentence's worth of tokens for the orange list check, with commas and
 // semicolons kept as tokens of their own. Everything else matches normalizeText,
 // so an option that compares equal to the passage there compares equal here.
+//
+// `tokens` are uppercased for comparing; `raw` holds the same tokens as the
+// passage wrote them, for quoting one back. Uppercasing is the last step so the
+// two line up one for one (the punctuation strip keeps letters of either case).
 function listTokens(sentence) {
-  return sentence
+  const raw = sentence
     .replace(/(\d),(?=\d{3}(?!\d))/g, "$1") // "3,776" is a number, not a list
-    .toUpperCase()
     .replace(/(\d)\.(\d)/g, `$1${DECIMAL_MARK}$2`)
     .replace(/[,;]/g, ` ${COMMA_MARK} `)
     .replace(LIST_PUNCTUATION, " ")
     .split(/\s+/)
     .filter(Boolean)
     .map((token) => token.split(DECIMAL_MARK).join("."));
+  return { tokens: raw.map((token) => token.toUpperCase()), raw };
 }
 
 // The section's passage as tokenised sentences. A list lives inside one sentence
-// — "rock, gas, and ash" — so the split is what stops two items that merely share
+// ("rock, gas, and ash"), so the split is what stops two items that merely share
 // a paragraph from reading as a series. Sentence enders only count when followed
 // by a space, which leaves "12.5" whole.
 function passageSentences(blocks) {
@@ -243,7 +249,7 @@ function passageSentences(blocks) {
     .join(" ")
     .split(/[.!?]+(?=\s|$)/)
     .map(listTokens)
-    .filter((tokens) => tokens.length);
+    .filter((sentence) => sentence.tokens.length);
 }
 
 // Are these two token positions adjacent members of a list? They must be joined
@@ -301,19 +307,21 @@ const MAX_ITEM_WORDS = 2;
 // runs on. That misses a subset whose sentence continues unpunctuated past the
 // last item, which is the safe direction to miss in — a false positive here
 // blocks an author who did nothing wrong.
-function nextListItemAfter(tokens, at) {
+//
+// The item comes back as the passage wrote it ("silt", not "SILT"): it is quoted
+// to whoever has to fix the list, and ALL CAPS in a lesson means vocabulary.
+function nextListItemAfter({ tokens, raw }, at) {
   const tail = tokens.slice(at + 1, at + 4 + MAX_LIST_GAP_WORDS);
   if (!tail.length || !LIST_SEPARATORS.has(tail[0])) return null;
   const conjunction = tail.findIndex((t) => CONJUNCTIONS.has(t));
   if (conjunction === -1) return null;
 
-  const item = [];
-  for (const token of tokens.slice(at + 2 + conjunction)) {
-    if (LIST_SEPARATORS.has(token)) break;
-    item.push(token);
-  }
-  if (!item.length || item.length > MAX_ITEM_WORDS) return null;
-  return item.join(" ");
+  const start = at + 2 + conjunction;
+  let end = start;
+  while (end < tokens.length && !LIST_SEPARATORS.has(tokens[end])) end += 1;
+  const length = end - start;
+  if (!length || length > MAX_ITEM_WORDS) return null;
+  return raw.slice(start, end).join(" ");
 }
 
 // The ALL-CAPS learning vocabulary a passage teaches. Two letters minimum so
@@ -328,27 +336,29 @@ function capsVocabulary(blocks) {
   return new Set(found.map(normalizeText).filter(Boolean));
 }
 
+// A section's spelling words, each with where it sits: its block and its own
+// id, so a finding about one word points at that word's field even when the
+// same word is listed twice.
 function spellingWordsOf(blocks) {
   return blocks
     .filter((b) => b?.type === "spelling")
-    .flatMap((b) => (Array.isArray(b.words) ? b.words : []))
-    .map((w) => (typeof w === "string" ? w : w?.text) || "")
-    .map((w) => w.trim())
-    .filter(Boolean);
+    .flatMap((b) =>
+      (Array.isArray(b.words) ? b.words : []).map((w) => ({
+        word: ((typeof w === "string" ? w : w?.text) || "").trim(),
+        blockId: b.id,
+        itemId: typeof w === "string" ? null : w?.id,
+      })),
+    )
+    .filter((entry) => entry.word);
 }
 
-// Which spelling block each word sits in, so a finding about the word can point
-// at it. Keyed the way spellingWordsOf returns the words.
-function spellingBlocksOf(blocks) {
-  const at = new Map();
-  for (const block of blocks) {
-    if (block?.type !== "spelling" || !Array.isArray(block.words)) continue;
-    for (const w of block.words) {
-      const word = ((typeof w === "string" ? w : w?.text) || "").trim();
-      if (word && !at.has(word)) at.set(word, block.id);
-    }
-  }
-  return at;
+// The id of the orange answer whose text is `answer`, so a finding about one
+// answer can point at its field.
+function answerIdOf(block, answer) {
+  const found = (Array.isArray(block?.answers) ? block.answers : []).find(
+    (a) => typeof a !== "string" && (a?.text || "").trim() === answer,
+  );
+  return found?.id;
 }
 
 function answersOf(block) {
@@ -419,6 +429,7 @@ export function validateLesson(doc) {
       section,
       sectionId: section ? sections[section - 1]?.id || null : null,
       blockId: detail.blockId || null,
+      itemId: detail.itemId || null,
       params: detail.params || {},
       message,
     });
@@ -443,7 +454,6 @@ export function validateLesson(doc) {
       sentences: passageSentences(blocks),
       caps: capsVocabulary(blocks),
       spelling: spellingWordsOf(blocks),
-      spellingBlock: spellingBlocksOf(blocks),
       questions: blocks.filter((b) => b?.type === "question"),
     };
   });
@@ -462,8 +472,9 @@ export function validateLesson(doc) {
       const where = `${ctx.label}, question ${qi + 1}`;
       // Every finding below is about this question, and the editor numbers its
       // questions per section the same way (SectionCard's questionNumbers).
-      const about = (params = {}) => ({
+      const about = (params = {}, itemId = null) => ({
         blockId: block?.id,
+        itemId,
         params: { question: qi + 1, ...params },
       });
 
@@ -501,7 +512,7 @@ export function validateLesson(doc) {
             `${where}: the answer "${answer}" is more than one word. ` +
               "Orange answers should be single words — a speller pointing to letters on a letterboard " +
               "has to spell every one of them.",
-            about({ answer }),
+            about({ answer }, answerIdOf(block, answer)),
           );
         }
       }
@@ -578,7 +589,7 @@ export function validateLesson(doc) {
                   "question). If you meant to ask for a synonym, a definition, or anything else the speller " +
                   'supplies in their own words ("Give a synonym for GRATITUDE"), that is the other orange type: ' +
                   "`multiple_open`, whose answers are suggestions and are not held to the passage.",
-                about({ answer }),
+                about({ answer }, answerIdOf(block, answer)),
               );
             } else {
               error(
@@ -587,7 +598,7 @@ export function validateLesson(doc) {
                 ctx.number,
                 `${ctx.label}: the accepted answer "${answer}" does not appear in that section's passage. ` +
                   "Match the passage's own wording, and prefer a single concrete word the speller can find in the text.",
-                about({ answer }),
+                about({ answer }, answerIdOf(block, answer)),
               );
             }
           }
@@ -654,13 +665,16 @@ export function validateLesson(doc) {
           const key = [...distinct].sort().join("|");
           let partial = null;
           let complete = false;
-          for (const tokens of ctx.sentences) {
-            const run = findListRun(tokens, distinct);
+          for (const sentence of ctx.sentences) {
+            const run = findListRun(sentence.tokens, distinct);
             if (!run) continue;
             // The series has to end where the accepted answers do — checked at
             // the run's last item, wherever the conjunctions inside it fell, so
             // "cats and dogs" is caught in front of "and rabbits".
-            const nextItem = nextListItemAfter(tokens, run[run.length - 1].at);
+            const nextItem = nextListItemAfter(
+              sentence,
+              run[run.length - 1].at,
+            );
             if (!nextItem) {
               complete = true;
               break;
@@ -721,18 +735,6 @@ export function validateLesson(doc) {
         }
 
         case "background": {
-          const backgroundText =
-            typeof block.background === "string" ? block.background.trim() : "";
-          if (!backgroundText) {
-            error(
-              "E_BACKGROUND_NO_CONTEXT",
-              questionId,
-              ctx.number,
-              `${where}: this blue (background) question has no \`background\` field. ` +
-                "Add the prior-knowledge context the speller is expected to bring to it.",
-              about(),
-            );
-          }
           for (const answer of answers) {
             if (!containsPhrase(ctx.passage, normalizeText(answer))) continue;
             error(
@@ -1027,9 +1029,8 @@ export function validateLesson(doc) {
       );
     }
 
-    for (const word of ctx.spelling) {
+    for (const { word, blockId, itemId } of ctx.spelling) {
       const letters = letterCount(word);
-      const blockId = ctx.spellingBlock.get(word);
       if (letters < SPELLING_MIN_LETTERS || letters > SPELLING_MAX_LETTERS) {
         error(
           "E_SPELLING_LENGTH",
@@ -1039,6 +1040,7 @@ export function validateLesson(doc) {
             `${SPELLING_MIN_LETTERS}-${SPELLING_MAX_LETTERS} letters.`,
           {
             blockId,
+            itemId,
             params: {
               word,
               letters,
@@ -1056,7 +1058,7 @@ export function validateLesson(doc) {
           `${ctx.label}: the spelling word "${word}" is also ALL-CAPS learning vocabulary in that section's ` +
             "passage. The two lists are meant to be separate — reusing the passage's vocabulary as a warm-up word " +
             "is redundant and too obvious. Pick a different word on the same theme.",
-          { blockId, params: { word } },
+          { blockId, itemId, params: { word } },
         );
       }
     }
@@ -1069,7 +1071,7 @@ export function validateLesson(doc) {
   // substring test rather than a whole-word one.
   const seenSpelling = new Map();
   for (const ctx of context) {
-    for (const word of ctx.spelling) {
+    for (const { word, blockId, itemId } of ctx.spelling) {
       const norm = normalizeText(word);
       const first = seenSpelling.get(norm);
       if (first && first.ctx.number !== ctx.number) {
@@ -1079,10 +1081,7 @@ export function validateLesson(doc) {
           ctx.number,
           `The spelling word "${word}" is used in both section ${first.ctx.number} and section ${ctx.number}. ` +
             "Each section needs its own four words.",
-          {
-            blockId: ctx.spellingBlock.get(word),
-            params: { word, otherSection: first.ctx.number },
-          },
+          { blockId, itemId, params: { word, otherSection: first.ctx.number } },
         );
       } else if (first) {
         error(
@@ -1090,15 +1089,15 @@ export function validateLesson(doc) {
           `${ctx.id}|${norm}`,
           ctx.number,
           `${ctx.label} lists the spelling word "${word}" twice.`,
-          { blockId: ctx.spellingBlock.get(word), params: { word } },
+          { blockId, itemId, params: { word } },
         );
       } else {
-        seenSpelling.set(norm, { ctx, word });
+        seenSpelling.set(norm, { ctx, word, blockId, itemId });
       }
     }
   }
 
-  for (const [norm, { ctx, word }] of seenSpelling) {
+  for (const [norm, { ctx, word, blockId, itemId }] of seenSpelling) {
     for (const answer of allAnswers) {
       if (!answer.norm.includes(norm)) continue;
       error(
@@ -1109,7 +1108,8 @@ export function validateLesson(doc) {
           `(${answer.where}). A spelling word must not turn up in any answer anywhere in the lesson — the ` +
           "warm-up would give the answer away. Change one or the other.",
         {
-          blockId: ctx.spellingBlock.get(word),
+          blockId,
+          itemId,
           params: {
             word,
             answer: answer.text,
@@ -1348,7 +1348,14 @@ function checkFormatting(context, error, warn) {
           "Leave lesson prose plain: formatting scattered through a passage makes it look bloated and " +
           "machine-written, and ALL CAPS already marks the vocabulary. Keep only formatting a convention " +
           `requires (italics for a book's title or a scientific name), at most ${FORMAT_MAX_SPANS} spans a section.`,
-        spanDetail(spans, { count: spans.length, max: FORMAT_MAX_SPANS }),
+        // Either limit trips this, and the fix differs: fewer spans, or shorter
+        // ones. `tooMany` says which, so a UI doesn't cite the span limit to
+        // someone already under it.
+        spanDetail(spans, {
+          count: spans.length,
+          max: FORMAT_MAX_SPANS,
+          tooMany: spans.length > FORMAT_MAX_SPANS,
+        }),
       );
     }
 
