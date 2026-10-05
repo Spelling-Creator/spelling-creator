@@ -22,11 +22,11 @@ two engines:
 1. **The browser's built-in [Summarizer API](https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API)**
    (Chromium 138+, desktop). The model ships with the browser; the first use
    fetches it once.
-2. **[Gemma 4](https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX)
+2. **[LFM2.5-1.2B](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX)
    running in the page with
    [transformers.js](https://huggingface.co/docs/transformers.js)**, for
    browsers without the API. Still local (the model runs in the tab on
-   WebGPU), but the first use downloads **about 3 GB** of quantised weights
+   WebGPU), but the first use downloads **about 760 MB** of quantised weights
    (then cached in browser storage, so it's a one-time cost per device). The
    card says so before the click and shows a progress bar during.
 
@@ -37,9 +37,9 @@ The catch is that plenty of machines can run neither.
 The Summarizer API is **Chromium-only** (Chrome/Edge 138+, desktop), and even
 there the browser refuses to run it unless the machine clears a hardware bar
 (enough free disk space for the model, enough VRAM, and a non-metered connection
-for the one-time download). Firefox and Safari don't ship it at all. The Gemma
+for the one-time download). Firefox and Safari don't ship it at all. The LFM
 fallback applies an equivalent bar of its own, so a device is never offered a
-3 GB model it can't run or shouldn't fetch: **WebGPU with f16 shader support**,
+760 MB model it can't run or shouldn't fetch: **WebGPU with f16 shader support**,
 adapter buffer limits of at least 1 GiB (enough to turn away phone-class
 adapters, and deliberately no higher: desktop browsers cap the limits they
 report a few bytes short of 2 GiB however capable the GPU, so a bigger bar
@@ -62,8 +62,8 @@ The probe answers with a state and an engine, and the card reacts to each:
 | `downloading`  | Supported; a download is already running.       | Same as `downloadable`.                                                          |
 | `unavailable`  | Neither engine can run on this machine.         | **Renders nothing.**                                                             |
 
-The engine is `"browser"` or `"gemma"`, and it picks the wording around the
-button: the fallback's heads-up names the 3 GB download, because that is not a
+The engine is `"browser"` or `"lfm"`, and it picks the wording around the
+button: the fallback's heads-up names the 760 MB download, because that is not a
 click anyone should make uninformed. The fallback always reports
 `downloadable` (there's no cheap way to ask whether the browser still has the
 model cached; when it does, the download phase is just instant).
@@ -82,7 +82,7 @@ text; below that the summary would be about as long as the lesson.
 pages/lesson/LessonOverview.jsx
   └── LessonSummary.jsx      the card: probe, controls, progress, streamed output
         └── core/browser/summarizer  the engine picker (no React, fails closed)
-              └── core/browser/fallbackSummarizer  Gemma 4 via transformers.js,
+              └── core/browser/fallbackSummarizer  LFM2.5 via transformers.js,
                   a lazy chunk only a click ever loads
 ```
 
@@ -90,7 +90,7 @@ pages/lesson/LessonOverview.jsx
    summarise, and with which engine. No usable engine means the card doesn't
    render.
 2. **Click.** `createSummarizer()` opens a session: the built-in API when it
-   can take the options, Gemma otherwise. This _must_ happen from a click: the
+   can take the options, LFM otherwise. This _must_ happen from a click: the
    built-in API requires
    [transient activation](https://developer.mozilla.org/en-US/docs/Glossary/Transient_activation),
    and the fallback's download is far too heavy to start uninvited. The
@@ -100,11 +100,11 @@ pages/lesson/LessonOverview.jsx
 
    The built-in engine can pass the probe and still refuse `create()` (a
    failed download, low disk, an option combination the model turns down).
-   `createSummarizer()` then moves on to Gemma, but announces it first
+   `createSummarizer()` then moves on to LFM, but announces it first
    through its `onEngine` hook, before the fallback does any work. If the
-   reader was never shown the 3 GB notice (the probe had promised the
+   reader was never shown the 760 MB notice (the probe had promised the
    built-in engine), the card aborts the run right there, before the
-   download starts, and re-offers the button with the Gemma wording, so
+   download starts, and re-offers the button with the LFM wording, so
    the download only ever begins from an informed click.
 
 3. **Download (first run only).** If the model isn't on the machine yet, the
@@ -112,26 +112,26 @@ pages/lesson/LessonOverview.jsx
    events, or transformers.js's per-file progress summed into one fraction by
    `core/browser/downloadProgress.js`, the same plumbing the translation
    fallback uses). This is a one-time cost per device, not per lesson. The
-   built-in engine's download stops when the run is aborted; a Gemma download
+   built-in engine's download stops when the run is aborted; an LFM download
    can't be interrupted once started, so the abort signal is checked right
    before it would begin and an aborted run never starts one.
 4. **Trim to quota.** A model session has a finite input budget (`inputQuota`). A
    long lesson can overrun it, which would make the summary throw. `fitToQuota()`
    measures the text with `measureInputUsage()` and, if it's over, scales it down
    to fit, so a long lesson gets a summary of its first part (the card says so)
-   rather than an error. The Gemma session implements the same two members
+   rather than an error. The LFM session implements the same two members
    (a token budget, and a tokenizer count), so the card doesn't care which
    engine it's trimming for.
 5. **Stream.** `summarizeStreaming()` yields the summary in chunks, which the card
    appends as they arrive. A [skeleton](./overview.md) covers the gap between the
    click and the first chunk; the summary then writes itself into place. The
-   built-in session hands back a `ReadableStream` and the Gemma session an
+   built-in session hands back a `ReadableStream` and the LFM session an
    async generator; both are async iterables, so the card's `for await` loop
    is the same either way.
 6. **Clean up.** Leaving the page (or starting another run) aborts the in-flight
    request and calls `destroy()` on the session. For the built-in engine that
-   frees the model; for Gemma it stops the generation, while the loaded model
-   stays cached for the page's lifetime (reloading 3 GB of weights per summary
+   frees the model; for LFM it stops the generation, while the loaded model
+   stays cached for the page's lifetime (reloading 760 MB of weights per summary
    would make Regenerate unusable).
 
 ## What the reader can change
@@ -143,7 +143,7 @@ Two dropdowns map onto the Summarizer API's own options:
 - **Length** maps to `length`: **Short** (default), **Medium**, **Long**, relative
   sizes, not word counts.
 
-The Gemma engine honours the same options by prompt: each type/length pair
+The LFM engine honours the same options by prompt: each type/length pair
 maps to the shape the built-in API would produce (3/5/7 bullet points for key
 points, 1/3/5 sentences for prose, 12/17/22 words for a headline), so the
 dropdowns mean the same thing whichever engine answers.
@@ -171,36 +171,77 @@ usually attribution boilerplate.
 A `sharedContext` string tells the model it's looking at a spelling lesson written
 for a class, and that it's summarising for another teacher deciding whether to use
 it. Without it, a lesson full of question prompts and word lists reads to the model
-like a worksheet to fill in rather than a lesson to describe. The Gemma engine
-bakes the same instruction into its prompt, so both engines summarise for the
-same reader.
+like a worksheet to fill in rather than a lesson to describe. The LFM engine
+puts the same framing in a system message, and spells it out more firmly: a
+small model left to itself answers the lesson's questions ("What surprised me
+most was..."), so the system message forbids that. It also loses track of an
+instruction placed before three thousand tokens of lesson, so the lesson sits
+inside `<lesson>` tags and the requested shape is repeated after it.
 
 The language options (`expectedInputLanguages` / `outputLanguage`) are left unset
 on purpose: naming a language the local model doesn't have makes `create()` throw,
 whereas omitting them lets the browser detect the lesson's language and reply in
-it. The Gemma prompt asks for the summary in the lesson's own language for the
+it. The LFM prompt asks for the summary in the lesson's own language for the
 same effect.
 
-## The Gemma fallback, in a little more detail
+## The LFM fallback, in a little more detail
 
-`core/browser/fallbackSummarizer.js` runs
-[onnx-community/gemma-4-E2B-it-ONNX](https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX)
-with transformers.js. The repo is multimodal, but loading it through
-`Gemma4ForCausalLM` puts transformers.js in text-only mode, so only the text
-components are fetched: the embedding and decoder weights at `q4f16`
-quantisation, about 3 GB, skipping the vision and audio encoders entirely.
-That quantisation is also why the probe requires WebGPU's `shader-f16`
-feature, not just WebGPU, alongside the buffer-limit and metered-connection
-checks described under [Availability](#availability-the-feature-hides-itself).
+`core/browser/fallbackSummarizer.js` runs Liquid AI's
+[LFM2.5-1.2B-Instruct](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX)
+with transformers.js, at `q4f16` quantisation, about 760 MB. It's pinned to one
+commit of the repo in `MODEL_REVISION`, so a push upstream can't change what
+readers download. Generation is greedy with the light repetition penalty (1.05)
+Liquid recommends, which stops a small model looping on the same bullet. The
+quantisation is also why the probe requires WebGPU's `shader-f16` feature, not
+just WebGPU, alongside the buffer-limit and metered-connection checks described
+under [Availability](#availability-the-feature-hides-itself).
+
+The model is under the [LFM Open License v1.0](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX/blob/main/LICENSE),
+not an OSI licence: it's free to use for any organisation under $10M a year in
+revenue (and for qualifying non-profits), with no commercial licence above
+that. Readers' browsers fetch the weights straight from Hugging Face, so the
+app never redistributes them itself. If Spelling Creator ever crosses that
+line, this model has to go.
 
 The module presents the same session surface the card already speaks
 (`summarizeStreaming()`, `inputQuota`, `measureInputUsage()`, `destroy()`), so
 everything above the engine picker is engine-blind. It carries
-`engine: "gemma"`, which the card uses to pick the honest wording for the
+`engine: "lfm"`, which the card uses to pick the honest wording for the
 download heads-up and the "generated by" caveat. Generation streams through a
 `TextStreamer` bridged to an async generator, aborts between tokens via an
 `InterruptableStoppingCriteria`, and runs one generation at a time (the ONNX
 sessions are shared page state).
+
+### Languages
+
+LFM2.5-1.2B officially supports eight languages: English, Arabic, Chinese,
+French, German, Japanese, Korean and Spanish. On a lesson in anything else it
+can produce a confident summary of a story that isn't there. Tested on the
+hub's Danish "Prindsessen paa Ærten", it described a prince facing "political
+challenges in Denmark", in English. Gemma was vague on the same lesson but not
+wrong. Readers on the built-in engine aren't affected.
+
+### Why this model
+
+Every candidate was run in Chromium on an Apple Silicon Mac against the same
+two hub lessons: "Volcanoes" (six sections, about 2,900 tokens) and the Danish
+"Prindsessen paa Ærten". Times are for the whole Volcanoes lesson.
+
+| Model                                                                                            | q4f16 download | First word | Whole summary | Outcome                                                                                                                                |
+| ------------------------------------------------------------------------------------------------ | -------------- | ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [Gemma 4 E2B](https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX) (the previous fallback) | about 3.1 GB   | 14 to 15 s | 16 to 29 s    | Good summaries, but half the download is one per-layer embedding table, and it took 53 s to load.                                      |
+| **[LFM2.5-1.2B-Instruct](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX)**            | about 760 MB   | 5 to 6 s   | 6 to 7 s      | Summaries on a par with Gemma's in English, loads in about 20 s. Weak outside its eight languages (above).                             |
+| [LFM2.5-2.6B](https://huggingface.co/LiquidAI/LFM2.5-2.6B-ONNX)                                  | about 1.5 GB   | 9 s        | 22 to 28 s    | The best summaries of the lot, Danish included, but only with its reasoning on, which it streams before every answer. Off, it's worse. |
+| [Qwen3-1.7B](https://huggingface.co/schmuell/Qwen3-1.7B) (Apache 2.0)                            | about 760 MB   | 21 s       | 24 s          | Works, but slower than Gemma to start writing, and the onnx-community build won't load at all (`std::bad_alloc`).                      |
+| [Qwen3.5-2B](https://huggingface.co/onnx-community/Qwen3.5-2B-ONNX) (Apache 2.0)                 | about 1.4 GB   | minutes    | minutes       | 42 s before the first word on a 236-token excerpt.                                                                                     |
+| [Granite 4.0 1B](https://huggingface.co/onnx-community/granite-4.0-1b-ONNX-web) (Apache 2.0)     | about 1.25 GB  |            |               | Loads, but its q4f16 build writes nothing but `!!!!` (16-bit overflow).                                                                |
+
+A summary is almost all prompt (a whole lesson in, a few lines out), so how
+fast a model reads its prompt matters far more here than how fast it writes.
+That is what ruled out Qwen3.5, whose linear-attention layers are slow to
+prefill in ONNX Runtime Web
+([transformers.js#1599](https://github.com/huggingface/transformers.js/issues/1599)).
+LFM2.5's short-convolution layers have no such problem.
 
 ## Testing it
 
@@ -214,7 +255,7 @@ await Summarizer.availability();
 // "available" | "downloadable" | "downloading" | "unavailable"
 ```
 
-For the **Gemma fallback** you need a browser without the Summarizer API (or
+For the **LFM fallback** you need a browser without the Summarizer API (or
 one where it answers `"unavailable"`) whose WebGPU clears the probe's bar, on
 an unmetered connection:
 
@@ -225,7 +266,7 @@ adapter?.features.has("shader-f16") &&
   adapter.limits.maxStorageBufferBindingSize >= 1024 ** 3;
 ```
 
-Be warned that actually clicking Summarise there downloads the 3 GB model.
+Be warned that actually clicking Summarise there downloads the 760 MB model.
 
 If neither answers yes, the card is _supposed_ to be invisible; that's the
 feature working, not a bug. On a machine that can't run it, you can still exercise
@@ -249,14 +290,14 @@ window.Summarizer = {
 };
 ```
 
-The Gemma path can be exercised the same way without the 3 GB download: stub
+The LFM path can be exercised the same way without the 760 MB download: stub
 `navigator.gpu` so the probe says yes (an object whose `requestAdapter()`
 resolves to `{ features: new Set(["shader-f16"]), limits: { maxBufferSize: 2147483644, maxStorageBufferBindingSize: 2147483644 } }`,
 the limits real desktop browsers report), make sure
 `window.Summarizer` is absent, and serve a stub module in place of
 `fallbackSummarizer.js` with your browser driver's network mocking (it only
 needs `createFallbackSummarizer` returning the session shape above plus
-`engine: "gemma"`).
+`engine: "lfm"`).
 
 ## Trust
 

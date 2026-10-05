@@ -222,7 +222,7 @@ the MCP server cannot reach it by accident:
   commonsImages         search Wikimedia Commons + download an image (no key, no proxy)
   presence              per-collaborator colour + selection presence helpers
   summarizer            on-device summaries: browser Summarizer API with an in-page fallback (fails closed when neither can run)
-  fallbackSummarizer    the fallback itself: Gemma 4 via transformers.js on WebGPU, a lazy chunk only a click ever loads
+  fallbackSummarizer    the fallback itself: LFM2.5 via transformers.js on WebGPU, a lazy chunk only a click ever loads
   translator            on-device comment translation: browser Translator API with an in-page fallback
   fallbackTranslator    the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
   downloadProgress      shared by both fallbacks: transformers.js's per-file download events summed into the one 0-1 fraction the UI shows
