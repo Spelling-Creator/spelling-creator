@@ -17,7 +17,6 @@ import {
   exactMatches,
   lastSegment,
   rankOf,
-  sitelinksPattern,
   sparql,
 } from "./wikidata.js";
 
@@ -59,7 +58,10 @@ export function mediaQuery(itemIds, pids) {
   const props = pids.map((p) => `("${p}" p:${p} ps:${p})`).join(" ");
   return `SELECT ?item ?links ?pid ?file ?rank WHERE {
   VALUES ?item { ${items} }
-  ${sitelinksPattern()}
+  # How many Wikipedias have a page on it: the lion has 274 and the family
+  # name Lion has 2, so of several exact matches the best known is the one
+  # meant.
+  ?item wikibase:sitelinks ?links .
   OPTIONAL {
     VALUES (?pid ?p ?ps) { ${props} }
     ?item ?p ?st .

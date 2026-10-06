@@ -1,10 +1,10 @@
 // Talking to Wikidata: the plumbing shared by everything that reads it.
 //
-// Three things use it, each with its own idea of what to ask:
+// Two things use it, each with its own idea of what to ask:
 //
 //   ./factCheck.js       a lesson's numbers and dates, compared with Wikidata's.
-//   ./wikidataMedia.js   the pictures and sounds an item has, which are files on
-//                        Wikimedia Commons.
+//   ./wikidataMedia.js   the pictures an item has, which are files on Wikimedia
+//                        Commons.
 //
 // What they share is here: finding items by name (wbsearchentities, small and
 // fast) and asking the query service (SPARQL) for exactly the statements
@@ -35,16 +35,20 @@ export const lastSegment = (iri) => String(iri || "").replace(/^.*[/#]/, "");
  * @property {typeof fetch} [fetch]  Defaults to the global one.
  * @property {string} [userAgent]    Required outside a browser.
  * @property {string} [language]     For item names and descriptions; "en".
+ * @property {AbortSignal} [signal]  Cancels every request of the lookup: a
+ *   budget for the whole chain, for a caller that can't wait on each request's
+ *   own timeout in turn.
  */
 
 async function getJson(url, opts = {}, init = {}) {
   const fetchImpl = opts.fetch || globalThis.fetch;
   const headers = { Accept: "application/json", ...(init.headers || {}) };
   if (opts.userAgent) headers["User-Agent"] = opts.userAgent;
+  const timeout = AbortSignal.timeout(15_000);
   const res = await fetchImpl(url, {
     ...init,
     headers,
-    signal: AbortSignal.timeout(15_000),
+    signal: opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout,
   });
   if (!res.ok) throw new Error(`Wikidata request failed (${res.status}).`);
   return res.json();
@@ -80,11 +84,16 @@ export async function searchItems(name, opts = {}) {
   }));
 }
 
-const squash = (s) =>
-  String(s || "")
-    .trim()
+/**
+ * Text as it is matched: one space between words, no case. A name against a
+ * label here; a quote against its passage in the fact check.
+ */
+export function squashText(text) {
+  return String(text || "")
     .replace(/\s+/g, " ")
+    .trim()
     .toLowerCase();
+}
 
 /**
  * The items whose label or alias IS the name, not just starts with it, in the
@@ -93,49 +102,17 @@ const squash = (s) =>
  *
  * The search's order is not a good guide to which one is meant. For "lion" it
  * puts a family name first and the animal second; for "Mercury", a car brand
- * ahead of the planet. Callers rank these by sitelinks (see sitelinksQuery).
+ * ahead of the planet. Callers rank these by sitelinks, which the media query
+ * in ./wikidataMedia.js reads along with everything else it asks for.
  * @returns {Promise<{ id: string, label: string, description: string }[]>}
  */
 export async function exactMatches(name, opts = {}) {
-  const wanted = squash(name);
+  const wanted = squashText(name);
   if (!wanted) return [];
   const hits = await searchItems(name, { ...opts, limit: opts.limit || 10 });
   return hits
-    .filter((hit) => squash(hit.match) === wanted)
+    .filter((hit) => squashText(hit.match) === wanted)
     .map(({ id, label, description }) => ({ id, label, description }));
-}
-
-/**
- * How many Wikipedias (and sister projects) have a page on each item: the
- * best measure there is of which "Mercury" someone means. The lion has 274
- * and the family name Lion has 2; the planet has 274, the element 185, the car
- * brand 27.
- *
- * Returned as a query fragment binding `?links` for `?item`, so a caller can
- * fold it into the query it was going to make anyway.
- */
-export function sitelinksPattern() {
-  return "?item wikibase:sitelinks ?links .";
-}
-
-/**
- * The item a name most likely means: of its exact matches, the one with the
- * most sitelinks.
- * @returns {Promise<{ id: string, label: string, description: string } | null>}
- */
-export async function findItem(name, opts = {}) {
-  const matches = await exactMatches(name, opts);
-  if (matches.length < 2) return matches[0] || null;
-  const rows = await sparql(
-    `SELECT ?item ?links WHERE { VALUES ?item { ${matches.map((m) => `wd:${m.id}`).join(" ")} } ${sitelinksPattern()} }`,
-    opts,
-  );
-  const links = new Map(
-    rows.map((r) => [lastSegment(r.item?.value), Number(r.links?.value) || 0]),
-  );
-  return [...matches].sort(
-    (a, b) => (links.get(b.id) || 0) - (links.get(a.id) || 0),
-  )[0];
 }
 
 /**

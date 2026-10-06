@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { commonsFileTitle, exactMatches, findItem } from "./wikidata.js";
+import { commonsFileTitle, exactMatches } from "./wikidata.js";
 import {
   IMAGE_ROLES,
   mediaFromBindings,
@@ -68,20 +68,6 @@ describe("finding the item a name means", () => {
       "Q140",
     ]);
     expect(await exactMatches("  ", { fetch })).toEqual([]);
-  });
-
-  it("prefers the best known of several, not the search's first", async () => {
-    const fetch = fakeWikidata({
-      search: [
-        hit("Q613883", "Mercury", "car brand"),
-        hit("Q308", "Mercury", "planet"),
-      ],
-      bindings: [
-        { item: { value: `${ITEM}Q613883` }, links: { value: "27" } },
-        { item: { value: `${ITEM}Q308` }, links: { value: "274" } },
-      ],
-    });
-    expect((await findItem("Mercury", { fetch })).id).toBe("Q308");
   });
 });
 

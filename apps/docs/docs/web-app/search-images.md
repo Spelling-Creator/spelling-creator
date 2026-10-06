@@ -93,9 +93,17 @@ a seal: real pictures of the thing, but not ones to put in front of a speller
 unasked.
 
 Wikidata is an extra here, not the search. If it is slow or down, the dialog
-still shows Commons' own results and says nothing about it. The lookup is two
-small requests (a name search, then one query), made alongside the Commons
-search rather than before it.
+still shows Commons' own results and says nothing about it. The lookup is three
+small requests (a name search, one query, and a Commons lookup of the files),
+made alongside the Commons search rather than before it, with a budget of four
+seconds for all three (`wikidataPickPages` in `packages/core/src/wikimedia.js`,
+which both apps use). A query service under load costs the picks, never the
+search.
+
+A file Wikidata names may have been renamed on Commons since, with a redirect
+left behind, or be spelt with different capitals. The lookup asks Commons to
+follow redirects and maps each title through the renames Commons reports, so
+the picture still shows under its current name.
 
 The shared Wikidata plumbing (searching names, running queries, reading Commons
 file names out of query results) is `packages/core/src/wikidata.js`, which the

@@ -18,13 +18,14 @@
 // errors it surfaces.
 
 import {
+  IMAGEINFO_PARAMS,
   cleanFileTitle,
   commonsQuery,
   extmetaCaption,
   isUsableImage,
   rankPages,
+  wikidataPickPages,
 } from "../wikimedia.js";
-import { topicImages } from "../wikidataMedia.js";
 
 // Strip HTML to plain text using DOMParser, which (unlike assigning innerHTML)
 // never executes scripts or fetches sub-resources. Commons' extmetadata fields
@@ -66,59 +67,6 @@ function normaliseHit(page, info) {
   };
 }
 
-// What every imageinfo request here asks for: a grid thumbnail, and the
-// licence/author metadata the caption needs.
-const IMAGEINFO = {
-  prop: "imageinfo",
-  iiprop: "url|size|mime|extmetadata",
-  iiurlwidth: "320", // grid thumbnail size
-  iiextmetadatafilter: "Artist|LicenseShortName|LicenseUrl",
-  iiextmetadatalanguage: "en",
-};
-
-/**
- * The pictures Wikidata lists for the topic, as hits like the search's, each
- * with `wikidata: { role, item }` saying what it is and of what (see
- * ../wikidataMedia.js). Empty when the query names no particular thing.
- *
- * Wikidata is an extra here, not the search: if it is slow to answer or down,
- * the dialog still has Commons' own results, so failures come back empty
- * rather than as an error.
- * @param {string} query
- * @returns {Promise<object[]>}
- */
-export async function wikidataImageHits(query) {
-  let found;
-  try {
-    found = await topicImages(query);
-  } catch {
-    return [];
-  }
-  if (!found) return [];
-  let pages;
-  try {
-    pages = await commonsQuery({
-      action: "query",
-      titles: found.images.map((image) => image.file).join("|"),
-      ...IMAGEINFO,
-    });
-  } catch {
-    return [];
-  }
-  const byTitle = new Map(pages.map((p) => [p.title, p]));
-  const hits = [];
-  for (const image of found.images) {
-    const page = byTitle.get(image.file);
-    const info = page && page.imageinfo && page.imageinfo[0];
-    if (!isUsableImage(info)) continue;
-    hits.push({
-      ...normaliseHit(page, info),
-      wikidata: { role: image.role, item: found.item },
-    });
-  }
-  return hits;
-}
-
 /**
  * Search Wikimedia Commons' File namespace for images matching `query`.
  *
@@ -126,8 +74,12 @@ export async function wikidataImageHits(query) {
  * get, in one request, each match's thumbnail URL, dimensions, MIME type, and
  * the licence/author metadata needed for attribution.
  *
- * On the first page, the pictures Wikidata lists for the topic come first (see
- * wikidataImageHits), and are not repeated among the search's own results.
+ * On the first page, the pictures Wikidata lists for the topic come first,
+ * each with `wikidata: { role, item }` saying what it is and of what, and are
+ * not repeated among the search's own results. They are looked up alongside
+ * the search, not before it, and on a budget of a few seconds
+ * (wikidataPickPages in ../wikimedia.js), so a slow query service costs the
+ * picks and never the search.
  *
  * @param {string} query  Free-text search terms.
  * @param {object} [opts]
@@ -147,7 +99,7 @@ export async function searchWikimediaImages(query, opts = {}) {
   const page = Math.max(1, Number(opts.page) || 1);
 
   const [picks, pages] = await Promise.all([
-    page === 1 ? wikidataImageHits(q) : [],
+    page === 1 ? wikidataPickPages(q) : [],
     commonsQuery(
       {
         action: "query",
@@ -156,14 +108,17 @@ export async function searchWikimediaImages(query, opts = {}) {
         gsrnamespace: "6", // File: namespace
         gsrlimit: String(perPage),
         gsroffset: String((page - 1) * perPage),
-        ...IMAGEINFO,
+        ...IMAGEINFO_PARAMS,
       },
       { httpErrorMessage: (status) => `Search failed (${status}).` },
     ),
   ]);
 
-  const picked = new Set(picks.map((hit) => hit.title));
-  const hits = [...picks];
+  const hits = picks.map(({ page: picked, info, image, item }) => ({
+    ...normaliseHit(picked, info),
+    wikidata: { role: image.role, item },
+  }));
+  const picked = new Set(hits.map((hit) => hit.title));
   for (const p of rankPages(pages)) {
     const info = p.imageinfo && p.imageinfo[0];
     // Skip non-images (Commons also holds audio/video/PDF in the File namespace).

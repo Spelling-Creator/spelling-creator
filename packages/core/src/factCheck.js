@@ -50,8 +50,14 @@ import {
   rankOf,
   searchItems,
   sparql,
+  squashText,
   wikidataItemUrl,
 } from "./wikidata.js";
+
+// The Worker places a quote in its passage with squashText, and the editor
+// asks whether it is still there with it. Both take it from here, so the two
+// can't drift apart.
+export { squashText };
 
 /**
  * A lesson's passages in reading order: every text block with words in it, as
@@ -80,19 +86,6 @@ export function quoteStillThere(fact, text) {
   return (
     Boolean(fact.quote) && squashText(text).includes(squashText(fact.quote))
   );
-}
-
-/**
- * Text as it is matched: one space between words, no case. The Worker places
- * a quote in its passage with this and the editor asks whether it is still
- * there with this, and the two have to agree or a placed finding would read as
- * changed.
- */
-export function squashText(text) {
-  return String(text || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
 }
 
 // Calendar models a Wikidata date can be in. Month and day are only compared
