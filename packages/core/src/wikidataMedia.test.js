@@ -22,7 +22,6 @@ const row = (item, pid, file, extra = {}) => ({
         rank: { value: RANK + (extra.rank || "NormalRank") },
       }
     : {}),
-  ...(extra.language ? { language: { value: ITEM + extra.language } } : {}),
 });
 
 // A stand-in for the two Wikidata endpoints.
@@ -106,16 +105,13 @@ describe("reading an item's files", () => {
     ]);
   });
 
-  it("keeps a file once, with every language it is in", () => {
+  it("keeps a file listed under two properties once", () => {
     const out = mediaFromBindings(
-      [
-        row("Q1", "P443", "Say.ogg", { language: "Q1860" }),
-        row("Q1", "P443", "Say.ogg", { language: "Q150" }),
-      ],
-      ["P443"],
+      [row("Q1", "P18", "Same.jpg"), row("Q1", "P2716", "Same.jpg")],
+      pids,
     ).get("Q1");
     expect(out.files).toHaveLength(1);
-    expect(out.files[0].languages).toEqual(["Q1860", "Q150"]);
+    expect(out.files[0]).toMatchObject({ pid: "P18", file: "File:Same.jpg" });
   });
 
   it("still reports an item with no files, so its sitelinks count", () => {

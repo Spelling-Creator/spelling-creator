@@ -48,16 +48,16 @@ export const IMAGE_ROLES = [
 
 /**
  * The query for several items' Commons files under the given properties, with
- * each statement's rank, the language a recording is in, and each item's
- * sitelinks (so the caller can tell which "Mercury" is meant without asking
- * again). An item with no such files still comes back, once, with its count.
+ * each statement's rank and each item's sitelinks (so the caller can tell
+ * which "Mercury" is meant without asking again). An item with no such files
+ * still comes back, once, with its count.
  * Files that are no longer current (an end date on the statement) are left
  * out.
  */
 export function mediaQuery(itemIds, pids) {
   const items = itemIds.map((id) => `wd:${id}`).join(" ");
   const props = pids.map((p) => `("${p}" p:${p} ps:${p})`).join(" ");
-  return `SELECT ?item ?links ?pid ?file ?rank ?language WHERE {
+  return `SELECT ?item ?links ?pid ?file ?rank WHERE {
   VALUES ?item { ${items} }
   ${sitelinksPattern()}
   OPTIONAL {
@@ -66,18 +66,17 @@ export function mediaQuery(itemIds, pids) {
     ?st ?ps ?file ; wikibase:rank ?rank .
     # A file with an end date is history: Japan's flag from 1870 to 1999.
     FILTER NOT EXISTS { ?st pq:P582 ?ended . }
-    OPTIONAL { ?st pq:P407 ?language . }
   }
 }`;
 }
 
 /**
  * The query's rows by item: its sitelinks, and its files in the order of
- * `pids`, preferred statements first within each. Deprecated statements and
- * repeats are dropped; a file recorded in several languages comes back once,
- * with all of them.
+ * `pids`, preferred statements first within each. Deprecated statements are
+ * dropped, and a file listed under two properties comes back once, under the
+ * first.
  * @returns {Map<string, { links: number, files: { pid: string, file: string,
- *   preferred: boolean, languages: string[] }[] }>}
+ *   preferred: boolean }[] }>}
  */
 export function mediaFromBindings(bindings, pids) {
   const items = new Map();
@@ -92,13 +91,9 @@ export function mediaFromBindings(bindings, pids) {
     const file = commonsFileTitle(row.file?.value);
     const rank = rankOf(row.rank?.value);
     if (!file || rank === "deprecated") continue;
-    const language = lastSegment(row.language?.value);
     const { byFile } = items.get(id);
     const seen = byFile.get(file);
     if (seen) {
-      if (language && !seen.languages.includes(language)) {
-        seen.languages.push(language);
-      }
       seen.preferred ||= rank === "preferred";
       continue;
     }
@@ -106,7 +101,6 @@ export function mediaFromBindings(bindings, pids) {
       pid: row.pid?.value,
       file,
       preferred: rank === "preferred",
-      languages: language ? [language] : [],
     });
   }
   const order = new Map(pids.map((p, i) => [p, i]));
@@ -136,7 +130,7 @@ export function mediaFromBindings(bindings, pids) {
  * @param {string[]} pids
  * @param {import("./wikidata.js").WikidataOptions} [opts]
  * @returns {Promise<{ item: { id: string, label: string, description: string },
- *   files: { pid: string, file: string, preferred: boolean, languages: string[] }[] } | null>}
+ *   files: { pid: string, file: string, preferred: boolean }[] } | null>}
  */
 export async function topicMedia(topic, pids, opts = {}) {
   const candidates = await exactMatches(topic, opts);
