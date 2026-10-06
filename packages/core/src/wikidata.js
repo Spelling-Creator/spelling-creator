@@ -40,7 +40,15 @@ export const lastSegment = (iri) => String(iri || "").replace(/^.*[/#]/, "");
  *   own timeout in turn.
  */
 
-async function getJson(url, opts = {}, init = {}) {
+/**
+ * A JSON request to a Wikimedia API, on the terms above: the caller's fetch
+ * and User-Agent, 15 s per request inside any budget the caller set. Shared
+ * with ./wikipedia.js.
+ * @param {string} url
+ * @param {WikidataOptions} [opts]
+ * @param {RequestInit} [init]
+ */
+export async function fetchJson(url, opts = {}, init = {}) {
   const fetchImpl = opts.fetch || globalThis.fetch;
   const headers = { Accept: "application/json", ...(init.headers || {}) };
   if (opts.userAgent) headers["User-Agent"] = opts.userAgent;
@@ -50,7 +58,7 @@ async function getJson(url, opts = {}, init = {}) {
     headers,
     signal: opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout,
   });
-  if (!res.ok) throw new Error(`Wikidata request failed (${res.status}).`);
+  if (!res.ok) throw new Error(`Wikimedia request failed (${res.status}).`);
   return res.json();
 }
 
@@ -75,7 +83,7 @@ export async function searchItems(name, opts = {}) {
     formatversion: "2",
     origin: "*",
   })}`;
-  const data = await getJson(url, opts);
+  const data = await fetchJson(url, opts);
   return (data.search || []).map((hit) => ({
     id: hit.id,
     label: hit.display?.label?.value || hit.label || hit.id,
@@ -130,8 +138,8 @@ export async function sparql(query, opts = {}) {
   const get = `${WIKIDATA_SPARQL}?${params}`;
   const data =
     get.length < 7000
-      ? await getJson(get, opts, accept)
-      : await getJson(WIKIDATA_SPARQL, opts, {
+      ? await fetchJson(get, opts, accept)
+      : await fetchJson(WIKIDATA_SPARQL, opts, {
           ...accept,
           method: "POST",
           body: params,

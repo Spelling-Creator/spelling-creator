@@ -110,9 +110,9 @@ function contextOf({ code, params }) {
 }
 
 // One formatter per language: describeFinding runs for every finding each time
-// the panel renders.
+// the panel renders. Shared with the fact check's wording (factCheck.js).
 const listFormats = new Map();
-function formatList(language, items) {
+export function formatList(language, items) {
   if (!listFormats.has(language)) {
     let format = null;
     try {

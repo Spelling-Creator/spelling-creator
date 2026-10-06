@@ -50,7 +50,7 @@ could only fail.
                                           │ 2. each quote must be in its passage
                                           ▼
                                   core/factCheck checkClaims
-                                          │ 3. wbsearchentities: names to candidate items
+                                          │ 3. Wikipedia search: names to candidate items
                                           │ 4. one SPARQL query: every candidate's values
                                           │ 5. pick the item, convert units, compare
                                           ▼
@@ -87,10 +87,14 @@ put the year in `value` (negative for BC) and may add `month` and `day`.
 
 ### What can be checked
 
-Only numbers and dates about one specific, named thing. Each property maps to one or more
-Wikidata properties, tried in order; the first the item has is used, and they are never
-pooled, so a tower's elevation above sea level can't agree with a sentence about its
-height.
+Numbers, dates and named facts about one specific, named thing. Each property maps to one
+or more Wikidata properties, tried in order; the first the item has is used, and they are
+not pooled unless the table says so, so a tower's elevation above sea level can't agree
+with a sentence about its height. The pooled ones are words that honestly mean either
+("leader" is a prime minister or a president).
+
+A named fact ("CANBERRA is the capital of Australia") puts the name in `stated` instead
+of a number in `value`: `{ subject: "Australia", property: "capital", stated: "Canberra" }`.
 
 | Property              | Wikidata                                               | For                                    |
 | --------------------- | ------------------------------------------------------ | -------------------------------------- |
@@ -113,6 +117,17 @@ height.
 | `happened`            | point in time (P585), start (P580), launch date (P619) | events, launches                       |
 | `discovered`          | P575                                                   |                                        |
 | `published`           | P577                                                   | books, films, songs                    |
+| `capital`             | capital (P36)                                          | countries, states, provinces           |
+| `country`             | P17                                                    | anything in a country                  |
+| `continent`           | P30                                                    |                                        |
+| `region`              | pooled: located in (P131), location (P276)             | the state, county or city it is in     |
+| `language`            | official language (P37)                                | countries, regions                     |
+| `currency`            | P38                                                    | countries                              |
+| `leader`              | pooled: head of government (P6), head of state (P35)   | the current prime minister, president  |
+| `discoverer`          | discoverer or inventor (P61)                           |                                        |
+| `creator`             | pooled: author, creator, architect, composer, director | books, works, buildings, films         |
+| `named_after`         | P138                                                   |                                        |
+| `flows_into`          | mouth of the watercourse (P403)                        | rivers                                 |
 
 Units cover metric and imperial length, area, volume, mass and speed, temperature in all
 three scales, durations from seconds to thousands of years, astronomical units,
@@ -127,6 +142,15 @@ deliberately generous and "disagrees" means something.
 - **Every current value counts.** Deprecated statements never do. Everest has 8,848,
   8,848.86 and 8,850; the Eiffel Tower started in 1887 and opened in 1889. A passage using
   any of them is not wrong.
+- **Except values with an end date, which never count.** Melbourne was Australia's
+  capital until 1927, and Wikidata records it with that end date, so a passage saying it
+  still is disagrees. The same rule retires former prime ministers and the height of a
+  demolished building.
+- **A named fact agrees when the stated thing is one of the current values.** The stated
+  name is looked up the way a topic is (an exact label or alias, so "USA" finds the United
+  States), and the claim agrees if any of the items it could mean is among them; a name
+  the search doesn't know is compared as words against the value's label instead. The
+  Nile's `country` is seven countries, and a passage naming any one of them is right.
 - **Except dated figures, where only the latest counts.** A population with several
   "point in time" qualifiers is compared with the most recent, and the finding says which
   year it is from ("2,103,778 as of 2023"). A passage agreeing with the 1910 census is out of
@@ -150,14 +174,51 @@ quotes Wikidata in: a passage in feet is told "29,031.69 feet", not "8,848.86 me
 
 ### Picking the item
 
-`wbsearchentities` returns up to three candidates for each name. The one used is, in
-order: one that has the property _and_ whose description mentions the claim's `kind`; one
-that has the property; one whose description mentions the kind; the top result. A search
-for "Mercury" finds the planet and the element, and only one of them has an orbital
-period.
+Names are turned into items through **Wikipedia's article search**
+(`packages/core/src/wikipedia.js`), not Wikidata's own. Wikidata's `wbsearchentities`
+matches labels by prefix and ranks them in an order that has little to do with which thing
+a lesson means: for "Hamlet" it puts a kind of village, a 1948 film and two given names
+ahead of the play, and for "Amazon" the river is nowhere in the first eight. Wikipedia's
+search ranks by how much an article matters and reads a phrase, so the subject is searched
+together with its `kind` ("Hamlet play", "Georgia country", "Mercury planet") and the right
+article comes first in every case tried. Each article names its Wikidata item, and the
+data is read from there as before.
+
+Two searches are made together, for the name alone and for the name with its `kind`, and
+their top three articles are the candidates, the bare name's first. The name alone finds
+what most people mean by it ("Hamlet" the play, "Titanic" the ship, "penicillin" itself);
+the kind finds another sense where that is the one meant ("Amazon river", "Mercury
+planet", "Georgia state"). Asking only with the kind was tried and ranks worse when the
+top article doesn't say the kind: "penicillin medicine" puts the discovery of penicillin
+above penicillin.
+
+The one used is the first candidate whose article _title_ is the name with the kind added
+and nothing else ("Mercury (planet)", "Amazon River", "Georgia (U.S. state)"); failing
+that, the first. A title that merely has the kind in it is something else: "Australian
+country music" is not Australia. The title and not Wikidata's description, because a
+description is prose that says "tragedy" for a play and "liner" for a ship, and matching a
+word of it picked Ur-Hamlet over Hamlet. Having the property never
+moves a candidate up past the first when a kind was given: "Titanic" the ship has no
+creator on Wikidata, and the right answer is "no value", not the 1997 film's director.
+Without a kind, a first that has nothing to check gives way to one that has: "Mercury" and
+an orbital period is the planet.
+
+If Wikipedia finds no article, or doesn't answer, the name falls back to
+`wbsearchentities`, whose order means little, so there the candidate that has the property
+and whose description says it is the kind wins, then one that is the kind, then one that
+has the property.
+
+The stated name of a named fact is resolved to its top Wikipedia article (so "USA" is the
+United States, and "Fleming" is Alexander Fleming), with Wikidata's exact label matches as
+the fallback, and then compared as words against the value's label if neither finds it:
+the whole label, or its end, so "Fleming" is Alexander Fleming. One article, not three:
+the second and third hits for a short name are other things, and a claim must not agree
+because one of them happened to be a value.
 
 When this picks wrong, the finding says so plainly ("Checked against Georgia (state of the
-United States)"), which is why the item is always shown.
+United States)"), which is why the item is always shown. The label and description come
+from Wikidata when the item had anything to check, and from the article's title ("Georgia",
+"country") otherwise.
 
 ### Why one SPARQL query
 
@@ -173,7 +234,8 @@ dates come back unshifted.
 
 ## Cost, limits and caching
 
-A check is one model call and, typically, one search per distinct name plus one SPARQL
+A check is one model call and, typically, two Wikipedia searches per distinct subject
+(the name, and the name with its kind), one per distinct stated name, and one SPARQL
 query. It goes through the same Turnstile check and per-IP rate limiter as the other
 [AI helpers](./ai-text-suggestions.md) and costs one token.
 
@@ -191,8 +253,9 @@ query. It goes through the same Turnstile check and per-IP rate limiter as the o
   `SpellingCreator/1.0 (https://spellingcreator.org; lesson fact checking)`, and the MCP
   server sends the one it already uses for Commons.
 
-A self-hosted instance needs outbound HTTPS to `www.wikidata.org` and
-`query.wikidata.org`, as well as an AI provider and a Turnstile key.
+A self-hosted instance needs outbound HTTPS to `en.wikipedia.org` (or the Wikipedia of
+the lesson's language), `www.wikidata.org` and `query.wikidata.org`, as well as an AI
+provider and a Turnstile key.
 
 ## Where the code is
 
@@ -200,6 +263,7 @@ A self-hosted instance needs outbound HTTPS to `www.wikidata.org` and
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparison. `checkClaims(claims, opts)`. |
 | `packages/core/src/wikidata.js`                       | The requests: name search and SPARQL, shared with the [image search](./search-images.md).                 |
+| `packages/core/src/wikipedia.js`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article.                               |
 | `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                |
 | `apps/api/src/routes/ai.js`                           | The `factCheck` mode: Turnstile, rate limit, cache.                                                       |
 | `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                         |
@@ -213,9 +277,10 @@ A self-hosted instance needs outbound HTTPS to `www.wikidata.org` and
 
 ## What it doesn't do
 
-- **Facts without a number or date** ("the Nile flows north") aren't checked. Comparing
-  those means matching meaning, not values, and is where a model would start judging
-  rather than extracting.
+- **Facts that aren't a number, a date or a name** ("the Nile flows north") aren't
+  checked. Comparing those means matching meaning, not values, and is where a model would
+  start judging rather than extracting. Named facts are limited to the properties in the
+  table for the same reason: each is one relation with a clear answer.
 - **Facts about a whole kind of thing** ("octopuses have three hearts") mostly aren't on
   Wikidata as values, and are left out by the prompt.
 - **It doesn't change the lesson.** Every finding is for the author to look at.

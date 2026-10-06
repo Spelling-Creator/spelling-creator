@@ -46,6 +46,8 @@ describe('the extraction request', () => {
 		expect(prompt).toContain('[1]\nMOUNT EVEREST');
 		expect(prompt).toContain('[2]\nThe NILE');
 		expect(prompt).toContain('"Big Things"');
+		// A named fact's name goes in "stated".
+		expect(prompt).toContain('"stated"');
 		for (const key of FACT_PROPERTY_KEYS) expect(prompt).toContain(`- ${key}:`);
 	});
 

@@ -15,6 +15,7 @@
 import { useCallback, useRef, useState } from "react";
 import { checkFacts } from "@spelling-creator/core/aiSuggest";
 import { lessonPassages } from "@spelling-creator/core/factCheck";
+import { formatList } from "./lessonChecks.js";
 
 const IDLE = Object.freeze({ status: "idle", facts: [], error: "" });
 
@@ -147,6 +148,12 @@ export function wikidataText(t, language, fact) {
   const wd = fact.wikidata;
   if (!wd) return "";
   if (wd.year != null) return dateText(t, language, wd);
+  if (wd.items) {
+    return formatList(
+      language,
+      wd.items.map((item) => item.label),
+    );
+  }
   const value = quantityText(t, language, wd.value, wd.unit);
   return wd.asOf ? t("facts.asOf", { value, year: wd.asOf }) : value;
 }

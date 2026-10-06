@@ -85,6 +85,42 @@ describe("describing a fact", () => {
     );
   });
 
+  it("lists what Wikidata names for a named fact", () => {
+    expect(
+      describeFact(
+        t,
+        {
+          quote: "SYDNEY",
+          property: "capital",
+          entity: { label: "Australia" },
+          status: "disagrees",
+          wikidata: { pid: "P36", items: [{ id: "Q3114", label: "Canberra" }] },
+        },
+        "en",
+      ),
+    ).toBe('"SYDNEY": Wikidata gives the capital of Australia as Canberra.');
+    expect(
+      describeFact(
+        t,
+        {
+          quote: "EGYPT",
+          property: "country",
+          entity: { label: "Nile" },
+          status: "agrees",
+          wikidata: {
+            pid: "P17",
+            items: [
+              { id: "Q79", label: "Egypt" },
+              { id: "Q1049", label: "Sudan" },
+              { id: "Q1036", label: "Uganda" },
+            ],
+          },
+        },
+        "en",
+      ),
+    ).toBe('"EGYPT" matches Wikidata (Egypt, Sudan, and Uganda).');
+  });
+
   it("says why a fact couldn't be checked", () => {
     expect(
       describeFact(

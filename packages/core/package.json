@@ -72,6 +72,7 @@
     "./vakt": "./src/vakt.js",
     "./wikidata": "./src/wikidata.js",
     "./wikidataMedia": "./src/wikidataMedia.js",
+    "./wikipedia": "./src/wikipedia.js",
     "./wikimedia": "./src/wikimedia.js",
     "./ydoc": "./src/ydoc.js"
   },
