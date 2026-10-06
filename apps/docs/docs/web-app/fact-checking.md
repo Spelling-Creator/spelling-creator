@@ -87,10 +87,14 @@ put the year in `value` (negative for BC) and may add `month` and `day`.
 
 ### What can be checked
 
-Only numbers and dates about one specific, named thing. Each property maps to one or more
-Wikidata properties, tried in order; the first the item has is used, and they are never
-pooled, so a tower's elevation above sea level can't agree with a sentence about its
-height.
+Numbers, dates and named facts about one specific, named thing. Each property maps to one
+or more Wikidata properties, tried in order; the first the item has is used, and they are
+not pooled unless the table says so, so a tower's elevation above sea level can't agree
+with a sentence about its height. The pooled ones are words that honestly mean either
+("leader" is a prime minister or a president).
+
+A named fact ("CANBERRA is the capital of Australia") puts the name in `stated` instead
+of a number in `value`: `{ subject: "Australia", property: "capital", stated: "Canberra" }`.
 
 | Property              | Wikidata                                               | For                                    |
 | --------------------- | ------------------------------------------------------ | -------------------------------------- |
@@ -113,6 +117,17 @@ height.
 | `happened`            | point in time (P585), start (P580), launch date (P619) | events, launches                       |
 | `discovered`          | P575                                                   |                                        |
 | `published`           | P577                                                   | books, films, songs                    |
+| `capital`             | capital (P36)                                          | countries, states, provinces           |
+| `country`             | P17                                                    | anything in a country                  |
+| `continent`           | P30                                                    |                                        |
+| `region`              | pooled: located in (P131), location (P276)             | the state, county or city it is in     |
+| `language`            | official language (P37)                                | countries, regions                     |
+| `currency`            | P38                                                    | countries                              |
+| `leader`              | pooled: head of government (P6), head of state (P35)   | the current prime minister, president  |
+| `discoverer`          | discoverer or inventor (P61)                           |                                        |
+| `creator`             | pooled: author, creator, architect, composer, director | books, works, buildings, films         |
+| `named_after`         | P138                                                   |                                        |
+| `flows_into`          | mouth of the watercourse (P403)                        | rivers                                 |
 
 Units cover metric and imperial length, area, volume, mass and speed, temperature in all
 three scales, durations from seconds to thousands of years, astronomical units,
@@ -127,6 +142,15 @@ deliberately generous and "disagrees" means something.
 - **Every current value counts.** Deprecated statements never do. Everest has 8,848,
   8,848.86 and 8,850; the Eiffel Tower started in 1887 and opened in 1889. A passage using
   any of them is not wrong.
+- **Except values with an end date, which never count.** Melbourne was Australia's
+  capital until 1927, and Wikidata records it with that end date, so a passage saying it
+  still is disagrees. The same rule retires former prime ministers and the height of a
+  demolished building.
+- **A named fact agrees when the stated thing is one of the current values.** The stated
+  name is looked up the way a topic is (an exact label or alias, so "USA" finds the United
+  States), and the claim agrees if any of the items it could mean is among them; a name
+  the search doesn't know is compared as words against the value's label instead. The
+  Nile's `country` is seven countries, and a passage naming any one of them is right.
 - **Except dated figures, where only the latest counts.** A population with several
   "point in time" qualifiers is compared with the most recent, and the finding says which
   year it is from ("2,103,778 as of 2023"). A passage agreeing with the 1910 census is out of
@@ -150,11 +174,21 @@ quotes Wikidata in: a passage in feet is told "29,031.69 feet", not "8,848.86 me
 
 ### Picking the item
 
-`wbsearchentities` returns up to three candidates for each name. The one used is, in
-order: one that has the property _and_ whose description mentions the claim's `kind`; one
-that has the property; one whose description mentions the kind; the top result. A search
-for "Mercury" finds the planet and the element, and only one of them has an orbital
-period.
+`wbsearchentities` returns up to eight candidates for each name (deep enough to reach a
+famous thing the search ranks below its namesakes: the play Hamlet is sixth, under a kind
+of village, a film and two given names). The one used is, in order: one that has the
+property _and_ whose description mentions the claim's `kind`; one that has the property;
+one whose description mentions the kind; the top result. Ties at the first two steps go to
+the best known candidate, by how many Wikipedias have a page on it (the play Hamlet is on
+143, the 1948 film on 45), a count that rides along in the statements query at no extra
+cost. A search for "Mercury" finds the planet and the element, and only one of them has an
+orbital period.
+
+When none of the candidates is described as the claim's `kind`, the name is searched once
+more with the kind appended, and anything new is added behind the originals. "Amazon" is a
+company first and the river nowhere in the top eight, but "Amazon river" is the river. The
+second search isn't run otherwise, because it is as often wrong as right ("Mercury planet"
+finds orbiters), and only the candidate ordering above decides what is used.
 
 When this picks wrong, the finding says so plainly ("Checked against Georgia (state of the
 United States)"), which is why the item is always shown.
@@ -213,9 +247,10 @@ A self-hosted instance needs outbound HTTPS to `www.wikidata.org` and
 
 ## What it doesn't do
 
-- **Facts without a number or date** ("the Nile flows north") aren't checked. Comparing
-  those means matching meaning, not values, and is where a model would start judging
-  rather than extracting.
+- **Facts that aren't a number, a date or a name** ("the Nile flows north") aren't
+  checked. Comparing those means matching meaning, not values, and is where a model would
+  start judging rather than extracting. Named facts are limited to the properties in the
+  table for the same reason: each is one relation with a clear answer.
 - **Facts about a whole kind of thing** ("octopuses have three hearts") mostly aren't on
   Wikidata as values, and are left out by the prompt.
 - **It doesn't change the lesson.** Every finding is for the author to look at.

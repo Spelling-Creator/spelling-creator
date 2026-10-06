@@ -83,7 +83,18 @@
       "ended": "end date",
       "happened": "date",
       "discovered": "date of discovery",
-      "published": "release date"
+      "published": "release date",
+      "capital": "capital",
+      "country": "country",
+      "continent": "continent",
+      "region": "region",
+      "language": "official language",
+      "currency": "currency",
+      "leader": "current leader",
+      "discoverer": "discoverer or inventor",
+      "creator": "creator",
+      "named_after": "namesake",
+      "flows_into": "mouth"
     },
     "units": {
       "nmi": "{{value}} nautical miles",

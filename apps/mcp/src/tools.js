@@ -1050,6 +1050,8 @@ export function registerTools(server, ctx) {
       "No unit. A quantity needs one; only a population and a date go without.",
     "unit-wrong":
       "The unit doesn't measure this property (a height in kg), or isn't one this knows. See `unit`.",
+    stated:
+      "No name stated. For a named fact, put the name of what the passage says it is in `stated`.",
     "over-limit":
       "Past the limit of 40 claims in one call. Send it in another.",
   };
@@ -1062,13 +1064,14 @@ export function registerTools(server, ctx) {
     {
       title: "Check facts against Wikidata",
       description:
-        "Compare numbers and dates you have written (or are about to write) into a lesson with Wikidata. The " +
-        "standard asks for anything time-sensitive to be verified before it goes in, and every fact a math " +
-        "question uses is one a speller will be marked on, so check those.\n\n" +
+        "Compare numbers, dates and named facts (the capital of a country, who discovered something) you have " +
+        "written (or are about to write) into a lesson with Wikidata. The standard asks for anything " +
+        "time-sensitive to be verified before it goes in, and every fact a math question uses is one a speller " +
+        "will be marked on, so check those.\n\n" +
         "You pass claims, not prose: one per fact, each naming the thing (`subject`), what is said about it " +
-        "(`property`), and the number or year. Only numbers and dates about a specific, named, real thing can be " +
-        "checked; leave out opinions, comparisons, and facts about a whole kind of thing ('cats sleep 16 hours " +
-        "a day'). Nothing is saved, and the only service called is Wikidata.\n\n" +
+        "(`property`), and the number, the year, or the name stated (`stated`). Only facts about a specific, " +
+        "named, real thing can be checked; leave out opinions, comparisons, and facts about a whole kind of " +
+        "thing ('cats sleep 16 hours a day'). Nothing is saved, and the only service called is Wikidata.\n\n" +
         "Each claim comes back `agrees`, `disagrees` or `unknown`, with the Wikidata item it was checked " +
         "against. Read that item's description before acting: a name can match the wrong thing. `unknown` means " +
         "Wikidata couldn't say (no such item, no such value, or no reply), not that the fact is wrong. Wikidata " +
@@ -1099,11 +1102,20 @@ export function registerTools(server, ctx) {
                       (key) => `${key}: ${FACT_PROPERTIES[key].hint}`,
                     ).join("\n"),
                 ),
+              stated: z
+                .string()
+                .optional()
+                .describe(
+                  "For a named fact (a capital, a country, a discoverer), the English name of what the passage " +
+                    "says it is, as an encyclopedia titles it: 'Canberra', 'Alexander Fleming'. Leave out `value` " +
+                    "and `unit` then.",
+                ),
               value: z
                 .number()
+                .optional()
                 .describe(
                   "The number as stated ('4.5 million' is 4500000). For a date, the year, negative for BC " +
-                    "('2560 BC' is -2560).",
+                    "('2560 BC' is -2560). Leave it out for a named fact.",
                 ),
               unit: z
                 .enum(FACT_UNIT_KEYS)
@@ -1155,7 +1167,7 @@ export function registerTools(server, ctx) {
         subject: r.subject,
         property: r.property,
         stated: {
-          value: r.value,
+          ...(r.stated ? { name: r.stated } : { value: r.value }),
           ...(r.unit ? { unit: r.unit } : {}),
           ...(r.month ? { month: r.month } : {}),
           ...(r.day ? { day: r.day } : {}),
@@ -1183,7 +1195,9 @@ export function registerTools(server, ctx) {
           : {}),
         note:
           "Wikidata's values are in the claim's own unit. `wikidata.asOf` is the year a dated figure (a " +
-          "population) was taken; only the latest is compared. `reason` on an unknown: no-item (no match for " +
+          "population) was taken; only the latest is compared. `wikidata.items` lists what Wikidata currently " +
+          "names for a named fact; a former capital or leader (one with an end date) is not among them. " +
+          "`reason` on an unknown: no-item (no match for " +
           "the name), no-value (the item has no such value), unit (a unit this can't convert), lookup-failed " +
           "(Wikidata didn't answer; try again later).",
       });

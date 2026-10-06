@@ -46,6 +46,7 @@
 import { textBlockPlain } from "./lessonText.js";
 import {
   eachLimited,
+  exactMatches,
   lastSegment,
   rankOf,
   searchItems,
@@ -244,6 +245,70 @@ export const FACT_PROPERTIES = {
     pids: ["P577"],
     hint: "when a book, film, song or game came out",
   },
+
+  // Facts that name a thing rather than give a number: the capital of a
+  // country, who discovered something. The claim's `stated` holds that name,
+  // and the claim agrees when one of the subject's current values on Wikidata
+  // is the thing named. `pooled` reads all the listed properties together, for
+  // a word like "leader" that honestly means either of two.
+  capital: {
+    kind: "item",
+    pids: ["P36"],
+    hint: "the capital city of a country, state or province (for 'Canberra is the capital of Australia', the subject is Australia)",
+  },
+  country: {
+    kind: "item",
+    pids: ["P17"],
+    hint: "the country something is in",
+  },
+  continent: {
+    kind: "item",
+    pids: ["P30"],
+    hint: "the continent something is in",
+  },
+  region: {
+    kind: "item",
+    pids: ["P131", "P276"],
+    pooled: true,
+    hint: "the state, province, county or city something is in",
+  },
+  language: {
+    kind: "item",
+    pids: ["P37"],
+    hint: "the official language of a country or region",
+  },
+  currency: {
+    kind: "item",
+    pids: ["P38"],
+    hint: "the money used in a country",
+  },
+  leader: {
+    kind: "item",
+    pids: ["P6", "P35"],
+    pooled: true,
+    hint: "the current head of government or head of state of a country (prime minister, president, monarch)",
+  },
+  discoverer: {
+    kind: "item",
+    pids: ["P61"],
+    hint: "who discovered or invented something",
+  },
+  creator: {
+    kind: "item",
+    pids: ["P50", "P170", "P84", "P86", "P57"],
+    pooled: true,
+    hint: "who wrote, made, designed, composed or directed something",
+  },
+  named_after: {
+    kind: "item",
+    pids: ["P138"],
+    hint: "what or who something is named after",
+  },
+  flows_into: {
+    kind: "item",
+    pids: ["P403"],
+    hint: "the river, lake or sea a river flows into",
+  },
 };
 
 export const FACT_PROPERTY_KEYS = Object.keys(FACT_PROPERTIES);
@@ -391,6 +456,7 @@ function wholeNumber(value, min, max) {
  *
  *   property      not one of FACT_PROPERTIES
  *   subject       empty
+ *   stated        a named fact (a capital, a discoverer) with no name stated
  *   value         not a number
  *   unit-missing  a quantity with no unit (a population is the one that goes
  *                 without)
@@ -404,6 +470,9 @@ export function claimProblem(raw) {
   const spec = FACT_PROPERTIES[raw.property];
   if (!spec) return "property";
   if (!cleanString(raw.subject, 200)) return "subject";
+  if (spec.kind === "item") {
+    return cleanString(raw.stated, 200) ? null : "stated";
+  }
   if (!Number.isFinite(Number(raw.value))) return "value";
   if (spec.kind === "quantity" && spec.dimension !== "count") {
     const unit = cleanString(raw.unit, 20);
@@ -425,13 +494,15 @@ export function claimProblem(raw) {
 export function normalizeClaim(raw) {
   if (claimProblem(raw)) return null;
   const spec = FACT_PROPERTIES[raw.property];
+  const named = spec.kind === "item";
   const measured = spec.kind === "quantity" && spec.dimension !== "count";
   return {
     ...raw,
     subject: cleanString(raw.subject, 200),
     kind: cleanString(raw.kind, 60),
     property: raw.property,
-    value: Number(raw.value),
+    stated: named ? cleanString(raw.stated, 200) : "",
+    value: named ? 0 : Number(raw.value),
     unit: measured ? cleanString(raw.unit, 20) : "",
     month: spec.kind === "time" ? wholeNumber(raw.month, 1, 12) : 0,
     day: spec.kind === "time" ? wholeNumber(raw.day, 1, 31) : 0,
@@ -487,16 +558,24 @@ export function parseSparqlTime(value, precision) {
 
 /**
  * The query for every statement of every listed property on every listed item,
- * with what a comparison needs: rank, the value node's parts, and the "point in
- * time" qualifier that dates a population figure.
+ * with what a comparison needs: rank, the value node's parts (a quantity or a
+ * date), the item a named fact points at with its label, the "point in time"
+ * qualifier that dates a population figure, and the "end time" qualifier that
+ * retires a former capital or prime minister.
+ * @param {string} [language]  For the labels; English stands in for a
+ *   language an item has no label in.
  */
-export function statementsQuery(itemIds, pids) {
+export function statementsQuery(itemIds, pids, language = "en") {
   const items = itemIds.map((id) => `wd:${id}`).join(" ");
-  const props = pids.map((p) => `("${p}" p:${p} psv:${p})`).join(" ");
-  return `SELECT ?item ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit WHERE {
+  const props = pids.map((p) => `("${p}" p:${p} psv:${p} ps:${p})`).join(" ");
+  const languages = language === "en" ? "en" : `${language},en`;
+  return `SELECT ?item ?links ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit ?value ?valueLabel ?ended WHERE {
   VALUES ?item { ${items} }
-  VALUES (?pid ?p ?psv) { ${props} }
+  VALUES (?pid ?p ?psv ?ps) { ${props} }
   ?item ?p ?st .
+  # How well known the item is (how many Wikipedias have a page on it), for
+  # choosing between same-named candidates: the play Hamlet over the film.
+  ?item wikibase:sitelinks ?links .
   ?st wikibase:rank ?rank .
   OPTIONAL {
     ?st ?psv ?node .
@@ -505,7 +584,10 @@ export function statementsQuery(itemIds, pids) {
     OPTIONAL { ?node wikibase:quantityUpperBound ?upper . }
     OPTIONAL { ?node wikibase:timeValue ?time ; wikibase:timePrecision ?precision ; wikibase:timeCalendarModel ?calendar . }
   }
+  OPTIONAL { ?st ?ps ?value . FILTER(isIRI(?value)) }
   OPTIONAL { ?st pq:P585 ?pit . }
+  OPTIONAL { ?st pq:P582 ?ended . }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "${languages}". }
 }`;
 }
 
@@ -516,7 +598,9 @@ const number = (binding) => (binding ? Number(binding.value) : undefined);
  * `Map<itemId, Map<pid, statement[]>>`. A statement with several "point in
  * time" qualifiers comes back once per qualifier; it is kept once, dated by
  * the latest. Statements with no value ("unknown value", "no value") are left
- * out, since there is nothing to compare with.
+ * out, since there is nothing to compare with. A statement that points at an
+ * item carries it as `value` (its id) and `valueLabel`; one with an end date
+ * is marked `ended`.
  */
 export function statementsFromBindings(bindings) {
   const byStatement = new Map();
@@ -531,6 +615,7 @@ export function statementsFromBindings(bindings) {
       if (pointInTime && timeKey(pointInTime) > timeKey(seen.pointInTime)) {
         seen.pointInTime = pointInTime;
       }
+      seen.ended ||= Boolean(row.ended);
       continue;
     }
     const precision = number(row.precision);
@@ -539,6 +624,7 @@ export function statementsFromBindings(bindings) {
       pid: row.pid?.value,
       rank: rankOf(row.rank?.value),
       pointInTime,
+      ended: Boolean(row.ended),
     };
     if (row.amount) {
       statement.amount = number(row.amount);
@@ -552,6 +638,9 @@ export function statementsFromBindings(bindings) {
         precision,
         calendar: lastSegment(row.calendar?.value),
       });
+    } else if (row.value) {
+      statement.value = lastSegment(row.value.value);
+      statement.valueLabel = row.valueLabel?.value || statement.value;
     } else {
       continue;
     }
@@ -568,21 +657,41 @@ export function statementsFromBindings(bindings) {
   return out;
 }
 
+/**
+ * Each item's sitelinks count, from the same rows. An item with none of the
+ * asked-for statements sends no rows and so isn't here; chooseItem treats
+ * that as 0, which is right, since such an item has already lost on having
+ * nothing to check.
+ * @returns {Map<string, number>}
+ */
+export function sitelinksFromBindings(bindings) {
+  const out = new Map();
+  for (const row of bindings || []) {
+    const id = lastSegment(row.item?.value);
+    if (id && row.links) out.set(id, Number(row.links.value) || 0);
+  }
+  return out;
+}
+
 function timeKey(t) {
   return t ? t.year * 10000 + (t.month || 0) * 100 + (t.day || 0) : -Infinity;
 }
 
 /**
- * The statements a passage should be held to. Deprecated ones never count.
- * When figures are dated (a population taken in 2020, another in 2017), only
- * the latest counts: a passage agreeing with a census from 1910 is out of date,
- * not right. Otherwise every remaining value counts, because Wikidata often
- * holds several honest answers at once (Everest's 8,848 and 8,848.86; the
- * Eiffel Tower started in 1887 and opened in 1889), and a passage using any of
- * them is not wrong.
+ * The statements a passage should be held to. Deprecated ones never count,
+ * and nor does one with an end date: Melbourne was Australia's capital until
+ * 1927, and a passage saying it still is, is wrong. When figures are dated (a
+ * population taken in 2020, another in 2017), only the latest counts: a
+ * passage agreeing with a census from 1910 is out of date, not right.
+ * Otherwise every remaining value counts, because Wikidata often holds several
+ * honest answers at once (Everest's 8,848 and 8,848.86; the Eiffel Tower
+ * started in 1887 and opened in 1889; the Nile runs through seven countries),
+ * and a passage using any of them is not wrong.
  */
 export function currentStatements(statements) {
-  const live = (statements || []).filter((s) => s.rank !== "deprecated");
+  const live = (statements || []).filter(
+    (s) => s.rank !== "deprecated" && !s.ended,
+  );
   const dated = live.filter((s) => s.pointInTime);
   if (!dated.length) return live;
   const latest = Math.max(...dated.map((s) => timeKey(s.pointInTime)));
@@ -650,24 +759,53 @@ export function timeAgrees(claim, s) {
 }
 
 /**
+ * Whether a named fact's stated thing is one of the statements' values: by
+ * item id, where the name could be looked up, and otherwise by the label, so
+ * a name Wikidata's search didn't know is still compared as words.
+ */
+export function itemAgrees(claim, statements, statedIds = []) {
+  const ids = new Set(statedIds);
+  const wanted = squashText(claim.stated);
+  return statements.some(
+    (s) => ids.has(s.value) || squashText(s.valueLabel) === wanted,
+  );
+}
+
+/**
  * Judge one claim against one item's statements.
  * @param {object} claim  A normalized claim.
  * @param {Map<string, object[]>} byPid  That item's statements, by property.
+ * @param {string[]} [statedIds]  For a named fact, the items its `stated`
+ *   name may mean (see itemAgrees).
  */
-export function judgeClaim(claim, byPid) {
+export function judgeClaim(claim, byPid, statedIds = []) {
   const spec = FACT_PROPERTIES[claim.property];
   let pid;
   let statements = [];
   for (const candidate of spec.pids) {
-    statements = currentStatements(byPid?.get(candidate));
-    if (statements.length) {
-      pid = candidate;
-      break;
-    }
+    const current = currentStatements(byPid?.get(candidate));
+    if (!current.length) continue;
+    pid ??= candidate;
+    statements = statements.concat(current);
+    if (!spec.pooled) break;
   }
   if (!pid) return { status: "unknown", reason: "no-value" };
 
   const shown = headline(statements);
+
+  if (spec.kind === "item") {
+    // The current values, each once: a pooled property can name one person
+    // twice (the author of a film who also directed it).
+    const items = [
+      ...new Map(
+        statements.map((s) => [s.value, { id: s.value, label: s.valueLabel }]),
+      ).values(),
+    ];
+    return {
+      status: itemAgrees(claim, statements, statedIds) ? "agrees" : "disagrees",
+      wikidata: { pid, items },
+    };
+  }
 
   if (spec.kind === "time") {
     const agrees = statements.some((s) => timeAgrees(claim, s));
@@ -706,9 +844,14 @@ export function judgeClaim(claim, byPid) {
 // --- Looking claims up -----------------------------------------------------
 
 async function fetchStatements(itemIds, pids, opts) {
-  return statementsFromBindings(
-    await sparql(statementsQuery(itemIds, pids), opts),
+  const rows = await sparql(
+    statementsQuery(itemIds, pids, opts.language),
+    opts,
   );
+  return {
+    statements: statementsFromBindings(rows),
+    sitelinks: sitelinksFromBindings(rows),
+  };
 }
 
 const words = (text) =>
@@ -722,9 +865,11 @@ const words = (text) =>
  * property wins over one that doesn't (a search for "Mercury" finds the planet
  * and the element; only one has an orbital period), and among those, one whose
  * description mentions the claim's `kind` wins ("Georgia" the country, for a
- * claim about a country).
+ * claim about a country). Ties go to the best known, by sitelinks: a search
+ * for "Hamlet" ranks the 1948 film above the play, and both have a creator,
+ * but the play is on 143 Wikipedias and the film on 45.
  */
-function chooseItem(claim, candidates, statements) {
+function chooseItem(claim, candidates, statements, sitelinks) {
   const pids = FACT_PROPERTIES[claim.property].pids;
   const has = (c) =>
     pids.some((p) => currentStatements(statements.get(c.id)?.get(p)).length);
@@ -733,9 +878,13 @@ function chooseItem(claim, candidates, statements) {
     const described = new Set(words(c.description));
     return kind.some((w) => described.has(w));
   };
+  const links = (c) => sitelinks.get(c.id) || 0;
+  // Sorting is stable, so equally known candidates keep the search's order.
+  const bestKnown = (list) =>
+    list.length ? [...list].sort((a, b) => links(b) - links(a))[0] : undefined;
   return (
-    candidates.find((c) => has(c) && fits(c)) ||
-    candidates.find(has) ||
+    bestKnown(candidates.filter((c) => has(c) && fits(c))) ||
+    bestKnown(candidates.filter(has)) ||
     candidates.find(fits) ||
     candidates[0]
   );
@@ -776,13 +925,56 @@ export async function checkPreparedClaims(claims, opts = {}) {
   const candidatesByName = new Map();
   const failedNames = new Set();
   await eachLimited(names, 4, async (name) => {
-    const subject = claims.find(
+    const { subject, kind } = claims.find(
       (c) => c.subject.toLowerCase() === name,
-    ).subject;
+    );
     try {
-      candidatesByName.set(name, await searchItems(subject, settings));
+      // Deep enough to reach a famous thing the search ranks below its
+      // namesakes: the play Hamlet is sixth, under a kind of village, a film
+      // and two names.
+      let hits = await searchItems(subject, { ...settings, limit: 8 });
+      // When nothing found is described as the claim's kind, the name alone
+      // is ambiguous in a way the kind settles: "Amazon" is a company first
+      // and the river nowhere in eight, but "Amazon river" is the river. Not
+      // otherwise, since the kind search is as often wrong ("Mercury planet"
+      // finds orbiters); and what is found goes behind the originals, for
+      // chooseItem to weigh like any other candidate.
+      const kindWords = words(kind);
+      const described = (c) =>
+        words(c.description).some((w) => kindWords.includes(w));
+      if (kindWords.length && !hits.some(described)) {
+        const seen = new Set(hits.map((h) => h.id));
+        const more = await searchItems(`${subject} ${kind}`, {
+          ...settings,
+          limit: 4,
+        });
+        hits = hits.concat(more.filter((h) => !seen.has(h.id)));
+      }
+      candidatesByName.set(name, hits);
     } catch {
       failedNames.add(name);
+    }
+  });
+
+  // And one per distinct name a named fact states, to learn which items it
+  // could mean ("USA" is an alias of the United States). A search that fails
+  // leaves the name to be compared as words instead.
+  const statedNames = [
+    ...new Set(
+      claims.filter((c) => c.stated).map((c) => c.stated.toLowerCase()),
+    ),
+  ];
+  const statedIdsByName = new Map();
+  await eachLimited(statedNames, 4, async (name) => {
+    const stated = claims.find((c) => c.stated.toLowerCase() === name).stated;
+    try {
+      const matches = await exactMatches(stated, settings);
+      statedIdsByName.set(
+        name,
+        matches.map((m) => m.id),
+      );
+    } catch {
+      // Compared by label in itemAgrees.
     }
   });
 
@@ -794,10 +986,15 @@ export async function checkPreparedClaims(claims, opts = {}) {
     ...new Set(claims.flatMap((c) => FACT_PROPERTIES[c.property].pids)),
   ];
   let statements = new Map();
+  let sitelinks = new Map();
   let valuesFailed = false;
   if (itemIds.length) {
     try {
-      statements = await fetchStatements(itemIds, pids, settings);
+      ({ statements, sitelinks } = await fetchStatements(
+        itemIds,
+        pids,
+        settings,
+      ));
     } catch {
       valuesFailed = true;
     }
@@ -812,11 +1009,19 @@ export async function checkPreparedClaims(claims, opts = {}) {
     if (!candidates.length) {
       return { ...claim, status: "unknown", reason: "no-item" };
     }
-    const item = chooseItem(claim, candidates, statements);
+    const item = chooseItem(claim, candidates, statements, sitelinks);
     const entity = { ...item, url: wikidataItemUrl(item.id) };
     if (valuesFailed) {
       return { ...claim, entity, status: "unknown", reason: "lookup-failed" };
     }
-    return { ...claim, entity, ...judgeClaim(claim, statements.get(item.id)) };
+    return {
+      ...claim,
+      entity,
+      ...judgeClaim(
+        claim,
+        statements.get(item.id),
+        statedIdsByName.get(claim.stated?.toLowerCase()),
+      ),
+    };
   });
 }

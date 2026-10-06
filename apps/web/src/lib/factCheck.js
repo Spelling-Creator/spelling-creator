@@ -147,8 +147,31 @@ export function wikidataText(t, language, fact) {
   const wd = fact.wikidata;
   if (!wd) return "";
   if (wd.year != null) return dateText(t, language, wd);
+  if (wd.items) {
+    return formatList(
+      language,
+      wd.items.map((item) => item.label),
+    );
+  }
   const value = quantityText(t, language, wd.value, wd.unit);
   return wd.asOf ? t("facts.asOf", { value, year: wd.asOf }) : value;
+}
+
+// One formatter per language: wikidataText runs for every fact each time the
+// panel renders.
+const listFormats = new Map();
+function formatList(language, items) {
+  if (!listFormats.has(language)) {
+    let format = null;
+    try {
+      format = new Intl.ListFormat(language, { type: "conjunction" });
+    } catch {
+      // An unknown tag; fall back to commas below.
+    }
+    listFormats.set(language, format);
+  }
+  const format = listFormats.get(language);
+  return format ? format.format(items) : items.join(", ");
 }
 
 /**

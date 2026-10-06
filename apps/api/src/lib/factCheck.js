@@ -49,13 +49,14 @@ export const FACT_CLAIMS_SCHEMA = {
 					subject: { type: 'string' },
 					kind: { type: 'string' },
 					property: { type: 'string', enum: FACT_PROPERTY_KEYS },
+					stated: { type: 'string' },
 					value: { type: 'number' },
 					unit: { type: 'string', enum: CLAIM_UNITS },
 					month: { type: 'integer' },
 					day: { type: 'integer' },
 					qualifier: { type: 'string', enum: FACT_QUALIFIERS },
 				},
-				required: ['passage', 'quote', 'subject', 'kind', 'property', 'value', 'unit', 'month', 'day', 'qualifier'],
+				required: ['passage', 'quote', 'subject', 'kind', 'property', 'stated', 'value', 'unit', 'month', 'day', 'qualifier'],
 				additionalProperties: false,
 			},
 		},
@@ -89,19 +90,20 @@ export function factCheckPrompt(passages, documentName) {
 	const units = CLAIM_UNITS.join(', ');
 	const numbered = passages.map((p, i) => `[${i + 1}]\n${p.text}`).join('\n\n');
 	const title = documentName ? ` The lesson is titled "${documentName}".` : '';
-	return `The passages below come from a lesson for students.${title} List the facts in them that can be checked against Wikidata: a number or a date stated about one specific, named, real-world thing.
+	return `The passages below come from a lesson for students.${title} List the facts in them that can be checked against Wikidata: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing.
 
 Only these kinds of fact count. Use the matching "property":
 ${properties}
 
-Leave out everything else: opinions, comparisons ("bigger than a bus"), facts about a whole kind of thing ("cats sleep 16 hours a day"), numbers in a made-up story or a word problem, and anything without a number or date. If a passage has none, list nothing for it.
+Leave out everything else: opinions, comparisons ("bigger than a bus"), facts about a whole kind of thing ("cats sleep 16 hours a day"), numbers in a made-up story or a word problem, and anything that states neither a number, a date nor a named thing. If a passage has none, list nothing for it.
 
 For each fact give:
 - "passage": the number of the passage it is in.
-- "quote": the shortest words from the passage that state the number or date, copied exactly, keeping its capital letters ("8,849 METRES").
+- "quote": the shortest words from the passage that state the number, date or name, copied exactly, keeping its capital letters ("8,849 METRES", "CANBERRA").
 - "subject": the English name of the thing, the way an encyclopedia titles it, with no "the" and nothing in brackets ("Mount Everest", "Nile", "Marie Curie").
 - "kind": one or two words for what sort of thing it is ("mountain", "river", "scientist", "country").
 - "property": one of the keys above.
+- "stated": for a fact that names a thing rather than giving a number, the English name of what the passage says it is, as an encyclopedia titles it ("Canberra", "Alexander Fleming", "Pacific Ocean"). Otherwise "". A fact with a "stated" name has "value" 0 and "unit" "${NO_UNIT}".
 - "value": the number as a plain number ("4.5 million" is 4500000). For a date, the year, negative for BC ("2560 BC" is -2560; "4.5 billion years ago" is -4500000000).
 - "unit": the unit the passage uses, one of: ${units}. Use "${NO_UNIT}" for a population and for dates.
 - "month" and "day": for a date given to the month or the day, the month (1 to 12) and the day. Otherwise 0.

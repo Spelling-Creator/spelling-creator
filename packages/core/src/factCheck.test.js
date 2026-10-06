@@ -5,6 +5,7 @@ import {
   claimProblem,
   convertUnit,
   currentStatements,
+  judgeClaim,
   normalizeClaim,
   parseSparqlTime,
   prepareClaims,
@@ -121,6 +122,17 @@ describe("preparing claims", () => {
       problem({ subject: "Paris", property: "population", value: 2e6 }),
     ).toBe(null);
     expect(problem({ subject: "X", property: "born", value: 1867 })).toBe(null);
+    // A named fact needs the name, and no number.
+    expect(problem({ subject: "Australia", property: "capital" })).toBe(
+      "stated",
+    );
+    expect(
+      problem({
+        subject: "Australia",
+        property: "capital",
+        stated: "Canberra",
+      }),
+    ).toBe(null);
   });
 
   it("keeps the good ones in order, up to the cap, and lists the rest", () => {
@@ -291,6 +303,164 @@ const statement = (item, pid, value, extra = {}) => ({
   amount: { value: String(value) },
   unit: { value: "http://www.wikidata.org/entity/Q11573" },
   ...extra,
+});
+
+// A statement that points at another item, as the query service gives it.
+const itemStatement = (item, pid, value, label, extra = {}) => ({
+  item: { value: `http://www.wikidata.org/entity/${item}` },
+  pid: { value: pid },
+  st: { value: `${item}-${pid}-${value}` },
+  rank: { value: "http://wikiba.se/ontology#NormalRank" },
+  value: { value: `http://www.wikidata.org/entity/${value}` },
+  valueLabel: { value: label },
+  ...extra,
+});
+
+describe("checking a named fact", () => {
+  it("agrees by item, by label when the name is unknown, and retires an ended value", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Australia: [{ id: "Q408", label: "Australia", description: "country" }],
+        // The stated capital, looked up to its item; "Oz capital" finds none.
+        Canberra: [
+          {
+            id: "Q3114",
+            label: "Canberra",
+            match: { type: "label", text: "Canberra" },
+          },
+        ],
+      },
+      bindings: [
+        itemStatement("Q408", "P36", "Q3114", "Canberra"),
+        itemStatement("Q408", "P36", "Q3141", "Melbourne", {
+          ended: { value: "1927-05-09T00:00:00Z" },
+        }),
+      ],
+    });
+    const claim = (stated) => ({
+      subject: "Australia",
+      property: "capital",
+      stated,
+    });
+    const [byId, byLabel, former, wrong] = await checkClaims(
+      [
+        claim("Canberra"),
+        claim("canberra "),
+        claim("Melbourne"),
+        claim("Sydney"),
+      ],
+      { fetch },
+    );
+    expect(byId).toMatchObject({
+      status: "agrees",
+      wikidata: { pid: "P36", items: [{ id: "Q3114", label: "Canberra" }] },
+    });
+    expect(byLabel.status).toBe("agrees");
+    // Melbourne's statement has an end date, so it is not current.
+    expect(former.status).toBe("disagrees");
+    expect(wrong.status).toBe("disagrees");
+    // Melbourne isn't offered as what Wikidata says, either.
+    expect(wrong.wikidata.items.map((i) => i.label)).toEqual(["Canberra"]);
+  });
+
+  it("prefers the best known of two candidates that both have the property", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Hamlet: [
+          { id: "Q27178", label: "Hamlet", description: "1948 film" },
+          {
+            id: "Q41567",
+            label: "Hamlet",
+            description: "tragedy by Shakespeare",
+          },
+        ],
+        "William Shakespeare": [
+          {
+            id: "Q692",
+            label: "William Shakespeare",
+            match: { type: "label", text: "William Shakespeare" },
+          },
+        ],
+      },
+      bindings: [
+        itemStatement("Q27178", "P57", "Q55245", "Laurence Olivier", {
+          links: { value: "45" },
+        }),
+        itemStatement("Q41567", "P50", "Q692", "William Shakespeare", {
+          links: { value: "143" },
+        }),
+      ],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Hamlet",
+          kind: "play",
+          property: "creator",
+          stated: "William Shakespeare",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "agrees",
+      entity: { id: "Q41567" },
+    });
+  });
+
+  it("searches again with the kind when nothing found is one", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Amazon: [{ id: "Q3884", label: "Amazon", description: "company" }],
+        "Amazon river": [
+          {
+            id: "Q3783",
+            label: "Amazon",
+            description: "river in South America",
+          },
+        ],
+        "Atlantic Ocean": [
+          {
+            id: "Q97",
+            label: "Atlantic Ocean",
+            match: { type: "label", text: "Atlantic Ocean" },
+          },
+        ],
+      },
+      bindings: [itemStatement("Q3783", "P403", "Q97", "Atlantic Ocean")],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Amazon",
+          kind: "river",
+          property: "flows_into",
+          stated: "Atlantic Ocean",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({ status: "agrees", entity: { id: "Q3783" } });
+    // The plain search, the kind search, the stated name, and one query.
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("reads pooled properties together", () => {
+    const byPid = new Map([
+      ["P6", [{ value: "Q1", valueLabel: "The PM", rank: "normal" }]],
+      ["P35", [{ value: "Q2", valueLabel: "The King", rank: "normal" }]],
+    ]);
+    const king = {
+      property: "leader",
+      stated: "The King",
+      qualifier: "exact",
+    };
+    expect(judgeClaim(king, byPid)).toMatchObject({
+      status: "agrees",
+      wikidata: { pid: "P6" },
+    });
+    expect(judgeClaim(king, byPid).wikidata.items).toHaveLength(2);
+  });
 });
 
 describe("checking claims", () => {

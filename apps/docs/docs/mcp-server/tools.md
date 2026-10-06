@@ -366,7 +366,11 @@ those with Wikidata. The assistant passes claims rather than prose, one per fact
 ```
 
 and gets each one back as `agrees`, `disagrees` or `unknown`, with Wikidata's value in the
-claim's own unit and the item it was checked against. Nothing is saved, the hub isn't called,
+claim's own unit and the item it was checked against. A fact that names a thing rather
+than a number ("Canberra is the capital of Australia") goes as
+`{ "subject": "Australia", "property": "capital", "stated": "Canberra" }` and comes back
+with `wikidata.items`, what Wikidata currently names; a former capital or leader is not
+among them. Nothing is saved, the hub isn't called,
 and no AI provider is involved: the assistant is the one reading the passage. A property
 that isn't on the list fails the tool's input validation, so the whole call is refused and
 nothing is checked. A claim that passes validation but still can't be checked comes back
