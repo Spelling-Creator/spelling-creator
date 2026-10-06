@@ -300,7 +300,9 @@ function fakeWikidata({
     // default, so a test that gives only `search` exercises the Wikidata
     // fallback.
     if (u.hostname.endsWith("wikipedia.org")) {
-      if (fail.search) return new Response("", { status: 503 });
+      if (fail.search || fail.wikipedia) {
+        return new Response("", { status: 503 });
+      }
       const pages = (articles[u.searchParams.get("gsrsearch")] || []).map(
         ({ id, title }, i) => ({
           pageid: i + 1,
@@ -424,9 +426,9 @@ describe("checking a named fact", () => {
       // Described by Wikidata, once the query has said what it is.
       entity: { id: "Q41567", description: "tragedy by William Shakespeare" },
     });
-    // The subject's article search, the stated name's, and one query: no
-    // Wikidata search at all.
-    expect(fetch).toHaveBeenCalledTimes(3);
+    // The subject's two article searches (bare, and with the kind), the
+    // stated name's, and one query: no Wikidata search at all.
+    expect(fetch).toHaveBeenCalledTimes(4);
   });
 
   it("describes a candidate by its article title until Wikidata has said", async () => {
@@ -474,7 +476,7 @@ describe("checking a named fact", () => {
       { fetch },
     );
     expect(result).toMatchObject({ status: "agrees", entity: { id: "Q3783" } });
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch).toHaveBeenCalledTimes(4);
   });
 
   it("searches once per name and kind, not once per name", async () => {
@@ -522,6 +524,203 @@ describe("checking a named fact", () => {
       entity: { id: "Q925" },
       reason: "no-value",
     });
+  });
+
+  it("lets the kind pick a later article by its title, over the name's own", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        // The name alone means the company; the river is the kind's answer.
+        Amazon: [
+          { id: "Q3884", title: "Amazon (company)" },
+          { id: "Q456120", title: "Amazon" },
+        ],
+        "Amazon river": [{ id: "Q3783", title: "Amazon River" }],
+        // The kind search can rank worse than the name alone.
+        penicillin: [{ id: "Q12190", title: "Penicillin" }],
+        "penicillin medicine": [
+          { id: "Q120776459", title: "Discovery of penicillin" },
+          { id: "Q12190", title: "Penicillin" },
+        ],
+        "Alexander Fleming": [{ id: "Q37064", title: "Alexander Fleming" }],
+      },
+      bindings: [
+        statement("Q3884", "P2043", 1),
+        statement("Q3783", "P2043", 6400, {
+          unit: { value: "http://www.wikidata.org/entity/Q828224" },
+        }),
+        itemStatement("Q12190", "P61", "Q37064", "Alexander Fleming"),
+      ],
+    });
+    const [river, drug] = await checkClaims(
+      [
+        {
+          subject: "Amazon",
+          kind: "river",
+          property: "length",
+          value: 6400,
+          unit: "km",
+        },
+        {
+          subject: "penicillin",
+          kind: "medicine",
+          property: "discoverer",
+          stated: "Alexander Fleming",
+        },
+      ],
+      { fetch },
+    );
+    expect(river).toMatchObject({ status: "agrees", entity: { id: "Q3783" } });
+    expect(drug).toMatchObject({ status: "agrees", entity: { id: "Q12190" } });
+  });
+
+  it("ignores a title that merely has the kind in it", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        Australia: [{ id: "Q408", title: "Australia" }],
+        "Australia country": [
+          { id: "Q2407589", title: "Australian country music" },
+          { id: "Q408", title: "Australia" },
+        ],
+        Canberra: [{ id: "Q3114", title: "Canberra" }],
+      },
+      bindings: [itemStatement("Q408", "P36", "Q3114", "Canberra")],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Australia",
+          kind: "country",
+          property: "capital",
+          stated: "Canberra",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({ status: "agrees", entity: { id: "Q408" } });
+  });
+
+  it("matches a surname to the full name Wikidata gives", () => {
+    const byPid = new Map([
+      [
+        "P61",
+        [{ value: "Q37064", valueLabel: "Alexander Fleming", rank: "normal" }],
+      ],
+    ]);
+    const claim = (stated) => ({
+      property: "discoverer",
+      stated,
+      qualifier: "exact",
+    });
+    expect(judgeClaim(claim("Fleming"), byPid).status).toBe("agrees");
+    expect(judgeClaim(claim("Alexander Fleming"), byPid).status).toBe("agrees");
+    expect(judgeClaim(claim("Alex"), byPid).status).toBe("disagrees");
+  });
+
+  it("without a kind, lets a first with nothing to check give way to one that has", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        Mercury: [
+          { id: "Q48397", title: "Mercury" },
+          { id: "Q308", title: "Mercury (planet)" },
+        ],
+      },
+      bindings: [
+        statement("Q308", "P2146", 87.969, {
+          unit: { value: "http://www.wikidata.org/entity/Q573" },
+        }),
+      ],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Mercury",
+          property: "orbital_period",
+          value: 88,
+          unit: "day",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({ status: "agrees", entity: { id: "Q308" } });
+  });
+
+  it("keeps the first article over a later one that merely has the property", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        "Titanic ship": [
+          { id: "Q25173", title: "Titanic" },
+          { id: "Q44578", title: "Titanic (1997 film)" },
+        ],
+        "Harland and Wolff": [{ id: "Q1", title: "Harland & Wolff" }],
+      },
+      // The ship has no creator on Wikidata; the film has a director.
+      bindings: [
+        {
+          item: { value: "http://www.wikidata.org/entity/Q25173" },
+          itemLabel: { value: "Titanic" },
+          itemDescription: { value: "British passenger liner, sunk in 1912" },
+        },
+        itemStatement("Q44578", "P57", "Q42574", "James Cameron"),
+      ],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Titanic",
+          kind: "ship",
+          property: "creator",
+          stated: "Harland and Wolff",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "no-value",
+      entity: {
+        id: "Q25173",
+        label: "Titanic",
+        description: "British passenger liner, sunk in 1912",
+      },
+    });
+  });
+
+  it("still checks from Wikidata's search when Wikipedia is down", async () => {
+    const fetch = fakeWikidata({
+      fail: { wikipedia: true },
+      search: {
+        Australia: [{ id: "Q408", label: "Australia", description: "country" }],
+        Canberra: [
+          {
+            id: "Q3114",
+            label: "Canberra",
+            match: { type: "label", text: "Canberra" },
+          },
+        ],
+      },
+      bindings: [itemStatement("Q408", "P36", "Q3114", "Canberra")],
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Australia", property: "capital", stated: "Canberra" }],
+      { fetch },
+    );
+    expect(result).toMatchObject({ status: "agrees", entity: { id: "Q408" } });
+  });
+
+  it("shows the article's title for an item with no label in the languages asked", async () => {
+    const fetch = fakeWikidata({
+      articles: { "Hamlet play": [{ id: "Q41567", title: "Hamlet" }] },
+      bindings: [
+        itemStatement("Q41567", "P50", "Q692", "William Shakespeare", {
+          itemLabel: { value: "Q41567" },
+        }),
+      ],
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Hamlet", kind: "play", property: "creator", stated: "X" }],
+      { fetch },
+    );
+    expect(result.entity.label).toBe("Hamlet");
   });
 
   it("reads pooled properties together", () => {

@@ -1071,7 +1071,8 @@ export function registerTools(server, ctx) {
         "You pass claims, not prose: one per fact, each naming the thing (`subject`), what is said about it " +
         "(`property`), and the number, the year, or the name stated (`stated`). Only facts about a specific, " +
         "named, real thing can be checked; leave out opinions, comparisons, and facts about a whole kind of " +
-        "thing ('cats sleep 16 hours a day'). Nothing is saved, and the only service called is Wikidata.\n\n" +
+        "thing ('cats sleep 16 hours a day'). Nothing is saved; the only services called are Wikipedia's " +
+        "article search (to find which thing a name means) and Wikidata (for what is known about it).\n\n" +
         "Each claim comes back `agrees`, `disagrees` or `unknown`, with the Wikidata item it was checked " +
         "against. Read that item's description before acting: a name can match the wrong thing. `unknown` means " +
         "Wikidata couldn't say (no such item, no such value, or no reply), not that the fact is wrong. Wikidata " +

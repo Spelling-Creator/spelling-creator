@@ -29,9 +29,15 @@ describe("the items of a Wikipedia search", () => {
       });
     });
     expect(await articleItems("Mercury planet", { fetch })).toEqual([
-      { id: "Q308", label: "Mercury", description: "planet" },
+      {
+        id: "Q308",
+        title: "Mercury (planet)",
+        label: "Mercury",
+        description: "planet",
+      },
       {
         id: "Q30597834",
+        title: "Outline of Mercury (planet)",
         label: "Outline of Mercury",
         description: "planet",
       },

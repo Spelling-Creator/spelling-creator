@@ -26,8 +26,8 @@ export const wikipediaApi = (language = "en") =>
  * @param {string} query  A name, with what kind of thing it is where known:
  *   "Mercury planet".
  * @param {import("./wikidata.js").WikidataOptions & { limit?: number }} [opts]
- * @returns {Promise<{ id: string, label: string, description: string }[]>}
- *   `label` is the article's title without its disambiguator and
+ * @returns {Promise<{ id: string, title: string, label: string, description: string }[]>}
+ *   `title` is the article's; `label` is it without its disambiguator and
  *   `description` the disambiguator ("Mercury" and "planet" for "Mercury
  *   (planet)"), standing in until the statements query brings Wikidata's own.
  */
@@ -54,6 +54,7 @@ export async function articleItems(query, opts = {}) {
       const parts = /^(.*?)\s*\(([^()]*)\)$/.exec(page.title) || [];
       return {
         id: page.pageprops.wikibase_item,
+        title: page.title,
         label: parts[1] || page.title,
         description: parts[2] || "",
       };

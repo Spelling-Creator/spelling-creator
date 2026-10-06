@@ -50,7 +50,7 @@ could only fail.
                                           │ 2. each quote must be in its passage
                                           ▼
                                   core/factCheck checkClaims
-                                          │ 3. wbsearchentities: names to candidate items
+                                          │ 3. Wikipedia search: names to candidate items
                                           │ 4. one SPARQL query: every candidate's values
                                           │ 5. pick the item, convert units, compare
                                           ▼
@@ -184,17 +184,36 @@ together with its `kind` ("Hamlet play", "Georgia country", "Mercury planet") an
 article comes first in every case tried. Each article names its Wikidata item, and the
 data is read from there as before.
 
-The top three articles are the candidates. The one used is, in order: the first whose
-description says it is the claim's `kind` _and_ that has the property; the first that is
-the kind; the first that has the property; the first. Being the kind outranks having the
-property because the kind is what the author said: "Mercury" the element has no recorded
-discoverer, and the right answer to that is "no value", not the third search result
-(copernicium, which has one). If Wikipedia finds no article at all, the name falls back to
-`wbsearchentities`, with the same ordering over its candidates' descriptions.
+Two searches are made together, for the name alone and for the name with its `kind`, and
+their top three articles are the candidates, the bare name's first. The name alone finds
+what most people mean by it ("Hamlet" the play, "Titanic" the ship, "penicillin" itself);
+the kind finds another sense where that is the one meant ("Amazon river", "Mercury
+planet", "Georgia state"). Asking only with the kind was tried and ranks worse when the
+top article doesn't say the kind: "penicillin medicine" puts the discovery of penicillin
+above penicillin.
 
-The stated name of a named fact is resolved the same way (its top three articles), with
-`wbsearchentities` as the fallback, and then compared as words against the value's label
-if neither finds it.
+The one used is the first candidate whose article _title_ is the name with the kind added
+and nothing else ("Mercury (planet)", "Amazon River", "Georgia (U.S. state)"); failing
+that, the first. A title that merely has the kind in it is something else: "Australian
+country music" is not Australia. The title and not Wikidata's description, because a
+description is prose that says "tragedy" for a play and "liner" for a ship, and matching a
+word of it picked Ur-Hamlet over Hamlet. Having the property never
+moves a candidate up past the first when a kind was given: "Titanic" the ship has no
+creator on Wikidata, and the right answer is "no value", not the 1997 film's director.
+Without a kind, a first that has nothing to check gives way to one that has: "Mercury" and
+an orbital period is the planet.
+
+If Wikipedia finds no article, or doesn't answer, the name falls back to
+`wbsearchentities`, whose order means little, so there the candidate that has the property
+and whose description says it is the kind wins, then one that is the kind, then one that
+has the property.
+
+The stated name of a named fact is resolved to its top Wikipedia article (so "USA" is the
+United States, and "Fleming" is Alexander Fleming), with Wikidata's exact label matches as
+the fallback, and then compared as words against the value's label if neither finds it:
+the whole label, or its end, so "Fleming" is Alexander Fleming. One article, not three:
+the second and third hits for a short name are other things, and a claim must not agree
+because one of them happened to be a value.
 
 When this picks wrong, the finding says so plainly ("Checked against Georgia (state of the
 United States)"), which is why the item is always shown. The label and description come
@@ -215,8 +234,9 @@ dates come back unshifted.
 
 ## Cost, limits and caching
 
-A check is one model call and, typically, one Wikipedia search per distinct name (subjects
-and stated names alike) plus one SPARQL query. It goes through the same Turnstile check and per-IP rate limiter as the other
+A check is one model call and, typically, two Wikipedia searches per distinct subject
+(the name, and the name with its kind), one per distinct stated name, and one SPARQL
+query. It goes through the same Turnstile check and per-IP rate limiter as the other
 [AI helpers](./ai-text-suggestions.md) and costs one token.
 
 - **Limits.** At most 60 passages, 4,000 characters each and 40,000 in all, and 40 claims.
@@ -243,6 +263,7 @@ provider and a Turnstile key.
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparison. `checkClaims(claims, opts)`. |
 | `packages/core/src/wikidata.js`                       | The requests: name search and SPARQL, shared with the [image search](./search-images.md).                 |
+| `packages/core/src/wikipedia.js`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article.                               |
 | `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                |
 | `apps/api/src/routes/ai.js`                           | The `factCheck` mode: Turnstile, rate limit, cache.                                                       |
 | `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                         |

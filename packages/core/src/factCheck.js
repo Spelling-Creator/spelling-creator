@@ -46,6 +46,7 @@
 import { textBlockPlain } from "./lessonText.js";
 import {
   eachLimited,
+  exactMatches,
   lastSegment,
   rankOf,
   searchItems,
@@ -573,19 +574,24 @@ export function statementsQuery(itemIds, pids, language = "en") {
   const languages = [...new Set([language, "en", "mul"])].join(",");
   return `SELECT ?item ?itemLabel ?itemDescription ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit ?value ?valueLabel ?ended WHERE {
   VALUES ?item { ${items} }
-  VALUES (?pid ?p ?psv ?ps) { ${props} }
-  ?item ?p ?st .
-  ?st wikibase:rank ?rank .
+  # The statements are optional so that every candidate comes back at least
+  # once, with its label and description, whether or not it has anything to
+  # check: choosing between candidates needs to know what each one is.
   OPTIONAL {
-    ?st ?psv ?node .
-    OPTIONAL { ?node wikibase:quantityAmount ?amount ; wikibase:quantityUnit ?unit . }
-    OPTIONAL { ?node wikibase:quantityLowerBound ?lower . }
-    OPTIONAL { ?node wikibase:quantityUpperBound ?upper . }
-    OPTIONAL { ?node wikibase:timeValue ?time ; wikibase:timePrecision ?precision ; wikibase:timeCalendarModel ?calendar . }
+    VALUES (?pid ?p ?psv ?ps) { ${props} }
+    ?item ?p ?st .
+    ?st wikibase:rank ?rank .
+    OPTIONAL {
+      ?st ?psv ?node .
+      OPTIONAL { ?node wikibase:quantityAmount ?amount ; wikibase:quantityUnit ?unit . }
+      OPTIONAL { ?node wikibase:quantityLowerBound ?lower . }
+      OPTIONAL { ?node wikibase:quantityUpperBound ?upper . }
+      OPTIONAL { ?node wikibase:timeValue ?time ; wikibase:timePrecision ?precision ; wikibase:timeCalendarModel ?calendar . }
+    }
+    OPTIONAL { ?st ?ps ?value . FILTER(isIRI(?value)) }
+    OPTIONAL { ?st pq:P585 ?pit . }
+    OPTIONAL { ?st pq:P582 ?ended . }
   }
-  OPTIONAL { ?st ?ps ?value . FILTER(isIRI(?value)) }
-  OPTIONAL { ?st pq:P585 ?pit . }
-  OPTIONAL { ?st pq:P582 ?ended . }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "${languages}". }
 }`;
 }
@@ -671,8 +677,12 @@ export function itemsFromBindings(bindings) {
   for (const row of bindings || []) {
     const id = lastSegment(row.item?.value);
     if (!id || out.has(id)) continue;
+    // The label service answers with the bare id for an item that has no
+    // label in the languages asked for. That is no label; the caller has a
+    // better one from the search (an article's title).
+    const label = row.itemLabel?.value;
     out.set(id, {
-      label: row.itemLabel?.value || id,
+      label: label && label !== id ? label : "",
       description: row.itemDescription?.value || "",
     });
   }
@@ -772,9 +782,12 @@ export function timeAgrees(claim, s) {
 export function itemAgrees(claim, statements, statedIds = []) {
   const ids = new Set(statedIds);
   const wanted = squashText(claim.stated);
-  return statements.some(
-    (s) => ids.has(s.value) || squashText(s.valueLabel) === wanted,
-  );
+  // The label, or its end: a passage says "Fleming" for Alexander Fleming.
+  const named = (label) => {
+    const have = squashText(label);
+    return have === wanted || have.endsWith(` ${wanted}`);
+  };
+  return statements.some((s) => ids.has(s.value) || named(s.valueLabel));
 }
 
 /**
@@ -866,47 +879,95 @@ const words = (text) =>
     .split(/[^\p{L}\p{N}]+/u)
     .filter((w) => w.length > 2);
 
+const hasWord = (text, wanted) => {
+  const present = new Set(words(text));
+  return wanted.some((w) => present.has(w));
+};
+
 /**
- * Which of a name's candidate items a claim is about. The candidates come
- * best first (see findCandidates), so this mostly takes the first. One whose
- * description says it is the claim's `kind` beats one that doesn't, and
- * among those, one that has the property beats one that doesn't: "Mercury"
- * for a claim about a planet is the planet, and only one of the planet and
- * the element has an orbital period. Fitting the kind outranks having the
- * property, because the kind is what the author said: "Mercury" the element
- * has no recorded discoverer, and the answer to that is "no value", not the
- * third search result, copernicium, which has one.
+ * Which of a name's candidate items a claim is about.
+ *
+ * Wikipedia's candidates (see findCandidates) come with the article the name
+ * alone means first, so that is the answer unless the author's `kind` names
+ * another: the first candidate whose article title has the kind in it
+ * ("Mercury (planet)", "Amazon River", "Georgia (U.S. state)"). The title,
+ * not Wikidata's description: a description is prose that says "tragedy"
+ * for a play and "liner" for a ship, and matching a word in it picked
+ * Ur-Hamlet over Hamlet. Having the property never moves a candidate up past
+ * the first when a kind was given: "Titanic" the ship has no creator on
+ * Wikidata, and the answer to that is "no value", not the 1997 film's
+ * director. Without a kind, a first that has nothing to check gives way to
+ * one that has: "Mercury" and an orbital period is the planet.
+ *
+ * Wikidata's search, the fallback, ranks by nothing useful, so there the
+ * candidate that has the property and whose description says it is the kind
+ * wins, then one that is the kind, then one that has the property.
  */
 function chooseItem(claim, candidates, statements) {
   const pids = FACT_PROPERTIES[claim.property].pids;
   const has = (c) =>
     pids.some((p) => currentStatements(statements.get(c.id)?.get(p)).length);
   const kind = words(claim.kind);
-  const fits = (c) => {
-    const described = new Set(words(c.description));
-    return kind.some((w) => described.has(w));
-  };
+  const [first] = candidates;
+
+  if (first?.title) {
+    // The name with the kind added, and nothing else: "Mercury (planet)",
+    // "Amazon River", "Georgia (U.S. state)". A title that merely has the
+    // kind in it is something else: "Australian country music" is not
+    // Australia, and "Sleep Country Canada" is not Canada.
+    const subject = new Set(words(claim.subject));
+    const nameAndKind = (c) => {
+      const title = words(c.title);
+      return (
+        title.some((w) => kind.includes(w)) &&
+        title.every((w) => subject.has(w) || kind.includes(w))
+      );
+    };
+    const named = kind.length && candidates.find(nameAndKind);
+    if (named) return named;
+    if (kind.length || has(first)) return first;
+    return candidates.find(has) || first;
+  }
+
+  const fits = (c) => hasWord(c.description, kind);
   return (
     candidates.find((c) => has(c) && fits(c)) ||
     candidates.find(fits) ||
     candidates.find(has) ||
-    candidates[0]
+    first
   );
 }
 
 /**
- * The items a name could mean, best first: the top articles of a Wikipedia
- * search for the name with its kind ("Georgia country"), which ranks by how
- * much an article matters and reads the phrase. Wikidata's own label search
- * is the fallback for a name with no article, a prefix match in an order
- * that means little ("Hamlet" puts a kind of village and a film ahead of the
- * play), which is why it isn't the first choice.
+ * The items a name could mean, best first.
+ *
+ * From Wikipedia's article search, which ranks by how much an article
+ * matters: the name alone finds the thing most people mean by it ("Hamlet"
+ * the play, "Titanic" the ship, "penicillin" itself), and the name with its
+ * kind finds another sense where that is the one meant ("Amazon river",
+ * "Mercury planet", "Georgia state"). Both are asked, together, and the
+ * bare name's answers come first; chooseItem reads the kind off the titles.
+ * Asking only with the kind was tried and ranks worse for a kind the top
+ * article doesn't say: "penicillin medicine" puts the discovery of
+ * penicillin above penicillin.
+ *
+ * Wikidata's own label search is the fallback for a name with no article,
+ * or when Wikipedia doesn't answer: a prefix match in an order that means
+ * little ("Hamlet" puts a kind of village and a film ahead of the play),
+ * which is why it isn't the first choice.
  * @param {string} name
  * @param {string} [kind]
  */
 async function findCandidates(name, kind, settings) {
-  const query = [name, kind].filter(Boolean).join(" ");
-  const articles = await articleItems(query, settings);
+  const search = (query) => articleItems(query, settings).catch(() => []);
+  const [plain, kinded] = await Promise.all([
+    search(name),
+    kind ? search(`${name} ${kind}`) : [],
+  ]);
+  const seen = new Set();
+  const articles = [...plain, ...kinded].filter(
+    (a) => !seen.has(a.id) && seen.add(a.id),
+  );
   if (articles.length) return articles;
   return searchItems(name, { ...settings, limit: 8 });
 }
@@ -948,7 +1009,7 @@ export async function checkPreparedClaims(claims, opts = {}) {
   const names = [...new Set(claims.map(searchKey))];
   const candidatesByName = new Map();
   const failedNames = new Set();
-  await eachLimited(names, 4, async (name) => {
+  const findSubjects = eachLimited(names, 4, async (name) => {
     const { subject, kind } = claims.find((c) => searchKey(c) === name);
     try {
       candidatesByName.set(name, await findCandidates(subject, kind, settings));
@@ -957,19 +1018,26 @@ export async function checkPreparedClaims(claims, opts = {}) {
     }
   });
 
-  // And one per distinct name a named fact states, to learn which items it
-  // could mean ("USA" is the United States). A search that fails leaves the
-  // name to be compared as words instead.
+  // And one per distinct name a named fact states, to learn which item it
+  // means: its top Wikipedia article ("USA" is the United States, "Fleming"
+  // is Alexander Fleming), or failing that Wikidata's exact label matches.
+  // One article, not three: the next hits for a short name are other things,
+  // and a claim must not agree because one of them happened to be a value.
+  // A search that fails leaves the name to be compared as words instead.
   const statedNames = [
     ...new Set(
       claims.filter((c) => c.stated).map((c) => c.stated.toLowerCase()),
     ),
   ];
   const statedIdsByName = new Map();
-  await eachLimited(statedNames, 4, async (name) => {
+  const findStated = eachLimited(statedNames, 4, async (name) => {
     const stated = claims.find((c) => c.stated.toLowerCase() === name).stated;
     try {
-      const found = await findCandidates(stated, "", settings);
+      const [article] = await articleItems(stated, {
+        ...settings,
+        limit: 1,
+      }).catch(() => []);
+      const found = article ? [article] : await exactMatches(stated, settings);
       statedIdsByName.set(
         name,
         found.map((m) => m.id),
@@ -978,6 +1046,9 @@ export async function checkPreparedClaims(claims, opts = {}) {
       // Compared by label in itemAgrees.
     }
   });
+
+  // The two lookups don't depend on each other, so they share the wait.
+  await Promise.all([findSubjects, findStated]);
 
   // One query for every candidate's values.
   const itemIds = [
