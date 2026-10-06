@@ -174,24 +174,32 @@ quotes Wikidata in: a passage in feet is told "29,031.69 feet", not "8,848.86 me
 
 ### Picking the item
 
-`wbsearchentities` returns up to eight candidates for each name (deep enough to reach a
-famous thing the search ranks below its namesakes: the play Hamlet is sixth, under a kind
-of village, a film and two given names). The one used is, in order: one that has the
-property _and_ whose description mentions the claim's `kind`; one that has the property;
-one whose description mentions the kind; the top result. Ties at the first two steps go to
-the best known candidate, by how many Wikipedias have a page on it (the play Hamlet is on
-143, the 1948 film on 45), a count that rides along in the statements query at no extra
-cost. A search for "Mercury" finds the planet and the element, and only one of them has an
-orbital period.
+Names are turned into items through **Wikipedia's article search**
+(`packages/core/src/wikipedia.js`), not Wikidata's own. Wikidata's `wbsearchentities`
+matches labels by prefix and ranks them in an order that has little to do with which thing
+a lesson means: for "Hamlet" it puts a kind of village, a 1948 film and two given names
+ahead of the play, and for "Amazon" the river is nowhere in the first eight. Wikipedia's
+search ranks by how much an article matters and reads a phrase, so the subject is searched
+together with its `kind` ("Hamlet play", "Georgia country", "Mercury planet") and the right
+article comes first in every case tried. Each article names its Wikidata item, and the
+data is read from there as before.
 
-When none of the candidates is described as the claim's `kind`, the name is searched once
-more with the kind appended, and anything new is added behind the originals. "Amazon" is a
-company first and the river nowhere in the top eight, but "Amazon river" is the river. The
-second search isn't run otherwise, because it is as often wrong as right ("Mercury planet"
-finds orbiters), and only the candidate ordering above decides what is used.
+The top three articles are the candidates. The one used is, in order: the first whose
+description says it is the claim's `kind` _and_ that has the property; the first that is
+the kind; the first that has the property; the first. Being the kind outranks having the
+property because the kind is what the author said: "Mercury" the element has no recorded
+discoverer, and the right answer to that is "no value", not the third search result
+(copernicium, which has one). If Wikipedia finds no article at all, the name falls back to
+`wbsearchentities`, with the same ordering over its candidates' descriptions.
+
+The stated name of a named fact is resolved the same way (its top three articles), with
+`wbsearchentities` as the fallback, and then compared as words against the value's label
+if neither finds it.
 
 When this picks wrong, the finding says so plainly ("Checked against Georgia (state of the
-United States)"), which is why the item is always shown.
+United States)"), which is why the item is always shown. The label and description come
+from Wikidata when the item had anything to check, and from the article's title ("Georgia",
+"country") otherwise.
 
 ### Why one SPARQL query
 
@@ -207,8 +215,8 @@ dates come back unshifted.
 
 ## Cost, limits and caching
 
-A check is one model call and, typically, one search per distinct name plus one SPARQL
-query. It goes through the same Turnstile check and per-IP rate limiter as the other
+A check is one model call and, typically, one Wikipedia search per distinct name (subjects
+and stated names alike) plus one SPARQL query. It goes through the same Turnstile check and per-IP rate limiter as the other
 [AI helpers](./ai-text-suggestions.md) and costs one token.
 
 - **Limits.** At most 60 passages, 4,000 characters each and 40,000 in all, and 40 claims.
@@ -225,8 +233,9 @@ query. It goes through the same Turnstile check and per-IP rate limiter as the o
   `SpellingCreator/1.0 (https://spellingcreator.org; lesson fact checking)`, and the MCP
   server sends the one it already uses for Commons.
 
-A self-hosted instance needs outbound HTTPS to `www.wikidata.org` and
-`query.wikidata.org`, as well as an AI provider and a Turnstile key.
+A self-hosted instance needs outbound HTTPS to `en.wikipedia.org` (or the Wikipedia of
+the lesson's language), `www.wikidata.org` and `query.wikidata.org`, as well as an AI
+provider and a Turnstile key.
 
 ## Where the code is
 

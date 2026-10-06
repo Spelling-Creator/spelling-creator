@@ -46,7 +46,6 @@
 import { textBlockPlain } from "./lessonText.js";
 import {
   eachLimited,
-  exactMatches,
   lastSegment,
   rankOf,
   searchItems,
@@ -54,6 +53,7 @@ import {
   squashText,
   wikidataItemUrl,
 } from "./wikidata.js";
+import { articleItems } from "./wikipedia.js";
 
 // The Worker places a quote in its passage with squashText, and the editor
 // asks whether it is still there with it. Both take it from here, so the two
@@ -568,14 +568,13 @@ export function parseSparqlTime(value, precision) {
 export function statementsQuery(itemIds, pids, language = "en") {
   const items = itemIds.map((id) => `wd:${id}`).join(" ");
   const props = pids.map((p) => `("${p}" p:${p} psv:${p} ps:${p})`).join(" ");
-  const languages = language === "en" ? "en" : `${language},en`;
-  return `SELECT ?item ?links ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit ?value ?valueLabel ?ended WHERE {
+  // "mul" is Wikidata's label for every language at once, where a name that
+  // is the same everywhere (Marie Curie) now lives instead of under "en".
+  const languages = [...new Set([language, "en", "mul"])].join(",");
+  return `SELECT ?item ?itemLabel ?itemDescription ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit ?value ?valueLabel ?ended WHERE {
   VALUES ?item { ${items} }
   VALUES (?pid ?p ?psv ?ps) { ${props} }
   ?item ?p ?st .
-  # How well known the item is (how many Wikipedias have a page on it), for
-  # choosing between same-named candidates: the play Hamlet over the film.
-  ?item wikibase:sitelinks ?links .
   ?st wikibase:rank ?rank .
   OPTIONAL {
     ?st ?psv ?node .
@@ -638,7 +637,10 @@ export function statementsFromBindings(bindings) {
         precision,
         calendar: lastSegment(row.calendar?.value),
       });
-    } else if (row.value) {
+    } else if (/\/entity\/Q\d+$/.test(row.value?.value || "")) {
+      // An item. "Unknown value" comes back as a blank node instead, and is
+      // left out like "no value": a planet whose discoverer is unknown does
+      // not have a discoverer to compare with.
       statement.value = lastSegment(row.value.value);
       statement.valueLabel = row.valueLabel?.value || statement.value;
     } else {
@@ -658,17 +660,21 @@ export function statementsFromBindings(bindings) {
 }
 
 /**
- * Each item's sitelinks count, from the same rows. An item with none of the
- * asked-for statements sends no rows and so isn't here; chooseItem treats
- * that as 0, which is right, since such an item has already lost on having
- * nothing to check.
- * @returns {Map<string, number>}
+ * Each item's own label and description, from the same rows: what a finding
+ * shows as the thing it was checked against. An item with none of the
+ * asked-for statements sends no rows and so isn't here; the caller falls back
+ * to what the search said about it.
+ * @returns {Map<string, { label: string, description: string }>}
  */
-export function sitelinksFromBindings(bindings) {
+export function itemsFromBindings(bindings) {
   const out = new Map();
   for (const row of bindings || []) {
     const id = lastSegment(row.item?.value);
-    if (id && row.links) out.set(id, Number(row.links.value) || 0);
+    if (!id || out.has(id)) continue;
+    out.set(id, {
+      label: row.itemLabel?.value || id,
+      description: row.itemDescription?.value || "",
+    });
   }
   return out;
 }
@@ -850,7 +856,7 @@ async function fetchStatements(itemIds, pids, opts) {
   );
   return {
     statements: statementsFromBindings(rows),
-    sitelinks: sitelinksFromBindings(rows),
+    items: itemsFromBindings(rows),
   };
 }
 
@@ -861,15 +867,17 @@ const words = (text) =>
     .filter((w) => w.length > 2);
 
 /**
- * Which of a name's candidate items a claim is about. A candidate that has the
- * property wins over one that doesn't (a search for "Mercury" finds the planet
- * and the element; only one has an orbital period), and among those, one whose
- * description mentions the claim's `kind` wins ("Georgia" the country, for a
- * claim about a country). Ties go to the best known, by sitelinks: a search
- * for "Hamlet" ranks the 1948 film above the play, and both have a creator,
- * but the play is on 143 Wikipedias and the film on 45.
+ * Which of a name's candidate items a claim is about. The candidates come
+ * best first (see findCandidates), so this mostly takes the first. One whose
+ * description says it is the claim's `kind` beats one that doesn't, and
+ * among those, one that has the property beats one that doesn't: "Mercury"
+ * for a claim about a planet is the planet, and only one of the planet and
+ * the element has an orbital period. Fitting the kind outranks having the
+ * property, because the kind is what the author said: "Mercury" the element
+ * has no recorded discoverer, and the answer to that is "no value", not the
+ * third search result, copernicium, which has one.
  */
-function chooseItem(claim, candidates, statements, sitelinks) {
+function chooseItem(claim, candidates, statements) {
   const pids = FACT_PROPERTIES[claim.property].pids;
   const has = (c) =>
     pids.some((p) => currentStatements(statements.get(c.id)?.get(p)).length);
@@ -878,16 +886,29 @@ function chooseItem(claim, candidates, statements, sitelinks) {
     const described = new Set(words(c.description));
     return kind.some((w) => described.has(w));
   };
-  const links = (c) => sitelinks.get(c.id) || 0;
-  // Sorting is stable, so equally known candidates keep the search's order.
-  const bestKnown = (list) =>
-    list.length ? [...list].sort((a, b) => links(b) - links(a))[0] : undefined;
   return (
-    bestKnown(candidates.filter((c) => has(c) && fits(c))) ||
-    bestKnown(candidates.filter(has)) ||
+    candidates.find((c) => has(c) && fits(c)) ||
     candidates.find(fits) ||
+    candidates.find(has) ||
     candidates[0]
   );
+}
+
+/**
+ * The items a name could mean, best first: the top articles of a Wikipedia
+ * search for the name with its kind ("Georgia country"), which ranks by how
+ * much an article matters and reads the phrase. Wikidata's own label search
+ * is the fallback for a name with no article, a prefix match in an order
+ * that means little ("Hamlet" puts a kind of village and a film ahead of the
+ * play), which is why it isn't the first choice.
+ * @param {string} name
+ * @param {string} [kind]
+ */
+async function findCandidates(name, kind, settings) {
+  const query = [name, kind].filter(Boolean).join(" ");
+  const articles = await articleItems(query, settings);
+  if (articles.length) return articles;
+  return searchItems(name, { ...settings, limit: 8 });
 }
 
 /**
@@ -920,45 +941,25 @@ export async function checkPreparedClaims(claims, opts = {}) {
   };
   if (!claims?.length) return [];
 
-  // One search per distinct name.
-  const names = [...new Set(claims.map((c) => c.subject.toLowerCase()))];
+  // One search per distinct name and kind: "Georgia" the country and
+  // "Georgia" the state are two searches, and must not share an answer.
+  const searchKey = (c) =>
+    [c.subject, c.kind].filter(Boolean).join(" ").toLowerCase();
+  const names = [...new Set(claims.map(searchKey))];
   const candidatesByName = new Map();
   const failedNames = new Set();
   await eachLimited(names, 4, async (name) => {
-    const { subject, kind } = claims.find(
-      (c) => c.subject.toLowerCase() === name,
-    );
+    const { subject, kind } = claims.find((c) => searchKey(c) === name);
     try {
-      // Deep enough to reach a famous thing the search ranks below its
-      // namesakes: the play Hamlet is sixth, under a kind of village, a film
-      // and two names.
-      let hits = await searchItems(subject, { ...settings, limit: 8 });
-      // When nothing found is described as the claim's kind, the name alone
-      // is ambiguous in a way the kind settles: "Amazon" is a company first
-      // and the river nowhere in eight, but "Amazon river" is the river. Not
-      // otherwise, since the kind search is as often wrong ("Mercury planet"
-      // finds orbiters); and what is found goes behind the originals, for
-      // chooseItem to weigh like any other candidate.
-      const kindWords = words(kind);
-      const described = (c) =>
-        words(c.description).some((w) => kindWords.includes(w));
-      if (kindWords.length && !hits.some(described)) {
-        const seen = new Set(hits.map((h) => h.id));
-        const more = await searchItems(`${subject} ${kind}`, {
-          ...settings,
-          limit: 4,
-        });
-        hits = hits.concat(more.filter((h) => !seen.has(h.id)));
-      }
-      candidatesByName.set(name, hits);
+      candidatesByName.set(name, await findCandidates(subject, kind, settings));
     } catch {
       failedNames.add(name);
     }
   });
 
   // And one per distinct name a named fact states, to learn which items it
-  // could mean ("USA" is an alias of the United States). A search that fails
-  // leaves the name to be compared as words instead.
+  // could mean ("USA" is the United States). A search that fails leaves the
+  // name to be compared as words instead.
   const statedNames = [
     ...new Set(
       claims.filter((c) => c.stated).map((c) => c.stated.toLowerCase()),
@@ -968,10 +969,10 @@ export async function checkPreparedClaims(claims, opts = {}) {
   await eachLimited(statedNames, 4, async (name) => {
     const stated = claims.find((c) => c.stated.toLowerCase() === name).stated;
     try {
-      const matches = await exactMatches(stated, settings);
+      const found = await findCandidates(stated, "", settings);
       statedIdsByName.set(
         name,
-        matches.map((m) => m.id),
+        found.map((m) => m.id),
       );
     } catch {
       // Compared by label in itemAgrees.
@@ -986,22 +987,18 @@ export async function checkPreparedClaims(claims, opts = {}) {
     ...new Set(claims.flatMap((c) => FACT_PROPERTIES[c.property].pids)),
   ];
   let statements = new Map();
-  let sitelinks = new Map();
+  let items = new Map();
   let valuesFailed = false;
   if (itemIds.length) {
     try {
-      ({ statements, sitelinks } = await fetchStatements(
-        itemIds,
-        pids,
-        settings,
-      ));
+      ({ statements, items } = await fetchStatements(itemIds, pids, settings));
     } catch {
       valuesFailed = true;
     }
   }
 
   return claims.map((claim) => {
-    const name = claim.subject.toLowerCase();
+    const name = searchKey(claim);
     if (failedNames.has(name)) {
       return { ...claim, status: "unknown", reason: "lookup-failed" };
     }
@@ -1009,8 +1006,16 @@ export async function checkPreparedClaims(claims, opts = {}) {
     if (!candidates.length) {
       return { ...claim, status: "unknown", reason: "no-item" };
     }
-    const item = chooseItem(claim, candidates, statements, sitelinks);
-    const entity = { ...item, url: wikidataItemUrl(item.id) };
+    const item = chooseItem(claim, candidates, statements);
+    // Wikidata's own label and description where the query brought them,
+    // and the search's (an article title, or a label) otherwise.
+    const known = items.get(item.id) || {};
+    const entity = {
+      id: item.id,
+      label: known.label || item.label,
+      description: known.description || item.description || "",
+      url: wikidataItemUrl(item.id),
+    };
     if (valuesFailed) {
       return { ...claim, entity, status: "unknown", reason: "lookup-failed" };
     }

@@ -1091,8 +1091,9 @@ export function registerTools(server, ctx) {
                 .string()
                 .optional()
                 .describe(
-                  "One or two words for what sort of thing it is ('mountain', 'country', 'scientist'). Used to " +
-                    "pick between items with the same name, such as Georgia the country and Georgia the state.",
+                  "One or two words for what sort of thing it is ('mountain', 'country', 'scientist'). It is " +
+                    "searched with the name, as 'Georgia country', so the right one of several things with " +
+                    "that name is found. Give it whenever the name alone could mean something else.",
                 ),
               property: z
                 .enum(FACT_PROPERTY_KEYS)

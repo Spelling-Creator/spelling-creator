@@ -12,6 +12,7 @@ import {
   quantityAgrees,
   roundingSlack,
   statementsFromBindings,
+  statementsQuery,
   timeAgrees,
 } from "./factCheck.js";
 
@@ -172,6 +173,11 @@ describe("reading the query service", () => {
     );
   });
 
+  it("asks for labels in the language, English and Wikidata's 'mul'", () => {
+    expect(statementsQuery(["Q7186"], ["P569"])).toContain('"en,mul"');
+    expect(statementsQuery(["Q7186"], ["P569"], "de")).toContain('"de,en,mul"');
+  });
+
   it("keeps a statement once, dated by its latest point in time", () => {
     const row = (pit) => ({
       item: { value: "http://www.wikidata.org/entity/Q90" },
@@ -282,9 +288,29 @@ describe("comparing", () => {
 });
 
 // A stand-in for the two Wikimedia endpoints, answering from fixtures.
-function fakeWikidata({ search = {}, bindings = [], fail = {} }) {
+function fakeWikidata({
+  articles = {},
+  search = {},
+  bindings = [],
+  fail = {},
+}) {
   return vi.fn(async (url) => {
     const u = new URL(url);
+    // Wikipedia's article search, keyed by what was searched. Nothing by
+    // default, so a test that gives only `search` exercises the Wikidata
+    // fallback.
+    if (u.hostname.endsWith("wikipedia.org")) {
+      if (fail.search) return new Response("", { status: 503 });
+      const pages = (articles[u.searchParams.get("gsrsearch")] || []).map(
+        ({ id, title }, i) => ({
+          pageid: i + 1,
+          index: i + 1,
+          title,
+          ...(id ? { pageprops: { wikibase_item: id } } : {}),
+        }),
+      );
+      return Response.json({ query: { pages } });
+    }
     if (u.hostname === "www.wikidata.org") {
       if (fail.search) return new Response("", { status: 503 });
       const hits = search[u.searchParams.get("search")] || [];
@@ -363,31 +389,22 @@ describe("checking a named fact", () => {
     expect(wrong.wikidata.items.map((i) => i.label)).toEqual(["Canberra"]);
   });
 
-  it("prefers the best known of two candidates that both have the property", async () => {
+  it("finds the subject through Wikipedia, searched with its kind", async () => {
     const fetch = fakeWikidata({
-      search: {
-        Hamlet: [
-          { id: "Q27178", label: "Hamlet", description: "1948 film" },
-          {
-            id: "Q41567",
-            label: "Hamlet",
-            description: "tragedy by Shakespeare",
-          },
+      articles: {
+        // Wikidata's search would rank the film first; Wikipedia, asked for
+        // the play, gives the play.
+        "Hamlet play": [
+          { id: "Q41567", title: "Hamlet" },
+          { id: "Q27178", title: "Hamlet (1948 film)" },
         ],
-        "William Shakespeare": [
-          {
-            id: "Q692",
-            label: "William Shakespeare",
-            match: { type: "label", text: "William Shakespeare" },
-          },
-        ],
+        "William Shakespeare": [{ id: "Q692", title: "William Shakespeare" }],
       },
       bindings: [
-        itemStatement("Q27178", "P57", "Q55245", "Laurence Olivier", {
-          links: { value: "45" },
-        }),
+        itemStatement("Q27178", "P57", "Q55245", "Laurence Olivier"),
         itemStatement("Q41567", "P50", "Q692", "William Shakespeare", {
-          links: { value: "143" },
+          itemLabel: { value: "Hamlet" },
+          itemDescription: { value: "tragedy by William Shakespeare" },
         }),
       ],
     });
@@ -404,28 +421,44 @@ describe("checking a named fact", () => {
     );
     expect(result).toMatchObject({
       status: "agrees",
-      entity: { id: "Q41567" },
+      // Described by Wikidata, once the query has said what it is.
+      entity: { id: "Q41567", description: "tragedy by William Shakespeare" },
+    });
+    // The subject's article search, the stated name's, and one query: no
+    // Wikidata search at all.
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("describes a candidate by its article title until Wikidata has said", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        "Mercury planet": [{ id: "Q308", title: "Mercury (planet)" }],
+      },
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Mercury",
+          kind: "planet",
+          property: "mass",
+          value: 1,
+          unit: "kg",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "no-value",
+      entity: { id: "Q308", label: "Mercury", description: "planet" },
     });
   });
 
-  it("searches again with the kind when nothing found is one", async () => {
+  it("resolves the stated name through Wikipedia too", async () => {
     const fetch = fakeWikidata({
-      search: {
-        Amazon: [{ id: "Q3884", label: "Amazon", description: "company" }],
-        "Amazon river": [
-          {
-            id: "Q3783",
-            label: "Amazon",
-            description: "river in South America",
-          },
-        ],
-        "Atlantic Ocean": [
-          {
-            id: "Q97",
-            label: "Atlantic Ocean",
-            match: { type: "label", text: "Atlantic Ocean" },
-          },
-        ],
+      articles: {
+        "Amazon river": [{ id: "Q3783", title: "Amazon River" }],
+        "Atlantic Ocean": [{ id: "Q97", title: "Atlantic Ocean" }],
       },
       bindings: [itemStatement("Q3783", "P403", "Q97", "Atlantic Ocean")],
     });
@@ -441,8 +474,54 @@ describe("checking a named fact", () => {
       { fetch },
     );
     expect(result).toMatchObject({ status: "agrees", entity: { id: "Q3783" } });
-    // The plain search, the kind search, the stated name, and one query.
-    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("searches once per name and kind, not once per name", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        "Mercury planet": [{ id: "Q308", title: "Mercury (planet)" }],
+        // Copernicium has a discoverer and the element mercury doesn't; the
+        // kind the author gave still wins.
+        "Mercury element": [
+          { id: "Q925", title: "Mercury (element)" },
+          { id: "Q1278", title: "Copernicium" },
+        ],
+      },
+      bindings: [
+        // The planet's discoverer is "unknown value": a blank node, not an item.
+        itemStatement("Q308", "P61", "", "", {
+          value: { value: "http://www.wikidata.org/.well-known/genid/abc" },
+        }),
+        itemStatement("Q1278", "P61", "Q1", "GSI"),
+      ],
+    });
+    const [planet, element] = await checkClaims(
+      [
+        {
+          subject: "Mercury",
+          kind: "planet",
+          property: "discoverer",
+          stated: "X",
+        },
+        {
+          subject: "Mercury",
+          kind: "element",
+          property: "discoverer",
+          stated: "X",
+        },
+      ],
+      { fetch },
+    );
+    // Each claim found its own thing, and neither has a discoverer to check.
+    expect(planet).toMatchObject({
+      entity: { id: "Q308" },
+      reason: "no-value",
+    });
+    expect(element).toMatchObject({
+      entity: { id: "Q925" },
+      reason: "no-value",
+    });
   });
 
   it("reads pooled properties together", () => {
@@ -501,12 +580,13 @@ describe("checking claims", () => {
       status: "disagrees",
       wikidata: { value: 8848.86, unit: "m" },
     });
-    // One search for the one name, one query for the values.
-    expect(fetch).toHaveBeenCalledTimes(2);
+    // Wikipedia for the one name (nothing, so Wikidata's search next), then
+    // one query for the values.
+    expect(fetch).toHaveBeenCalledTimes(3);
     expect(fetch.mock.calls[0][1].headers["User-Agent"]).toBe("test");
   });
 
-  it("prefers the candidate that has the property, then the one of the right kind", async () => {
+  it("falls back to Wikidata's search, preferring the right kind, when Wikipedia has no article", async () => {
     const fetch = fakeWikidata({
       search: {
         Georgia: [
