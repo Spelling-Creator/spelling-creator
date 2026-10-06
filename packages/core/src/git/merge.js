@@ -136,8 +136,13 @@ function mergeFields(base, ours, theirs) {
  * that precedes them there, and ids either side deleted drop out.
  *
  * Deliberately not a conflict source — see the note at the top of the file.
+ *
+ * `placeRest` appends whatever `keep` holds that neither list placed. That is
+ * only right when `keep` describes this one list. A section's block list is
+ * merged against the kept blocks of the whole lesson, so it passes false, or
+ * every other section's blocks would land in the first one.
  */
-function mergeIdList(base, ours, theirs, keep) {
+function mergeIdList(base, ours, theirs, keep, { placeRest = true } = {}) {
   const baseSet = new Set(base);
   const ourSet = new Set(ours);
   const theirSet = new Set(theirs);
@@ -166,9 +171,11 @@ function mergeIdList(base, ours, theirs, keep) {
     merged.splice(at, 0, id);
   }
 
-  // Anything the resolution kept that neither list places (e.g. a "keep both"
-  // clone whose anchor vanished) lands at the end rather than being lost.
-  for (const id of keep) if (!merged.includes(id)) merged.push(id);
+  // Anything the resolution kept that neither list places (e.g. a section we
+  // deleted that they still have) lands at the end rather than being lost.
+  if (placeRest) {
+    for (const id of keep) if (!merged.includes(id)) merged.push(id);
+  }
 
   return merged;
 }
@@ -343,28 +350,59 @@ function assemble(base, ours, theirs, resolved) {
   // Blocks are placed in the first merged section that claims them, so a block
   // moved between sections on one side can't end up duplicated.
   const placed = new Set();
-  const sections = [];
+  /** sectionId -> its merged block ids, in order. */
+  const layout = new Map();
 
   for (const sectionId of sectionIds) {
-    const our = ourSections.get(sectionId);
-    const their = theirSections.get(sectionId);
-    const original = baseSections.get(sectionId);
-
     const blockIds = mergeIdList(
       blockIdsOf(base, sectionId),
       blockIdsOf(ours, sectionId),
       blockIdsOf(theirs, sectionId),
       kept,
+      { placeRest: false },
     ).filter((id) => !placed.has(id));
 
     for (const id of blockIds) placed.add(id);
-
-    sections.push({
-      id: sectionId,
-      name: mergeName(original?.name, our?.name, their?.name),
-      blocks: blockIds.map((id) => resolved.get(id)),
-    });
+    layout.set(sectionId, blockIds);
   }
+
+  // A block one side deleted and the other edited is kept, but neither order
+  // places it: the deleting side no longer lists it, and the other side's copy
+  // is in the base, so it doesn't count as an addition. Put it back in the
+  // section that still holds it, after the block it follows there.
+  for (const id of kept) {
+    if (placed.has(id)) continue;
+    for (const doc of [ours, theirs]) {
+      const home = (doc?.sections || []).find((section) =>
+        (section.blocks || []).some((b) => b.id === id),
+      );
+      const blockIds = home && layout.get(home.id);
+      if (!blockIds) continue;
+
+      const order = home.blocks.map((b) => b.id);
+      let at = 0;
+      for (let j = order.indexOf(id) - 1; j >= 0; j--) {
+        const anchor = blockIds.indexOf(order[j]);
+        if (anchor !== -1) {
+          at = anchor + 1;
+          break;
+        }
+      }
+      blockIds.splice(at, 0, id);
+      placed.add(id);
+      break;
+    }
+  }
+
+  const sections = sectionIds.map((sectionId) => ({
+    id: sectionId,
+    name: mergeName(
+      baseSections.get(sectionId)?.name,
+      ourSections.get(sectionId)?.name,
+      theirSections.get(sectionId)?.name,
+    ),
+    blocks: layout.get(sectionId).map((id) => resolved.get(id)),
+  }));
 
   // A kept block whose every section disappeared would otherwise be dropped.
   const orphans = [...kept].filter((id) => !placed.has(id));
