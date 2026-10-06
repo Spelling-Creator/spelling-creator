@@ -294,7 +294,10 @@ A conflict offers three ways out, per block:
 
 Structure (which section a block sits in, and in what order) is merged separately
 and never raises a dialog: order is cheap for a human to fix and expensive for
-one to adjudicate, so a reorder on both sides resolves to ours.
+one to adjudicate, so a reorder on both sides resolves to ours. Each section's
+block order is merged on its own, and a block moved to another section on one
+side follows the move. A block one side deleted and the other edited goes back
+into the section that still holds it, after the block it followed there.
 
 A text block's words count as **one field**, whichever of its two shapes they
 are stored in (a plain `text` string, or a formatted `content` document; see
