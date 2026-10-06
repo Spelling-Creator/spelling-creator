@@ -1101,9 +1101,9 @@ export function registerTools(server, ctx) {
                 .enum(FACT_QUALIFIERS)
                 .optional()
                 .describe(
-                  "'about' for a hedged figure ('around', 'nearly', 'up to'), 'more_than' and 'less_than' for " +
-                    "bounds. Default 'exact'. A figure is always allowed the rounding it was written with: 9,000 " +
-                    "agrees with anything from 8,500 to 9,500.",
+                  "'about' for a hedged figure ('around', 'nearly'), 'more_than' and 'less_than' for bounds ('over " +
+                    "8,000 metres', 'up to 2 metres long'). Default 'exact'. A figure is always allowed the rounding " +
+                    "it was written with: 9,000 agrees with anything from 8,500 to 9,500.",
                 ),
               quote: z
                 .string()
@@ -1120,6 +1120,7 @@ export function registerTools(server, ctx) {
     },
     tool(async ({ claims }) => {
       // checkClaims drops what it can't read without saying so; say so here.
+      // An unknown property never gets this far: the schema refuses it.
       const dropped = claims
         .map((claim, index) => (normalizeClaim(claim) ? null : index))
         .filter((index) => index !== null);
@@ -1151,8 +1152,8 @@ export function registerTools(server, ctx) {
               dropped: {
                 indexes: dropped,
                 note:
-                  "Not checked: each has an unknown property, no number, no subject, or a unit that doesn't " +
-                  "measure its property.",
+                  "Not checked: each has an empty subject, or a unit that doesn't measure its property (a " +
+                  "height in kg).",
               },
             }
           : {}),

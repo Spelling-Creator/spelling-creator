@@ -276,6 +276,14 @@ export default function EditorPage() {
   // (LibraryPage), not here.
   const [localId, setLocalId] = useState(null);
 
+  // A fact check is about the lesson it was run on. Switching to another one
+  // drops it, and any check still out, rather than showing the old lesson's
+  // facts as "changed since this check".
+  const resetFactCheck = factCheck.reset;
+  useEffect(() => {
+    resetFactCheck();
+  }, [localId, resetFactCheck]);
+
   // Hub-editing state. `editingId` is the id of a published lesson currently
   // loaded for editing (so "Publish" becomes "Update"); null when authoring a
   // fresh lesson. It's stored on the library record (see effect below) so the

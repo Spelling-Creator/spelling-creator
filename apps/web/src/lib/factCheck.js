@@ -12,7 +12,7 @@
 // server's check_facts runs. Findings are worded here, from the `checks`
 // namespace's `facts` keys.
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { checkFacts } from "@spelling-creator/core/aiSuggest";
 import { lessonPassages } from "@spelling-creator/core/factCheck";
 
@@ -21,22 +21,36 @@ const IDLE = Object.freeze({ status: "idle", facts: [], error: "" });
 /**
  * The fact check for the lesson being edited. Lives on the editor page rather
  * than in the panel, so closing the panel to go to a finding doesn't throw the
- * result away.
+ * result away. The page calls `reset` when it switches to another lesson.
+ *
+ * A check takes seconds, and the author can start another, or switch lessons,
+ * while one is out. Each run is numbered, and only the latest one's answer is
+ * kept: a slow reply must not land on top of a newer result, or on a lesson it
+ * wasn't about.
  */
 export function useFactCheck() {
   const [state, setState] = useState(IDLE);
+  const latest = useRef(0);
   const run = useCallback(async (doc, token) => {
+    const request = ++latest.current;
     setState((prev) => ({ ...prev, status: "running", error: "" }));
     try {
       const facts = await checkFacts(lessonPassages(doc), token, {
         documentName: doc?.title || "",
       });
+      if (request !== latest.current) return;
       setState({ status: "done", facts, error: "" });
     } catch (e) {
+      if (request !== latest.current) return;
       setState({ status: "error", facts: [], error: e.message || "" });
     }
   }, []);
-  return { ...state, run };
+  // Forget the result, and any check still out.
+  const reset = useCallback(() => {
+    latest.current += 1;
+    setState(IDLE);
+  }, []);
+  return { ...state, run, reset };
 }
 
 // Units Intl can name in every language it knows, plurals included. The rest

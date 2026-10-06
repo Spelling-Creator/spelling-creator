@@ -21,7 +21,7 @@ const FACT_CHECK_TTL = 60 * 60 * 24 * 7; // 7 days
 
 // Part of a fact check's cache key. Bump it when the prompt or the checker
 // changes what a check would find, so old results aren't served for new rules.
-const FACT_CHECK_VERSION = 'v1';
+const FACT_CHECK_VERSION = 'v2';
 
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any
@@ -245,9 +245,14 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	}
 	// Fact checks are cached too, keyed on the passages' text in order: the same
 	// lesson checked again (or reopened) costs neither a model call nor a round of
-	// Wikidata lookups.
+	// Wikidata lookups. The passages go in as one JSON array rather than as
+	// separate parts, because cacheKey joins its parts with spaces: ["a b", "c"]
+	// and ["a", "b c"] would share a key, and the cached facts' passage indexes
+	// would point at the wrong blocks.
 	const fKey =
-		mode === 'factCheck' ? await cacheKey(['factCheck', FACT_CHECK_VERSION, documentName, ...passages.map((p) => p.text)]) : null;
+		mode === 'factCheck'
+			? await cacheKey(['factCheck', FACT_CHECK_VERSION, documentName, JSON.stringify(passages.map((p) => p.text))])
+			: null;
 	if (fKey) {
 		const cached = await kv.get(fKey);
 		if (cached) {

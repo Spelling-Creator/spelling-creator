@@ -98,7 +98,7 @@ For each fact give:
 - "value": the number as a plain number ("4.5 million" is 4500000). For a date, the year, negative for BC ("2560 BC" is -2560; "4.5 billion years ago" is -4500000000).
 - "unit": the unit the passage uses, one of: ${units}. Use "${NO_UNIT}" for a population and for dates.
 - "month" and "day": for a date given to the month or the day, the month (1 to 12) and the day. Otherwise 0.
-- "qualifier": "about" when the passage hedges ("about", "around", "almost", "nearly", "up to"), "more_than" for "more than" or "over", "less_than" for "less than" or "under", and "exact" otherwise.
+- "qualifier": "about" when the passage hedges ("about", "around", "almost", "nearly"), "more_than" for "more than" or "over", "less_than" for "less than", "under" or "up to", and "exact" otherwise.
 
 Passages:
 

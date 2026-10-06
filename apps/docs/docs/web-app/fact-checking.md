@@ -133,9 +133,11 @@ deliberately generous and "disagrees" means something.
   date, not right.
 - **A figure gets the rounding it was written with**: half a unit in its last place. "9,000
   metres" allows 500 either way; "8,849" allows 0.5. On top of that, 2% of Wikidata's value,
-  or 10% when the passage hedges ("about", "nearly", "up to").
+  or 10% when the passage hedges ("about", "nearly").
 - **"More than" and "less than" are bounds**, not rounded figures, so "more than 10,000
-  metres" disagrees with Everest even though 10,000 is a round number.
+  metres" disagrees with Everest even though 10,000 is a round number. "Up to" is a
+  "less than": "grows up to 2 metres long" is true of anything 2 metres or under, so it is
+  checked as a ceiling rather than as a hedged figure near 2.
 - **Wikidata's own error bounds** (a population "between 7 and 8 million") are honoured.
 - **Dates are compared as precisely as Wikidata knows them.** A date known to the day is
   checked to the day, if the passage gives one; to the century, anywhere in it. Month and

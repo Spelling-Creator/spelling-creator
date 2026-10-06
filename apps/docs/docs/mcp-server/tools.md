@@ -367,9 +367,11 @@ those with Wikidata. The assistant passes claims rather than prose, one per fact
 
 and gets each one back as `agrees`, `disagrees` or `unknown`, with Wikidata's value in the
 claim's own unit and the item it was checked against. Nothing is saved, the hub isn't called,
-and no AI provider is involved: the assistant is the one reading the passage. Claims it can't
-check (a height in kilograms, a property not on the list) come back under `dropped` rather
-than silently disappearing.
+and no AI provider is involved: the assistant is the one reading the passage. A property
+that isn't on the list fails the tool's input validation, so the whole call is refused and
+nothing is checked. A claim that passes validation but still can't be checked (an empty
+subject, or a height in kilograms) comes back under `dropped` rather than silently
+disappearing.
 
 The tool's description tells the assistant to read the matched item's description before
 acting on a disagreement, and to tell the user rather than "correct" a fact it isn't sure
