@@ -15,6 +15,7 @@
 import { useCallback, useRef, useState } from "react";
 import { checkFacts } from "@spelling-creator/core/aiSuggest";
 import { lessonPassages } from "@spelling-creator/core/factCheck";
+import { formatList } from "./lessonChecks.js";
 
 const IDLE = Object.freeze({ status: "idle", facts: [], error: "" });
 
@@ -155,23 +156,6 @@ export function wikidataText(t, language, fact) {
   }
   const value = quantityText(t, language, wd.value, wd.unit);
   return wd.asOf ? t("facts.asOf", { value, year: wd.asOf }) : value;
-}
-
-// One formatter per language: wikidataText runs for every fact each time the
-// panel renders.
-const listFormats = new Map();
-function formatList(language, items) {
-  if (!listFormats.has(language)) {
-    let format = null;
-    try {
-      format = new Intl.ListFormat(language, { type: "conjunction" });
-    } catch {
-      // An unknown tag; fall back to commas below.
-    }
-    listFormats.set(language, format);
-  }
-  const format = listFormats.get(language);
-  return format ? format.format(items) : items.join(", ");
 }
 
 /**

@@ -4,28 +4,28 @@ title: Tools
 
 # Tools
 
-| Tool                    | What it does                                                                                                       |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `whoami`                | Confirm the session is valid and show the publishing display name.                                                 |
-| `validate_lesson`       | Check lesson content against the authoring standard, saving nothing.                                               |
-| `check_facts`           | Compare numbers and dates with Wikidata before they go into a lesson. See [Fact checking](/web-app/fact-checking). |
-| `create_lesson`         | Build and save a new lesson (draft by default; `published: true` to share).                                        |
-| `create_lesson_file`    | Build an importable lesson file offline, with no account or network.                                               |
-| `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                                      |
-| `update_lesson`         | Replace a lesson's whole title/content (author only).                                                              |
-| `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                                       |
-| `propose_changes`       | Offer a fork's changes back to the original, for a human to review and merge.                                      |
-| `list_lesson_proposals` | List the proposals against a lesson, and whether yours have been resolved.                                         |
-| `review_proposal`       | Read what a proposal changes, as a diff with merge and decline, where a client can show one.                       |
-| `merge_proposal`        | Merge a proposal (the reviewer's own click in that view, not the assistant's to call).                             |
-| `decline_proposal`      | Close a proposal without merging it (likewise the reviewer's own click).                                           |
-| `get_lesson`            | Fetch one lesson with its full content (read before editing / as a template).                                      |
-| `list_my_lessons`       | List your own lessons (drafts + published).                                                                        |
-| `list_hub_lessons`      | Browse published lessons for inspiration / de-duplication.                                                         |
-| `set_lesson_published`  | Toggle a lesson between public and private draft.                                                                  |
-| `delete_lesson`         | Permanently delete one of your lessons.                                                                            |
-| `search_images`         | Search Wikimedia Commons for freely-licensed images, as a picker, where a client can show one.                     |
-| `add_image`             | Download a searched image and insert it as an image block in a lesson.                                             |
+| Tool                    | What it does                                                                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `whoami`                | Confirm the session is valid and show the publishing display name.                                                                                        |
+| `validate_lesson`       | Check lesson content against the authoring standard, saving nothing.                                                                                      |
+| `check_facts`           | Compare numbers, dates and named facts (a capital, a discoverer) with Wikidata before they go into a lesson. See [Fact checking](/web-app/fact-checking). |
+| `create_lesson`         | Build and save a new lesson (draft by default; `published: true` to share).                                                                               |
+| `create_lesson_file`    | Build an importable lesson file offline, with no account or network.                                                                                      |
+| `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                                                                             |
+| `update_lesson`         | Replace a lesson's whole title/content (author only).                                                                                                     |
+| `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                                                                              |
+| `propose_changes`       | Offer a fork's changes back to the original, for a human to review and merge.                                                                             |
+| `list_lesson_proposals` | List the proposals against a lesson, and whether yours have been resolved.                                                                                |
+| `review_proposal`       | Read what a proposal changes, as a diff with merge and decline, where a client can show one.                                                              |
+| `merge_proposal`        | Merge a proposal (the reviewer's own click in that view, not the assistant's to call).                                                                    |
+| `decline_proposal`      | Close a proposal without merging it (likewise the reviewer's own click).                                                                                  |
+| `get_lesson`            | Fetch one lesson with its full content (read before editing / as a template).                                                                             |
+| `list_my_lessons`       | List your own lessons (drafts + published).                                                                                                               |
+| `list_hub_lessons`      | Browse published lessons for inspiration / de-duplication.                                                                                                |
+| `set_lesson_published`  | Toggle a lesson between public and private draft.                                                                                                         |
+| `delete_lesson`         | Permanently delete one of your lessons.                                                                                                                   |
+| `search_images`         | Search Wikimedia Commons for freely-licensed images, as a picker, where a client can show one.                                                            |
+| `add_image`             | Download a searched image and insert it as an image block in a lesson.                                                                                    |
 
 Plus five more on the stdio transport, for joining a lesson the user is editing live:
 `join_collab_session`, `read_collab_doc`, `edit_collab_doc`, `send_collab_chat` and
