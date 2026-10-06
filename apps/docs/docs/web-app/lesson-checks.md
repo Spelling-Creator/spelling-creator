@@ -23,6 +23,12 @@ runs on every write: `@spelling-creator/core/lessonChecks`.
 Nothing blocks. A lesson with problems saves, exports, publishes and prints
 exactly as before.
 
+Below the problems and suggestions, the panel has a **Facts** section that compares
+the passages' numbers and dates with Wikidata. It is a different kind of check: it
+costs a model call and a round of lookups, so it runs only when the author presses
+**Check facts**, and nothing it finds is counted in the bar or the outline. See
+[Fact checking](./fact-checking.md).
+
 ## Problems and suggestions
 
 The checks report two levels, and the editor keeps the MCP server's split
@@ -54,6 +60,7 @@ The full list of codes and what trips each one is in
 | `apps/web/src/lib/lessonChecks.js`                     | `useLessonChecks(doc)`, the per-section tallies, and `describeFinding`, which words a finding for a person. |
 | `apps/web/src/locales/en/checks.json`                  | The editor's wording for every code, under `codes`.                                                         |
 | `apps/web/src/components/editor/LessonChecksSheet.jsx` | The panel.                                                                                                  |
+| `apps/web/src/components/editor/checkGroups.js`        | Grouping findings by section and naming the groups, shared with the panel's Facts section.                  |
 | `apps/web/src/components/editor/SectionOutline.jsx`    | The per-section counts.                                                                                     |
 
 `validateLesson` takes the canonical document, which is the shape the editor

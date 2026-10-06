@@ -26,7 +26,8 @@ Any fact a math question needs must be stated in the passage first. Describe oth
 curiosity, never as strange ("Fascinating Countries", not "Unusual Countries") — this is a hard
 rule. Handle mental illness, war, death, and disability factually and with dignity, without
 euphemism or tragedy-framing. Verify anything time-sensitive (records, prices, "world's largest
-X") before writing it down.
+X") before writing it down. `check_facts` compares numbers and dates with Wikidata: run it on the
+figures a math question uses, and on any record or population, before they go in.
 
 ## Formatting
 
@@ -397,5 +398,5 @@ Things validation cannot decide for you:
 - a `multiple_open` question is genuinely the looser kind, not a `multiple` one whose list you
   couldn't ground: the type is not a way around the checks, and using it that way costs the speller
   the question
-- anything time-sensitive has been verified
+- anything time-sensitive has been verified, with `check_facts` where Wikidata has it
 - the image agrees with the text it sits above

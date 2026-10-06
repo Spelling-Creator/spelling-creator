@@ -10,6 +10,10 @@
 // Problems are always shown. Suggestions start folded away: they describe the
 // usual shape of a lesson, and someone who wrote a short one on purpose
 // shouldn't have to read past a list of reasons it's short.
+//
+// Below both sits the fact check (FactCheckSection), which is different in
+// kind: it costs a model call and a round of Wikidata lookups, so it runs only
+// when asked rather than on every edit.
 
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,45 +33,19 @@ import {
 import { Button } from "../ui/button.jsx";
 import { cn } from "../../lib/utils.js";
 import { describeFinding } from "../../lib/lessonChecks.js";
-
-// Findings in document order: lesson-wide ones first, then each section's in
-// the order the sections appear now (which may have moved since the checks
-// last ran, if they are a frame behind).
-function groupBySection(findings, sections) {
-  const order = new Map(sections.map((s, i) => [s.id, i]));
-  const groups = new Map();
-  for (const finding of findings) {
-    const id = finding.sectionId || "";
-    if (!groups.has(id)) groups.set(id, []);
-    groups.get(id).push(finding);
-  }
-  return [...groups.entries()]
-    .map(([sectionId, items]) => ({ sectionId, items }))
-    .sort(
-      (a, b) =>
-        (a.sectionId ? (order.get(a.sectionId) ?? Infinity) : -1) -
-        (b.sectionId ? (order.get(b.sectionId) ?? Infinity) : -1),
-    );
-}
+import { groupBySection, sectionHeading } from "./checkGroups.js";
+import FactCheckSection from "./FactCheckSection.jsx";
 
 function FindingList({ findings, sections, kind, onChoose }) {
   const { t, i18n } = useTranslation("checks");
   const Icon = kind === "problem" ? CircleAlertIcon : LightbulbIcon;
-
-  const heading = (sectionId, fallbackNumber) => {
-    if (!sectionId) return t("wholeLesson");
-    const index = sections.findIndex((s) => s.id === sectionId);
-    const n = index === -1 ? fallbackNumber : index + 1;
-    const name = sections[index]?.name?.trim();
-    return name ? t("section", { n, name }) : t("untitledSection", { n });
-  };
 
   return (
     <div className="flex flex-col gap-4">
       {groupBySection(findings, sections).map(({ sectionId, items }) => (
         <section key={sectionId || "lesson"} className="flex flex-col gap-1">
           <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            {heading(sectionId, items[0].section)}
+            {sectionHeading(t, sections, sectionId, items[0].section)}
           </h4>
           <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
             {items.map((finding, i) => {
@@ -117,15 +95,19 @@ function FindingList({ findings, sections, kind, onChoose }) {
 }
 
 /**
- * @param {object}   props.checks   From useLessonChecks.
- * @param {any[]}    props.sections The document's sections, for the headings.
- * @param {Function} props.onGoTo   Called with the chosen finding once the sheet
- *                                  has closed, to scroll to its block.
+ * @param {object}   props.checks    From useLessonChecks.
+ * @param {object}   props.factCheck From useFactCheck.
+ * @param {string}   props.title     The lesson's title, sent with a fact check.
+ * @param {any[]}    props.sections  The document's sections, for the headings.
+ * @param {Function} props.onGoTo    Called with the chosen finding once the
+ *                                   sheet has closed, to scroll to its block.
  */
 export default function LessonChecksSheet({
   open,
   onClose,
   checks,
+  factCheck,
+  title,
   sections,
   onGoTo,
 }) {
@@ -225,6 +207,14 @@ export default function LessonChecksSheet({
                   )}
                 </div>
               )}
+
+              <FactCheckSection
+                open={open}
+                factCheck={factCheck}
+                title={title}
+                sections={sections}
+                onChoose={choose}
+              />
             </>
           )}
         </div>

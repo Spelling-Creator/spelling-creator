@@ -32,6 +32,7 @@
     "./collabFrames": "./src/collabFrames.js",
     "./comments": "./src/comments.js",
     "./config": "./src/config.js",
+    "./factCheck": "./src/factCheck.js",
     "./git/doc": "./src/git/doc.js",
     "./git/layout": "./src/git/layout.js",
     "./git/memfs": "./src/git/memfs.js",
@@ -69,6 +70,8 @@
     "./username": "./src/username.js",
     "./users": "./src/users.js",
     "./vakt": "./src/vakt.js",
+    "./wikidata": "./src/wikidata.js",
+    "./wikidataMedia": "./src/wikidataMedia.js",
     "./wikimedia": "./src/wikimedia.js",
     "./ydoc": "./src/ydoc.js"
   },

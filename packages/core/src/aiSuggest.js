@@ -180,3 +180,48 @@ export async function suggestLessonIdeas(ageRange, token) {
   const data = await res.json().catch(() => ({}));
   return Array.isArray(data.ideas) ? data.ideas : [];
 }
+
+/**
+ * Ask the Worker to check a lesson's numbers and dates against Wikidata.
+ * @param {{ blockId: string, text: string }[]} passages  The lesson's text
+ *   blocks, in order (see lessonPassages in ./factCheck.js).
+ * @param {string} token  Turnstile token from the widget's callback.
+ * @param {object} [context]
+ * @param {string} [context.documentName]  Title of the lesson.
+ * @returns {Promise<object[]>} One result per fact found, each carrying the
+ *   `blockId` of the passage it is in (see ./factCheck.js for the rest).
+ */
+export async function checkFacts(passages, token, context = {}) {
+  if (!hasApi()) {
+    throw new Error("The API is not configured.");
+  }
+  if (!token) {
+    throw new Error("Please complete the verification challenge first.");
+  }
+
+  let res;
+  try {
+    res = await fetch(apiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "factCheck",
+        passages: passages.map(({ blockId, text }) => ({ blockId, text })),
+        documentName: context.documentName || "",
+        token,
+      }),
+    });
+  } catch (e) {
+    throw new Error("Could not reach the fact checking service.", {
+      cause: e,
+    });
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(detail || `Request failed (${res.status}).`);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  return Array.isArray(data.facts) ? data.facts : [];
+}

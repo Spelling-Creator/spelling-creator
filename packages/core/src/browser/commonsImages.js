@@ -18,11 +18,13 @@
 // errors it surfaces.
 
 import {
+  IMAGEINFO_PARAMS,
   cleanFileTitle,
   commonsQuery,
   extmetaCaption,
   isUsableImage,
   rankPages,
+  wikidataPickPages,
 } from "../wikimedia.js";
 
 // Strip HTML to plain text using DOMParser, which (unlike assigning innerHTML)
@@ -72,13 +74,20 @@ function normaliseHit(page, info) {
  * get, in one request, each match's thumbnail URL, dimensions, MIME type, and
  * the licence/author metadata needed for attribution.
  *
+ * On the first page, the pictures Wikidata lists for the topic come first,
+ * each with `wikidata: { role, item }` saying what it is and of what, and are
+ * not repeated among the search's own results. They are looked up alongside
+ * the search, not before it, and on a budget of a few seconds
+ * (wikidataPickPages in ../wikimedia.js), so a slow query service costs the
+ * picks and never the search.
+ *
  * @param {string} query  Free-text search terms.
  * @param {object} [opts]
  * @param {number} [opts.page]     1-based page number (default 1).
  * @param {number} [opts.perPage]  Results per page (default 20, max 50).
  * @returns {Promise<{hits: object[], total: number, totalHits: number}>}
  *   Normalised hits: { id, title, previewURL, width, height, mime,
- *   descriptionURL, licenseURL, author, license, tags, caption }.
+ *   descriptionURL, licenseURL, author, license, tags, caption, wikidata? }.
  */
 export async function searchWikimediaImages(query, opts = {}) {
   const q = (query || "").trim();
@@ -89,28 +98,31 @@ export async function searchWikimediaImages(query, opts = {}) {
   const perPage = Math.max(3, Math.min(Number(opts.perPage) || 20, 50));
   const page = Math.max(1, Number(opts.page) || 1);
 
-  const pages = await commonsQuery(
-    {
-      action: "query",
-      generator: "search",
-      gsrsearch: q,
-      gsrnamespace: "6", // File: namespace
-      gsrlimit: String(perPage),
-      gsroffset: String((page - 1) * perPage),
-      prop: "imageinfo",
-      iiprop: "url|size|mime|extmetadata",
-      iiurlwidth: "320", // grid thumbnail size
-      iiextmetadatafilter: "Artist|LicenseShortName|LicenseUrl",
-      iiextmetadatalanguage: "en",
-    },
-    { httpErrorMessage: (status) => `Search failed (${status}).` },
-  );
+  const [picks, pages] = await Promise.all([
+    page === 1 ? wikidataPickPages(q) : [],
+    commonsQuery(
+      {
+        action: "query",
+        generator: "search",
+        gsrsearch: q,
+        gsrnamespace: "6", // File: namespace
+        gsrlimit: String(perPage),
+        gsroffset: String((page - 1) * perPage),
+        ...IMAGEINFO_PARAMS,
+      },
+      { httpErrorMessage: (status) => `Search failed (${status}).` },
+    ),
+  ]);
 
-  const hits = [];
+  const hits = picks.map(({ page: picked, info, image, item }) => ({
+    ...normaliseHit(picked, info),
+    wikidata: { role: image.role, item },
+  }));
+  const picked = new Set(hits.map((hit) => hit.title));
   for (const p of rankPages(pages)) {
     const info = p.imageinfo && p.imageinfo[0];
     // Skip non-images (Commons also holds audio/video/PDF in the File namespace).
-    if (!isUsableImage(info)) continue;
+    if (!isUsableImage(info) || picked.has(p.title)) continue;
     hits.push(normaliseHit(p, info));
   }
   return { hits, total: hits.length, totalHits: hits.length };
