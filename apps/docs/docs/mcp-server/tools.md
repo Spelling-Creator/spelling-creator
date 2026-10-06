@@ -4,27 +4,28 @@ title: Tools
 
 # Tools
 
-| Tool                    | What it does                                                                                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| `whoami`                | Confirm the session is valid and show the publishing display name.                             |
-| `validate_lesson`       | Check lesson content against the authoring standard, saving nothing.                           |
-| `create_lesson`         | Build and save a new lesson (draft by default; `published: true` to share).                    |
-| `create_lesson_file`    | Build an importable lesson file offline, with no account or network.                           |
-| `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                  |
-| `update_lesson`         | Replace a lesson's whole title/content (author only).                                          |
-| `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                   |
-| `propose_changes`       | Offer a fork's changes back to the original, for a human to review and merge.                  |
-| `list_lesson_proposals` | List the proposals against a lesson, and whether yours have been resolved.                     |
-| `review_proposal`       | Read what a proposal changes, as a diff with merge and decline, where a client can show one.   |
-| `merge_proposal`        | Merge a proposal (the reviewer's own click in that view, not the assistant's to call).         |
-| `decline_proposal`      | Close a proposal without merging it (likewise the reviewer's own click).                       |
-| `get_lesson`            | Fetch one lesson with its full content (read before editing / as a template).                  |
-| `list_my_lessons`       | List your own lessons (drafts + published).                                                    |
-| `list_hub_lessons`      | Browse published lessons for inspiration / de-duplication.                                     |
-| `set_lesson_published`  | Toggle a lesson between public and private draft.                                              |
-| `delete_lesson`         | Permanently delete one of your lessons.                                                        |
-| `search_images`         | Search Wikimedia Commons for freely-licensed images, as a picker, where a client can show one. |
-| `add_image`             | Download a searched image and insert it as an image block in a lesson.                         |
+| Tool                    | What it does                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `whoami`                | Confirm the session is valid and show the publishing display name.                                                 |
+| `validate_lesson`       | Check lesson content against the authoring standard, saving nothing.                                               |
+| `check_facts`           | Compare numbers and dates with Wikidata before they go into a lesson. See [Fact checking](/web-app/fact-checking). |
+| `create_lesson`         | Build and save a new lesson (draft by default; `published: true` to share).                                        |
+| `create_lesson_file`    | Build an importable lesson file offline, with no account or network.                                               |
+| `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                                      |
+| `update_lesson`         | Replace a lesson's whole title/content (author only).                                                              |
+| `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                                       |
+| `propose_changes`       | Offer a fork's changes back to the original, for a human to review and merge.                                      |
+| `list_lesson_proposals` | List the proposals against a lesson, and whether yours have been resolved.                                         |
+| `review_proposal`       | Read what a proposal changes, as a diff with merge and decline, where a client can show one.                       |
+| `merge_proposal`        | Merge a proposal (the reviewer's own click in that view, not the assistant's to call).                             |
+| `decline_proposal`      | Close a proposal without merging it (likewise the reviewer's own click).                                           |
+| `get_lesson`            | Fetch one lesson with its full content (read before editing / as a template).                                      |
+| `list_my_lessons`       | List your own lessons (drafts + published).                                                                        |
+| `list_hub_lessons`      | Browse published lessons for inspiration / de-duplication.                                                         |
+| `set_lesson_published`  | Toggle a lesson between public and private draft.                                                                  |
+| `delete_lesson`         | Permanently delete one of your lessons.                                                                            |
+| `search_images`         | Search Wikimedia Commons for freely-licensed images, as a picker, where a client can show one.                     |
+| `add_image`             | Download a searched image and insert it as an image block in a lesson.                                             |
 
 Plus five more on the stdio transport, for joining a lesson the user is editing live:
 `join_collab_session`, `read_collab_doc`, `edit_collab_doc`, `send_collab_chat` and
@@ -342,6 +343,38 @@ authoring standard, but `patch_lesson` holds the caller only to the defects its 
 introduced, whereas `update_lesson` replaces the whole document and so owns everything in
 it, including problems inherited from the lesson it fetched. See
 [Lesson validation](/mcp-server/lesson-validation).
+
+## Checking facts
+
+The standard asks for anything time-sensitive to be verified before it is written down, and
+every number a math question uses is one the speller is marked on. **`check_facts`** compares
+those with Wikidata. The assistant passes claims rather than prose, one per fact:
+
+```json
+{
+  "claims": [
+    {
+      "subject": "Mount Everest",
+      "kind": "mountain",
+      "property": "height",
+      "value": 8849,
+      "unit": "m",
+      "quote": "8,849 METRES"
+    }
+  ]
+}
+```
+
+and gets each one back as `agrees`, `disagrees` or `unknown`, with Wikidata's value in the
+claim's own unit and the item it was checked against. Nothing is saved, the hub isn't called,
+and no AI provider is involved: the assistant is the one reading the passage. Claims it can't
+check (a height in kilograms, a property not on the list) come back under `dropped` rather
+than silently disappearing.
+
+The tool's description tells the assistant to read the matched item's description before
+acting on a disagreement, and to tell the user rather than "correct" a fact it isn't sure
+about, since Wikidata can be out of date too. The rules for what counts as agreeing are on
+[Fact checking](/web-app/fact-checking), which this shares with the editor.
 
 ## Lesson shape the assistant fills
 

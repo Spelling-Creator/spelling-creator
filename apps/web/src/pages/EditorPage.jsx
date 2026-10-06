@@ -40,6 +40,7 @@ import SectionOutline from "../components/editor/SectionOutline.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
 import { useLessonChecks } from "../lib/lessonChecks.js";
+import { useFactCheck } from "../lib/factCheck.js";
 import { LessonSourcesProvider } from "../lib/lessonSources.jsx";
 import { createSource } from "@spelling-creator/core/sources";
 import { removeSourceCitations } from "@spelling-creator/core/lessonText";
@@ -242,6 +243,9 @@ export default function EditorPage() {
   // The lesson standard's checks, rerun as the lesson changes. Shown in the
   // outline and the Check panel; never in the way of saving or exporting.
   const checks = useLessonChecks(doc);
+  // The Check panel's fact check, held here so closing the panel to go to a
+  // finding keeps the result. Runs only when asked; see lib/factCheck.js.
+  const factCheck = useFactCheck();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [ideaDialogOpen, setIdeaDialogOpen] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
@@ -3433,6 +3437,8 @@ export default function EditorPage() {
         open={checkOpen}
         onClose={() => openPanel(null)}
         checks={checks}
+        factCheck={factCheck}
+        title={doc.title}
         sections={doc.sections}
         onGoTo={goToFinding}
       />

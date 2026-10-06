@@ -26,7 +26,19 @@ import {
   reviewProposal,
 } from "./git.js";
 import { applyPatch, findBlock } from "./patch.js";
-import { searchWikimediaImages, resolveWikimediaImage } from "./wikimedia.js";
+import {
+  searchWikimediaImages,
+  resolveWikimediaImage,
+  USER_AGENT,
+} from "./wikimedia.js";
+import {
+  FACT_PROPERTIES,
+  FACT_PROPERTY_KEYS,
+  FACT_QUALIFIERS,
+  FACT_UNIT_KEYS,
+  checkClaims,
+  normalizeClaim,
+} from "@spelling-creator/core/factCheck";
 import { LESSON_STANDARDS } from "./standards.js";
 import {
   IMAGE_PICKER_URI,
@@ -1014,6 +1026,142 @@ export function registerTools(server, ctx) {
           },
         }),
       );
+    }),
+  );
+
+  // The editor's Check panel has the same check, but there the Worker's model
+  // pulls the claims out of the passages. Here the client is a model already,
+  // so it states the claims itself and nothing but Wikidata is called.
+  server.registerTool(
+    "check_facts",
+    {
+      title: "Check facts against Wikidata",
+      description:
+        "Compare numbers and dates you have written (or are about to write) into a lesson with Wikidata. The " +
+        "standard asks for anything time-sensitive to be verified before it goes in, and every fact a math " +
+        "question uses is one a speller will be marked on, so check those.\n\n" +
+        "You pass claims, not prose: one per fact, each naming the thing (`subject`), what is said about it " +
+        "(`property`), and the number or year. Only numbers and dates about a specific, named, real thing can be " +
+        "checked; leave out opinions, comparisons, and facts about a whole kind of thing ('cats sleep 16 hours " +
+        "a day'). Nothing is saved, and the only service called is Wikidata.\n\n" +
+        "Each claim comes back `agrees`, `disagrees` or `unknown`, with the Wikidata item it was checked " +
+        "against. Read that item's description before acting: a name can match the wrong thing. `unknown` means " +
+        "Wikidata couldn't say (no such item, no such value, or no reply), not that the fact is wrong. Wikidata " +
+        "can be out of date or mistaken too, so when a fact disagrees, correct it only if you are confident; " +
+        "otherwise tell the user what Wikidata says and let them decide.",
+      inputSchema: {
+        claims: z
+          .array(
+            z.object({
+              subject: z
+                .string()
+                .describe(
+                  "The thing's English name as an encyclopedia titles it, with no 'the' and nothing in " +
+                    "brackets: 'Mount Everest', 'Nile', 'Marie Curie'.",
+                ),
+              kind: z
+                .string()
+                .optional()
+                .describe(
+                  "One or two words for what sort of thing it is ('mountain', 'country', 'scientist'). Used to " +
+                    "pick between items with the same name, such as Georgia the country and Georgia the state.",
+                ),
+              property: z
+                .enum(FACT_PROPERTY_KEYS)
+                .describe(
+                  "What the claim is about:\n" +
+                    FACT_PROPERTY_KEYS.map(
+                      (key) => `${key}: ${FACT_PROPERTIES[key].hint}`,
+                    ).join("\n"),
+                ),
+              value: z
+                .number()
+                .describe(
+                  "The number as stated ('4.5 million' is 4500000). For a date, the year, negative for BC " +
+                    "('2560 BC' is -2560).",
+                ),
+              unit: z
+                .enum(FACT_UNIT_KEYS)
+                .optional()
+                .describe(
+                  "The unit the claim uses. Leave it out for a population or a date. A unit that measures the " +
+                    "wrong thing for the property (a height in kg) gets the claim dropped.",
+                ),
+              month: z
+                .number()
+                .int()
+                .optional()
+                .describe("For a date given to the month: 1 to 12."),
+              day: z
+                .number()
+                .int()
+                .optional()
+                .describe("For a date given to the day: 1 to 31."),
+              qualifier: z
+                .enum(FACT_QUALIFIERS)
+                .optional()
+                .describe(
+                  "'about' for a hedged figure ('around', 'nearly', 'up to'), 'more_than' and 'less_than' for " +
+                    "bounds. Default 'exact'. A figure is always allowed the rounding it was written with: 9,000 " +
+                    "agrees with anything from 8,500 to 9,500.",
+                ),
+              quote: z
+                .string()
+                .optional()
+                .describe(
+                  "The words in the passage that state it, so the result says which fact is which.",
+                ),
+            }),
+          )
+          .min(1)
+          .max(40)
+          .describe("The facts to check, at most 40 at a time."),
+      },
+    },
+    tool(async ({ claims }) => {
+      // checkClaims drops what it can't read without saying so; say so here.
+      const dropped = claims
+        .map((claim, index) => (normalizeClaim(claim) ? null : index))
+        .filter((index) => index !== null);
+      const results = await checkClaims(claims, { userAgent: USER_AGENT });
+      const report = (r) => ({
+        ...(r.quote ? { quote: r.quote } : {}),
+        subject: r.subject,
+        property: r.property,
+        stated: {
+          value: r.value,
+          ...(r.unit ? { unit: r.unit } : {}),
+          ...(r.month ? { month: r.month } : {}),
+          ...(r.day ? { day: r.day } : {}),
+          qualifier: r.qualifier,
+        },
+        ...(r.wikidata ? { wikidata: r.wikidata } : {}),
+        ...(r.entity ? { item: r.entity } : {}),
+        ...(r.reason ? { reason: r.reason } : {}),
+      });
+      const of = (status) =>
+        results.filter((r) => r.status === status).map(report);
+      return text({
+        checked: results.length,
+        disagrees: of("disagrees"),
+        agrees: of("agrees"),
+        unknown: of("unknown"),
+        ...(dropped.length
+          ? {
+              dropped: {
+                indexes: dropped,
+                note:
+                  "Not checked: each has an unknown property, no number, no subject, or a unit that doesn't " +
+                  "measure its property.",
+              },
+            }
+          : {}),
+        note:
+          "Wikidata's values are in the claim's own unit. `wikidata.asOf` is the year a dated figure (a " +
+          "population) was taken; only the latest is compared. `reason` on an unknown: no-item (no match for " +
+          "the name), no-value (the item has no such value), unit (a unit this can't convert), lookup-failed " +
+          "(Wikidata didn't answer; try again later).",
+      });
     }),
   );
 

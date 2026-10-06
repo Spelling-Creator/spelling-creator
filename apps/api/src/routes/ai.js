@@ -1,9 +1,12 @@
 // The Turnstile-gated AI / image flow — the Worker's POST entrypoint (`POST /`).
 // `mode` selects the suggester: "text"/"question"/"lessonIdea" drive Gemini;
+// "factCheck" checks a lesson's numbers and dates against Wikidata;
 // "imageSearch"/"imageFetch" proxy Pixabay. All share the Turnstile check and the
-// per-IP token-bucket rate limiter below; text suggestions are additionally cached.
+// per-IP token-bucket rate limiter below; text suggestions and fact checks are
+// additionally cached.
 
 import { generateWithFallback, QUESTION_SCHEMAS, QUESTION_LABELS, QUESTION_INSTRUCTIONS, LESSON_IDEA_SCHEMA } from '../lib/ai/index.js';
+import { checkPassages, cleanPassages } from '../lib/factCheck.js';
 import { cacheKey } from '../lib/cache.js';
 import { clientIp, rateLimitStore } from '../platform/index.js';
 import { verifyTurnstile } from '../lib/turnstile.js';
@@ -12,10 +15,24 @@ import { textResponse } from '../lib/http.js';
 // How long a cached AI answer lives in KV.
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
+// How long a fact check's result lives in KV. Shorter than a text suggestion:
+// the answer is Wikidata's, which changes (a new census, a corrected height).
+const FACT_CHECK_TTL = 60 * 60 * 24 * 7; // 7 days
+
+// Part of a fact check's cache key. Bump it when the prompt or the checker
+// changes what a check would find, so old results aren't served for new rules.
+const FACT_CHECK_VERSION = 'v1';
+
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any
 // unknown mode falls back to "text".
-const KNOWN_MODES = new Set(['text', 'question', 'imageSearch', 'imageFetch', 'lessonIdea']);
+const KNOWN_MODES = new Set(['text', 'question', 'imageSearch', 'imageFetch', 'lessonIdea', 'factCheck']);
+
+// A cached fact check holds facts by passage index; the block ids are this
+// request's, since two lessons can share a passage's text.
+function factsForRequest(facts, passages) {
+	return facts.map(({ passage, ...fact }) => ({ ...fact, blockId: passages[passage]?.blockId || '' }));
+}
 
 // The only hosts the image proxy will ever fetch from — an SSRF guard so a
 // crafted `url` can't make the Worker fetch arbitrary internal/external targets.
@@ -176,6 +193,11 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	if (mode === 'question' && !QUESTION_SCHEMAS[questionType]) {
 		return new Response('Unknown "questionType" in request body', { status: 400, headers: cors });
 	}
+	// A fact check reads the lesson's passages: [{ blockId, text }], in order.
+	const passages = mode === 'factCheck' ? cleanPassages(body.passages) : [];
+	if (mode === 'factCheck' && !passages.length) {
+		return new Response('There is no text in this lesson to check.', { status: 400, headers: cors });
+	}
 
 	// Validate the request really came from our domain via Turnstile.
 	// This relies on the verified `hostname` from Cloudflare's siteverify
@@ -221,6 +243,18 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 			return new Response(cached, { status: 200, headers: okHeaders() });
 		}
 	}
+	// Fact checks are cached too, keyed on the passages' text in order: the same
+	// lesson checked again (or reopened) costs neither a model call nor a round of
+	// Wikidata lookups.
+	const fKey =
+		mode === 'factCheck' ? await cacheKey(['factCheck', FACT_CHECK_VERSION, documentName, ...passages.map((p) => p.text)]) : null;
+	if (fKey) {
+		const cached = await kv.get(fKey);
+		if (cached) {
+			const facts = factsForRequest(JSON.parse(cached), passages);
+			return new Response(JSON.stringify({ facts }), { status: 200, headers: okHeaders() });
+		}
+	}
 
 	// Cache miss: charge the rate limit before doing the (billable) AI call.
 	if (entry.tokens < 1) {
@@ -242,6 +276,24 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	}
 	if (mode === 'imageFetch') {
 		return handleImageFetch(imageUrl, okHeaders, cors);
+	}
+
+	// Fact check: the model lists the passages' checkable numbers and dates, and
+	// core compares each with Wikidata (see lib/factCheck.js). Wikidata being
+	// unreachable is not an error here; those facts come back as "unknown".
+	if (mode === 'factCheck') {
+		let facts;
+		try {
+			facts = await checkPassages(passages, documentName, env);
+		} catch (err) {
+			return new Response('Upstream AI error', { status: 502, headers: cors });
+		}
+		// Only cache a check that reached Wikidata, so a blip isn't remembered for
+		// a week.
+		if (!facts.some((f) => f.reason === 'lookup-failed')) {
+			await kv.put(fKey, JSON.stringify(facts), { expirationTtl: FACT_CHECK_TTL });
+		}
+		return new Response(JSON.stringify({ facts: factsForRequest(facts, passages) }), { status: 200, headers: okHeaders() });
 	}
 
 	// Lesson-idea suggester: propose a handful of lesson topics suited to the

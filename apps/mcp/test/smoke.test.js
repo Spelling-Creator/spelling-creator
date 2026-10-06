@@ -364,6 +364,7 @@ test("the MCP server exposes the full tool set", async () => {
   const names = tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
     "add_image",
+    "check_facts",
     "create_lesson",
     "create_lesson_file",
     // The reviewer's two, which only a view calls (`visibility: ["app"]`). They

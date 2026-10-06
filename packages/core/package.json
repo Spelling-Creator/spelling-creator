@@ -32,6 +32,7 @@
     "./collabFrames": "./src/collabFrames.js",
     "./comments": "./src/comments.js",
     "./config": "./src/config.js",
+    "./factCheck": "./src/factCheck.js",
     "./git/doc": "./src/git/doc.js",
     "./git/layout": "./src/git/layout.js",
     "./git/memfs": "./src/git/memfs.js",
