@@ -47,7 +47,9 @@ export default function PageBody({
   return (
     <div
       className={cn(
-        "mx-auto w-full px-4",
+        // px-safe-4 is px-4 plus the landscape notch, so text never sits
+        // under it (see globals.css).
+        "mx-auto w-full px-safe-4",
         PAGE_WIDTHS[width] ?? PAGE_WIDTHS.wide,
         // pb-16 is the same on every page so a page's last element never ends
         // up flush against the bottom of the viewport, and so the editor's

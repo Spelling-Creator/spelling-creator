@@ -74,7 +74,13 @@ const DialogContent = forwardRef(function DialogContent(
           // (vanilla shadcn relies on a global `body { color: var(--foreground)
           // }` for this, deliberately deferred to the migration's cleanup phase
           // — see the comment at the bottom of styles/globals.css).
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-panel border bg-card text-foreground p-6 shadow-(--shadow-panel) duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          //
+          // The height cap and overflow are for a phone, and mostly a phone
+          // turned sideways, where the screen is ~390px tall: without them a
+          // dialog taller than that ran off both ends with no way to scroll to
+          // its buttons. The tall dialogs that scroll a list inside themselves
+          // pass their own max-h, which replaces this one.
+          "fixed top-[50%] left-[50%] z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] overflow-y-auto translate-y-[-50%] gap-4 rounded-panel border bg-card text-foreground p-6 shadow-(--shadow-panel) duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className,
         )}
         {...props}

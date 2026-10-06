@@ -1097,7 +1097,12 @@ export default function InteractiveLesson({
         onInteractOutside={(event) => event.preventDefault()}
         showCloseButton={false}
       >
-        <header className="shrink-0 border-b border-border bg-card/60">
+        {/* Full-bleed means the header and footer meet the edges of the
+            screen, so they pad by the status bar, the home indicator and (on
+            a phone turned sideways) the notch, the way AppHeader does. The
+            sides matter even with a max-w-3xl column: on an 812px-wide phone
+            it leaves 22px either side, less than the notch takes. */}
+        <header className="shrink-0 border-b border-border bg-card/60 pt-safe pr-safe pl-safe">
           <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-3 sm:px-6">
             <div className="min-w-0 flex-1">
               <DialogTitle className="truncate text-base">
@@ -1156,7 +1161,7 @@ export default function InteractiveLesson({
             the top strip of a full-screen page and look abandoned there. `m-auto`
             centres it — and unlike `items-center`, it still scrolls from the top
             when a step is taller than the viewport instead of clipping its head. */}
-        <div className="flex min-h-0 flex-1 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 overflow-y-auto pr-safe pl-safe">
           <div className="m-auto w-full max-w-3xl px-4 py-8 sm:px-6">
             {empty ? (
               <p className="text-muted-foreground">{t("emptyLesson")}</p>
@@ -1198,7 +1203,7 @@ export default function InteractiveLesson({
           </div>
         </div>
 
-        <footer className="shrink-0 border-t border-border bg-card/60">
+        <footer className="shrink-0 border-t border-border bg-card/60 pr-safe pb-safe pl-safe">
           <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
             {empty ? (
               <Button variant="outline" onClick={close}>

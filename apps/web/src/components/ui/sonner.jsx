@@ -12,6 +12,18 @@ import { useColorScheme } from "@/lib/colorScheme";
 // this app has its own dark-mode mechanism (data-theme on <html>, driven by
 // ColorSchemeProvider), so it reads that instead. See the note in
 // AppHeader.jsx for the app's dark-mode wiring in general.
+
+// Sonner's own gaps from the screen edge (24px, or 16px on a phone) with the
+// safe-area insets added, so a toast never lands on the home indicator or under
+// the notch. Sonner writes these into CSS variables as given, so the var()
+// references resolve in the page. See the *-safe utilities in globals.css.
+const edgeOffset = (px) => ({
+  top: `calc(${px}px + var(--safe-top))`,
+  right: `calc(${px}px + var(--safe-right))`,
+  bottom: `calc(${px}px + var(--safe-bottom))`,
+  left: `calc(${px}px + var(--safe-left))`,
+});
+
 const Toaster = ({ ...props }) => {
   const { resolved } = useColorScheme();
 
@@ -19,6 +31,8 @@ const Toaster = ({ ...props }) => {
     <Sonner
       theme={resolved}
       className="toaster group"
+      offset={edgeOffset(24)}
+      mobileOffset={edgeOffset(16)}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
