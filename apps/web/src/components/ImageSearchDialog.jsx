@@ -14,6 +14,7 @@ import { Input } from "./ui/input.jsx";
 import { Field, FieldLabel } from "./ui/field.jsx";
 import { Alert, AlertDescription } from "./ui/alert.jsx";
 import { Spinner } from "./ui/spinner.jsx";
+import { Badge } from "./ui/badge.jsx";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.jsx";
 import { cn } from "../lib/utils.js";
 import {
@@ -42,6 +43,8 @@ import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
 // `needsToken` distinguishes Pixabay (proxied through the Worker, which enforces
 // a Turnstile check) from Wikimedia Commons (queried directly from the browser,
 // no key and no token needed — see @spelling-creator/core/browser/commonsImages).
+// Commons' results open with the pictures Wikidata lists for the topic, which
+// carry `wikidata: { role, item }` and get a badge saying what they are.
 const PROVIDERS = [
   {
     id: "pixabay",
@@ -238,6 +241,12 @@ export default function ImageSearchDialog({
   const canSearch =
     !busy && !!query.trim() && (!provider.needsToken || !!token);
 
+  // Wikimedia's results open with the pictures Wikidata lists for the topic,
+  // each badged with what it is (see searchWikimediaImages).
+  const wikidataHits = (hits || []).filter((hit) => hit.wikidata);
+  const wikidataItem = wikidataHits[0]?.wikidata.item;
+  const wikidataCount = wikidataHits.length;
+
   return (
     <Dialog
       open={open}
@@ -341,6 +350,19 @@ export default function ImageSearchDialog({
             </p>
           )}
 
+          {/* Which item the Wikidata picks are of, so a search that landed on
+              the wrong "Mercury" says so before anyone picks from it. */}
+          {wikidataItem && (
+            <p className="m-0 text-xs text-muted-foreground">
+              {t("imageSearch.wikidataNote", {
+                count: wikidataCount,
+                label: wikidataItem.label,
+                description: wikidataItem.description,
+                context: wikidataItem.description ? undefined : "plain",
+              })}
+            </p>
+          )}
+
           {hits && hits.length > 0 && (
             <div className="grid max-h-[360px] grid-cols-3 gap-2 overflow-y-auto">
               {hits.map((hit) => (
@@ -361,6 +383,14 @@ export default function ImageSearchDialog({
                       insertingId === hit.id ? "opacity-40" : "opacity-100",
                     )}
                   />
+                  {hit.wikidata && (
+                    <Badge
+                      variant="secondary"
+                      className="absolute top-1.5 left-1.5 max-w-[calc(100%-0.75rem)] truncate"
+                    >
+                      {t(`imageSearch.wikidataRoles.${hit.wikidata.role}`)}
+                    </Badge>
+                  )}
                   {insertingId === hit.id && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Spinner className="size-6" />

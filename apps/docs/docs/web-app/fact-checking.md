@@ -199,6 +199,7 @@ A self-hosted instance needs outbound HTTPS to `www.wikidata.org` and
 | File                                                  | Does                                                                                                      |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparison. `checkClaims(claims, opts)`. |
+| `packages/core/src/wikidata.js`                       | The requests: name search and SPARQL, shared with the [image search](./search-images.md).                 |
 | `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                |
 | `apps/api/src/routes/ai.js`                           | The `factCheck` mode: Turnstile, rate limit, cache.                                                       |
 | `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                         |

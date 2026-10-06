@@ -149,7 +149,26 @@
       "insertFailed": "Could not add that image."
     },
     "noResults": "No images found. Try different words.",
-    "close": "Close"
+    "close": "Close",
+    "wikidataNote_one": "The first picture is the one Wikidata lists for {{label}} ({{description}}).",
+    "wikidataNote_other": "The first {{count}} are the pictures Wikidata lists for {{label}} ({{description}}).",
+    "wikidataNote_plain_one": "The first picture is the one Wikidata lists for {{label}}.",
+    "wikidataNote_plain_other": "The first {{count}} are the pictures Wikidata lists for {{label}}.",
+    "wikidataRoles": {
+      "image": "Main picture",
+      "aerial": "From above",
+      "night": "At night",
+      "panorama": "Panorama",
+      "interior": "Inside",
+      "montage": "Montage",
+      "range_map": "Where it lives",
+      "locator_map": "Map",
+      "location_map": "Area map",
+      "flag": "Flag",
+      "coat_of_arms": "Coat of arms",
+      "logo": "Logo",
+      "structure": "Structure"
+    }
   },
   "variations": {
     "title": "Variations",

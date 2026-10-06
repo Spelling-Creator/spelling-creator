@@ -387,6 +387,17 @@ const imageSearchOutputSchema = {
         mime: z.string().optional(),
         previewURL: z.string().optional(),
         source: z.string().optional(),
+        // Set on the pictures Wikidata lists for the topic, which come first.
+        wikidata: z
+          .object({
+            role: z.string(),
+            item: z.object({
+              id: z.string(),
+              label: z.string(),
+              description: z.string().optional(),
+            }),
+          })
+          .optional(),
       })
       .passthrough(),
   ),
@@ -2108,6 +2119,12 @@ export function registerTools(server, ctx) {
         "Search Wikimedia Commons for freely-licensed images to illustrate a lesson. Returns a list of candidates, " +
         "each with a `ref` (its File: title), a `caption` carrying the required attribution, the licence/author, " +
         "dimensions, a `previewURL`, and a `source` page link.\n\n" +
+        "When the query names one particular thing ('lion', 'Paris', 'Great Pyramid of Giza'), the list opens " +
+        "with the pictures Wikidata lists for it: its main picture, and where it has them a map, a flag, a view " +
+        "at night. Those carry `wikidata: { role, item }` and say so in their `description`; check `item` is the " +
+        "thing you meant. They are usually the best choice, chosen by people describing that thing rather than " +
+        "ranked by a text search. Search a plain name to get them, not a phrase ('volcano', not 'volcano " +
+        "erupting at night').\n\n" +
         "WHO PICKS DEPENDS ON THE CLIENT, AND THE RESULT SAYS WHICH — read its `note` first and follow it. On a " +
         "client that can show the candidates as pictures, they are on screen and the USER picks: stop there, add " +
         "nothing, and wait to be told what they chose. On a text-only client, you pick — take the most relevant " +

@@ -428,7 +428,10 @@ A lesson is **sections** of **blocks**. Block types:
   - `background` takes `answer` (needs prior knowledge)
 
 - **`image`**: a picture. Don't write these by hand; use `search_images` to find a
-  freely-licensed Wikimedia Commons image, then `add_image` with its `ref` to download
+  freely-licensed Wikimedia Commons image (the pictures Wikidata lists for the topic
+  come first, labelled with what they are; see
+  [Search images](/web-app/search-images)), then
+  `add_image` with its `ref` to download
   the bytes, store them, and insert the block. The licence attribution is set as the
   caption automatically.
 - **`vakt`**: a regulation activity: `{ "type": "vakt", "text": "Bob likes to do jumping

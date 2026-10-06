@@ -70,6 +70,8 @@
     "./username": "./src/username.js",
     "./users": "./src/users.js",
     "./vakt": "./src/vakt.js",
+    "./wikidata": "./src/wikidata.js",
+    "./wikidataMedia": "./src/wikidataMedia.js",
     "./wikimedia": "./src/wikimedia.js",
     "./ydoc": "./src/ydoc.js"
   },

@@ -23,6 +23,7 @@ import {
   isUsableImage,
   rankPages,
 } from "@spelling-creator/core/wikimedia";
+import { topicImages } from "@spelling-creator/core/wikidataMedia";
 
 // Wikimedia's User-Agent policy (https://meta.wikimedia.org/wiki/User-Agent_policy)
 // throttles or 403s requests with a generic/missing UA — Node's fetch defaults to
@@ -33,9 +34,81 @@ import {
 export const USER_AGENT =
   "SpellingCreatorMCP/0.6.0 (https://spellingcreator.org; MCP server for the Spelling Creator hub)";
 
+// What every imageinfo request here asks for: a preview thumbnail, and the
+// licence/author metadata the caption needs.
+const IMAGEINFO = {
+  prop: "imageinfo",
+  iiprop: "url|size|mime|extmetadata",
+  iiurlwidth: "320", // thumbnail for the preview URL
+  iiextmetadatafilter: "Artist|LicenseShortName|LicenseUrl",
+  iiextmetadatalanguage: "en",
+};
+
+function toHit(page, info) {
+  const { author, license, caption } = extmetaCaption(info.extmetadata);
+  return {
+    ref: page.title, // full "File:…" title — the handle for resolveWikimediaImage
+    description: cleanFileTitle(page.title),
+    caption,
+    author,
+    license,
+    width: info.width,
+    height: info.height,
+    mime: info.mime,
+    previewURL: info.thumburl,
+    source: info.descriptionurl || "",
+  };
+}
+
+/**
+ * The pictures Wikidata lists for the topic (its main picture, a map, a
+ * flag...), as hits. Their `description` says what each one is and of what,
+ * which is also what the picker view shows under it, and `wikidata` carries
+ * the same as data. Empty when the query names no particular thing, and when
+ * Wikidata doesn't answer: the search still has Commons' own results.
+ */
+async function wikidataImageHits(query) {
+  let found;
+  try {
+    found = await topicImages(query, { userAgent: USER_AGENT });
+  } catch {
+    return [];
+  }
+  if (!found) return [];
+  let pages;
+  try {
+    pages = await commonsQuery(
+      {
+        action: "query",
+        titles: found.images.map((image) => image.file).join("|"),
+        ...IMAGEINFO,
+      },
+      { userAgent: USER_AGENT },
+    );
+  } catch {
+    return [];
+  }
+  const byTitle = new Map(pages.map((p) => [p.title, p]));
+  const hits = [];
+  for (const image of found.images) {
+    const page = byTitle.get(image.file);
+    const info = page && page.imageinfo && page.imageinfo[0];
+    if (!isUsableImage(info)) continue;
+    const label = image.label[0].toUpperCase() + image.label.slice(1);
+    hits.push({
+      ...toHit(page, info),
+      description: `${label} (${found.item.label}, from Wikidata)`,
+      wikidata: { role: image.role, item: found.item },
+    });
+  }
+  return hits;
+}
+
 /**
  * Search the Commons File namespace for images matching `query`. Returns
  * normalised hits with a `ref` (the "File:…" title) to hand to resolveWikimediaImage.
+ * The pictures Wikidata lists for the topic come first (see wikidataImageHits),
+ * and aren't repeated among the search's own results.
  * @param {string} query
  * @param {{ perPage?: number }} [opts]
  */
@@ -44,40 +117,28 @@ export async function searchWikimediaImages(query, opts = {}) {
   if (!q) throw new Error("Provide something to search for.");
   const perPage = Math.max(3, Math.min(Number(opts.perPage) || 12, 30));
 
-  const pages = await commonsQuery(
-    {
-      action: "query",
-      generator: "search",
-      gsrsearch: q,
-      gsrnamespace: "6", // File:
-      gsrlimit: String(perPage),
-      prop: "imageinfo",
-      iiprop: "url|size|mime|extmetadata",
-      iiurlwidth: "320", // thumbnail for the preview URL
-      iiextmetadatafilter: "Artist|LicenseShortName|LicenseUrl",
-      iiextmetadatalanguage: "en",
-    },
-    { userAgent: USER_AGENT },
-  );
+  const [picks, pages] = await Promise.all([
+    wikidataImageHits(q),
+    commonsQuery(
+      {
+        action: "query",
+        generator: "search",
+        gsrsearch: q,
+        gsrnamespace: "6", // File:
+        gsrlimit: String(perPage),
+        ...IMAGEINFO,
+      },
+      { userAgent: USER_AGENT },
+    ),
+  ]);
 
-  const hits = [];
+  const picked = new Set(picks.map((hit) => hit.ref));
+  const hits = [...picks];
   for (const p of rankPages(pages)) {
     const info = p.imageinfo && p.imageinfo[0];
     // The File namespace also holds audio/video/PDF; keep only images.
-    if (!isUsableImage(info)) continue;
-    const { author, license, caption } = extmetaCaption(info.extmetadata);
-    hits.push({
-      ref: p.title, // full "File:…" title — the handle for resolveWikimediaImage
-      description: cleanFileTitle(p.title),
-      caption,
-      author,
-      license,
-      width: info.width,
-      height: info.height,
-      mime: info.mime,
-      previewURL: info.thumburl,
-      source: info.descriptionurl || "",
-    });
+    if (!isUsableImage(info) || picked.has(p.title)) continue;
+    hits.push(toHit(p, info));
   }
   return hits;
 }

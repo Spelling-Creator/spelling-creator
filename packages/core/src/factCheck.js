@@ -39,19 +39,19 @@
 //     JSON runs to megabytes (the United States is about 1.6 MB), and a check
 //     looks at several candidates for each name.
 //
-// No DOM, and `fetch` is injectable: this runs in the Worker, in Node and in the
-// MCP server. Wikimedia's User-Agent policy throttles or refuses requests
-// without a descriptive User-Agent, so server callers must pass one.
+// The requests themselves go through ./wikidata.js, shared with the picture
+// and sound lookups. It runs in the Worker, in Node and in the MCP server, and
+// server callers must pass a User-Agent (see there).
 
 import { textBlockPlain } from "./lessonText.js";
-
-export const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
-export const WIKIDATA_SPARQL = "https://query.wikidata.org/sparql";
-
-/** The page a person can open to see an item. */
-export function wikidataItemUrl(id) {
-  return `https://www.wikidata.org/wiki/${id}`;
-}
+import {
+  eachLimited,
+  lastSegment,
+  rankOf,
+  searchItems,
+  sparql,
+  wikidataItemUrl,
+} from "./wikidata.js";
 
 /**
  * A lesson's passages in reading order: every text block with words in it, as
@@ -492,14 +492,6 @@ export function parseSparqlTime(value, precision) {
   return { year, month: Number(match[3]), day: Number(match[4]) };
 }
 
-const RANKS = {
-  PreferredRank: "preferred",
-  NormalRank: "normal",
-  DeprecatedRank: "deprecated",
-};
-
-const lastSegment = (iri) => String(iri || "").replace(/^.*[/#]/, "");
-
 /**
  * The query for every statement of every listed property on every listed item,
  * with what a comparison needs: rank, the value node's parts, and the "point in
@@ -552,7 +544,7 @@ export function statementsFromBindings(bindings) {
     const statement = {
       item: lastSegment(row.item?.value),
       pid: row.pid?.value,
-      rank: RANKS[lastSegment(row.rank?.value)] || "normal",
+      rank: rankOf(row.rank?.value),
       pointInTime,
     };
     if (row.amount) {
@@ -718,75 +710,12 @@ export function judgeClaim(claim, byPid) {
   };
 }
 
-// --- Talking to Wikidata ---------------------------------------------------
-
-async function getJson(url, { fetch: fetchImpl, userAgent, init = {} }) {
-  const headers = { Accept: "application/json", ...(init.headers || {}) };
-  if (userAgent) headers["User-Agent"] = userAgent;
-  const res = await fetchImpl(url, {
-    ...init,
-    headers,
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`Wikidata request failed (${res.status}).`);
-  return res.json();
-}
-
-/**
- * Items whose name matches, best match first.
- * @returns {Promise<{ id: string, label: string, description: string }[]>}
- */
-export async function searchItems(name, opts) {
-  const url = `${WIKIDATA_API}?${new URLSearchParams({
-    action: "wbsearchentities",
-    search: name,
-    language: opts.language || "en",
-    uselang: opts.language || "en",
-    type: "item",
-    limit: String(opts.limit || 3),
-    format: "json",
-    formatversion: "2",
-    origin: "*",
-  })}`;
-  const data = await getJson(url, opts);
-  return (data.search || []).map((hit) => ({
-    id: hit.id,
-    label: hit.display?.label?.value || hit.label || hit.id,
-    description: hit.display?.description?.value || hit.description || "",
-  }));
-}
+// --- Looking claims up -----------------------------------------------------
 
 async function fetchStatements(itemIds, pids, opts) {
-  const query = statementsQuery(itemIds, pids);
-  const params = new URLSearchParams({ query, format: "json" });
-  // GET where it fits, so a cache in front (the Worker's) can hold the answer;
-  // the query service turns very long URLs away, so POST past that.
-  const get = `${WIKIDATA_SPARQL}?${params}`;
-  const data =
-    get.length < 7000
-      ? await getJson(get, {
-          ...opts,
-          init: { headers: { Accept: "application/sparql-results+json" } },
-        })
-      : await getJson(WIKIDATA_SPARQL, {
-          ...opts,
-          init: {
-            method: "POST",
-            body: params,
-            headers: { Accept: "application/sparql-results+json" },
-          },
-        });
-  return statementsFromBindings(data?.results?.bindings);
-}
-
-// Run `work` over `items`, a few at a time: polite to Wikimedia, and quick
-// enough for a lesson's worth of names.
-async function eachLimited(items, limit, work) {
-  const queue = [...items];
-  const run = async () => {
-    while (queue.length) await work(queue.shift());
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, run));
+  return statementsFromBindings(
+    await sparql(statementsQuery(itemIds, pids), opts),
+  );
 }
 
 const words = (text) =>
