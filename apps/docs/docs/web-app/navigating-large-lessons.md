@@ -45,10 +45,11 @@ Two details make it work:
 - **It pins to `--header-h`, not to `0`.** `globals.css` publishes the chrome's
   heights as tokens: `--header-row-h` (`AppHeader`'s row) and `--pagebar-row-h`
   (`PageBar`'s; each bar applies its own as `h-(...)`, so the tokens are the
-  single source of truth), `--appheader-h` (the header plus
-  `env(safe-area-inset-top)` for the [installed app](./pwa-and-offline.md),
-  where the header pads itself by the iOS status bar; it's where `PageBar` pins
-  its top), and `--header-h`, the sum of all of it: the real distance from the
+  single source of truth), `--appheader-h` (the header plus `--safe-top`, the
+  status-bar inset the header pads itself by on an iPhone, most visibly in the
+  [installed app](./pwa-and-offline.md); it's where `PageBar` pins its top, see
+  [Safe areas](./mobile-layout.md#safe-areas-notch-status-bar-and-home-indicator)),
+  and `--header-h`, the sum of all of it: the real distance from the
   top of the viewport to the first pixel of page content on a page with a
   `PageBar`, which is every page that pins anything. Use it for whatever has to
   sit clear of the chrome, including `scroll-mt-(--header-h)` on anything

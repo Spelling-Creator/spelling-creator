@@ -9,7 +9,7 @@ src/
   App.jsx                 route table (editor / hub / lesson / profile / login / moderation); the editor, moderation, login and OAuth routes are lazy (see pages-and-routing.md)
   main.jsx                React entry: ColorSchemeProvider + BrowserRouter + SsrProvider + AuthProvider + DisplayNameGate + Toaster + ServiceWorkerPrompt; hydrates a server-rendered page, mounts a plain one
   entry-server.jsx        the same tree built for the Worker (see server-rendering.md) — kept structurally in step with main.jsx
-  styles/globals.css      Tailwind v4 + shadcn/ui design tokens (light/dark palettes, opaque surfaces and the border/radius scale), plus the `mb-safe` utility (see mobile-layout.md)
+  styles/globals.css      Tailwind v4 + shadcn/ui design tokens (light/dark palettes, opaque surfaces and the border/radius scale), plus the `--safe-*` inset tokens and `*-safe` utilities (see mobile-layout.md)
   locales/en/*.json      one JSON file per i18next namespace (see internationalization.md)
   pages/
     EditorPage.jsx        the lesson builder (toolbar, section list, + button, publish, collaborate) — and the owner of which of this device's lessons is open
@@ -32,7 +32,7 @@ src/
       AppShell.jsx        the one layout route every page sits in: AppHeader + the page. Takes no configuration. Publishes @container/page
       AppHeader.jsx       the app's chrome: nav links (a sheet below md), New lesson, and the install/theme/settings/notification/account cluster
       PageBar.jsx         the contextual bar pinned under the header on lesson pages and in the editor: breadcrumb + the page's own actions
-      PageBody.jsx        the content column, in two documented widths (wide / reading). Exports PAGE_WIDTHS for the two things that need the width but can't be the column
+      PageBody.jsx        the content column, in two documented widths (wide / reading). Exports PAGE_WIDTHS for the tab bar, which needs the width but can't be the column, and PAGE_GUTTER, the safe-area-aware side padding for every content column
       EditorShell.jsx     the editor's nested routes behind one lazy import; mounts no chrome of its own
     editor/
       SectionOutline.jsx  the editor's left-hand section list (52rem+ of page column) — jump to a section, collapse them all; `readOnly` reuses it beside the preview

@@ -173,7 +173,10 @@ export default function HistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-3xl">
+      <DialogContent
+        className="max-h-[85dvh] sm:max-w-3xl"
+        bodyClassName="flex flex-col"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HistoryIcon className="size-4" />

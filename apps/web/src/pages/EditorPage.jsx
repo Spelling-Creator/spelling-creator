@@ -35,6 +35,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import PageBar from "../components/layout/PageBar.jsx";
+import { PAGE_GUTTER } from "../components/layout/PageBody.jsx";
 import SectionOutline from "../components/editor/SectionOutline.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
@@ -2815,8 +2816,14 @@ export default function EditorPage() {
           made the window bigger and the editor had not got bigger. The reading
           argument for a width cap (PageBody's `reading`, 48rem) is about lines
           of prose someone reads straight through; it is not about a form, which
-          is what this is. */}
-      <div className="flex w-full items-start gap-6 px-4 pt-6 pb-16">
+          is what this is.
+
+          PAGE_GUTTER rather than px-4 for the same reason as PageBody: the
+          panes reach the sides of the screen, which on a phone turned
+          sideways is where the safe-area insets are. */}
+      <div
+        className={cn("flex w-full items-start gap-6 pt-6 pb-16", PAGE_GUTTER)}
+      >
         {/* One outline, both modes. `readOnly` drops collapse-all and
             add-section; what is left navigates the preview unchanged, because
             LessonView anchors its sections with the same data-section-id the
@@ -3262,7 +3269,7 @@ export default function EditorPage() {
               size="icon-lg"
               onClick={openAddDialog}
               aria-label={t("addSectionFab.ariaLabel")}
-              className="mb-safe fixed right-4 bottom-4 z-40 size-14 rounded-full shadow-[var(--shadow-panel)] sm:right-8 sm:bottom-8"
+              className="mr-safe mb-safe fixed right-4 bottom-4 z-40 size-14 rounded-full shadow-[var(--shadow-panel)] sm:right-8 sm:bottom-8"
             >
               <PlusIcon className="size-6" />
             </Button>

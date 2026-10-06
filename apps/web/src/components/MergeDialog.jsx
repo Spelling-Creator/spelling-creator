@@ -270,7 +270,10 @@ export default function MergeDialog({
         if (!next && !busy) onClose?.();
       }}
     >
-      <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-2xl">
+      <DialogContent
+        className="max-h-[85dvh] sm:max-w-2xl"
+        bodyClassName="flex flex-col"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GitMergeIcon className="size-4" />

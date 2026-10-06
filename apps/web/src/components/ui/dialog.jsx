@@ -52,8 +52,27 @@ const DialogOverlay = forwardRef(function DialogOverlay(
   );
 });
 
+/**
+ * The dialog is two boxes, and `className` and `bodyClassName` style one each.
+ *
+ * - The **frame** (`className`) is the surface: position, size, border,
+ *   background, and the close button. It never scrolls. Width and height
+ *   classes go here (`sm:max-w-md`, `max-h-[85dvh]`).
+ * - The **body** (`bodyClassName`) holds the children and is what scrolls when
+ *   they don't fit. Layout classes go here: the default is `grid gap-4 p-6`,
+ *   so a dialog that wants `flex flex-col`, or `p-0 gap-0`, says so on the
+ *   body.
+ *
+ * It was one box until dialogs had to scroll. A phone turned sideways is
+ * ~390px tall, and a dialog taller than that ran off both ends of the screen
+ * with no way to reach its buttons. Making the one box scroll fixed that, but
+ * took the close button with it: an absolutely positioned child of a scroll
+ * container scrolls with the content (so does a `fixed` one, inside a
+ * transformed parent like this). With the scrolling one level in, the button
+ * stays in the corner however far down the body is.
+ */
 const DialogContent = forwardRef(function DialogContent(
-  { className, children, showCloseButton = true, ...props },
+  { className, bodyClassName, children, showCloseButton = true, ...props },
   ref,
 ) {
   const { t } = useTranslation("common");
@@ -74,12 +93,32 @@ const DialogContent = forwardRef(function DialogContent(
           // (vanilla shadcn relies on a global `body { color: var(--foreground)
           // }` for this, deliberately deferred to the migration's cleanup phase
           // — see the comment at the bottom of styles/globals.css).
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-panel border bg-card text-foreground p-6 shadow-(--shadow-panel) duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          //
+          // The size caps keep 1rem of overlay on every side, plus the
+          // screen's safe-area inset. The box is centred, so the bigger of the
+          // two insets on an axis is taken off both ends of it: otherwise, in
+          // the installed app, the top of a tall dialog (and its close button)
+          // would sit under the clock. --safe-x/--safe-y are in globals.css.
+          "fixed top-[50%] left-[50%] z-50 flex max-h-[calc(100dvh-2rem-2*var(--safe-y))] w-full max-w-[calc(100%-2rem-2*var(--safe-x))] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-panel border bg-card text-foreground shadow-(--shadow-panel) duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className,
         )}
         {...props}
       >
-        {children}
+        {/* min-h-0 lets the body shrink below its content inside the capped
+            frame, which is what makes overflow-y-auto engage. A dialog with a
+            scrolling list of its own (history, merge) makes the body a flex
+            column with the list as an overflow-y-auto item, which a flex
+            column is allowed to shrink: the list gives way first, and the body
+            only scrolls if what's around the list can't fit either. */}
+        <div
+          data-slot="dialog-body"
+          className={cn(
+            "grid min-h-0 gap-4 overflow-y-auto p-6",
+            bodyClassName,
+          )}
+        >
+          {children}
+        </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

@@ -161,10 +161,12 @@ export default function AppHeader() {
 
   return (
     // pt-safe keeps the contents clear of the iOS status bar when the app runs
-    // installed, where the bar reaches the very top of the screen. It resolves
-    // to 0 in a browser tab — see globals.css.
+    // installed, where the bar reaches the very top of the screen, and the
+    // px-safe-* padding keeps the end buttons out from under the notch in
+    // landscape. All of it resolves to 0 where nothing is in the way; see
+    // globals.css.
     <header className="sticky top-0 z-40 border-b border-border bg-card pt-safe">
-      <div className="flex h-(--header-row-h) items-center gap-1 px-3 sm:px-4">
+      <div className="flex h-(--header-row-h) items-center gap-1 px-safe-3 sm:px-safe-4">
         {/* The destinations move behind a menu button where the row can't hold
             them. The sheet carries Settings too, since the gear it normally
             shares a cluster with is also hidden at this width. */}

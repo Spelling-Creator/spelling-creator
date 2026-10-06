@@ -116,32 +116,57 @@
      ring on a light background. */
 }
 
-/* Keeps a bottom-anchored floating element clear of the iOS home indicator.
-   The FAB, the collab chat and the first-lesson wizard all sit `bottom-4`
-   (1rem) off the edge, which puts their lower half inside the ~34px swipe
-   strip — the gesture wins, so the tap doesn't land.
+/* Safe areas: the parts of an iPhone screen taken by the status bar, the
+   notch, the rounded corners and the home indicator. The viewport meta sets
+   viewport-fit=cover (see index.html), so the page draws under all of them,
+   and anything pinned to a screen edge has to step back by the matching
+   --safe-* token (defined in :root below). Each is 0 wherever the screen has
+   nothing in the way, so none of this changes a desktop browser.
 
-   Implemented as a margin rather than a `bottom-safe` replacement for
-   `bottom-*` so it composes with whatever offset an element already uses
-   (`bottom-4 sm:bottom-8` on the FAB) instead of having to restate it.
-   env() only resolves to something non-zero because the viewport meta sets
-   viewport-fit=cover — see index.html. */
-@utility mb-safe {
-  margin-bottom: env(safe-area-inset-bottom);
-}
+   The bare utilities are for an element whose own padding or margin on that
+   edge is zero, which is every sheet and overlay that reaches the edge of the
+   screen. The bottom ones keep things out of the ~34px home-indicator strip,
+   where the swipe gesture wins and a tap doesn't land; pt-safe drops a bar's
+   contents below the clock and battery while its background still reaches
+   the top. The margins exist so a floating element keeps its own offset
+   (`bottom-4 sm:bottom-8` on the editor's + button) instead of restating it.
 
-/* The top half of the same problem, and only for the installed PWA. iOS in
-   standalone mode draws the app's content under the status bar (that's what
-   `apple-mobile-web-app-status-bar-style: black-translucent` in index.html asks
-   for, so AppHeader's indigo bar fills the notch area rather than leaving a
-   mismatched strip above it) — which would put the header's title and buttons
-   behind the clock. Padding the header by the inset drops its contents back
-   below the status bar while the background still reaches the top edge.
-
-   Zero in a browser tab, where the browser's own chrome occupies that space, so
-   this changes nothing outside an installed app. See pwa-and-offline.md. */
+   The px-safe-* family is for the page's chrome and content columns, which
+   already have side padding. In landscape iOS reports the same inset on both
+   sides (~59px on an iPhone 15), not just the side the notch is on, so a
+   full-width column loses that much at each end. Plain `px-4 px-safe` would
+   replace the 1rem rather than add to it, so these take the usual spacing
+   step and add the inset on top: px-safe-4 is px-4 on a desktop and 1rem
+   inside each inset on a phone. Content columns get it through PAGE_GUTTER
+   (layout/PageBody.jsx). See mobile-layout.md. */
 @utility pt-safe {
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-top);
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+@utility pl-safe {
+  padding-left: var(--safe-left);
+}
+@utility pr-safe {
+  padding-right: var(--safe-right);
+}
+@utility mb-safe {
+  margin-bottom: var(--safe-bottom);
+}
+@utility ml-safe {
+  margin-left: var(--safe-left);
+}
+@utility mr-safe {
+  margin-right: var(--safe-right);
+}
+@utility mx-safe {
+  margin-left: var(--safe-left);
+  margin-right: var(--safe-right);
+}
+@utility px-safe-* {
+  padding-left: calc(var(--spacing) * --value(integer) + var(--safe-left));
+  padding-right: calc(var(--spacing) * --value(integer) + var(--safe-right));
 }
 
 :root {
@@ -179,8 +204,22 @@
      PageBar have nothing sticky below the header, so nothing there reads it.) */
   --header-row-h: 4rem;
   --pagebar-row-h: 3rem;
-  --appheader-h: calc(var(--header-row-h) + env(safe-area-inset-top));
+  --appheader-h: calc(var(--header-row-h) + var(--safe-top));
   --header-h: calc(var(--appheader-h) + var(--pagebar-row-h));
+
+  /* The screen's safe-area insets, one per edge, read by the *-safe utilities
+     above. Tokens rather than env() at every use so there is one place that
+     knows where the insets come from, and so they can be set by hand to check
+     a layout in a desktop browser, which has no notch to report:
+     document.documentElement.style.setProperty("--safe-top", "59px"). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  /* The bigger inset on each axis, for something centred on the screen that
+     has to clear both ends of it (DialogContent's size caps). */
+  --safe-x: max(var(--safe-left), var(--safe-right));
+  --safe-y: max(var(--safe-top), var(--safe-bottom));
 
   /* THE LIGHT PALETTE. Three surfaces, in the order the eye should read them:
      the page is a tinted well (--background), content boxes are white on top of

@@ -155,7 +155,8 @@ export default function VariationsDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
-        className="flex max-h-[85dvh] flex-col sm:max-w-lg"
+        className="max-h-[85dvh] sm:max-w-lg"
+        bodyClassName="flex flex-col"
         // Escape backs out of the thing in front of you. While a name is being
         // typed or a delete is being confirmed, that is the field or the question
         // — not the dialog behind them, which Radix would otherwise dismiss from

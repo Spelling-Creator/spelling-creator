@@ -1086,7 +1086,12 @@ export default function InteractiveLesson({
         // DialogContent's own radius and its two-layer glass shadow are custom
         // theme values that tailwind-merge won't reconcile away, and left alone
         // they draw a rounded card outline around a full-bleed screen.)
-        className="top-0 left-0 flex h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none! border-0 bg-background p-0 shadow-none! sm:max-w-none"
+        //
+        // The body fills the frame as a column that never scrolls itself:
+        // only the step area between the header and footer does, so those two
+        // stay put.
+        className="top-0 left-0 h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 rounded-none! border-0 bg-background shadow-none! sm:max-w-none"
+        bodyClassName="flex flex-1 flex-col gap-0 overflow-hidden p-0"
         // Esc and a stray click are the two easiest ways to leave a half-typed
         // run-through by accident, so both route through the same confirmation
         // as the close button rather than dropping out of it silently.
@@ -1097,7 +1102,12 @@ export default function InteractiveLesson({
         onInteractOutside={(event) => event.preventDefault()}
         showCloseButton={false}
       >
-        <header className="shrink-0 border-b border-border bg-card/60">
+        {/* Full-bleed means the header and footer meet the edges of the
+            screen, so they pad by the status bar, the home indicator and (on
+            a phone turned sideways) the notch, the way AppHeader does. The
+            sides matter even with a max-w-3xl column: on an 812px-wide phone
+            it leaves 22px either side, less than the notch takes. */}
+        <header className="shrink-0 border-b border-border bg-card/60 pt-safe pr-safe pl-safe">
           <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-3 sm:px-6">
             <div className="min-w-0 flex-1">
               <DialogTitle className="truncate text-base">
@@ -1156,7 +1166,7 @@ export default function InteractiveLesson({
             the top strip of a full-screen page and look abandoned there. `m-auto`
             centres it — and unlike `items-center`, it still scrolls from the top
             when a step is taller than the viewport instead of clipping its head. */}
-        <div className="flex min-h-0 flex-1 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 overflow-y-auto pr-safe pl-safe">
           <div className="m-auto w-full max-w-3xl px-4 py-8 sm:px-6">
             {empty ? (
               <p className="text-muted-foreground">{t("emptyLesson")}</p>
@@ -1198,7 +1208,7 @@ export default function InteractiveLesson({
           </div>
         </div>
 
-        <footer className="shrink-0 border-t border-border bg-card/60">
+        <footer className="shrink-0 border-t border-border bg-card/60 pr-safe pb-safe pl-safe">
           <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
             {empty ? (
               <Button variant="outline" onClick={close}>
