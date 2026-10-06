@@ -36,8 +36,8 @@ import {
   FACT_PROPERTY_KEYS,
   FACT_QUALIFIERS,
   FACT_UNIT_KEYS,
-  checkClaims,
-  normalizeClaim,
+  checkPreparedClaims,
+  prepareClaims,
 } from "@spelling-creator/core/factCheck";
 import { LESSON_STANDARDS } from "./standards.js";
 import {
@@ -1029,6 +1029,20 @@ export function registerTools(server, ctx) {
     }),
   );
 
+  // Why check_facts couldn't read a claim, in words the assistant can act on.
+  // An unknown property is not here: the input schema refuses it first.
+  const DROP_NOTES = {
+    subject: "No subject. Name the thing the fact is about.",
+    value:
+      "No number. Put the figure, or the year, in `value` as a plain number.",
+    "unit-missing":
+      "No unit. A quantity needs one; only a population and a date go without.",
+    "unit-wrong":
+      "The unit doesn't measure this property (a height in kg), or isn't one this knows. See `unit`.",
+    "over-limit":
+      "Past the limit of 40 claims in one call. Send it in another.",
+  };
+
   // The editor's Check panel has the same check, but there the Worker's model
   // pulls the claims out of the passages. Here the client is a model already,
   // so it states the claims itself and nothing but Wikidata is called.
@@ -1119,12 +1133,12 @@ export function registerTools(server, ctx) {
       },
     },
     tool(async ({ claims }) => {
-      // checkClaims drops what it can't read without saying so; say so here.
-      // An unknown property never gets this far: the schema refuses it.
-      const dropped = claims
-        .map((claim, index) => (normalizeClaim(claim) ? null : index))
-        .filter((index) => index !== null);
-      const results = await checkClaims(claims, { userAgent: USER_AGENT });
+      // Prepared here rather than inside checkClaims, so each claim it can't
+      // read is reported back with why.
+      const prepared = prepareClaims(claims);
+      const results = await checkPreparedClaims(prepared.claims, {
+        userAgent: USER_AGENT,
+      });
       const report = (r) => ({
         ...(r.quote ? { quote: r.quote } : {}),
         subject: r.subject,
@@ -1147,14 +1161,13 @@ export function registerTools(server, ctx) {
         disagrees: of("disagrees"),
         agrees: of("agrees"),
         unknown: of("unknown"),
-        ...(dropped.length
+        ...(prepared.dropped.length
           ? {
-              dropped: {
-                indexes: dropped,
-                note:
-                  "Not checked: each has an empty subject, or a unit that doesn't measure its property (a " +
-                  "height in kg).",
-              },
+              dropped: prepared.dropped.map(({ index, reason }) => ({
+                index,
+                reason,
+                note: DROP_NOTES[reason],
+              })),
             }
           : {}),
         note:

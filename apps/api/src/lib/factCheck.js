@@ -9,7 +9,14 @@
 // claim whose quote isn't actually in the passage is dropped before anything is
 // looked up, so an invented fact can't reach the author as a finding.
 
-import { FACT_PROPERTIES, FACT_PROPERTY_KEYS, FACT_QUALIFIERS, FACT_UNIT_KEYS, checkClaims } from '@spelling-creator/core/factCheck';
+import {
+	FACT_PROPERTIES,
+	FACT_PROPERTY_KEYS,
+	FACT_QUALIFIERS,
+	FACT_UNIT_KEYS,
+	checkClaims,
+	squashText,
+} from '@spelling-creator/core/factCheck';
 import { generateWithFallback } from './ai/index.js';
 
 // Wikimedia's User-Agent policy wants a name and a way to reach the operator;
@@ -105,22 +112,19 @@ Passages:
 ${numbered}`;
 }
 
-const squash = (text) =>
-	String(text || '')
-		.replace(/\s+/g, ' ')
-		.trim()
-		.toLowerCase();
-
 /**
  * Find each claim's passage by its quote. A model sometimes numbers a passage
  * wrong, so a quote found elsewhere is moved there; one found nowhere is
  * dropped, since the author would be shown a fact the lesson never stated.
+ *
+ * Matched with core's squashText, the same way the editor later asks whether
+ * the quote is still there, so a placed finding can't read as changed.
  */
 export function placeClaims(claims, passages) {
-	const texts = passages.map((p) => squash(p.text));
+	const texts = passages.map((p) => squashText(p.text));
 	const out = [];
 	for (const claim of claims || []) {
-		const quote = squash(claim?.quote);
+		const quote = squashText(claim?.quote);
 		if (!quote) continue;
 		const stated = Number(claim.passage) - 1;
 		const index = texts[stated]?.includes(quote) ? stated : texts.findIndex((t) => t.includes(quote));
@@ -149,6 +153,9 @@ export async function checkPassages(passages, documentName, env) {
 		env,
 	});
 	const parsed = JSON.parse(response.text);
-	const claims = placeClaims(parsed?.claims, passages).slice(0, MAX_CLAIMS);
-	return checkClaims(claims, { userAgent: USER_AGENT, fetch: cachedFetch, maxClaims: MAX_CLAIMS });
+	return checkClaims(placeClaims(parsed?.claims, passages), {
+		userAgent: USER_AGENT,
+		fetch: cachedFetch,
+		maxClaims: MAX_CLAIMS,
+	});
 }

@@ -77,11 +77,22 @@ export function lessonPassages(doc) {
  * since changed is finished with rather than wrong.
  */
 export function quoteStillThere(fact, text) {
-  const squash = (s) =>
-    String(s || "")
-      .replace(/\s+/g, " ")
-      .toLowerCase();
-  return Boolean(fact.quote) && squash(text).includes(squash(fact.quote));
+  return (
+    Boolean(fact.quote) && squashText(text).includes(squashText(fact.quote))
+  );
+}
+
+/**
+ * Text as it is matched: one space between words, no case. The Worker places
+ * a quote in its passage with this and the editor asks whether it is still
+ * there with this, and the two have to agree or a placed finding would read as
+ * changed.
+ */
+export function squashText(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 // Calendar models a Wikidata date can be in. Month and day are only compared
@@ -382,38 +393,53 @@ function wholeNumber(value, min, max) {
 }
 
 /**
- * Check a claim's shape and fill in its defaults, or reject it. Claims arrive
+ * Why a claim can't be checked as given, or null when it can. Claims arrive
  * from a model on both paths, so nothing about them is trusted.
+ *
+ *   property      not one of FACT_PROPERTIES
+ *   subject       empty
+ *   value         not a number
+ *   unit-missing  a quantity with no unit (a population is the one that goes
+ *                 without)
+ *   unit-wrong    a unit this doesn't know, or one that measures the wrong
+ *                 thing for the property (a height in kilograms)
+ *
+ * @returns {string | null}
+ */
+export function claimProblem(raw) {
+  if (!raw || typeof raw !== "object") return "value";
+  const spec = FACT_PROPERTIES[raw.property];
+  if (!spec) return "property";
+  if (!cleanString(raw.subject, 200)) return "subject";
+  if (!Number.isFinite(Number(raw.value))) return "value";
+  if (spec.kind === "quantity" && spec.dimension !== "count") {
+    const unit = cleanString(raw.unit, 20);
+    if (!unit) return "unit-missing";
+    if (UNIT_DEFS[unit]?.dimension !== spec.dimension) return "unit-wrong";
+  }
+  return null;
+}
+
+/**
+ * A claim with its shape checked and its defaults filled in, or null for one
+ * claimProblem rejects.
  *
  * Anything a caller attaches beyond the fields below (the Worker's `passage`
  * index, say) is carried through to the result untouched.
  *
- * @returns {object | null}  null for a claim that can't be checked as given: an
- *   unknown property, no subject, no number, or a unit that measures the wrong
- *   thing ("height" in kilograms).
+ * @returns {object | null}
  */
 export function normalizeClaim(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const property = FACT_PROPERTIES[raw.property] ? raw.property : null;
-  const subject = cleanString(raw.subject, 200);
-  const value = Number(raw.value);
-  if (!property || !subject || !Number.isFinite(value)) return null;
-
-  const spec = FACT_PROPERTIES[property];
-  let unit = "";
-  if (spec.kind === "quantity") {
-    unit = spec.dimension === "count" ? "" : cleanString(raw.unit, 20);
-    if (!UNIT_DEFS[unit] || UNIT_DEFS[unit].dimension !== spec.dimension) {
-      return null;
-    }
-  }
+  if (claimProblem(raw)) return null;
+  const spec = FACT_PROPERTIES[raw.property];
+  const measured = spec.kind === "quantity" && spec.dimension !== "count";
   return {
     ...raw,
-    subject,
+    subject: cleanString(raw.subject, 200),
     kind: cleanString(raw.kind, 60),
-    property,
-    value,
-    unit,
+    property: raw.property,
+    value: Number(raw.value),
+    unit: measured ? cleanString(raw.unit, 20) : "",
     month: spec.kind === "time" ? wholeNumber(raw.month, 1, 12) : 0,
     day: spec.kind === "time" ? wholeNumber(raw.day, 1, 31) : 0,
     qualifier: FACT_QUALIFIERS.includes(raw.qualifier)
@@ -421,6 +447,30 @@ export function normalizeClaim(raw) {
       : "exact",
     quote: cleanString(raw.quote, 300),
   };
+}
+
+/**
+ * The claims that can be checked, normalized and capped, and why each of the
+ * others can't be. Callers that report on dropped claims (the MCP tool) run
+ * this themselves and hand the claims to checkPreparedClaims; the rest call
+ * checkClaims, which does both.
+ *
+ * @param {object[]} rawClaims
+ * @param {{ maxClaims?: number }} [opts]  Claims past this are dropped as
+ *   "over-limit".
+ * @returns {{ claims: object[], dropped: { index: number, reason: string }[] }}
+ */
+export function prepareClaims(rawClaims, { maxClaims = 40 } = {}) {
+  const claims = [];
+  const dropped = [];
+  (rawClaims || []).forEach((raw, index) => {
+    const reason = claimProblem(raw);
+    if (reason) dropped.push({ index, reason });
+    else if (claims.length >= maxClaims) {
+      dropped.push({ index, reason: "over-limit" });
+    } else claims.push(normalizeClaim(raw));
+  });
+  return { claims, dropped };
 }
 
 // --- Reading what Wikidata says -------------------------------------------
@@ -773,7 +823,8 @@ function chooseItem(claim, candidates, statements) {
  * Check claims against Wikidata.
  *
  * @param {object[]} rawClaims  Claims as described at the top of this file.
- *   Ones that fail normalizeClaim are dropped, not reported.
+ *   Ones prepareClaims drops are left out, not reported; a caller that wants
+ *   to say why runs prepareClaims itself and calls checkPreparedClaims.
  * @param {object} [opts]
  * @param {string} [opts.userAgent]  Required outside a browser (see the top).
  * @param {typeof fetch} [opts.fetch]  Defaults to the global one.
@@ -783,16 +834,20 @@ function chooseItem(claim, candidates, statements) {
  *   plus `status`, and `entity`, `wikidata` and `reason` where they apply.
  */
 export async function checkClaims(rawClaims, opts = {}) {
+  return checkPreparedClaims(prepareClaims(rawClaims, opts).claims, opts);
+}
+
+/**
+ * Check claims prepareClaims has already passed. Same options and result as
+ * checkClaims.
+ */
+export async function checkPreparedClaims(claims, opts = {}) {
   const settings = {
     fetch: opts.fetch || globalThis.fetch,
     userAgent: opts.userAgent,
     language: opts.language || "en",
   };
-  const claims = (rawClaims || [])
-    .map(normalizeClaim)
-    .filter(Boolean)
-    .slice(0, opts.maxClaims || 40);
-  if (!claims.length) return [];
+  if (!claims?.length) return [];
 
   // One search per distinct name.
   const names = [...new Set(claims.map((c) => c.subject.toLowerCase()))];

@@ -369,9 +369,10 @@ and gets each one back as `agrees`, `disagrees` or `unknown`, with Wikidata's va
 claim's own unit and the item it was checked against. Nothing is saved, the hub isn't called,
 and no AI provider is involved: the assistant is the one reading the passage. A property
 that isn't on the list fails the tool's input validation, so the whole call is refused and
-nothing is checked. A claim that passes validation but still can't be checked (an empty
-subject, or a height in kilograms) comes back under `dropped` rather than silently
-disappearing.
+nothing is checked. A claim that passes validation but still can't be checked comes back
+under `dropped` with its index and why, rather than silently disappearing: an empty
+subject, no number, a quantity with no unit, or a unit that doesn't measure its property
+(a height in kilograms).
 
 The tool's description tells the assistant to read the matched item's description before
 acting on a disagreement, and to tell the user rather than "correct" a fact it isn't sure

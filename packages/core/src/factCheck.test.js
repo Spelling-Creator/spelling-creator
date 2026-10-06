@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   checkClaims,
+  claimProblem,
   convertUnit,
   currentStatements,
   normalizeClaim,
   parseSparqlTime,
+  prepareClaims,
   quantityAgrees,
   roundingSlack,
   statementsFromBindings,
@@ -93,6 +95,51 @@ describe("normalizing a claim", () => {
         day: 7,
       }),
     ).toMatchObject({ unit: "", month: 0, day: 7 });
+  });
+});
+
+describe("preparing claims", () => {
+  it("says why a claim can't be checked", () => {
+    const problem = (claim) => claimProblem(claim);
+    expect(problem({ subject: "X", property: "colour", value: 1 })).toBe(
+      "property",
+    );
+    expect(problem({ subject: " ", property: "height", value: 1 })).toBe(
+      "subject",
+    );
+    expect(problem({ subject: "X", property: "height", value: "tall" })).toBe(
+      "value",
+    );
+    expect(problem({ subject: "X", property: "height", value: 3 })).toBe(
+      "unit-missing",
+    );
+    expect(
+      problem({ subject: "X", property: "height", value: 3, unit: "kg" }),
+    ).toBe("unit-wrong");
+    // A population needs no unit, and a date never has one.
+    expect(
+      problem({ subject: "Paris", property: "population", value: 2e6 }),
+    ).toBe(null);
+    expect(problem({ subject: "X", property: "born", value: 1867 })).toBe(null);
+  });
+
+  it("keeps the good ones in order, up to the cap, and lists the rest", () => {
+    const good = {
+      subject: "Nile",
+      property: "length",
+      value: 6650,
+      unit: "km",
+    };
+    const { claims, dropped } = prepareClaims(
+      [good, { subject: "X", property: "height", value: 3 }, good, good],
+      { maxClaims: 2 },
+    );
+    expect(claims).toHaveLength(2);
+    expect(claims[0]).toMatchObject({ subject: "Nile", qualifier: "exact" });
+    expect(dropped).toEqual([
+      { index: 1, reason: "unit-missing" },
+      { index: 3, reason: "over-limit" },
+    ]);
   });
 });
 

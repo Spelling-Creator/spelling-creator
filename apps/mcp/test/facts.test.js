@@ -3,8 +3,8 @@
 // Wikidata is stubbed at the global fetch, which is what the shared checker
 // uses when it isn't handed one. The checking itself is tested in core
 // (packages/core/src/factCheck.test.js); this covers the tool's contract: that
-// it reaches Wikidata politely, sorts the verdicts, and owns up to claims it
-// dropped.
+// it reaches Wikidata politely, sorts the verdicts, and says why it dropped a
+// claim.
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -24,7 +24,7 @@ const EVEREST = {
   unit: { value: "http://www.wikidata.org/entity/Q11573" },
 };
 
-test("check_facts sorts claims by verdict and says which it dropped", async (t) => {
+test("check_facts sorts claims by verdict and says why it dropped the rest", async (t) => {
   const seen = [];
   t.mock.method(globalThis, "fetch", async (url, init) => {
     seen.push({ url: String(url), userAgent: init?.headers?.["User-Agent"] });
@@ -73,8 +73,9 @@ test("check_facts sorts claims by verdict and says which it dropped", async (t) 
           value: 29032,
           unit: "ft",
         },
-        // A height in kilograms can't be checked.
+        // A height in kilograms can't be checked, and nor can one in nothing.
         { subject: "Mount Everest", property: "height", value: 3, unit: "kg" },
+        { subject: "Mount Everest", property: "height", value: 8849 },
       ],
     },
   });
@@ -87,7 +88,15 @@ test("check_facts sorts claims by verdict and says which it dropped", async (t) 
   assert.equal(body.disagrees[0].item.id, "Q513");
   assert.equal(body.agrees.length, 1);
   assert.equal(body.agrees[0].stated.unit, "ft");
-  assert.deepEqual(body.dropped.indexes, [2]);
+  // Each dropped claim says which it was and why, in words.
+  assert.deepEqual(
+    body.dropped.map(({ index, reason }) => [index, reason]),
+    [
+      [2, "unit-wrong"],
+      [3, "unit-missing"],
+    ],
+  );
+  assert.match(body.dropped[1].note, /No unit/);
 
   // Wikimedia's policy: every request names itself.
   assert.ok(seen.length >= 2);
