@@ -1,6 +1,6 @@
 // The OpenAI chat-completions call, shared by every provider that speaks it.
 //
-// Three do: OpenAI itself, Groq, and whatever an operator points
+// Four do: OpenAI itself, Groq, Novita, and whatever an operator points
 // `openai-compatible` at (Ollama, llama.cpp, vLLM, LM Studio, LiteLLM, an
 // OpenRouter account). They differ in three things — the endpoint, the
 // credential, and how much structured-output support the server actually has —
@@ -15,8 +15,8 @@
 //             the right JSON — and understood essentially everywhere.
 //
 // Which to use is the caller's call because it depends on the server, not on the
-// request: OpenAI enforces schemas properly, Groq's support varies by model, and
-// a local runtime depends on which one and which version.
+// request: OpenAI enforces schemas properly, Groq's and Novita's support varies
+// by model, and a local runtime depends on which one and which version.
 
 import { schemaToExampleShape, toOpenAiStrictSchema } from '../jsonSchema.js';
 

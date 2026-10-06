@@ -9,6 +9,7 @@ import * as gemini from './providers/gemini.js';
 import * as openai from './providers/openai.js';
 import * as anthropic from './providers/anthropic.js';
 import * as groq from './providers/groq.js';
+import * as novita from './providers/novita.js';
 import * as openaiCompatible from './providers/openai-compatible.js';
 import * as workersAi from './providers/workers-ai.js';
 
@@ -17,6 +18,7 @@ const PROVIDERS = {
 	[openai.id]: openai,
 	[anthropic.id]: anthropic,
 	[groq.id]: groq,
+	[novita.id]: novita,
 	[openaiCompatible.id]: openaiCompatible,
 	[workersAi.id]: workersAi,
 };
@@ -28,7 +30,7 @@ const PROVIDERS = {
 // A self-hosted instance that would rather use its local model first — for
 // privacy, or because it has no hosted keys worth spending — reorders this with
 // AI_PROVIDER_ORDER rather than being told what it wants.
-const DEFAULT_ORDER = ['gemini', 'openai', 'anthropic', 'groq', 'openai-compatible', 'workers-ai'];
+const DEFAULT_ORDER = ['gemini', 'openai', 'anthropic', 'groq', 'novita', 'openai-compatible', 'workers-ai'];
 
 function resolveOrder(env) {
 	const raw = env.AI_PROVIDER_ORDER;
@@ -58,7 +60,7 @@ export async function generateWithFallback({ prompt, schema, env }) {
 	throw (
 		lastErr ??
 		new Error(
-			'No AI provider is configured (set at least one of GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, or OPENAI_COMPATIBLE_URL + OPENAI_COMPATIBLE_MODELS)',
+			'No AI provider is configured (set at least one of GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, NOVITA_API_KEY, or OPENAI_COMPATIBLE_URL + OPENAI_COMPATIBLE_MODELS)',
 		)
 	);
 }

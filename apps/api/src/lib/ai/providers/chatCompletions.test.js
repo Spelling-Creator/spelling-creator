@@ -1,4 +1,4 @@
-// The shared chat-completions call, and the three providers built on it.
+// The shared chat-completions call, and the providers built on it.
 //
 // These went in when `openai-compatible` was added, because that would otherwise
 // have been a third copy of the same forty lines. The providers had no tests
@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { chatCompletion, firstModelThatAnswers, modelList } from './chatCompletions.js';
 import * as openai from './openai.js';
 import * as groq from './groq.js';
+import * as novita from './novita.js';
 import * as openaiCompatible from './openai-compatible.js';
 
 /** A fetch that records what it was asked and replies with `text`. */
@@ -201,6 +202,23 @@ describe('provider wiring', () => {
 		// Groq's json_schema support varies by model; this is the behaviour that
 		// was there before the shared helper and has to stay.
 		expect(server.calls[0].body.response_format).toEqual({ type: 'json_object' });
+	});
+
+	it('novita talks to its own endpoint and asks for json_object like groq', async () => {
+		const server = recordingFetch();
+		vi.stubGlobal('fetch', server.fetch);
+		await novita.generate({ prompt: 'p', schema: SCHEMA, env: { NOVITA_API_KEY: 'k', NOVITA_MODELS: 'gpt-oss-test' } });
+		expect(server.calls[0].url).toBe('https://api.novita.ai/openai/v1/chat/completions');
+		expect(server.calls[0].headers.Authorization).toBe('Bearer k');
+		expect(server.calls[0].body.model).toBe('gpt-oss-test');
+		// Only some of Novita's models enforce json_schema, and NOVITA_MODELS can
+		// name any of them, so the prompt-described shape is the safe default.
+		expect(server.calls[0].body.response_format).toEqual({ type: 'json_object' });
+	});
+
+	it('novita is configured by its key alone', () => {
+		expect(novita.isConfigured({ NOVITA_API_KEY: 'k' })).toBe(true);
+		expect(novita.isConfigured({})).toBe(false);
 	});
 
 	it('openai-compatible defaults to json_object and honours the override', async () => {
