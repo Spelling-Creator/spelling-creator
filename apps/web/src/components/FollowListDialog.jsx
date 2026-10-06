@@ -117,7 +117,7 @@ export default function FollowListDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose?.()}>
-      <DialogContent className="sm:max-w-sm p-0 gap-0">
+      <DialogContent className="sm:max-w-sm" bodyClassName="p-0 gap-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle>{t("followList.title")}</DialogTitle>
         </DialogHeader>

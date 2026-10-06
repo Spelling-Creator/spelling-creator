@@ -643,7 +643,10 @@ export default function CollaborateDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-        <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-md">
+        <DialogContent
+          className="max-h-[85dvh] sm:max-w-md"
+          bodyClassName="flex flex-col"
+        >
           <DialogHeader>
             <DialogTitle>{t("collaborateDialog.title")}</DialogTitle>
           </DialogHeader>

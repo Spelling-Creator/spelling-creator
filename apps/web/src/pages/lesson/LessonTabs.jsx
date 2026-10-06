@@ -19,7 +19,7 @@ import {
   PlayIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils.js";
-import { PAGE_WIDTHS } from "../../components/layout/PageBody.jsx";
+import { PAGE_GUTTER, PAGE_WIDTHS } from "../../components/layout/PageBody.jsx";
 
 // `end` on the overview only: it lives at the layout's index path, so without
 // it every tab would light it up as well as itself.
@@ -44,9 +44,8 @@ export default function LessonTabs({ playable }) {
           of the page, the tabs line up with the lesson beneath them. */}
       <nav
         className={cn(
-          // px-safe-4 to stay lined up with PageBody's column, which steps in
-          // by the same landscape notch inset.
-          "mx-auto flex w-full gap-1 overflow-x-auto px-safe-4",
+          "mx-auto flex w-full gap-1 overflow-x-auto",
+          PAGE_GUTTER,
           PAGE_WIDTHS.wide,
         )}
       >

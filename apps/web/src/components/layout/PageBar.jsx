@@ -24,8 +24,10 @@ import { cn } from "../../lib/utils.js";
  * @param {Array<{label: string, to?: string}>} props.crumbs  Trail from the
  *   section down to this page. The last entry is the current page and renders
  *   as text however it's given; earlier ones need a `to` to be links. All but
- *   the last are hidden while the crumbs have less than 16rem to themselves,
- *   where there isn't room for a trail.
+ *   the last are hidden while the crumbs have less than 24rem to themselves,
+ *   where there isn't room for a trail. Every page passes one ancestor and the
+ *   title, and the 24rem is sized for that; a deeper trail would need it
+ *   raised.
  * @param {React.ReactNode} [props.children]  Page actions, right-aligned.
  */
 export default function PageBar({ crumbs = [], children }) {
@@ -42,12 +44,18 @@ export default function PageBar({ crumbs = [], children }) {
             how much room there is depends on the page's actions as much as on
             the screen. The editor's take ~640px, so on a phone turned sideways
             the trail used to squeeze the page's own title down to nothing and
-            then spill underneath the buttons. */}
+            then spill underneath the buttons.
+
+            When it does show, the ancestor keeps its width (shrink-0, up to
+            max-w-48) and the title takes what's left. The 24rem threshold is
+            the ancestor's 12rem, the chevron and gaps, and ~10rem kept back
+            for the title, so a short crumb like "Lesson hub" is never cut to
+            "Less..." and showing the trail never costs the title its words. */}
         <nav className="@container/crumbs flex min-w-0 flex-1 items-center gap-1 text-sm">
           {crumbs.map((crumb, i) => (
             <Fragment key={`${crumb.label}-${i}`}>
               {i > 0 && (
-                <ChevronRightIcon className="hidden size-4 shrink-0 text-muted-foreground @min-[16rem]/crumbs:block" />
+                <ChevronRightIcon className="hidden size-4 shrink-0 text-muted-foreground @min-[24rem]/crumbs:block" />
               )}
               {i === last ? (
                 <h1 className="min-w-0 truncate text-base font-semibold">
@@ -56,7 +64,7 @@ export default function PageBar({ crumbs = [], children }) {
               ) : (
                 <span
                   className={cn(
-                    "hidden min-w-0 @min-[16rem]/crumbs:block",
+                    "hidden shrink-0 @min-[24rem]/crumbs:block",
                     "max-w-48",
                   )}
                 >

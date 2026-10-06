@@ -65,12 +65,15 @@ There are two widths:
 
 The `reading` width is why the page getting wider did **not** make lesson text
 wider: a line of text set to the full width of a desktop screen is harder to
-read, not easier. The two things that need the column's width but can't be the
-column (the lesson's sticky tab bar and a Suspense fallback) import
-`PAGE_WIDTHS` rather than restating the number.
+read, not easier. The lesson's sticky tab bar needs the column's width but
+can't be the column, so it imports `PAGE_WIDTHS` rather than restating the
+number. Both Suspense fallbacks (AppShell's and the route-level one in
+`App.jsx`) simply render a `PageBody`.
 
 Two places opt out and say so where they do: the marketing hero (a full-bleed
-gradient) and the editor's panes.
+gradient) and the editor's panes. They still use `PageBody`'s side padding,
+`PAGE_GUTTER`, which adds the safe-area insets on a phone turned sideways; see
+[Mobile layout](./mobile-layout.md#the-utilities).
 
 ## Laying out against the container
 

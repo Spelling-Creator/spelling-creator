@@ -132,7 +132,13 @@ screen, so their headers and close buttons sat behind the status bar.
 --safe-right: env(safe-area-inset-right, 0px);
 --safe-bottom: env(safe-area-inset-bottom, 0px);
 --safe-left: env(safe-area-inset-left, 0px);
+--safe-x: max(var(--safe-left), var(--safe-right));
+--safe-y: max(var(--safe-top), var(--safe-bottom));
 ```
+
+`--safe-x` and `--safe-y` are the bigger inset on each axis, for something
+centred on the screen that has to clear both ends of it (the dialog caps,
+below).
 
 Use the tokens (or the utilities below), not `env()` directly. Besides keeping
 one place that knows where the values come from, it means a layout can be
@@ -143,8 +149,11 @@ hand in the console:
 const s = document.documentElement.style;
 s.setProperty("--safe-top", "59px"); // iPhone 15, portrait
 s.setProperty("--safe-bottom", "34px");
-// Landscape: --safe-left / --safe-right 59px, --safe-bottom 21px.
+// Landscape: --safe-left and --safe-right both 59px, --safe-bottom 21px.
 ```
+
+In landscape iOS reports the same inset on **both** sides, not only on the side
+the notch happens to be on, so set both.
 
 ### The utilities
 
@@ -168,13 +177,25 @@ because it pins at `--appheader-h`, which already includes `--safe-top`.
 every breakpoint. The FAB, the collapsed collab-chat launcher and its corner
 panel from `sm` up, and the first-lesson wizard all use them.
 
-**`px-safe-<n>` for side padding.** In landscape the notch is on one side, and
-the header, `PageBar`, `PageBody`, the editor's panes and the lesson tabs all
-run the full width of the screen. Writing `px-4 px-safe` wouldn't work: both
-set `padding-left`, so whichever Tailwind emits last replaces the other rather
-than adding to it, and `tailwind-merge` doesn't know to drop either. The
-functional utility takes the spacing step and adds the inset in one
-declaration (`calc(var(--spacing) * 4 + var(--safe-left))`).
+**`px-safe-<n>` for side padding.** In landscape both side insets are about
+59px, and the header, `PageBar` and the page's content columns all run the full
+width of the screen, so each of them gives up that much at both ends. Writing
+`px-4 px-safe` wouldn't work: both set `padding-left`, so whichever Tailwind
+emits last replaces the other rather than adding to it, and `tailwind-merge`
+doesn't know to drop either. The functional utility takes the spacing step and
+adds the inset in one declaration
+(`calc(var(--spacing) * 4 + var(--safe-left))`).
+
+**Content columns use `PAGE_GUTTER`.** `layout/PageBody.jsx` exports it
+(currently `px-safe-4`) next to `PAGE_WIDTHS`, and it's the side padding for
+anything that holds content and can reach the sides of the screen: `PageBody`
+itself (so every page that renders into one, and the route-level Suspense
+fallback in `App.jsx`), the editor's panes, the lesson's tab bar and the home
+page's hero text. **If you add a full-width column that isn't a `PageBody`, use
+`PAGE_GUTTER` rather than a bare `px-4`.** It isn't padding on `AppShell`'s
+`<main>`, though that would cover everything at once, because `<main>` also holds
+things that have to reach the edge: `PageBar`'s card background, the tab bar's
+full-width rule and the hero's gradient would all stop 59px short of each side.
 
 Toasts get the same treatment through sonner's `offset` and `mobileOffset`
 props in `ui/sonner.jsx`, which add the tokens to sonner's default 24px and 16px
@@ -185,22 +206,53 @@ layout on a desktop or on a phone without a notch.
 
 ## Dialogs scroll on short screens
 
-`DialogContent` caps itself at `max-h-[calc(100dvh-2rem)]` with
-`overflow-y-auto`. A phone turned sideways is about 390px tall, and before the
-cap a dialog taller than that ran off both ends of the screen with no way to
-reach its buttons. The tall dialogs that scroll a list inside themselves
-(history, merge, collaborate, variations) pass their own `max-h-[85dvh]`,
-which replaces the default through `tailwind-merge`.
+A phone turned sideways is about 390px tall, and a dialog taller than that used
+to run off both ends of the screen with no way to reach its buttons. So
+`DialogContent` is two boxes:
+
+- The **frame** takes `className`: position, size, border, background and the
+  close button. It never scrolls. It is capped at
+  `calc(100dvh - 2rem - 2 * var(--safe-y))` tall and
+  `calc(100% - 2rem - 2 * var(--safe-x))` wide: 1rem of overlay on every side
+  plus the safe-area inset. The box is centred, so the bigger inset on each axis
+  comes off both ends, or the top of a tall dialog would sit under the clock in
+  the installed app.
+- The **body** (`data-slot="dialog-body"`) takes `bodyClassName`. It holds the
+  children and scrolls when they don't fit. Its default layout is
+  `grid gap-4 p-6`, so a dialog that wants something else says so here, not on
+  the frame: `bodyClassName="flex flex-col"` for the dialogs with a scrolling
+  list of their own (history, merge, collaborate, variations),
+  `bodyClassName="p-0 gap-0"` for the follow list.
+
+The split is what keeps the close button in its corner. An absolutely positioned
+child of a scroll container scrolls with the content, and so does a `fixed`
+one inside a transformed parent like the dialog, so with one box the button
+scrolled out of sight as soon as you scrolled down to the buttons.
+
+The list dialogs keep their own `max-h-[85dvh]` on the frame, which replaces the
+default cap through `tailwind-merge`. That still clears the insets: 7.5% of an
+844px-tall phone is 63px, past the 59px status bar, and 7.5% of a 390px
+landscape screen is 29px, past the 21px home indicator. Their list is an
+`overflow-y-auto` item in the body's flex column, which the column is allowed to
+shrink, so the list gives way first and the body only scrolls if what's around
+the list can't fit either.
 
 ## The breadcrumb yields to the page's actions
 
 `PageBar`'s trail (everything before the current page's title) only shows when
-the crumbs have at least 16rem to themselves. That's a container query on the
+the crumbs have at least 24rem to themselves. That's a container query on the
 crumb row (`@container/crumbs`), not a viewport breakpoint, because the room
 left depends on the page's actions as much as on the screen: the editor's take
 about 640px. Keyed off `sm`, the trail showed on a phone turned sideways,
 squeezed the lesson's own title down to nothing, and then spilled out under the
 buttons once the header made room for the notch.
+
+When the trail does show, the ancestor keeps its width (`shrink-0`, up to
+`max-w-48`) and the title takes the rest. 24rem is the ancestor's 12rem, the
+chevron and the gaps, plus about 10rem kept back for the title, so a short crumb
+is never cut down to a couple of letters and showing the trail never costs the
+title its words. Every page passes one ancestor and the title; a deeper trail
+would need the threshold raised.
 
 ## The nav is a sheet below `md`
 
@@ -222,8 +274,9 @@ actions in an overflow menu.
 
 `100vh` is the _large_ viewport: it ignores the browser's retractable address
 bar, so a `max-h-[90vh]` dialog can be taller than what's actually on screen.
-Page wrappers use `min-h-dvh` and the tall dialogs (history, merge,
-collaborate) use `max-h-[85dvh]`/`max-h-[90dvh]`.
+Page wrappers use `min-h-dvh`, the tall dialogs (history, merge, collaborate,
+variations) use `max-h-[85dvh]`, and every other dialog gets `DialogContent`'s
+`100dvh`-based cap (see [Dialogs scroll on short screens](#dialogs-scroll-on-short-screens)).
 
 `HomePage`'s hero deliberately keeps `min-h-[70vh] md:min-h-[78vh]`: `dvh` there
 would resize the hero as the address bar hides and shows during scroll, which
@@ -241,7 +294,11 @@ rounded at the top only, `h-[60dvh] max-h-[70dvh]`, with `pb-safe` so the
 composer clears the home indicator. From `sm` up every one of those is reverted
 and it's the original corner panel, with `sm:ml-safe sm:mb-safe` so a phone
 turned sideways (which is `sm` and up) still keeps it off the notch and the
-home indicator.
+home indicator. Its height cap,
+`sm:max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))]`, takes off
+everything between the panel and the ends of the screen. With only the 2rem
+taken off, the margin pushed a 390px-tall screen's panel up past the top
+edge and clipped its header row.
 
 ## Known gaps
 

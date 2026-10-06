@@ -124,9 +124,12 @@ export default function CollabChat({ collab }) {
   //
   // From `sm` up it goes back to the original floating corner panel, which on
   // a phone turned sideways still needs margins to clear the notch and the
-  // home indicator.
+  // home indicator. Its height cap takes off everything between it and the
+  // ends of the screen: 1rem and the inset below it (bottom-4 + mb-safe), and
+  // the same above it, or on a ~390px-tall screen the header row is pushed off
+  // the top.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex h-[60dvh] max-h-[70dvh] flex-col overflow-hidden rounded-t-panel border border-b-0 border-border bg-card pb-safe text-card-foreground shadow-(--shadow-panel) sm:inset-x-auto sm:bottom-4 sm:left-4 sm:ml-safe sm:mb-safe sm:h-[420px] sm:max-h-[calc(100dvh-32px)] sm:w-80 sm:rounded-panel sm:border-b sm:pb-0">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex h-[60dvh] max-h-[70dvh] flex-col overflow-hidden rounded-t-panel border border-b-0 border-border bg-card pb-safe text-card-foreground shadow-(--shadow-panel) sm:inset-x-auto sm:bottom-4 sm:left-4 sm:ml-safe sm:mb-safe sm:h-[420px] sm:max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))] sm:w-80 sm:rounded-panel sm:border-b sm:pb-0">
       {/* Header */}
       <div className="flex items-center gap-2 bg-primary px-3 py-2 text-primary-foreground">
         <MessageCircleIcon className="size-4" />

@@ -32,7 +32,7 @@ src/
       AppShell.jsx        the one layout route every page sits in: AppHeader + the page. Takes no configuration. Publishes @container/page
       AppHeader.jsx       the app's chrome: nav links (a sheet below md), New lesson, and the install/theme/settings/notification/account cluster
       PageBar.jsx         the contextual bar pinned under the header on lesson pages and in the editor: breadcrumb + the page's own actions
-      PageBody.jsx        the content column, in two documented widths (wide / reading). Exports PAGE_WIDTHS for the two things that need the width but can't be the column
+      PageBody.jsx        the content column, in two documented widths (wide / reading). Exports PAGE_WIDTHS for the tab bar, which needs the width but can't be the column, and PAGE_GUTTER, the safe-area-aware side padding for every content column
       EditorShell.jsx     the editor's nested routes behind one lazy import; mounts no chrome of its own
     editor/
       SectionOutline.jsx  the editor's left-hand section list (52rem+ of page column) — jump to a section, collapse them all; `readOnly` reuses it beside the preview

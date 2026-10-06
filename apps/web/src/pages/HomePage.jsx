@@ -28,7 +28,7 @@ import {
   Users2Icon,
   UsersIcon,
 } from "lucide-react";
-import PageBody from "../components/layout/PageBody.jsx";
+import PageBody, { PAGE_GUTTER } from "../components/layout/PageBody.jsx";
 import FloatingWords from "../components/FloatingWords.jsx";
 import { FeedListSkeleton } from "../components/Skeletons.jsx";
 import { Button } from "../components/ui/button.jsx";
@@ -185,7 +185,15 @@ function LandingView() {
               "radial-gradient(circle at 50% 40%, rgba(0,0,0,0.15), rgba(0,0,0,0.55))",
           }}
         />
-        <div className="relative mx-auto max-w-3xl px-4 py-16 text-center">
+        {/* The gradient above runs to the edges of the screen; the text
+            column steps in by PAGE_GUTTER, so in landscape it clears the
+            notch. */}
+        <div
+          className={cn(
+            "relative mx-auto max-w-3xl py-16 text-center",
+            PAGE_GUTTER,
+          )}
+        >
           <h1
             className="mb-4 font-serif text-4xl font-semibold md:text-6xl"
             style={{ textShadow: "0 2px 18px rgba(0,0,0,0.4)" }}

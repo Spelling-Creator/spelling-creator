@@ -15,14 +15,19 @@ import { useColorScheme } from "@/lib/colorScheme";
 
 // Sonner's own gaps from the screen edge (24px, or 16px on a phone) with the
 // safe-area insets added, so a toast never lands on the home indicator or under
-// the notch. Sonner writes these into CSS variables as given, so the var()
-// references resolve in the page. See the *-safe utilities in globals.css.
+// the notch. Sonner (2.x) takes a per-edge object for both props and writes
+// each value into its --offset-* / --mobile-offset-* variables as given, so the
+// var() references resolve in the page. See the *-safe utilities in
+// globals.css. Built once: they never change, and new objects on every render
+// would only hand Sonner new props to re-apply.
 const edgeOffset = (px) => ({
   top: `calc(${px}px + var(--safe-top))`,
   right: `calc(${px}px + var(--safe-right))`,
   bottom: `calc(${px}px + var(--safe-bottom))`,
   left: `calc(${px}px + var(--safe-left))`,
 });
+const OFFSET = edgeOffset(24);
+const MOBILE_OFFSET = edgeOffset(16);
 
 const Toaster = ({ ...props }) => {
   const { resolved } = useColorScheme();
@@ -31,8 +36,8 @@ const Toaster = ({ ...props }) => {
     <Sonner
       theme={resolved}
       className="toaster group"
-      offset={edgeOffset(24)}
-      mobileOffset={edgeOffset(16)}
+      offset={OFFSET}
+      mobileOffset={MOBILE_OFFSET}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,

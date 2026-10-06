@@ -35,6 +35,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import PageBar from "../components/layout/PageBar.jsx";
+import { PAGE_GUTTER } from "../components/layout/PageBody.jsx";
 import SectionOutline from "../components/editor/SectionOutline.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
@@ -2817,10 +2818,12 @@ export default function EditorPage() {
           of prose someone reads straight through; it is not about a form, which
           is what this is.
 
-          px-safe-4 rather than px-4 for the same reason as PageBody: the
-          panes reach the sides of the screen, which in landscape is where an
-          iPhone's notch is. */}
-      <div className="flex w-full items-start gap-6 px-safe-4 pt-6 pb-16">
+          PAGE_GUTTER rather than px-4 for the same reason as PageBody: the
+          panes reach the sides of the screen, which on a phone turned
+          sideways is where the safe-area insets are. */}
+      <div
+        className={cn("flex w-full items-start gap-6 pt-6 pb-16", PAGE_GUTTER)}
+      >
         {/* One outline, both modes. `readOnly` drops collapse-all and
             add-section; what is left navigates the preview unchanged, because
             LessonView anchors its sections with the same data-section-id the

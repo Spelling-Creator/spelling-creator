@@ -37,6 +37,7 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./components/layout/AppShell.jsx";
+import PageBody from "./components/layout/PageBody.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import { SectionsSkeleton } from "./components/Skeletons.jsx";
 import HomePage from "./pages/HomePage.jsx";
@@ -64,12 +65,13 @@ const OAuthAuthorizePage = lazy(() => import("./pages/OAuthAuthorizePage.jsx"));
 // route, so React unwinds past AppShell to reach it, taking the header with
 // it. In practice it is almost never seen — AppShell has a boundary of its
 // own, so a lazy page inside the shell keeps the header on screen and only its
-// body is replaced.
+// body is replaced. It is a PageBody, as that one is, so the skeleton sits in
+// the same column as the page that replaces it.
 function RouteFallback() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pt-6 pb-16">
+    <PageBody>
       <SectionsSkeleton />
-    </div>
+    </PageBody>
   );
 }
 

@@ -32,6 +32,20 @@ export const PAGE_WIDTHS = {
 };
 
 /**
+ * The side padding of every content column: 1rem, plus the safe-area inset on
+ * each side (the notch, on a phone turned sideways; see globals.css). Use this
+ * rather than a bare `px-4` on anything that holds content and can reach the
+ * sides of the screen. PageBody uses it, and so do the columns that can't be a
+ * PageBody: the editor's panes, the lesson's tab bar, the home page's hero.
+ *
+ * It's a constant rather than padding on AppShell's <main> because <main> also
+ * holds things that have to reach the edge of the screen: PageBar's card
+ * background, the tab bar's full-width rule, the hero's gradient. Padding the
+ * shell would stop all of those 59px short of each side in landscape.
+ */
+export const PAGE_GUTTER = "px-safe-4";
+
+/**
  * @param {object} props
  * @param {"wide"|"reading"} [props.width]
  * @param {boolean} [props.flush]  Drop the top padding, for a page whose first
@@ -47,9 +61,8 @@ export default function PageBody({
   return (
     <div
       className={cn(
-        // px-safe-4 is px-4 plus the landscape notch, so text never sits
-        // under it (see globals.css).
-        "mx-auto w-full px-safe-4",
+        "mx-auto w-full",
+        PAGE_GUTTER,
         PAGE_WIDTHS[width] ?? PAGE_WIDTHS.wide,
         // pb-16 is the same on every page so a page's last element never ends
         // up flush against the bottom of the viewport, and so the editor's
