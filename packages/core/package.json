@@ -85,15 +85,15 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
-    "@isomorphic-git/lightning-fs": "^4.7.0",
-    "@supabase/supabase-js": "^2.112.3",
-    "docx": "^9.0.3",
-    "dompurify": "^3.4.13",
+    "@isomorphic-git/lightning-fs": "^4.10.3",
+    "@supabase/supabase-js": "^2.117.2",
+    "docx": "^9.8.1",
+    "dompurify": "^3.4.16",
     "fuse.js": "^7.5.0",
     "html2pdf.js": "^0.14.0",
-    "isomorphic-git": "^1.41.4",
-    "mammoth": "^1.12.1",
-    "yjs": "^13.6.32"
+    "isomorphic-git": "^1.43.0",
+    "mammoth": "^1.13.0",
+    "yjs": "^13.6.33"
   },
   "devDependencies": {
     "vitest": "~3.2.7"
