@@ -52,6 +52,12 @@ describe("languageForTag", () => {
     expect(languageForTag("zh")?.flores).toBe("zho_Hans");
   });
 
+  it("normalizes underscores before looking up the full tag", () => {
+    expect(languageForTag("zh_Hant")?.tag).toBe("zh-Hant");
+    expect(languageForTag(" ZH_TW ")?.tag).toBe("zh-Hant");
+    expect(languageForTag("pt_BR")?.tag).toBe("pt");
+  });
+
   it("is case-insensitive and null for unknowns", () => {
     expect(languageForTag("ES")?.tag).toBe("es");
     expect(languageForTag("tlh")).toBeNull();

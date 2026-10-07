@@ -85,7 +85,7 @@ export function baseLanguageTag(tag) {
  * @param {string} tag
  */
 export function languageForTag(tag) {
-  const lower = (tag || "").trim().toLowerCase();
+  const lower = (tag || "").trim().toLowerCase().replace(/_/g, "-");
   if (!lower) return null;
   return byTag.get(lower) || byTag.get(baseLanguageTag(lower)) || null;
 }
