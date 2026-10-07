@@ -21,11 +21,13 @@ import { z } from "zod";
 
 import { presentDoc } from "@spelling-creator/core/lessonBuild";
 import { applyPatch } from "@spelling-creator/core/lessonPatch";
+import { docFromY } from "@spelling-creator/core/ydoc";
 import {
   JOIN_WAIT_MS,
   busyBlocks,
   chatOf,
   docOf,
+  replicaOf,
   updateFor,
   waitForAdmission,
 } from "./collab.js";
@@ -113,15 +115,32 @@ export function registerCollabTools(server, ctx) {
     }
   };
 
-  /** The session we're in and its state now, or a clear error naming what to do. */
-  const current = async () => {
+  /**
+   * The session we're in and its state now, or a clear error naming what to
+   * do. `doc: false` skips the document, for a call that doesn't need it.
+   */
+  const current = async ({ doc = true } = {}) => {
     const handle = await store.get();
     if (!handle) throw new Error(NOT_IN_SESSION);
     const state = await ask(handle, () =>
-      api.collabState(handle.code, handle.token),
+      api.collabState(handle.code, handle.token, { doc }),
     );
     if (!state.admitted) throw new Error(stillWaitingMessage(handle.code));
     return { handle, state };
+  };
+
+  // Reading the state drains the room's chat inbox for us, so anything said
+  // since the last look is in `state` and nowhere else now. An error raised
+  // after that point must carry it, or the teacher's reply to the assistant's
+  // last question is lost in the very call that fetched it.
+  const withChat = (err, state) => {
+    const chat = chatOf(state);
+    if (chat.length) {
+      err.message +=
+        "\n\nSaid in the session since you last looked (delivered now, it won't repeat): " +
+        JSON.stringify(chat);
+    }
+    return err;
   };
 
   // The roster and any chat waiting, folded into every result. Several
@@ -155,7 +174,7 @@ export function registerCollabTools(server, ctx) {
         note ||
         "You are in the session and this is the live lesson. Anything you change with edit_collab_doc appears " +
           "on their screen as you make it, so make one deliberate edit at a time rather than rewriting in a " +
-          "burst — and say what you are doing in the chat.",
+          "burst, and say what you are doing in the chat.",
     };
   };
 
@@ -189,7 +208,7 @@ export function registerCollabTools(server, ctx) {
     tool(async ({ code }) => {
       // Declare what this is. The room shows an assistant as a participant of
       // its own rather than as a second cursor wearing the account holder's
-      // name — see handleCollabAgent in apps/api/src/routes/collab.js. The label
+      // name (see handleCollabAgent in apps/api/src/routes/collab.js). The label
       // is the connecting MCP client's own account of itself ("Claude Desktop"),
       // which is the most useful thing the teacher could be told about who is
       // typing.
@@ -219,7 +238,7 @@ export function registerCollabTools(server, ctx) {
         if (handle && handle.code !== code) {
           throw new Error(
             state.admitted
-              ? `Already in session "${handle.code}". Call leave_collab_session before joining another — one at ` +
+              ? `Already in session "${handle.code}". Call leave_collab_session before joining another: one at ` +
                   "a time, so there is never a question about which session an edit is going to."
               : `A request to join session "${handle.code}" is still waiting for the host. Call ` +
                   "leave_collab_session to withdraw it before asking to join a different session.",
@@ -258,6 +277,12 @@ export function registerCollabTools(server, ctx) {
       try {
         state = await waitForAdmission(api, handle, { budgetMs: joinWaitMs });
       } catch (err) {
+        if (err?.status === 404) {
+          // The room forgot the request mid-wait (swept, or a new session took
+          // over the room). Nothing to resume; the next call starts clean.
+          await store.clear();
+          throw new Error(forgottenMessage(code));
+        }
         if (!err?.gone) throw err;
         await store.clear();
         throw new Error(
@@ -332,28 +357,39 @@ export function registerCollabTools(server, ctx) {
       // document.
       const { handle, state } = await current();
 
-      const busy = busyBlocks(state);
-      const clashes = touchedBlocks(operations)
-        .filter((id) => busy.has(id))
-        .map((id) => ({ blockId: id, editedBy: busy.get(id) }));
-      if (clashes.length) {
-        throw new Error(
-          `Someone else's cursor is in ${clashes.length === 1 ? "a block" : "blocks"} this edit would rewrite: ` +
-            `${clashes.map((c) => `${c.blockId} (${c.editedBy})`).join(", ")}. Text in a single field doesn't ` +
-            "merge — one of you would lose the sentence. Edit somewhere else, or ask in the chat for them to " +
-            "move off it and try again.",
-        );
-      }
+      let doc;
+      let update;
+      let after;
+      try {
+        const busy = busyBlocks(state);
+        const clashes = touchedBlocks(operations)
+          .filter((id) => busy.has(id))
+          .map((id) => ({ blockId: id, editedBy: busy.get(id) }));
+        if (clashes.length) {
+          throw new Error(
+            `Someone else's cursor is in ${clashes.length === 1 ? "a block" : "blocks"} this edit would rewrite: ` +
+              `${clashes.map((c) => `${c.blockId} (${c.editedBy})`).join(", ")}. Text in a single field doesn't ` +
+              "merge, so one of you would lose the sentence. Edit somewhere else, or ask in the chat for them to " +
+              "move off it and try again.",
+          );
+        }
 
-      const doc = applyPatch(docOf(state), operations);
-      const update = updateFor(state, doc);
-      // An edit that changes nothing sends nothing: the room would relay it
-      // anyway, and credit nobody, but there is no reason to make it.
-      const after = update
-        ? await ask(handle, () =>
-            api.collabUpdate(handle.code, handle.token, update),
-          )
-        : state;
+        // One replica serves both the document the patch is applied to and the
+        // update that results; decoding a large lesson twice would be the
+        // slowest part of the call.
+        const replica = replicaOf(state);
+        doc = applyPatch(docFromY(replica), operations);
+        update = updateFor(replica, doc);
+        // An edit that changes nothing sends nothing: the room would relay it
+        // anyway, and credit nobody, but there is no reason to make it.
+        after = update
+          ? await ask(handle, () =>
+              api.collabUpdate(handle.code, handle.token, update),
+            )
+          : state;
+      } catch (err) {
+        throw withChat(err, state);
+      }
 
       const { failures, flags } = standardFindings({ doc });
       return text({
@@ -404,10 +440,16 @@ export function registerCollabTools(server, ctx) {
       },
     },
     tool(async ({ text: body }) => {
-      const { handle, state } = await current();
-      const after = await ask(handle, () =>
-        api.collabChat(handle.code, handle.token, body),
-      );
+      // Saying something needs the roster and the chat, not the document.
+      const { handle, state } = await current({ doc: false });
+      let after;
+      try {
+        after = await ask(handle, () =>
+          api.collabChat(handle.code, handle.token, body),
+        );
+      } catch (err) {
+        throw withChat(err, state);
+      }
       return text({ sent: body, ...roomState(state, after) });
     }),
   );
@@ -417,7 +459,7 @@ export function registerCollabTools(server, ctx) {
     {
       title: "Leave the session",
       description:
-        "Leave the collaboration session. The lesson stays exactly as it is — leaving changes nothing the " +
+        "Leave the collaboration session. The lesson stays exactly as it is, since leaving changes nothing the " +
         "session holds, and frees the participant slot (a room holds ten). Say goodbye in the chat first.",
       inputSchema: {},
     },

@@ -129,10 +129,23 @@ function identityFrom(request) {
 }
 
 // Which agent endpoint a path names, or null for the WebSocket path. The Worker
-// forwards the full URL (/collab/<code>/agent[/update|/chat]).
+// forwards the full URL (/collab/<code>/agent[/update|/chat]). Anchored on the
+// code segment, so a session whose share code happens to be "agent" is still a
+// WebSocket path (/collab/agent) and not an agent ask.
 function agentAction(pathname) {
-	const m = /\/agent(?:\/(update|chat))?\/?$/.exec(pathname);
+	const m = /^\/collab\/[^/]+\/agent(?:\/(update|chat))?\/?$/.exec(pathname);
 	return m ? m[1] || 'session' : null;
+}
+
+// An agent row's JSON, or null for a corrupt one: skipped rather than allowed
+// to take the room down.
+function rowToAgent(row) {
+	if (!row) return null;
+	try {
+		return JSON.parse(row.v);
+	} catch {
+		return null;
+	}
 }
 
 // A document travels to an agent as base64 inside JSON. Built in chunks: one
@@ -164,9 +177,11 @@ export class CollabRoom extends DurableObject {
 		// which is lenient (a fresh full bucket) on the next message — acceptable.
 		this.buckets = new Map();
 		this.violations = new Map();
-		// Agents waiting (inside a long-poll) to hear they were admitted, by slot.
-		// In-memory by nature: a waiter is an open request, and an open request
-		// keeps this object awake.
+		// Agents waiting (inside a long-poll) to hear they were admitted, by their
+		// token. Keyed by token rather than slot because a slot can be reissued
+		// after its agent leaves, and a wait must only ever be answered about the
+		// record that started it. In-memory by nature: a waiter is an open
+		// request, and an open request keeps this object awake.
 		this.agentWaiters = new Map();
 		// The document is cached in SQLite (not a DO storage value) so it survives
 		// hibernation/eviction and can exceed the 128 KiB key-value limit; a late
@@ -190,11 +205,12 @@ export class CollabRoom extends DurableObject {
 			if (saved) Y.applyUpdate(this.ydoc, saved);
 			// Where each participant's caret is, by slot. A socket learns this from
 			// relayed CURSOR frames as they happen; an agent has to be told on its
-			// next ask, so the room remembers the latest. Persisted (while an agent
-			// exists) because an agent's asks are exactly when this object has had
-			// time to be evicted.
+			// next ask, so the room remembers the latest. Persisted (while an
+			// admitted agent exists to read it) because an agent's asks are exactly
+			// when this object has had time to be evicted.
 			this.cursors = this.loadCursors();
-			this.hasAgents = this.agents().length > 0;
+			this.cursorReaders = false;
+			this.refreshAgentFlags();
 		});
 		// Keep-alive. A backgrounded tab stops sending cursor/doc traffic, so its
 		// otherwise-idle WebSocket gets dropped as inactive — the bug where leaving
@@ -241,9 +257,10 @@ export class CollabRoom extends DurableObject {
 	}
 
 	persistCursors() {
-		// Only an agent ever reads these back, so a room with no agent writes
-		// nothing: a browser sends up to fifteen cursor frames a second.
-		if (!this.hasAgents) return;
+		// Only an admitted agent ever reads these back, so a room without one
+		// writes nothing: a browser sends up to fifteen cursor frames a second,
+		// and a pending request or a tombstone is not a reader.
+		if (!this.cursorReaders) return;
 		this.ctx.storage.sql.exec("INSERT OR REPLACE INTO room (k, v) VALUES ('cursors', ?)", JSON.stringify(Object.fromEntries(this.cursors)));
 	}
 
@@ -273,15 +290,7 @@ export class CollabRoom extends DurableObject {
 
 	// ----- agents (SQLite) ----------------------------------------------------
 	agents() {
-		const out = [];
-		for (const row of this.ctx.storage.sql.exec('SELECT v FROM agents').toArray()) {
-			try {
-				out.push(JSON.parse(row.v));
-			} catch {
-				/* skip a corrupt row rather than lose the room */
-			}
-		}
-		return out;
+		return this.ctx.storage.sql.exec('SELECT v FROM agents').toArray().map(rowToAgent).filter(Boolean);
 	}
 
 	liveAgents() {
@@ -289,39 +298,48 @@ export class CollabRoom extends DurableObject {
 	}
 
 	agentBySlot(slot) {
-		const rows = this.ctx.storage.sql.exec('SELECT v FROM agents WHERE slot = ?', slot).toArray();
-		if (!rows[0]) return null;
-		try {
-			return JSON.parse(rows[0].v);
-		} catch {
-			return null;
-		}
+		return rowToAgent(this.ctx.storage.sql.exec('SELECT v FROM agents WHERE slot = ?', slot).toArray()[0]);
 	}
 
 	agentByToken(token) {
-		const rows = this.ctx.storage.sql.exec('SELECT v FROM agents WHERE token = ?', token).toArray();
-		if (!rows[0]) return null;
-		try {
-			return JSON.parse(rows[0].v);
-		} catch {
-			return null;
+		return rowToAgent(this.ctx.storage.sql.exec('SELECT v FROM agents WHERE token = ?', token).toArray()[0]);
+	}
+
+	// Recompute what the agent table implies for the rest of the room: whether
+	// any record exists at all (the sweep keeps running while one does), and
+	// whether an admitted agent exists to read cursors back. The moment the
+	// first reader appears, the cursors already in memory are written down, so
+	// a caret the teacher parked before the assistant arrived survives an
+	// eviction too; the moment the last one goes, the row is dropped.
+	refreshAgentFlags() {
+		const all = this.agents();
+		this.hasAgents = all.length > 0;
+		const readers = all.some((a) => !a.gone && a.admitted);
+		if (readers && !this.cursorReaders) {
+			this.cursorReaders = true;
+			this.persistCursors();
+		} else if (!readers && this.cursorReaders) {
+			this.cursorReaders = false;
+			this.ctx.storage.sql.exec("DELETE FROM room WHERE k = 'cursors'");
 		}
 	}
 
 	saveAgent(a) {
 		this.ctx.storage.sql.exec('INSERT OR REPLACE INTO agents (slot, token, v) VALUES (?, ?, ?)', a.slot, a.token, JSON.stringify(a));
-		this.hasAgents = true;
+		this.refreshAgentFlags();
 	}
 
-	deleteAgent(slot) {
-		this.ctx.storage.sql.exec('DELETE FROM agents WHERE slot = ?', slot);
-		this.ctx.storage.sql.exec('DELETE FROM agent_inbox WHERE slot = ?', slot);
-		this.buckets.delete(slot);
-		this.violations.delete(slot);
-		this.cursors.delete(slot);
-		this.agentWaiters.delete(slot);
-		this.hasAgents = this.agents().length > 0;
-		if (!this.hasAgents) this.ctx.storage.sql.exec("DELETE FROM room WHERE k = 'cursors'");
+	// Forget an agent outright. Anyone waiting on it inside a long-poll is woken
+	// first, so the wait ends now and finds the record gone, rather than
+	// sleeping out its timeout and guessing at a reason.
+	deleteAgent(a) {
+		this.wakeAgent(a);
+		this.ctx.storage.sql.exec('DELETE FROM agents WHERE slot = ?', a.slot);
+		this.ctx.storage.sql.exec('DELETE FROM agent_inbox WHERE slot = ?', a.slot);
+		this.buckets.delete(a.slot);
+		this.violations.delete(a.slot);
+		this.cursors.delete(a.slot);
+		this.refreshAgentFlags();
 	}
 
 	// End an agent's part in the session, keeping the record as a tombstone so
@@ -333,7 +351,7 @@ export class CollabRoom extends DurableObject {
 		a.admitted = false;
 		this.saveAgent(a);
 		this.ctx.storage.sql.exec('DELETE FROM agent_inbox WHERE slot = ?', a.slot);
-		this.wakeAgent(a.slot);
+		this.wakeAgent(a);
 	}
 
 	inboxPush(slot, entry) {
@@ -360,19 +378,24 @@ export class CollabRoom extends DurableObject {
 		return out;
 	}
 
-	// A long-poll: resolve when the agent is admitted or ended, or when `ms`
-	// runs out, whichever is first.
-	waitForAgent(slot, ms) {
+	// A long-poll: resolve when the agent is admitted, ended or forgotten, or
+	// when `ms` runs out, whichever is first. The caller re-reads the record by
+	// token afterwards; this promises nothing about what it will find.
+	waitForAgent(a, ms) {
 		return new Promise((resolve) => {
-			let waiters = this.agentWaiters.get(slot);
+			let waiters = this.agentWaiters.get(a.token);
 			if (!waiters) {
 				waiters = new Set();
-				this.agentWaiters.set(slot, waiters);
+				this.agentWaiters.set(a.token, waiters);
 			}
 			const done = () => {
 				clearTimeout(timer);
 				waiters.delete(done);
-				if (!waiters.size) this.agentWaiters.delete(slot);
+				// Only drop the map entry if it is still ours: a later wait on the
+				// same token may have started its own set since.
+				if (!waiters.size && this.agentWaiters.get(a.token) === waiters) {
+					this.agentWaiters.delete(a.token);
+				}
 				resolve();
 			};
 			const timer = setTimeout(done, ms);
@@ -380,8 +403,8 @@ export class CollabRoom extends DurableObject {
 		});
 	}
 
-	wakeAgent(slot) {
-		const waiters = this.agentWaiters.get(slot);
+	wakeAgent(a) {
+		const waiters = this.agentWaiters.get(a.token);
 		if (!waiters) return;
 		for (const done of [...waiters]) done();
 	}
@@ -399,11 +422,16 @@ export class CollabRoom extends DurableObject {
 		let changed = false;
 		for (const a of this.agents()) {
 			if (a.gone) {
-				if (now - a.goneAt > AGENT_GONE_TTL_MS) this.deleteAgent(a.slot);
+				if (now - a.goneAt > AGENT_GONE_TTL_MS) this.deleteAgent(a);
 				continue;
 			}
-			const ttl = a.admitted ? AGENT_IDLE_TTL_MS : AGENT_PENDING_TTL_MS;
-			if (now - a.lastSeen > ttl) {
+			// A pending request is measured from when it was made, not from the
+			// assistant's last ask: it is the host's silence that withdraws it, and
+			// an assistant that keeps asking must not keep it in their dialog
+			// forever. An admitted agent is measured from its last ask, because
+			// asking is the only sign of life it has.
+			const expired = a.admitted ? now - a.lastSeen > AGENT_IDLE_TTL_MS : now - a.joinedAt > AGENT_PENDING_TTL_MS;
+			if (expired) {
 				this.endAgent(a, a.admitted ? GONE_IDLE : GONE_UNANSWERED);
 				changed = true;
 			}
@@ -622,7 +650,7 @@ export class CollabRoom extends DurableObject {
 			// A new session in an object a previous one used. Any agent record
 			// left is a tombstone from that session; it must not name a slot or
 			// answer an ask in this one.
-			for (const a of this.agents()) this.deleteAgent(a.slot);
+			for (const a of this.agents()) this.deleteAgent(a);
 		} else if (!existingHost) {
 			// Joining a code that nobody is hosting — mirrors the old "no session for
 			// that code" failure when a PeerJS host id wasn't found.
@@ -669,6 +697,11 @@ export class CollabRoom extends DurableObject {
 	// and is answered 410 with { gone: reason } once the session has let that
 	// agent go (declined, removed, host left, swept). The Worker has already
 	// verified who is asking (X-Collab-Uid), and the record has to be theirs.
+	//
+	// Order matters here. A request body is read BEFORE the record is looked up
+	// and checked, and a long-poll re-reads the record by token AFTER waking, so
+	// that nothing authorised on one side of an await acts on the other side of
+	// it: the host may have removed the agent, or it may have left, in between.
 	async agentFetch(request, url, action) {
 		const identity = identityFrom(request);
 		const method = request.method;
@@ -698,6 +731,19 @@ export class CollabRoom extends DurableObject {
 			return json({ token: a.token, ...this.agentEnvelope(a, { withDoc: false }) }, 201);
 		}
 
+		// The body first (see above). Only the two writes have one.
+		let bytes = null;
+		let text = '';
+		if (action === 'update' && method === 'POST') {
+			bytes = new Uint8Array(await request.arrayBuffer());
+			if (bytes.length > MAX_UPDATE_BYTES) return json({ error: 'Update too large.' }, 413);
+		} else if (action === 'chat' && method === 'POST') {
+			const body = await request.json().catch(() => null);
+			text = typeof body?.text === 'string' ? body.text.trim() : '';
+			if (!text) return json({ error: 'Nothing to say.' }, 400);
+			if (text.length > AGENT_CHAT_MAX_CHARS) return json({ error: 'Message too long.' }, 413);
+		}
+
 		const token = request.headers.get('X-Collab-Agent') || '';
 		const a = token ? this.agentByToken(token) : null;
 		if (!a) {
@@ -705,36 +751,41 @@ export class CollabRoom extends DurableObject {
 		}
 		if (a.uid !== identity.uid) return json({ error: 'Forbidden' }, 403);
 		if (a.gone) {
-			this.deleteAgent(a.slot);
+			this.deleteAgent(a);
 			return json({ gone: a.gone }, 410);
 		}
 		a.lastSeen = Date.now();
 		this.saveAgent(a);
 
 		if (action === 'session' && method === 'GET') {
+			// `doc=0` leaves the document out, for an ask that only wants to know
+			// whether it is still in the session and what has been said.
+			const withDoc = url.searchParams.get('doc') !== '0';
 			const wait = Math.min(AGENT_WAIT_MAX_MS, Math.max(0, Number(url.searchParams.get('wait')) || 0) * 1000);
 			if (!a.admitted && wait > 0) {
-				await this.waitForAgent(a.slot, wait);
-				const fresh = this.agentBySlot(a.slot);
-				if (!fresh || fresh.gone) {
-					if (fresh) this.deleteAgent(fresh.slot);
-					return json({ gone: fresh?.gone || GONE_UNANSWERED }, 410);
+				await this.waitForAgent(a, wait);
+				// Woken, or timed out: either way, what is true now is whatever the
+				// record under OUR token says. Never by slot, which may since have
+				// been handed to somebody else.
+				const fresh = this.agentByToken(a.token);
+				if (!fresh) return json({ error: 'No such participant in this session any more.' }, 404);
+				if (fresh.gone) {
+					this.deleteAgent(fresh);
+					return json({ gone: fresh.gone }, 410);
 				}
-				return json(this.agentEnvelope(fresh, { withDoc: true }));
+				return json(this.agentEnvelope(fresh, { withDoc }));
 			}
-			return json(this.agentEnvelope(a, { withDoc: true }));
+			return json(this.agentEnvelope(a, { withDoc }));
 		}
 
 		if (action === 'session' && method === 'DELETE') {
-			this.deleteAgent(a.slot);
+			this.deleteAgent(a);
 			this.broadcastPresence();
 			return json({ left: true });
 		}
 
 		if (action === 'update' && method === 'POST') {
 			if (!a.admitted) return json({ error: 'Not admitted to the session yet.' }, 409);
-			const bytes = new Uint8Array(await request.arrayBuffer());
-			if (bytes.length > MAX_UPDATE_BYTES) return json({ error: 'Update too large.' }, 413);
 			const over = this.overBudget(a, T.UPDATE);
 			if (over) return over;
 			const changed = this.applyUpdateFrom(a.slot, bytes);
@@ -744,10 +795,6 @@ export class CollabRoom extends DurableObject {
 
 		if (action === 'chat' && method === 'POST') {
 			if (!a.admitted) return json({ error: 'Not admitted to the session yet.' }, 409);
-			const body = await request.json().catch(() => null);
-			const text = typeof body?.text === 'string' ? body.text.trim() : '';
-			if (!text) return json({ error: 'Nothing to say.' }, 400);
-			if (text.length > AGENT_CHAT_MAX_CHARS) return json({ error: 'Message too long.' }, 413);
 			const payload = enc.encode(JSON.stringify({ text, ts: Date.now() }));
 			if (payload.length > MAX_CHAT_BYTES) return json({ error: 'Message too long.' }, 413);
 			const over = this.overBudget(a, T.CHAT);
@@ -858,9 +905,9 @@ export class CollabRoom extends DurableObject {
 
 	// Host admitted a pending guest: flip them to admitted, hand them the lesson as
 	// it stands, and refresh everyone's roster. For a socket the payload is the
-	// room's whole Y.Doc encoded as one update, which the guest simply applies —
-	// the same code path as any incremental edit. An agent is woken instead, and
-	// gets the document on the ask that was waiting.
+	// room's whole Y.Doc encoded as one update, which the guest simply applies
+	// through the same code path as any incremental edit. An agent is woken
+	// instead, and gets the document on the ask that was waiting.
 	admit(slot) {
 		const ws = this.socketBySlot(slot);
 		if (ws) {
@@ -877,7 +924,7 @@ export class CollabRoom extends DurableObject {
 		a.admitted = true;
 		a.lastSeen = Date.now();
 		this.saveAgent(a);
-		this.wakeAgent(slot);
+		this.wakeAgent(a);
 		this.broadcastPresence();
 	}
 

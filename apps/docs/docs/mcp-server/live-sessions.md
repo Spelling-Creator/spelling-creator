@@ -63,13 +63,13 @@ So the assistant is not a connection. It is a **record in the room**. `CollabRoo
 authoritative Yjs document and roster, keeps one row per assistant and answers questions
 about it over plain HTTP:
 
-| Request                           | What it does                                                                                                                                  |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /collab/:code/agent`        | Ask to join. A pending request the host sees in the Collaborate dialog; returns a participant token.                                          |
-| `GET /collab/:code/agent?wait=s`  | The session now: admitted or not, roster, chat since the last ask, where every caret is, the document. Waits up to `s` seconds for admission. |
-| `POST /collab/:code/agent/update` | A Yjs update to merge, as raw bytes.                                                                                                          |
-| `POST /collab/:code/agent/chat`   | `{ text }`: say something to everyone.                                                                                                        |
-| `DELETE /collab/:code/agent`      | Leave.                                                                                                                                        |
+| Request                           | What it does                                                                                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /collab/:code/agent`        | Ask to join. A pending request the host sees in the Collaborate dialog; returns a participant token.                                                                  |
+| `GET /collab/:code/agent?wait=s`  | The session now: admitted or not, roster, chat since the last ask, where every caret is, the document (`doc=0` leaves it out). Waits up to `s` seconds for admission. |
+| `POST /collab/:code/agent/update` | A Yjs update to merge, as raw bytes.                                                                                                                                  |
+| `POST /collab/:code/agent/chat`   | `{ text }`: say something to everyone.                                                                                                                                |
+| `DELETE /collab/:code/agent`      | Leave.                                                                                                                                                                |
 
 Every ask after the join carries the participant token in `X-Collab-Agent`, next to the
 same `Authorization: Bearer` the rest of the API takes. The Worker (`handleCollabAgent` in
@@ -161,7 +161,7 @@ cursor is currently in, and names who is there:
 
 ```text
 Someone else's cursor is in a block this edit would rewrite: b7 (Ms Kelly). Text in a
-single field doesn't merge — one of you would lose the sentence. Edit somewhere else, or
+single field doesn't merge, so one of you would lose the sentence. Edit somewhere else, or
 ask in the chat for them to move off it and try again.
 ```
 

@@ -414,11 +414,15 @@ export function createApi(config, auth) {
     /**
      * The session as the room holds it: whether we're admitted yet, the roster,
      * chat since the last ask, where everyone's caret is, and the document (as
-     * a base64 Yjs update). `wait` seconds is how long the room may hold the
-     * request open for admission if it hasn't come yet.
+     * a base64 Yjs update), unless `doc: false` leaves that out. `wait` seconds
+     * is how long the room may hold the request open for admission if it
+     * hasn't come yet.
      */
-    async collabState(code, token, { wait = 0 } = {}) {
-      const query = wait > 0 ? `?wait=${Math.ceil(wait)}` : "";
+    async collabState(code, token, { wait = 0, doc = true } = {}) {
+      const params = new URLSearchParams();
+      if (wait > 0) params.set("wait", String(Math.ceil(wait)));
+      if (!doc) params.set("doc", "0");
+      const query = params.size ? `?${params}` : "";
       return collabCall(collabUrl(code, query), { token });
     },
 

@@ -18,7 +18,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 import { docFromY, reconcile } from "@spelling-creator/core/ydoc";
 
-import { busyBlocks, docOf, updateFor } from "../src/collab.js";
+import { busyBlocks, docOf, replicaOf, updateFor } from "../src/collab.js";
 import { memorySessionStore } from "../src/collabTools.js";
 import { registerTools, SERVER_INFO } from "../src/tools.js";
 
@@ -63,6 +63,7 @@ function fakeRoom(doc = LESSON) {
     cursors: {},
     updates: [],
     said: [],
+    docAsked: [], // whether each state ask wanted the document
     waiters: [],
     beforeUpdate: null, // what the teacher does while our update is in flight
 
@@ -144,8 +145,9 @@ function fakeRoom(doc = LESSON) {
       room.exists = true;
       return { token: room.token, slot: room.slot, admitted: false };
     },
-    async collabState(code, token, { wait = 0 } = {}) {
+    async collabState(code, token, { wait = 0, doc = true } = {}) {
       check(token);
+      room.docAsked.push(doc);
       // The real room holds the request open for admission; here a few
       // milliseconds stand in for the seconds, so a test's budget is spent in
       // a handful of asks rather than a tight loop.
@@ -216,12 +218,15 @@ test("an edit becomes the update for exactly what changed, and nothing for no ch
 
   assert.equal(docOf(state).title, "Volcanoes");
   assert.equal(
-    updateFor(state, LESSON),
+    updateFor(replicaOf(state), LESSON),
     null,
     "reconciling the same document emits nothing",
   );
 
-  const update = updateFor(state, { ...LESSON, title: "Volcanoes and lava" });
+  const update = updateFor(replicaOf(state), {
+    ...LESSON,
+    title: "Volcanoes and lava",
+  });
   assert.ok(update instanceof Uint8Array);
   // Applied to a replica that never saw our change, it lands as that change
   // alone: the room's document, with the title moved and nothing else.
@@ -458,6 +463,42 @@ test("edit_collab_doc refuses a block somebody else's cursor is in", async () =>
 
     const doc = payload(await mcp.call("read_collab_doc")).doc;
     assert.equal(doc.sections[0].blocks[1].text, "MAGMA rises quickly.");
+  } finally {
+    await mcp.close();
+  }
+});
+
+test("chat fetched by a call that then fails is not lost", async () => {
+  // Reading the state drains the room's inbox. The clash error is the likely
+  // case: it tells the model to ask in the chat, and the teacher's answer may
+  // be the very message this call just drained.
+  const { room, api } = fakeRoom();
+  room.admit();
+  const mcp = await connect(api);
+  try {
+    await mcp.call("join_collab_session", { code: "ABC" });
+    room.cursor(0, "b1");
+    room.say("Leave b1 to me, do b2.");
+
+    const clash = await mcp.call("edit_collab_doc", {
+      operations: [
+        {
+          op: "replace_block",
+          blockId: "b1",
+          block: { type: "text", text: "Rewritten." },
+        },
+      ],
+    });
+    assert.equal(clash.isError, true);
+    assert.match(clash.content[0].text, /cursor is in/);
+    assert.match(clash.content[0].text, /Leave b1 to me, do b2\./);
+    assert.match(clash.content[0].text, /Teacher/);
+
+    // Saying something only needs to know we're still in; it doesn't pull
+    // the document across for that.
+    room.docAsked.length = 0;
+    await mcp.call("send_collab_chat", { text: "Will do." });
+    assert.deepEqual(room.docAsked, [false]);
   } finally {
     await mcp.close();
   }

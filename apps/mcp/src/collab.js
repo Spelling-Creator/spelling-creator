@@ -64,8 +64,12 @@ export function fromBase64(b64) {
   return out;
 }
 
-// A replica of the room's document, from the state it sent.
-function replica(state) {
+/**
+ * A replica of the room's document, from the state it sent. Decoding is the
+ * expensive step for a large lesson, so a caller that needs both the plain
+ * document and an update from it builds one replica and uses it for both.
+ */
+export function replicaOf(state) {
   const ydoc = new Y.Doc();
   if (state?.doc) Y.applyUpdate(ydoc, fromBase64(state.doc));
   return ydoc;
@@ -73,21 +77,20 @@ function replica(state) {
 
 /** The lesson as the room holds it, as the plain document the editor renders. */
 export function docOf(state) {
-  return docFromY(replica(state));
+  return docFromY(replicaOf(state));
 }
 
 /**
- * The Yjs update that turns the room's document into `next`, or null when
- * nothing would change.
+ * The Yjs update that turns the replica's document into `next`, or null when
+ * nothing would change. The replica is left holding `next`.
  *
- * Built on a replica of the room's own state and reconciled the way the
- * browser reconciles, so the update carries exactly the fields that differ and
- * merges with whatever the teacher typed in the meantime the same way an edit
- * made in the editor would. Encoding against the state vector from before the
- * edit keeps the update to the edit itself rather than the whole document.
+ * Reconciled the way the browser reconciles, so the update carries exactly the
+ * fields that differ and merges with whatever the teacher typed in the meantime
+ * the same way an edit made in the editor would. Encoding against the state
+ * vector from before the edit keeps the update to the edit itself rather than
+ * the whole document.
  */
-export function updateFor(state, next) {
-  const ydoc = replica(state);
+export function updateFor(ydoc, next) {
   const before = Y.encodeStateVector(ydoc);
   let changed = false;
   const mark = () => {

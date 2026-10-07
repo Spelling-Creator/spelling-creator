@@ -9,7 +9,7 @@
 // These drive the DO stub directly, which bypasses handleCollab's Supabase JWT
 // gate. That's deliberate: authentication is the Worker's job, not the room's.
 
-import { env } from 'cloudflare:test';
+import { env, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
@@ -347,6 +347,15 @@ describe('CollabRoom agents', () => {
 		expect(body.error).toMatch(/not found/i);
 	});
 
+	it('still treats a session whose code is "agent" as a socket path', async () => {
+		const stub = env.COLLAB_ROOM.get(env.COLLAB_ROOM.idFromName('agent'));
+		const res = await stub.fetch('https://collab/collab/agent', {
+			headers: { Upgrade: 'websocket', 'X-Collab-Uid': 'u', 'X-Collab-Name': 'User', 'X-Collab-Email': '', 'X-Collab-Avatar': '' },
+		});
+		expect(res.status).toBe(404);
+		expect(await res.text()).toBe('Session not found');
+	});
+
 	it('admits an agent the way it admits anyone, then hands it the lesson when it asks', async () => {
 		const host = await join('agent-admit', { create: true, uid: 'host' });
 		await host.nextOf(T.HELLO);
@@ -510,6 +519,151 @@ describe('CollabRoom agents', () => {
 		expect((await other.state()).status).toBe(403);
 		expect((await agent('agent-forbidden', '').state()).status).toBe(404);
 		void host;
+	});
+
+	it('answers a waiting ask at once when the agent leaves, not after the timeout', async () => {
+		// A wait that outlived its record would otherwise sleep out its timeout
+		// and then report on whatever the slot holds by then, which may be
+		// somebody else's record.
+		const host = await join('agent-leave-waiting', { create: true, uid: 'host' });
+		await host.nextOf(T.HELLO);
+		const joined = await agentJoin('agent-leave-waiting');
+		const me = agent('agent-leave-waiting', joined.body.token);
+
+		const started = Date.now();
+		const waiting = me.state(20);
+		await new Promise((r) => setTimeout(r, 20));
+		expect((await me.leave()).body).toEqual({ left: true });
+
+		const res = await waiting;
+		expect(res.status).toBe(404);
+		expect(Date.now() - started).toBeLessThan(5000);
+
+		// The slot is reissued to a second agent, who is admitted; the first
+		// agent's token learns nothing about it.
+		const second = await agentJoin('agent-leave-waiting');
+		expect(second.body.slot).toBe(joined.body.slot);
+		const pending = await host.nextRequest();
+		host.send(slotFrame(T.ADMIT, pending.slot));
+		expect((await agent('agent-leave-waiting', second.body.token).state()).body.admitted).toBe(true);
+		expect((await me.state()).status).toBe(404);
+	});
+
+	it('sweeps a request nobody answered, an agent that stopped asking, and the tombstones after them', async () => {
+		const code = 'agent-sweep';
+		const stub = env.COLLAB_ROOM.get(env.COLLAB_ROOM.idFromName(code));
+		const host = await join(code, { create: true, uid: 'host' });
+		await host.nextOf(T.HELLO);
+
+		// One pending request the assistant keeps polling, one admitted agent.
+		const pendingJoin = await agentJoin(code);
+		const admittedJoin = await agentJoin(code, { ...AGENT, 'X-Collab-Uid': 'other-agent' });
+		for (;;) {
+			const roster = JSON.parse(decoder.decode((await host.nextOf(T.PRESENCE)).subarray(1)));
+			if (roster.requests.length === 2) break;
+		}
+		host.send(slotFrame(T.ADMIT, admittedJoin.body.slot));
+		const pendingAgent = agent(code, pendingJoin.body.token);
+		const admittedAgent = agent(code, admittedJoin.body.token, { ...AGENT, 'X-Collab-Uid': 'other-agent' });
+		expect((await admittedAgent.state()).body.admitted).toBe(true);
+
+		// Joining armed the sweep. Nothing is old yet, so it lets everyone be,
+		// and re-arms while records remain.
+		expect(await runDurableObjectAlarm(stub)).toBe(true);
+		expect((await pendingAgent.state()).body.admitted).toBe(false);
+		await runInDurableObject(stub, async (room) => {
+			expect(await room.ctx.storage.getAlarm()).not.toBeNull();
+		});
+
+		// Six minutes on: the request was made too long ago, however recently it
+		// was polled; the admitted agent has asked recently and stays.
+		await runInDurableObject(stub, (room) => {
+			for (const a of room.agents()) {
+				a.joinedAt -= 6 * 60_000;
+				a.lastSeen = Date.now();
+				room.saveAgent(a);
+			}
+		});
+		expect(await runDurableObjectAlarm(stub)).toBe(true);
+		let res = await pendingAgent.state();
+		expect(res.status).toBe(410);
+		expect(res.body.gone).toMatch(/nobody admitted/);
+		expect((await admittedAgent.state()).body.admitted).toBe(true);
+
+		// Half an hour of silence from the admitted agent, and it is let go too.
+		await runInDurableObject(stub, (room) => {
+			for (const a of room.agents()) {
+				a.lastSeen -= 31 * 60_000;
+				room.saveAgent(a);
+			}
+		});
+		expect(await runDurableObjectAlarm(stub)).toBe(true);
+		res = await admittedAgent.state();
+		expect(res.status).toBe(410);
+		expect(res.body.gone).toMatch(/half an hour/);
+
+		// Both asked, so both tombstones are already gone and nothing remains:
+		// the sweep runs once more and does not re-arm.
+		await runInDurableObject(stub, (room) => {
+			expect(room.agents()).toEqual([]);
+		});
+		expect(await runDurableObjectAlarm(stub)).toBe(true);
+		await runInDurableObject(stub, async (room) => {
+			expect(await room.ctx.storage.getAlarm()).toBeNull();
+		});
+
+		// A tombstone nobody asks about is swept after its own ttl.
+		const late = await agentJoin(code);
+		await runInDurableObject(stub, (room) => {
+			for (const a of room.agents()) {
+				a.joinedAt -= 6 * 60_000;
+				room.saveAgent(a);
+			}
+		});
+		expect(await runDurableObjectAlarm(stub)).toBe(true); // ends it
+		await runInDurableObject(stub, (room) => {
+			const [a] = room.agents();
+			expect(a.gone).toMatch(/nobody admitted/);
+			a.goneAt -= 11 * 60_000;
+			room.saveAgent(a);
+		});
+		expect(await runDurableObjectAlarm(stub)).toBe(true); // forgets it
+		expect((await agent(code, late.body.token).state()).status).toBe(404);
+	});
+
+	it('writes cursors down only while an admitted agent exists to read them', async () => {
+		const code = 'agent-cursor-persist';
+		const stub = env.COLLAB_ROOM.get(env.COLLAB_ROOM.idFromName(code));
+		const host = await join(code, { create: true, uid: 'host' });
+		const hello = await host.nextOf(T.HELLO);
+		const hostSlot = (hello[1] << 8) | hello[2];
+		const stored = () =>
+			runInDurableObject(stub, (room) => {
+				const rows = room.ctx.storage.sql.exec("SELECT v FROM room WHERE k = 'cursors'").toArray();
+				return rows[0] ? JSON.parse(rows[0].v) : null;
+			});
+
+		// The teacher parks a caret before anyone else is here: remembered, not
+		// written, since nobody can ask for it.
+		host.send(frame(T.CURSOR, encoder.encode(JSON.stringify({ field: 'b1', start: 0, end: 0 }))));
+		await new Promise((r) => setTimeout(r, 20));
+		expect(await stored()).toBeNull();
+
+		// A pending request is not a reader either.
+		const joined = await agentJoin(code);
+		const pending = await host.nextRequest();
+		expect(await stored()).toBeNull();
+
+		// Admission makes a reader, and the caret parked earlier is written down
+		// at that moment, so it would survive an eviction before the first ask.
+		host.send(slotFrame(T.ADMIT, pending.slot));
+		const me = agent(code, joined.body.token);
+		expect((await me.state()).body.cursors[hostSlot].field).toBe('b1');
+		expect((await stored())[hostSlot].field).toBe('b1');
+
+		// Leaving takes the last reader away, and the row with it.
+		await me.leave();
+		expect(await stored()).toBeNull();
 	});
 
 	it('frees the slot when an agent leaves', async () => {

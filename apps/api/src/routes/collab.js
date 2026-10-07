@@ -157,10 +157,11 @@ export async function handleCollab(request, env, url, cors) {
 	const assistant = clampLabel(url.searchParams.get('assistant'));
 
 	// Forward the upgrade to the room's Durable Object with the verified identity.
+	// The badge is scrubbed first: identityHeaders sets it only for an assistant,
+	// so a client-supplied one must not survive for a person.
 	const headers = new Headers(request.headers);
-	for (const [k, v] of identityHeaders(user, assistant)) headers.set(k, v);
 	headers.delete('X-Collab-Bot');
-	if (assistant) headers.set('X-Collab-Bot', '1');
+	for (const [k, v] of identityHeaders(user, assistant)) headers.set(k, v);
 
 	const stub = env.COLLAB_ROOM.get(env.COLLAB_ROOM.idFromName(code));
 	return stub.fetch(new Request(url.toString(), { method: 'GET', headers }));
