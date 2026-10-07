@@ -115,6 +115,28 @@ pages/lesson/LessonOverview.jsx
    built-in engine's download stops when the run is aborted; an LFM download
    can't be interrupted once started, so the abort signal is checked right
    before it would begin and an aborted run never starts one.
+
+   Until the first real progress arrives, the bar is full and pulsing and
+   the line above it says the download is starting (not "0%").
+
+   A built-in download can also never start. Chrome needs about 20 GB of free
+   disk to install its model, but `availability()` still answers
+   `"downloadable"` below that, and `create()` then waits without ever
+   settling. So the built-in download gets 15 seconds
+   (`BUILT_IN_DOWNLOAD_START_MS`) to report its first real progress. A real
+   download on a fresh Chrome 154 profile reported its first progress after
+   3.1 seconds. If it doesn't, the create is aborted and the run moves to LFM
+   where this machine can run it (through the same `onEngine` re-warning as
+   above). The stall is kept in `sessionStorage`, so later runs in the tab,
+   reloads included, skip the built-in engine. A new tab tries it again, which
+   is how freed-up disk space gets noticed. Without LFM, the card says the
+   download didn't start and that Chrome needs about 20 GB free. Only the start is
+   timed: once bytes arrive, a slow download (or the long unpacking step near
+   the end) runs to completion or until the reader cancels.
+   `chrome://on-device-internals` (debug pages have to be switched on at
+   `chrome://chrome-urls` first) shows the disk check as "Enough disk space to
+   install".
+
 4. **Trim to quota.** A model session has a finite input budget (`inputQuota`). A
    long lesson can overrun it, which would make the summary throw. `fitToQuota()`
    measures the text with `measureInputUsage()` and, if it's over, scales it down
@@ -178,11 +200,43 @@ most was..."), so the system message forbids that. It also loses track of an
 instruction placed before three thousand tokens of lesson, so the lesson sits
 inside `<lesson>` tags and the requested shape is repeated after it.
 
-The language options (`expectedInputLanguages` / `outputLanguage`) are left unset
-on purpose: naming a language the local model doesn't have makes `create()` throw,
-whereas omitting them lets the browser detect the lesson's language and reply in
-it. The LFM prompt asks for the summary in the lesson's own language for the
-same effect.
+A summary is written in the lesson's own language where the engine can manage
+it. The built-in engine always gets an `outputLanguage`, because Chrome warns on
+every request that leaves it out:
+
+- The availability probe asks about English output, which every build of the
+  model writes. That keeps the probe about the browser and its hardware.
+- On the click, `createSummarizer()` runs the lesson text through the browser's
+  [LanguageDetector](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector)
+  (it ships alongside the Summarizer) and asks `availability()` whether the
+  model can write that language. If it can, a Spanish lesson gets a Spanish
+  summary. If it can't, or the language can't be told, the summary is in
+  English. The detector is only used when its model is already on the device,
+  so a detector download never eats into the click's user activation before the
+  Summarizer needs it.
+
+Only languages on Chrome's own list (`de`, `en`, `es`, `fr` and `ja`, in
+`BUILT_IN_OUTPUT_LANGUAGES`) are asked about. Asking `availability()` about any
+other language makes Chrome log a console error as well as answering
+"unavailable", so a Danish lesson goes straight to English. A listed language is
+still checked with `availability()`, because older builds of the model write
+fewer of them. `expectedInputLanguages` stays unset, because a lesson doesn't
+record its language.
+
+LFM gets the same detected language. Its
+[model card](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct) lists eight
+languages it is trained on (English, Arabic, Chinese, French, German, Japanese,
+Korean and Spanish), and it writes badly in anything else, so
+`LFM_LANGUAGES` in `fallbackSummarizer.js` keeps it to those. A Spanish lesson is
+summarised in Spanish, and a Danish one in English. (Told to answer a Danish
+lesson in the lesson's own language, it wrote garbled German.)
+
+Browsers that reach LFM usually have no LanguageDetector (Firefox and Safari),
+and there every summary is in English. Leaving the choice to the model was
+tried and doesn't work: told to use the lesson's language only if it is one of
+the eight, it wrote English for Spanish and German lessons as well, and asked to
+name a lesson's language, it answered "English" for Spanish, German and Danish
+alike.
 
 ## The LFM fallback, in a little more detail
 
@@ -290,6 +344,11 @@ window.Summarizer = {
   },
 };
 ```
+
+To exercise a download that never starts, have the stub's `availability()`
+answer `"downloadable"` and make `create()` return a promise that only
+rejects when its `signal` aborts. After 15 seconds the card moves to LFM, or
+shows the "didn't start" message when LFM can't run.
 
 The LFM path can be exercised the same way without the 760 MB download: stub
 `navigator.gpu` so the probe says yes (an object whose `requestAdapter()`

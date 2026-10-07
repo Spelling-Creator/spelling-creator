@@ -211,7 +211,9 @@ export default function LessonSummary({ doc }) {
 
     try {
       const session = await createSummarizer(
-        { type, length },
+        // The text too, so the built-in engine can answer in the lesson's
+        // own language.
+        { type, length, text },
         {
           signal: controller.signal,
           onDownloadProgress: (loaded) => setProgress(loaded),
@@ -381,16 +383,24 @@ export default function LessonSummary({ doc }) {
       </div>
 
       {/* First run on this device: the model has to be fetched before it can
-          summarise. `loaded` is a 0–1 fraction, so show real progress. */}
+          summarise. `loaded` is a 0–1 fraction, so show real progress. Until
+          the first real progress arrives the bar is full and pulsing, so the
+          line says the download is starting rather than showing "0%". */}
       {phase === "downloading" && (
         <div className="mb-3">
           <p className="text-xs text-muted-foreground">
-            {t(
-              engine === "lfm"
-                ? "lessonSummary.downloadingModelLfm"
-                : "lessonSummary.downloadingModel",
-              { percent: Math.round(progress * 100) },
-            )}
+            {progress > 0
+              ? t(
+                  engine === "lfm"
+                    ? "lessonSummary.downloadingModelLfm"
+                    : "lessonSummary.downloadingModel",
+                  { percent: Math.round(progress * 100) },
+                )
+              : t(
+                  engine === "lfm"
+                    ? "lessonSummary.startingDownloadLfm"
+                    : "lessonSummary.startingDownload",
+                )}
           </p>
           <Progress
             value={progress > 0 ? progress * 100 : 100}

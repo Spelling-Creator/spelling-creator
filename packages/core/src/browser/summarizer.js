@@ -26,6 +26,7 @@
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
 import { textBlockPlain } from "../lessonText.js";
+import { baseLanguageTag } from "../translationLanguages.js";
 import { VAKT_LABEL, vaktText } from "../vakt.js";
 
 /**
@@ -148,38 +149,177 @@ function fallbackPossible() {
   return webGpuProbe;
 }
 
-// The options passed to both availability() and create(). We deliberately leave
-// the language options (expectedInputLanguages / outputLanguage) unset: naming a
-// language the local model doesn't have makes create() throw NotSupportedError,
-// whereas leaving them out lets the browser detect the lesson's language and
-// answer in it.
-function summarizerOptions({ type, length }) {
+// Chrome warns on every request that leaves outputLanguage unset, so one is
+// always named. English is the language every build of the model writes, which
+// makes it the safe answer for the availability probe and the fallback when a
+// lesson's own language can't be used.
+const DEFAULT_OUTPUT_LANGUAGE = "en";
+
+// The options passed to both availability() and create(). expectedInputLanguages
+// stays unset: a lesson doesn't record its language, and the summary's language
+// is chosen separately (outputLanguageFor below).
+function summarizerOptions(
+  { type, length },
+  outputLanguage = DEFAULT_OUTPUT_LANGUAGE,
+) {
   return {
     type: type || DEFAULT_SUMMARY_TYPE,
     length: length || DEFAULT_SUMMARY_LENGTH,
     format: "markdown",
+    outputLanguage,
     sharedContext: SHARED_CONTEXT,
   };
+}
+
+// How long the built-in engine gets to show that its model download has
+// started. availability() can say "downloadable" on a machine where the
+// download will never start: Chrome needs about 20 GB of free disk to install
+// the model and checks that only once create() is waiting, without rejecting
+// it. Left alone, create() never settles and the card waits forever. A real
+// download reported its first progress 3.1 seconds after the click on a fresh
+// Chrome 154 profile, so 15 seconds leaves room for a slow connection without
+// leaving the reader watching a dead card. Only the start is timed: once bytes
+// are arriving, a slow connection or the long unpacking step at the end is
+// left to run, and the reader can still cancel.
+const BUILT_IN_DOWNLOAD_START_MS = 15_000;
+
+// Set when the built-in engine's download failed to start and the fallback
+// took over, so later runs go straight to the fallback instead of waiting out
+// the same stall again. Kept in sessionStorage so a reload in the same tab
+// remembers it too, and in memory for when storage is blocked. A new tab
+// tries the built-in engine again, which is how freeing up disk space gets
+// noticed.
+const STALLED_KEY = "summarizer:builtInDownloadStalled";
+let builtInDownloadStalledHere = false;
+
+function builtInDownloadStalled() {
+  if (builtInDownloadStalledHere) return true;
+  try {
+    return globalThis.sessionStorage?.getItem(STALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markBuiltInDownloadStalled() {
+  builtInDownloadStalledHere = true;
+  try {
+    globalThis.sessionStorage?.setItem(STALLED_KEY, "1");
+  } catch {
+    // Storage blocked: the in-memory flag still covers this page.
+  }
 }
 
 // What the built-in API says about these options, failing closed: a missing
 // API, unsupported options or a probe that throws all collapse to
 // "unavailable", which hands the decision to the fallback probe.
-async function builtInAvailability(options) {
+async function builtInAvailability(options, outputLanguage) {
   const api = summarizerApi();
-  if (!api) return "unavailable";
+  if (!api || builtInDownloadStalled()) return "unavailable";
   try {
     return (
-      (await api.availability(summarizerOptions(options))) || "unavailable"
+      (await api.availability(summarizerOptions(options, outputLanguage))) ||
+      "unavailable"
     );
   } catch {
     return "unavailable";
   }
 }
 
+// The lesson's language as a bare tag ("es"), or null when it can't be told.
+// Uses only the browser's LanguageDetector, which ships alongside the built-in
+// Summarizer, and only when its model is already on the device: create() runs
+// inside the click's user activation, and a detector download would spend that
+// window before the Summarizer gets to use it. translator.js has a heavier
+// fallback detector, but it isn't worth a second model download here: with no
+// detected language, both engines write English.
+async function detectLessonLanguage(text, signal) {
+  const api = globalThis.LanguageDetector;
+  if (!api || !text) return null;
+  try {
+    if ((await api.availability()) !== "available") return null;
+    const detector = await api.create({ signal });
+    try {
+      const [best] = await detector.detect(text);
+      const tag = baseLanguageTag(best?.detectedLanguage);
+      return tag && tag !== "und" ? tag : null;
+    } finally {
+      detector.destroy?.();
+    }
+  } catch (err) {
+    if (err?.name === "AbortError") throw err;
+    return null;
+  }
+}
+
+// The output languages Chrome lists for the model (its own console message
+// names them). Asking availability() about any other language doesn't just
+// return "unavailable": Chrome also logs a console error, so a Danish lesson
+// is never asked about.
+const BUILT_IN_OUTPUT_LANGUAGES = ["de", "en", "es", "fr", "ja"];
+
+// The language the built-in engine should write in: the lesson's own when the
+// model can write it, so a Spanish lesson gets a Spanish summary, and English
+// otherwise. A listed language is still checked with availability(), because
+// older builds of the model write fewer of them.
+async function outputLanguageFor(options, detected) {
+  if (
+    !detected ||
+    detected === DEFAULT_OUTPUT_LANGUAGE ||
+    !BUILT_IN_OUTPUT_LANGUAGES.includes(detected)
+  ) {
+    return DEFAULT_OUTPUT_LANGUAGE;
+  }
+  return (await builtInAvailability(options, detected)) === "unavailable"
+    ? DEFAULT_OUTPUT_LANGUAGE
+    : detected;
+}
+
+// Open a built-in session. When the model still has to be downloaded, the
+// download must report progress within BUILT_IN_DOWNLOAD_START_MS, or the
+// create is aborted and this throws a TimeoutError. The caller's own abort
+// still comes through as an AbortError.
+async function createBuiltIn(options, outputLanguage, needsDownload, hooks) {
+  const stall = new AbortController();
+  const signal = hooks.signal
+    ? AbortSignal.any([hooks.signal, stall.signal])
+    : stall.signal;
+  const timer = needsDownload
+    ? setTimeout(() => stall.abort(), BUILT_IN_DOWNLOAD_START_MS)
+    : null;
+  try {
+    return await summarizerApi().create({
+      ...summarizerOptions(options, outputLanguage),
+      signal,
+      monitor(monitor) {
+        monitor.addEventListener("downloadprogress", (event) => {
+          // Chrome sends a 0 when the create starts, before any bytes, so
+          // only real progress counts as the download having started.
+          if (event.loaded > 0) clearTimeout(timer);
+          hooks.onDownloadProgress?.(event.loaded);
+        });
+      },
+    });
+  } catch (err) {
+    if (stall.signal.aborted && !hooks.signal?.aborted) {
+      throw new DOMException(
+        "The on-device model download didn't start.",
+        "TimeoutError",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Can this device summarise with these options, with which engine, and is the
  * model ready?
+ *
+ * The built-in engine is probed with English output, which every build of its
+ * model writes: this is a question about the browser and its hardware, and the
+ * lesson's own language is only settled at create().
  *
  * @param {{type?: string, length?: string}} [options]
  * @returns {Promise<{availability: string, engine: "browser"|"lfm"|null}>}
@@ -213,7 +353,10 @@ export async function summarizerAvailability(options = {}) {
  * transient activation, and the fallback's download is far too heavy to start
  * uninvited.
  *
- * @param {{type?: string, length?: string}} options
+ * @param {{type?: string, length?: string, text?: string}} options
+ *   text is the lesson as it will be summarised (lessonSummaryText). The
+ *   lesson's language is detected from it, and each engine writes in that
+ *   language when its model supports it, and in English otherwise.
  * @param {object} [hooks]
  * @param {AbortSignal} [hooks.signal]  Aborts creation. The built-in engine
  *   also aborts its model download; the fallback's download can't be
@@ -221,6 +364,9 @@ export async function summarizerAvailability(options = {}) {
  *   the download begins (an aborted run never starts a 760 MB fetch) and again
  *   when it ends.
  * @param {(loaded: number) => void} [hooks.onDownloadProgress]  Download fraction, 0-1.
+ *   A built-in download that reports no progress for 15 seconds is given up on
+ *   (see BUILT_IN_DOWNLOAD_START_MS): the run moves to the fallback where this
+ *   machine can run it, and otherwise rejects with a TimeoutError.
  * @param {(engine: "browser"|"lfm") => void} [hooks.onEngine]  Called with
  *   the engine actually being opened, before that engine does any heavy
  *   work. The built-in engine can pass the availability probe and still
@@ -234,24 +380,27 @@ export async function summarizerAvailability(options = {}) {
  *   property.
  */
 export async function createSummarizer(options = {}, hooks = {}) {
-  if ((await builtInAvailability(options)) !== "unavailable") {
+  // Detected once, for whichever engine ends up answering.
+  const lessonLanguage = await detectLessonLanguage(options.text, hooks.signal);
+
+  const builtIn = await builtInAvailability(options);
+  if (builtIn !== "unavailable") {
     hooks.onEngine?.("browser");
     try {
-      return await summarizerApi().create({
-        ...summarizerOptions(options),
-        signal: hooks.signal,
-        monitor(monitor) {
-          monitor.addEventListener("downloadprogress", (event) => {
-            hooks.onDownloadProgress?.(event.loaded);
-          });
-        },
-      });
+      const outputLanguage = await outputLanguageFor(options, lessonLanguage);
+      return await createBuiltIn(
+        options,
+        outputLanguage,
+        builtIn !== "available",
+        hooks,
+      );
     } catch (err) {
       if (err?.name === "AbortError") throw err;
-      // The probe said yes but create() said no (a download that failed, an
-      // option combination the model turned down): the fallback gets its
-      // chance below, if this machine can run it.
+      // The probe said yes but create() said no (a download that failed or
+      // never started, an option combination the model turned down): the
+      // fallback gets its chance below, if this machine can run it.
       if (!(await fallbackPossible())) throw err;
+      if (err?.name === "TimeoutError") markBuiltInDownloadStalled();
     }
   }
 
@@ -266,7 +415,10 @@ export async function createSummarizer(options = {}, hooks = {}) {
     throw new DOMException("Summary aborted.", "AbortError");
   }
   const fallback = await loadFallback();
-  return fallback.createFallbackSummarizer(options, hooks);
+  return fallback.createFallbackSummarizer(
+    { ...options, language: lessonLanguage },
+    hooks,
+  );
 }
 
 /**
@@ -375,11 +527,13 @@ export function summarizerErrorMessage(error) {
     case "NotAllowedError":
       return "Summarising is blocked on this page.";
     case "NotSupportedError":
-      return "This lesson's language isn't supported by the on-device model.";
+      return "The on-device model can't summarise this lesson with these settings.";
     case "QuotaExceededError":
       return "This lesson is too long for the on-device model.";
     case "NetworkError":
       return "The model download didn't finish. Check your connection and try again.";
+    case "TimeoutError":
+      return "The on-device model download didn't start. Chrome needs about 20 GB of free disk space to install it.";
     case "UnknownError":
     case "OperationError":
       return "The on-device model couldn't summarise this lesson. Try again.";
