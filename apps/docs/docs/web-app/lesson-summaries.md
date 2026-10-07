@@ -115,6 +115,28 @@ pages/lesson/LessonOverview.jsx
    built-in engine's download stops when the run is aborted; an LFM download
    can't be interrupted once started, so the abort signal is checked right
    before it would begin and an aborted run never starts one.
+
+   Until the first real progress arrives, the bar is full and pulsing and
+   the line above it says the download is starting (not "0%").
+
+   A built-in download can also never start. Chrome needs about 20 GB of free
+   disk to install its model, but `availability()` still answers
+   `"downloadable"` below that, and `create()` then waits without ever
+   settling. So the built-in download gets 15 seconds
+   (`BUILT_IN_DOWNLOAD_START_MS`) to report its first real progress. A real
+   download on a fresh Chrome 154 profile reported its first progress after
+   3.1 seconds. If it doesn't, the create is aborted and the run moves to LFM
+   where this machine can run it (through the same `onEngine` re-warning as
+   above). The stall is kept in `sessionStorage`, so later runs in the tab,
+   reloads included, skip the built-in engine. A new tab tries it again, which
+   is how freed-up disk space gets noticed. Without LFM, the card says the
+   download didn't start and that Chrome needs about 20 GB free. Only the start is
+   timed: once bytes arrive, a slow download (or the long unpacking step near
+   the end) runs to completion or until the reader cancels.
+   `chrome://on-device-internals` (debug pages have to be switched on at
+   `chrome://chrome-urls` first) shows the disk check as "Enough disk space to
+   install".
+
 4. **Trim to quota.** A model session has a finite input budget (`inputQuota`). A
    long lesson can overrun it, which would make the summary throw. `fitToQuota()`
    measures the text with `measureInputUsage()` and, if it's over, scales it down
@@ -322,6 +344,11 @@ window.Summarizer = {
   },
 };
 ```
+
+To exercise a download that never starts, have the stub's `availability()`
+answer `"downloadable"` and make `create()` return a promise that only
+rejects when its `signal` aborts. After 15 seconds the card moves to LFM, or
+shows the "didn't start" message when LFM can't run.
 
 The LFM path can be exercised the same way without the 760 MB download: stub
 `navigator.gpu` so the probe says yes (an object whose `requestAdapter()`

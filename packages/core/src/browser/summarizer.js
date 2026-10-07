@@ -171,12 +171,51 @@ function summarizerOptions(
   };
 }
 
+// How long the built-in engine gets to show that its model download has
+// started. availability() can say "downloadable" on a machine where the
+// download will never start: Chrome needs about 20 GB of free disk to install
+// the model and checks that only once create() is waiting, without rejecting
+// it. Left alone, create() never settles and the card waits forever. A real
+// download reported its first progress 3.1 seconds after the click on a fresh
+// Chrome 154 profile, so 15 seconds leaves room for a slow connection without
+// leaving the reader watching a dead card. Only the start is timed: once bytes
+// are arriving, a slow connection or the long unpacking step at the end is
+// left to run, and the reader can still cancel.
+const BUILT_IN_DOWNLOAD_START_MS = 15_000;
+
+// Set when the built-in engine's download failed to start and the fallback
+// took over, so later runs go straight to the fallback instead of waiting out
+// the same stall again. Kept in sessionStorage so a reload in the same tab
+// remembers it too, and in memory for when storage is blocked. A new tab
+// tries the built-in engine again, which is how freeing up disk space gets
+// noticed.
+const STALLED_KEY = "summarizer:builtInDownloadStalled";
+let builtInDownloadStalledHere = false;
+
+function builtInDownloadStalled() {
+  if (builtInDownloadStalledHere) return true;
+  try {
+    return globalThis.sessionStorage?.getItem(STALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markBuiltInDownloadStalled() {
+  builtInDownloadStalledHere = true;
+  try {
+    globalThis.sessionStorage?.setItem(STALLED_KEY, "1");
+  } catch {
+    // Storage blocked: the in-memory flag still covers this page.
+  }
+}
+
 // What the built-in API says about these options, failing closed: a missing
 // API, unsupported options or a probe that throws all collapse to
 // "unavailable", which hands the decision to the fallback probe.
 async function builtInAvailability(options, outputLanguage) {
   const api = summarizerApi();
-  if (!api) return "unavailable";
+  if (!api || builtInDownloadStalled()) return "unavailable";
   try {
     return (
       (await api.availability(summarizerOptions(options, outputLanguage))) ||
@@ -236,6 +275,44 @@ async function outputLanguageFor(options, detected) {
     : detected;
 }
 
+// Open a built-in session. When the model still has to be downloaded, the
+// download must report progress within BUILT_IN_DOWNLOAD_START_MS, or the
+// create is aborted and this throws a TimeoutError. The caller's own abort
+// still comes through as an AbortError.
+async function createBuiltIn(options, outputLanguage, needsDownload, hooks) {
+  const stall = new AbortController();
+  const signal = hooks.signal
+    ? AbortSignal.any([hooks.signal, stall.signal])
+    : stall.signal;
+  const timer = needsDownload
+    ? setTimeout(() => stall.abort(), BUILT_IN_DOWNLOAD_START_MS)
+    : null;
+  try {
+    return await summarizerApi().create({
+      ...summarizerOptions(options, outputLanguage),
+      signal,
+      monitor(monitor) {
+        monitor.addEventListener("downloadprogress", (event) => {
+          // Chrome sends a 0 when the create starts, before any bytes, so
+          // only real progress counts as the download having started.
+          if (event.loaded > 0) clearTimeout(timer);
+          hooks.onDownloadProgress?.(event.loaded);
+        });
+      },
+    });
+  } catch (err) {
+    if (stall.signal.aborted && !hooks.signal?.aborted) {
+      throw new DOMException(
+        "The on-device model download didn't start.",
+        "TimeoutError",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Can this device summarise with these options, with which engine, and is the
  * model ready?
@@ -287,6 +364,9 @@ export async function summarizerAvailability(options = {}) {
  *   the download begins (an aborted run never starts a 760 MB fetch) and again
  *   when it ends.
  * @param {(loaded: number) => void} [hooks.onDownloadProgress]  Download fraction, 0-1.
+ *   A built-in download that reports no progress for 15 seconds is given up on
+ *   (see BUILT_IN_DOWNLOAD_START_MS): the run moves to the fallback where this
+ *   machine can run it, and otherwise rejects with a TimeoutError.
  * @param {(engine: "browser"|"lfm") => void} [hooks.onEngine]  Called with
  *   the engine actually being opened, before that engine does any heavy
  *   work. The built-in engine can pass the availability probe and still
@@ -303,25 +383,24 @@ export async function createSummarizer(options = {}, hooks = {}) {
   // Detected once, for whichever engine ends up answering.
   const lessonLanguage = await detectLessonLanguage(options.text, hooks.signal);
 
-  if ((await builtInAvailability(options)) !== "unavailable") {
+  const builtIn = await builtInAvailability(options);
+  if (builtIn !== "unavailable") {
     hooks.onEngine?.("browser");
     try {
       const outputLanguage = await outputLanguageFor(options, lessonLanguage);
-      return await summarizerApi().create({
-        ...summarizerOptions(options, outputLanguage),
-        signal: hooks.signal,
-        monitor(monitor) {
-          monitor.addEventListener("downloadprogress", (event) => {
-            hooks.onDownloadProgress?.(event.loaded);
-          });
-        },
-      });
+      return await createBuiltIn(
+        options,
+        outputLanguage,
+        builtIn !== "available",
+        hooks,
+      );
     } catch (err) {
       if (err?.name === "AbortError") throw err;
-      // The probe said yes but create() said no (a download that failed, an
-      // option combination the model turned down): the fallback gets its
-      // chance below, if this machine can run it.
+      // The probe said yes but create() said no (a download that failed or
+      // never started, an option combination the model turned down): the
+      // fallback gets its chance below, if this machine can run it.
       if (!(await fallbackPossible())) throw err;
+      if (err?.name === "TimeoutError") markBuiltInDownloadStalled();
     }
   }
 
@@ -453,6 +532,8 @@ export function summarizerErrorMessage(error) {
       return "This lesson is too long for the on-device model.";
     case "NetworkError":
       return "The model download didn't finish. Check your connection and try again.";
+    case "TimeoutError":
+      return "The on-device model download didn't start. Chrome needs about 20 GB of free disk space to install it.";
     case "UnknownError":
     case "OperationError":
       return "The on-device model couldn't summarise this lesson. Try again.";
