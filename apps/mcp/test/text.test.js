@@ -4,8 +4,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildDoc, buildSources, presentDoc } from "../src/doc.js";
-import { applyPatch } from "../src/patch.js";
+import {
+  buildDoc,
+  buildSources,
+  presentDoc,
+} from "@spelling-creator/core/lessonBuild";
+import { applyPatch } from "@spelling-creator/core/lessonPatch";
 
 function lesson(text, sources) {
   return buildDoc({

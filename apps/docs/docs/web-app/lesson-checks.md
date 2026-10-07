@@ -23,6 +23,8 @@ runs on every write: `@spelling-creator/core/lessonChecks`.
 Nothing blocks. A lesson with problems saves, exports, publishes and prints
 exactly as before.
 
+Some findings also have a fix button under them. See [Fixing findings](#fixing-findings).
+
 Below the problems and suggestions, the panel has a **Facts** section that compares
 the passages' numbers and dates with Wikidata. It is a different kind of check: it
 costs a model call and a round of lookups, so it runs only when the author presses
@@ -52,13 +54,47 @@ who wrote a three-section lesson on purpose sees them only if they ask.
 The full list of codes and what trips each one is in
 [Lesson validation](/mcp-server/lesson-validation).
 
+## Fixing findings
+
+A finding whose fix needs no judgement gets a button under it in the panel. The
+fix is made straight away, the panel stays open, and the finding drops off the
+list once the checks rerun. A click on a finding that has already gone stale
+(the panel lags an edit by a beat, or a collaborator fixed it first) says so in
+a toast rather than doing nothing.
+
+| Code                                             | Button                                | What it does                                                                  |
+| ------------------------------------------------ | ------------------------------------- | ----------------------------------------------------------------------------- |
+| `W_FORMAT_BOLD`                                  | Remove the bold                       | Takes bold off every text block in the section. Italics and underlining stay. |
+| `W_FORMAT_UNDERLINE`                             | Remove the underlining                | The same for underlining.                                                     |
+| `W_FORMAT_CAPS`                                  | Remove the formatting                 | Unformats the ALL-CAPS spans only.                                            |
+| `E_FORMAT_HEAVY`                                 | Remove all formatting in this section | Every mark in the section's text, italics included.                           |
+| `E_FORMAT_LONG_EMPHASIS`, `E_FORMAT_LONG_ITALIC` | Make it plain                         | Unformats the one long span the finding quotes.                               |
+| `W_VAKT_NOT_LAST`                                | Move it to the end                    | Moves the section's VAKT activities to its end, keeping their order.          |
+| `W_ORANGE_ORDER`                                 | Swap them                             | Puts the tight orange question in the first orange slot.                      |
+| `E_ORANGE_PARTIAL_LIST`                          | Accept "silt" too                     | Adds the item the passage's list goes on to as an accepted answer.            |
+
+Before a fix is made, the lesson as it stood is saved as a version, so the fix
+is a version of its own in History and History's Undo can take it back at any
+time. A line at the top of the panel then says **Fixed.** with a quicker
+**Undo**. It stays only while nothing else has changed: once the lesson has been
+edited again, putting the old lesson back would throw that edit away too, so the
+line goes and History is the way back. The Undo is in the panel rather than in a
+toast because the panel is modal, and while it is open nothing outside it can
+be clicked.
+
+The fixes live in `packages/core/src/lessonFixes.js`. Each takes the document
+and the finding and returns the fixed document, or null when there is nothing
+left to do. Only the section and blocks a fix touches are new objects, and text
+blocks are written with `withTextBlockDocument`, the way the editor writes them.
+
 ## How it fits together
 
 | File                                                   | Does                                                                                                        |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `packages/core/src/lessonChecks.js`                    | The checks. `validateLesson(doc)` returns `{ errors, warnings }`.                                           |
 | `apps/web/src/lib/lessonChecks.js`                     | `useLessonChecks(doc)`, the per-section tallies, and `describeFinding`, which words a finding for a person. |
-| `apps/web/src/locales/en/checks.json`                  | The editor's wording for every code, under `codes`.                                                         |
+| `packages/core/src/lessonFixes.js`                     | The quick fixes. `applyQuickFix(doc, finding)` returns the fixed document or null.                          |
+| `apps/web/src/locales/en/checks.json`                  | The editor's wording for every code, under `codes`, and the fix buttons, under `quickFix`.                  |
 | `apps/web/src/components/editor/LessonChecksSheet.jsx` | The panel.                                                                                                  |
 | `apps/web/src/components/editor/checkGroups.js`        | Grouping findings by section and naming the groups, shared with the panel's Facts section.                  |
 | `apps/web/src/components/editor/SectionOutline.jsx`    | The per-section counts.                                                                                     |
@@ -118,7 +154,8 @@ than "section 1, question 2".
 core source and fails if `checks.json` is missing the base wording for one (the
 one a finding falls back to when no context applies), is missing a wording for
 any context in `CONTEXTS`, or still has wording for a code core no longer
-reports.
+reports. It also fails if `quickFix` doesn't label exactly the codes in
+`QUICK_FIX_CODES`.
 
 It checks that the wording exists, not that a finding's `params` fill it in.
 That is only exercised for the codes its fixture lesson trips, so a new check

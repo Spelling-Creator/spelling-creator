@@ -15,8 +15,8 @@
 
 import { z } from "zod";
 
-import { presentDoc } from "./doc.js";
-import { applyPatch } from "./patch.js";
+import { presentDoc } from "@spelling-creator/core/lessonBuild";
+import { applyPatch } from "@spelling-creator/core/lessonPatch";
 import { joinSession, canJoinSessions, NO_WEBSOCKET } from "./collab.js";
 
 /** The blocks a set of patch operations would touch, by id. */

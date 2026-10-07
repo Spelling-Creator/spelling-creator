@@ -33,14 +33,9 @@ export async function putImageObject(env, hash, bytes, mime) {
 	await images.put(hash, converted.bytes, { contentType: converted.contentType });
 }
 
-// docx ext rules, mirroring web/src/lib/imageRef.js extFromMime.
-export function extFromMime(mime) {
-	const raw = (mime || '').toLowerCase().replace(/^image\//, '');
-	if (raw === 'jpeg') return 'jpg';
-	if (raw === 'svg+xml') return 'png';
-	if (['png', 'jpg', 'gif', 'bmp'].includes(raw)) return raw;
-	return 'png';
-}
+// The docx ext rules, shared with the web editor and the MCP server so every
+// writer stores the same ext for the same mime.
+export { extFromMime } from '@spelling-creator/core/image';
 
 // Split a base64/percent-encoded data URL into raw bytes + mime (server side).
 export function decodeDataUrl(dataUrl) {

@@ -1297,6 +1297,15 @@ export const FORMAT_MAX_EMPHASIS_WORDS = 4;
 /** The longest italic run, in words. Long enough for a book's title. */
 export const FORMAT_MAX_ITALIC_WORDS = 10;
 
+/**
+ * Whether a formatted span is ALL-CAPS vocabulary (W_FORMAT_CAPS). Exported so
+ * the quick fix in lessonFixes.js picks out the same spans.
+ * @param {string} text
+ */
+export function isCapsSpan(text) {
+  return /^[\p{Lu}\s'’-]+$/u.test(text) && /\p{Lu}{2}/u.test(text);
+}
+
 // Every formatted span in a section's text blocks (textBlockFormattedSpans),
 // tagged with the block it sits in, and the length of the prose around them.
 function formattedSpans(blocks) {
@@ -1412,9 +1421,7 @@ function checkFormatting(context, error, warn) {
         spanDetail(underlined),
       );
     }
-    const capsFormatted = spans.filter(
-      (s) => /^[\p{Lu}\s'’-]+$/u.test(s.text) && /\p{Lu}{2}/u.test(s.text),
-    );
+    const capsFormatted = spans.filter((s) => isCapsSpan(s.text));
     if (capsFormatted.length) {
       warn(
         "W_FORMAT_CAPS",
@@ -1454,4 +1461,20 @@ function checkCitations(doc, context, error) {
 /** Whether a finding is one of the formatting checks above. */
 export function isFormattingFinding(finding) {
   return /^[EW]_FORMAT_/.test(finding.code);
+}
+
+/**
+ * Findings an edit is responsible for: everything in `after` that wasn't
+ * already true of `before`. The MCP server's patch_lesson uses it so a one-line
+ * tweak to a lesson written elsewhere (in the web editor, or before these rules
+ * existed) isn't blocked by defects the patch didn't introduce. Keyed on the
+ * defect's identity rather than its message, so inserting a section doesn't
+ * make every later finding look new.
+ * @param {Finding[]} before
+ * @param {Finding[]} after
+ * @returns {Finding[]}
+ */
+export function newFindings(before, after) {
+  const existing = new Set(before.map((f) => f.key));
+  return after.filter((f) => !existing.has(f.key));
 }

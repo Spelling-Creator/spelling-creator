@@ -11,6 +11,11 @@
 // usual shape of a lesson, and someone who wrote a short one on purpose
 // shouldn't have to read past a list of reasons it's short.
 //
+// A finding a script can fix on its own (core's lessonFixes.js: stray bold, a
+// VAKT activity mid-section) gets a button that does it there and then, without
+// closing the sheet. A line at the top of the sheet then says it is fixed and
+// offers Undo, until the lesson changes again.
+//
 // Below both sits the fact check (FactCheckSection), which is different in
 // kind: it costs a model call and a round of Wikidata lookups, so it runs only
 // when asked rather than on every edit.
@@ -22,7 +27,10 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   LightbulbIcon,
+  Undo2Icon,
+  WrenchIcon,
 } from "lucide-react";
+import { hasQuickFix } from "@spelling-creator/core/lessonFixes";
 import {
   Sheet,
   SheetContent,
@@ -36,7 +44,7 @@ import { describeFinding } from "../../lib/lessonChecks.js";
 import { groupBySection, sectionHeading } from "./checkGroups.js";
 import FactCheckSection from "./FactCheckSection.jsx";
 
-function FindingList({ findings, sections, kind, onChoose }) {
+function FindingList({ findings, sections, kind, onChoose, onFix }) {
   const { t, i18n } = useTranslation("checks");
   const Icon = kind === "problem" ? CircleAlertIcon : LightbulbIcon;
 
@@ -84,6 +92,20 @@ function FindingList({ findings, sections, kind, onChoose }) {
                   ) : (
                     <p className={cn(row, "m-0")}>{body}</p>
                   )}
+                  {/* Beside the row rather than in it: a button can't sit
+                      inside another. Indented to line up with the text. */}
+                  {onFix && hasQuickFix(finding) && (
+                    <div className="flex flex-wrap gap-1 pb-1 pl-8">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => onFix(finding)}
+                      >
+                        <WrenchIcon data-icon="inline-start" />
+                        {t(`quickFix.${finding.code}`, finding.params)}
+                      </Button>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -101,6 +123,10 @@ function FindingList({ findings, sections, kind, onChoose }) {
  * @param {any[]}    props.sections  The document's sections, for the headings.
  * @param {Function} props.onGoTo    Called with the chosen finding once the
  *                                   sheet has closed, to scroll to its block.
+ * @param {Function} [props.onFix]   Make a finding's quick fix. Without it, no
+ *                                   fix buttons are shown.
+ * @param {Function} [props.onUndoFix] Take the last fix back. Given only while
+ *                                   nothing else has changed since it.
  */
 export default function LessonChecksSheet({
   open,
@@ -110,6 +136,8 @@ export default function LessonChecksSheet({
   title,
   sections,
   onGoTo,
+  onFix,
+  onUndoFix,
 }) {
   const { t } = useTranslation("checks");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -141,6 +169,21 @@ export default function LessonChecksSheet({
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
+          {onUndoFix && (
+            <div
+              role="status"
+              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+            >
+              <span className="flex items-center gap-2">
+                <CircleCheckIcon className="size-4" aria-hidden />
+                {t("fix.done")}
+              </span>
+              <Button variant="outline" size="xs" onClick={onUndoFix}>
+                <Undo2Icon data-icon="inline-start" />
+                {t("fix.undo")}
+              </Button>
+            </div>
+          )}
           {sections.length === 0 ? (
             <p className="m-0 text-sm text-muted-foreground">{t("empty")}</p>
           ) : (
@@ -160,6 +203,7 @@ export default function LessonChecksSheet({
                     sections={sections}
                     kind="problem"
                     onChoose={choose}
+                    onFix={onFix}
                   />
                 ) : (
                   <p className="m-0 flex items-center gap-2 text-sm text-muted-foreground">
@@ -203,6 +247,7 @@ export default function LessonChecksSheet({
                       sections={sections}
                       kind="suggestion"
                       onChoose={choose}
+                      onFix={onFix}
                     />
                   )}
                 </div>

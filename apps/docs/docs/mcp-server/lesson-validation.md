@@ -15,11 +15,11 @@ advice the model may or may not follow. Validation does not depend on either.
 
 The split between the two halves of the standard lives in these files:
 
-| File                                | Holds                                                                                                                                                    |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/mcp/src/standards.md`         | The rules that need judgement: tone, difficulty, what makes a tight open easy. Sent as MCP `instructions` and embedded in `create_lesson`'s description. |
-| `packages/core/src/lessonChecks.js` | The rules a script can decide (`validateLesson`). Enforced on write, whatever the client showed the model.                                               |
-| `apps/mcp/src/validate.js`          | What only a write path needs on top: `E_OPEN_HAS_ANSWER` (read off the raw input), the rejection message, and `patch_lesson`'s before-and-after filter.  |
+| File                                | Holds                                                                                                                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/mcp/src/standards.md`         | The rules that need judgement: tone, difficulty, what makes a tight open easy. Sent as MCP `instructions` and embedded in `create_lesson`'s description.                                    |
+| `packages/core/src/lessonChecks.js` | The rules a script can decide (`validateLesson`). Enforced on write, whatever the client showed the model.                                                                                  |
+| `apps/mcp/src/validate.js`          | What only a write path needs on top: `E_OPEN_HAS_ANSWER` (read off the raw input), and the rejection message. (`newFindings`, the before-and-after filter `patch_lesson` uses, is in core.) |
 
 Keep them in step: a rule stated in one that the other also covers should describe the
 same thing.

@@ -1,11 +1,10 @@
 // Build the canonical editor document (`doc`) from the LLM-friendly lesson input
-// the tools accept. The Worker stores `doc` verbatim and the web editor renders
-// it, so the shapes here must match the editor's exactly. They are kept in sync
-// with:
-//   • packages/core/src/questions.js  (question block shapes, the eight types)
-//   • packages/core/src/spelling.js   (spelling block shape)
-//   • packages/core/src/vakt.js       (VAKT activity block shape)
-//   • packages/core/src/id.js         (id generation)
+// the MCP server's tools accept. The Worker stores `doc` verbatim and the web
+// editor renders it, so the shapes here must match the editor's exactly. They
+// are kept in sync with:
+//   • ./questions.js  (question block shapes, the eight types)
+//   • ./spelling.js   (spelling block shape)
+//   • ./vakt.js       (VAKT activity block shape)
 //
 // The canonical doc is:
 //   { title, sources?, sections: [ { id, name, blocks: [ Block, ... ] } ] }
@@ -20,26 +19,23 @@
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
-import { IMAGE_ALIGNS } from "@spelling-creator/core/image";
-import { isSafeLink } from "@spelling-creator/core/richText";
+import { IMAGE_ALIGNS, extFromMime } from "./image.js";
+import { isSafeLink } from "./richText.js";
 import {
   markupToContent,
   normalizeTextContent,
   textBlockMarkup,
   withTextBlockContent,
-} from "@spelling-creator/core/lessonText";
+} from "./lessonText.js";
 import {
   SOURCE_FIELDS,
   isSourceId,
   normalizeSource,
   sourceHasContent,
-} from "@spelling-creator/core/sources";
+} from "./sources.js";
+import { newId } from "./id.js";
 
-import { extFromMime } from "./images.js";
-
-export function newId() {
-  return crypto.randomUUID();
-}
+export { newId };
 
 export const QUESTION_TYPES = [
   "number",
@@ -54,7 +50,7 @@ export const QUESTION_TYPES = [
 
 // Map one input block to its stored form. Throws a descriptive Error on bad
 // input so the assistant gets actionable feedback it can correct. Exported so
-// the patch logic (patch.js) can build single blocks the same way.
+// the patch logic (lessonPatch.js) can build single blocks the same way.
 export function buildBlock(block, where) {
   if (!block || typeof block !== "object") {
     throw new Error(`${where}: each block must be an object.`);
@@ -238,7 +234,7 @@ function buildQuestionBlock(block, where) {
 }
 
 // An image block references its bytes by content hash. The bytes are uploaded
-// out of band by the add_image tool (which talks to Wikimedia Commons + R2), so
+// out of band by the MCP add_image tool (which talks to Wikimedia Commons + R2), so
 // here we only validate and normalise the resulting ref — the model never
 // hand-writes one. Existing image blocks (from get_lesson) round-trip through
 // this unchanged.
@@ -423,27 +419,7 @@ export function buildDoc(input, { existingSources } = {}) {
   };
 }
 
-// The on-disk lesson-file format produced by create_lesson_file (here) and by
-// the web editor's "Export JSON". The web app's "Import JSON" button reads it
-// back. Keep this format marker and shape in sync with apps/web/src/lib/
-// jsonImport.js and jsonExport.js so a file from either side imports cleanly.
-export const LESSON_FILE_FORMAT = "spelling-creator-lesson";
-export const LESSON_FILE_VERSION = 1;
-
-/**
- * Wrap a built doc in the importable lesson-file envelope.
- * @param {{ title: string, sections: any[] }} doc
- */
-export function buildLessonFile(doc) {
-  return {
-    format: LESSON_FILE_FORMAT,
-    version: LESSON_FILE_VERSION,
-    doc,
-  };
-}
-
-// Checking a built doc against the authoring standard lives in
-// @spelling-creator/core/lessonChecks (reached through validate.js).
+// Checking a built doc against the authoring standard lives in ./lessonChecks.js.
 // buildDoc's job is only to reject input it cannot turn into a valid document at
 // all (a text block with no text, an unknown block type), which it does by
 // throwing. Everything that is well-formed but off-standard is decided there, so

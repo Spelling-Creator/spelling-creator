@@ -1,6 +1,6 @@
-// Small image helpers shared by the API client (api.js, which uploads bytes) and
-// the doc builder (doc.js, which validates image-block refs). Kept dependency-free
-// and using Web Crypto so they work on both transports (Node ≥18 and the Worker).
+// Small image helpers for the API client (api.js, which uploads bytes). Kept
+// dependency-free and using Web Crypto so they work on both transports (Node ≥18
+// and the Worker).
 //
 // An image block references its bytes by content hash, exactly like the web app
 // (see apps/web/src/lib/imageRef.js):  image: { hash, mime, ext }. The hash is the
@@ -16,13 +16,6 @@ export async function sha256Hex(bytes) {
     .join("");
 }
 
-// Normalise a mime type to the short extension the editor stores on the block.
-// Mirrors apps/web/src/lib/imageRef.js extFromMime so blocks built here match the
-// web app's shape (svg is unsupported by the docx export, so it maps to png).
-export function extFromMime(mime) {
-  const raw = (mime || "").toLowerCase().replace(/^image\//, "");
-  if (raw === "jpeg") return "jpg";
-  if (raw === "svg+xml") return "png";
-  if (["png", "jpg", "gif", "bmp", "webp"].includes(raw)) return raw;
-  return "png";
-}
+// The short extension the editor stores on the block. It lives in core because
+// the doc builder (core's lessonBuild.js) needs it too.
+export { extFromMime } from "@spelling-creator/core/image";
