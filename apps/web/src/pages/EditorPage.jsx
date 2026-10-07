@@ -935,8 +935,16 @@ export default function EditorPage() {
   }, [lastFix]);
 
   const quickFixFinding = useCallback(
-    (finding) => applyLessonFix((current) => applyQuickFix(current, finding)),
-    [applyLessonFix],
+    async (finding) => {
+      const applied = await applyLessonFix((current) =>
+        applyQuickFix(current, finding),
+      );
+      // A stale finding (the panel lags an edit by a beat, or a collaborator
+      // got there first) must not swallow the click. A plain toast is enough;
+      // the list rights itself on the next recheck.
+      if (!applied) toast.info(tChecks("fix.gone"));
+    },
+    [applyLessonFix, tChecks],
   );
 
   // Remember which block the user was last typing in.

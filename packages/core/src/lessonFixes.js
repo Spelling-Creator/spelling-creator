@@ -120,13 +120,16 @@ const FIXES = {
   W_FORMAT_UNDERLINE: stripFormatting(["underline"]),
   W_FORMAT_CAPS: stripFormatting(TEXT_MARKS, ({ text }) => isCapsSpan(text)),
   E_FORMAT_HEAVY: stripFormatting(TEXT_MARKS),
+  // "Make it plain" means plain: every mark comes off the quoted span. A long
+  // bold span can carry italics inside it, and taking only the bold off would
+  // leave a long italic run, which is a new finding, not a fix.
   E_FORMAT_LONG_EMPHASIS: (doc, finding) =>
-    stripFormatting(
-      ["bold", "underline"],
-      ({ text }) => text === finding.params?.text,
-    )(doc, finding),
+    stripFormatting(TEXT_MARKS, ({ text }) => text === finding.params?.text)(
+      doc,
+      finding,
+    ),
   E_FORMAT_LONG_ITALIC: (doc, finding) =>
-    stripFormatting(["italic"], ({ text }) => text === finding.params?.text)(
+    stripFormatting(TEXT_MARKS, ({ text }) => text === finding.params?.text)(
       doc,
       finding,
     ),

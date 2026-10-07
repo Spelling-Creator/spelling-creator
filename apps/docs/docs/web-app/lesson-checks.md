@@ -58,7 +58,9 @@ The full list of codes and what trips each one is in
 
 A finding whose fix needs no judgement gets a button under it in the panel. The
 fix is made straight away, the panel stays open, and the finding drops off the
-list once the checks rerun.
+list once the checks rerun. A click on a finding that has already gone stale
+(the panel lags an edit by a beat, or a collaborator fixed it first) says so in
+a toast rather than doing nothing.
 
 | Code                                             | Button                                | What it does                                                                  |
 | ------------------------------------------------ | ------------------------------------- | ----------------------------------------------------------------------------- |

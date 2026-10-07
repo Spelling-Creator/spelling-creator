@@ -37,7 +37,8 @@
   },
   "fix": {
     "done": "Fixed.",
-    "undo": "Undo"
+    "undo": "Undo",
+    "gone": "That's already fixed. The list is catching up."
   },
   "facts": {
     "heading": "Facts",

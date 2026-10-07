@@ -82,22 +82,27 @@ describe("formatting fixes", () => {
     );
   });
 
-  it("unbolds a bolded sentence", () => {
+  it("makes a long bold span plain, italics inside it included", () => {
     const doc = {
       title: "T",
       sections: [
         section("s1", [
           text(
             "t1",
-            "Rivers matter. **Every river runs to the sea eventually.** And *Nile* is long, with plenty more words to keep the share of formatting low enough here.",
+            "Rivers matter. **Every river *runs* to the sea eventually.** And *Nile* is long, with plenty more words to keep the share of formatting low enough here.",
           ),
         ]),
       ],
     };
     const fixed = fixes(doc, "E_FORMAT_LONG_EMPHASIS");
+    // The whole quoted span goes plain, so no long-italic finding takes the
+    // long-emphasis one's place; the separate short italic stays.
     expect(textBlockMarkup(fixed.sections[0].blocks[0])).toContain(
       "Every river runs to the sea eventually. And *Nile*",
     );
+    expect(
+      findingsOf(fixed).some((f) => f.code === "E_FORMAT_LONG_ITALIC"),
+    ).toBe(false);
   });
 
   it("takes all formatting out of a heavily formatted section", () => {
