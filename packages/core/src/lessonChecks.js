@@ -1297,6 +1297,15 @@ export const FORMAT_MAX_EMPHASIS_WORDS = 4;
 /** The longest italic run, in words. Long enough for a book's title. */
 export const FORMAT_MAX_ITALIC_WORDS = 10;
 
+/**
+ * Whether a formatted span is ALL-CAPS vocabulary (W_FORMAT_CAPS). Exported so
+ * the quick fix in lessonFixes.js picks out the same spans.
+ * @param {string} text
+ */
+export function isCapsSpan(text) {
+  return /^[\p{Lu}\s'’-]+$/u.test(text) && /\p{Lu}{2}/u.test(text);
+}
+
 // Every formatted span in a section's text blocks (textBlockFormattedSpans),
 // tagged with the block it sits in, and the length of the prose around them.
 function formattedSpans(blocks) {
@@ -1412,9 +1421,7 @@ function checkFormatting(context, error, warn) {
         spanDetail(underlined),
       );
     }
-    const capsFormatted = spans.filter(
-      (s) => /^[\p{Lu}\s'’-]+$/u.test(s.text) && /\p{Lu}{2}/u.test(s.text),
-    );
+    const capsFormatted = spans.filter((s) => isCapsSpan(s.text));
     if (capsFormatted.length) {
       warn(
         "W_FORMAT_CAPS",

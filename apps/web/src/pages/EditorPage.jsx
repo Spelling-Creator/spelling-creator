@@ -40,6 +40,7 @@ import SectionOutline from "../components/editor/SectionOutline.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
 import { useLessonChecks } from "../lib/lessonChecks.js";
+import { applyQuickFix } from "@spelling-creator/core/lessonFixes";
 import { useFactCheck } from "../lib/factCheck.js";
 import { LessonSourcesProvider } from "../lib/lessonSources.jsx";
 import { createSource } from "@spelling-creator/core/sources";
@@ -904,6 +905,39 @@ export default function EditorPage() {
       );
     },
     [toggleCollapse],
+  );
+
+  // Put a fix from the Check panel into the lesson. `makeFix` turns the lesson
+  // into the fixed one, or returns null when there is nothing left to fix.
+  //
+  // The lesson as it stood is saved as a version first, so the fix lands in
+  // history on its own and History's Undo can take it back any time. The
+  // toast's Undo is the quick way, and only while nothing else has changed:
+  // putting the old lesson back after another edit would lose that edit too.
+  const applyLessonFix = useCallback(
+    async (makeFix) => {
+      await commitNow();
+      const before = docRef.current;
+      const fixed = makeFix(before);
+      if (!fixed) return false;
+      setDoc(fixed);
+      toast.success(tChecks("fix.done"), {
+        action: {
+          label: tChecks("fix.undo"),
+          onClick: () => {
+            if (docRef.current === fixed) setDoc(before);
+            else toast.info(tChecks("fix.undoStale"));
+          },
+        },
+      });
+      return true;
+    },
+    [commitNow, tChecks],
+  );
+
+  const quickFixFinding = useCallback(
+    (finding) => applyLessonFix((current) => applyQuickFix(current, finding)),
+    [applyLessonFix],
   );
 
   // Remember which block the user was last typing in.
@@ -3449,6 +3483,7 @@ export default function EditorPage() {
         title={doc.title}
         sections={doc.sections}
         onGoTo={goToFinding}
+        onFix={quickFixFinding}
       />
 
       {/* The lesson's own version history, read out of its git repository. */}

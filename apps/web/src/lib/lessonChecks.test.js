@@ -12,6 +12,7 @@ import {
   markupToContent,
   withTextBlockContent,
 } from "@spelling-creator/core/lessonText";
+import { QUICK_FIX_CODES } from "@spelling-creator/core/lessonFixes";
 
 // The source as text, through Vite: under happy-dom, import.meta.url isn't a
 // file URL that node:fs can read.
@@ -107,6 +108,12 @@ describe("lesson checks in the editor", () => {
       Object.keys(rules).map((context) => `${code}_${context}`),
     );
     expect(contexts.filter((key) => !hasWording(key))).toEqual([]);
+  });
+
+  it("labels every quick fix, and only those", () => {
+    expect(Object.keys(checks.quickFix).sort()).toEqual(
+      [...QUICK_FIX_CODES].sort(),
+    );
   });
 
   it("has no wording left over for a code core no longer reports", () => {

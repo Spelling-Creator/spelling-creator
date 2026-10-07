@@ -50,6 +50,7 @@
     "./lessonBuild": "./src/lessonBuild.js",
     "./lessonChecks": "./src/lessonChecks.js",
     "./lessonFile": "./src/lessonFile.js",
+    "./lessonFixes": "./src/lessonFixes.js",
     "./lessonLayout": "./src/lessonLayout.js",
     "./lessonPatch": "./src/lessonPatch.js",
     "./lessonResponses": "./src/lessonResponses.js",

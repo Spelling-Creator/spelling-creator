@@ -24,6 +24,22 @@
   "leak": "\"{{answer}}\" (the answer to question {{question}})",
   "otherHere": "question {{question}}",
   "otherElsewhere": "section {{section}}, question {{question}}",
+  "quickFix": {
+    "W_FORMAT_BOLD": "Remove the bold",
+    "W_FORMAT_UNDERLINE": "Remove the underlining",
+    "W_FORMAT_CAPS": "Remove the formatting",
+    "E_FORMAT_HEAVY": "Remove all formatting in this section",
+    "E_FORMAT_LONG_EMPHASIS": "Make it plain",
+    "E_FORMAT_LONG_ITALIC": "Make it plain",
+    "W_VAKT_NOT_LAST": "Move it to the end",
+    "W_ORANGE_ORDER": "Swap them",
+    "E_ORANGE_PARTIAL_LIST": "Accept \"{{next}}\" too"
+  },
+  "fix": {
+    "done": "Fixed.",
+    "undo": "Undo",
+    "undoStale": "The lesson has changed since that fix. Open History to undo it."
+  },
   "facts": {
     "heading": "Facts",
     "hint": "Numbers, dates and named facts (a capital, a discoverer) in the passages, compared with Wikidata. Wikidata can be out of date or wrong too, so treat these as things to look into.",
