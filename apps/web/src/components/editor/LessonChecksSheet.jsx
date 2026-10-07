@@ -13,7 +13,8 @@
 //
 // A finding a script can fix on its own (core's lessonFixes.js: stray bold, a
 // VAKT activity mid-section) gets a button that does it there and then, without
-// closing the sheet. The editor says so in a toast with an Undo.
+// closing the sheet. A line at the top of the sheet then says it is fixed and
+// offers Undo, until the lesson changes again.
 //
 // Below both sits the fact check (FactCheckSection), which is different in
 // kind: it costs a model call and a round of Wikidata lookups, so it runs only
@@ -26,6 +27,7 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   LightbulbIcon,
+  Undo2Icon,
   WrenchIcon,
 } from "lucide-react";
 import { hasQuickFix } from "@spelling-creator/core/lessonFixes";
@@ -123,6 +125,8 @@ function FindingList({ findings, sections, kind, onChoose, onFix }) {
  *                                   sheet has closed, to scroll to its block.
  * @param {Function} [props.onFix]   Make a finding's quick fix. Without it, no
  *                                   fix buttons are shown.
+ * @param {Function} [props.onUndoFix] Take the last fix back. Given only while
+ *                                   nothing else has changed since it.
  */
 export default function LessonChecksSheet({
   open,
@@ -133,6 +137,7 @@ export default function LessonChecksSheet({
   sections,
   onGoTo,
   onFix,
+  onUndoFix,
 }) {
   const { t } = useTranslation("checks");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -164,6 +169,21 @@ export default function LessonChecksSheet({
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4">
+          {onUndoFix && (
+            <div
+              role="status"
+              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+            >
+              <span className="flex items-center gap-2">
+                <CircleCheckIcon className="size-4" aria-hidden />
+                {t("fix.done")}
+              </span>
+              <Button variant="outline" size="xs" onClick={onUndoFix}>
+                <Undo2Icon data-icon="inline-start" />
+                {t("fix.undo")}
+              </Button>
+            </div>
+          )}
           {sections.length === 0 ? (
             <p className="m-0 text-sm text-muted-foreground">{t("empty")}</p>
           ) : (

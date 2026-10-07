@@ -73,9 +73,12 @@ list once the checks rerun.
 
 Before a fix is made, the lesson as it stood is saved as a version, so the fix
 is a version of its own in History and History's Undo can take it back at any
-time. A toast offers a quicker Undo, which puts the old lesson back only if
-nothing else has changed since; otherwise it points to History, since putting
-the old lesson back would also throw away the later edit.
+time. A line at the top of the panel then says **Fixed.** with a quicker
+**Undo**. It stays only while nothing else has changed: once the lesson has been
+edited again, putting the old lesson back would throw that edit away too, so the
+line goes and History is the way back. The Undo is in the panel rather than in a
+toast because the panel is modal, and while it is open nothing outside it can
+be clicked.
 
 The fixes live in `packages/core/src/lessonFixes.js`. Each takes the document
 and the finding and returns the fixed document, or null when there is nothing

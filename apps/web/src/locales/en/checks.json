@@ -37,8 +37,7 @@
   },
   "fix": {
     "done": "Fixed.",
-    "undo": "Undo",
-    "undoStale": "The lesson has changed since that fix. Open History to undo it."
+    "undo": "Undo"
   },
   "facts": {
     "heading": "Facts",

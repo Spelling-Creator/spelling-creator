@@ -911,9 +911,12 @@ export default function EditorPage() {
   // into the fixed one, or returns null when there is nothing left to fix.
   //
   // The lesson as it stood is saved as a version first, so the fix lands in
-  // history on its own and History's Undo can take it back any time. The
-  // toast's Undo is the quick way, and only while nothing else has changed:
-  // putting the old lesson back after another edit would lose that edit too.
+  // history on its own and History's Undo can take it back any time. The Check
+  // panel's Undo is the quick way, and is only offered while nothing else has
+  // changed: putting the old lesson back after another edit would lose that
+  // edit too. (It is in the panel rather than in a toast because the panel is
+  // modal, and nothing outside it can be clicked while it is open.)
+  const [lastFix, setLastFix] = useState(null);
   const applyLessonFix = useCallback(
     async (makeFix) => {
       await commitNow();
@@ -921,19 +924,15 @@ export default function EditorPage() {
       const fixed = makeFix(before);
       if (!fixed) return false;
       setDoc(fixed);
-      toast.success(tChecks("fix.done"), {
-        action: {
-          label: tChecks("fix.undo"),
-          onClick: () => {
-            if (docRef.current === fixed) setDoc(before);
-            else toast.info(tChecks("fix.undoStale"));
-          },
-        },
-      });
+      setLastFix({ before, fixed });
       return true;
     },
-    [commitNow, tChecks],
+    [commitNow],
   );
+  const undoLessonFix = useCallback(() => {
+    if (lastFix && docRef.current === lastFix.fixed) setDoc(lastFix.before);
+    setLastFix(null);
+  }, [lastFix]);
 
   const quickFixFinding = useCallback(
     (finding) => applyLessonFix((current) => applyQuickFix(current, finding)),
@@ -3484,6 +3483,7 @@ export default function EditorPage() {
         sections={doc.sections}
         onGoTo={goToFinding}
         onFix={quickFixFinding}
+        onUndoFix={lastFix?.fixed === doc ? undoLessonFix : undefined}
       />
 
       {/* The lesson's own version history, read out of its git repository. */}
