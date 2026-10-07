@@ -38,6 +38,9 @@ PDF printing.
   a section's title and existing text (see [AI question suggestions](./ai-question-suggestions.md)).
 - **AI lesson ideas** - get a batch of lesson topic suggestions for an age range
   to start from a blank document (see [AI lesson ideas](./ai-lesson-ideas.md)).
+- **AI lesson fixes** - ask AI to fix a problem the lesson checks found, see the
+  change as a before-and-after, and apply it or not (see
+  [AI lesson fixes](./ai-lesson-fixes.md)).
 - **Lesson summaries** - summarise a published lesson with the browser's built-in
   AI, or with LFM2.5 running in the page where the browser has none, entirely
   on the reader's own device (no server, no cost). Only appears on devices

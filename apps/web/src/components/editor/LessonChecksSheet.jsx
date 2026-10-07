@@ -14,7 +14,10 @@
 // A finding a script can fix on its own (core's lessonFixes.js: stray bold, a
 // VAKT activity mid-section) gets a button that does it there and then, without
 // closing the sheet. A line at the top of the sheet then says it is fixed and
-// offers Undo, until the lesson changes again.
+// offers Undo, until the lesson changes again. A finding that needs judgement
+// (core's lessonAiFixes.js: an answer that isn't in its passage) gets "Fix with
+// AI" instead, which opens AiFixDialog over the sheet to show the fix before it
+// is made.
 //
 // Below both sits the fact check (FactCheckSection), which is different in
 // kind: it costs a model call and a round of Wikidata lookups, so it runs only
@@ -27,10 +30,12 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   LightbulbIcon,
+  SparklesIcon,
   Undo2Icon,
   WrenchIcon,
 } from "lucide-react";
 import { hasQuickFix } from "@spelling-creator/core/lessonFixes";
+import { hasAiFix } from "@spelling-creator/core/lessonAiFixes";
 import {
   Sheet,
   SheetContent,
@@ -44,7 +49,7 @@ import { describeFinding } from "../../lib/lessonChecks.js";
 import { groupBySection, sectionHeading } from "./checkGroups.js";
 import FactCheckSection from "./FactCheckSection.jsx";
 
-function FindingList({ findings, sections, kind, onChoose, onFix }) {
+function FindingList({ findings, sections, kind, onChoose, onFix, onAiFix }) {
   const { t, i18n } = useTranslation("checks");
   const Icon = kind === "problem" ? CircleAlertIcon : LightbulbIcon;
 
@@ -94,16 +99,29 @@ function FindingList({ findings, sections, kind, onChoose, onFix }) {
                   )}
                   {/* Beside the row rather than in it: a button can't sit
                       inside another. Indented to line up with the text. */}
-                  {onFix && hasQuickFix(finding) && (
+                  {((onFix && hasQuickFix(finding)) ||
+                    (onAiFix && hasAiFix(finding))) && (
                     <div className="flex flex-wrap gap-1 pb-1 pl-8">
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        onClick={() => onFix(finding)}
-                      >
-                        <WrenchIcon data-icon="inline-start" />
-                        {t(`quickFix.${finding.code}`, finding.params)}
-                      </Button>
+                      {onFix && hasQuickFix(finding) && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => onFix(finding)}
+                        >
+                          <WrenchIcon data-icon="inline-start" />
+                          {t(`quickFix.${finding.code}`, finding.params)}
+                        </Button>
+                      )}
+                      {onAiFix && hasAiFix(finding) && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => onAiFix(finding)}
+                        >
+                          <SparklesIcon data-icon="inline-start" />
+                          {t("aiFix.button")}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </li>
@@ -127,6 +145,8 @@ function FindingList({ findings, sections, kind, onChoose, onFix }) {
  *                                   fix buttons are shown.
  * @param {Function} [props.onUndoFix] Take the last fix back. Given only while
  *                                   nothing else has changed since it.
+ * @param {Function} [props.onAiFix] Ask AI to fix a finding. Without it (no
+ *                                   API or no Turnstile key), no AI buttons.
  */
 export default function LessonChecksSheet({
   open,
@@ -138,6 +158,7 @@ export default function LessonChecksSheet({
   onGoTo,
   onFix,
   onUndoFix,
+  onAiFix,
 }) {
   const { t } = useTranslation("checks");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -204,6 +225,7 @@ export default function LessonChecksSheet({
                     kind="problem"
                     onChoose={choose}
                     onFix={onFix}
+                    onAiFix={onAiFix}
                   />
                 ) : (
                   <p className="m-0 flex items-center gap-2 text-sm text-muted-foreground">
@@ -248,6 +270,7 @@ export default function LessonChecksSheet({
                       kind="suggestion"
                       onChoose={choose}
                       onFix={onFix}
+                      onAiFix={onAiFix}
                     />
                   )}
                 </div>

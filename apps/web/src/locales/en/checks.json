@@ -35,6 +35,36 @@
     "W_ORANGE_ORDER": "Swap them",
     "E_ORANGE_PARTIAL_LIST": "Accept \"{{next}}\" too"
   },
+  "aiFix": {
+    "button": "Fix with AI",
+    "title": "Fix with AI",
+    "ask": "Suggest a fix",
+    "working": "Working on a fix",
+    "again": "Try again",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "review": "Check the change before you apply it. You can undo it afterwards in the Check panel or from History.",
+    "newSuggestions_one": "This also adds {{count}} suggestion to the Check panel.",
+    "newSuggestions_other": "This also adds {{count}} suggestions to the Check panel.",
+    "stale": "The lesson has changed since this fix was made, so it no longer fits. Try again.",
+    "genericError": "No fix came back. Try again in a moment.",
+    "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
+    "verificationFailed": "Verification failed. Close this and open it again to retry.",
+    "fields": {
+      "passage": "Text",
+      "words": "Spelling words",
+      "type": "Type",
+      "prompt": "Question",
+      "answer": "Answer",
+      "answers": "Answers",
+      "steps": "Steps"
+    },
+    "headings": {
+      "question": "Question {{n}}",
+      "spelling": "Spelling words",
+      "passage": "Passage"
+    }
+  },
   "fix": {
     "done": "Fixed.",
     "undo": "Undo",

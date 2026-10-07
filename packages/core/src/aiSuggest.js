@@ -182,6 +182,66 @@ export async function suggestLessonIdeas(ageRange, token) {
 }
 
 /**
+ * Ask the Worker for a fix to one lesson check finding. The Worker finds the
+ * finding again by its key, asks a model, and only answers with a fix that
+ * passes the checks (see apps/api/src/lib/lessonFix.js).
+ * @param {object} doc         The lesson as it is now.
+ * @param {string} findingKey  The finding's `key`.
+ * @param {string} token       Turnstile token from the widget's callback.
+ * @returns {Promise<{ operations: object[], explanation: string, newWarnings: number }>}
+ *   replace_block operations for ./lessonAiFixes.js applyFixOperations.
+ */
+export async function suggestFix(doc, findingKey, token) {
+  if (!hasApi()) {
+    throw new Error("The API is not configured.");
+  }
+  if (!token) {
+    throw new Error("Please complete the verification challenge first.");
+  }
+
+  let res;
+  try {
+    res = await fetch(apiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "fix",
+        doc: {
+          title: doc.title || "",
+          sources: doc.sources || [],
+          // The checks never read an image, and an old lesson can hold one
+          // inline as a data URL, so only its place is sent.
+          sections: (doc.sections || []).map((section) => ({
+            id: section.id,
+            name: section.name,
+            blocks: (section.blocks || []).map((block) =>
+              block?.type === "image" ? { id: block.id, type: "image" } : block,
+            ),
+          })),
+        },
+        findingKey,
+        documentName: doc.title || "",
+        token,
+      }),
+    });
+  } catch (e) {
+    throw new Error("Could not reach the suggestion service.", { cause: e });
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(detail || `Request failed (${res.status}).`);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  return {
+    operations: Array.isArray(data.operations) ? data.operations : [],
+    explanation: typeof data.explanation === "string" ? data.explanation : "",
+    newWarnings: Number(data.newWarnings) || 0,
+  };
+}
+
+/**
  * Ask the Worker to check a lesson's numbers and dates against Wikidata.
  * @param {{ blockId: string, text: string }[]} passages  The lesson's text
  *   blocks, in order (see lessonPassages in ./factCheck.js).

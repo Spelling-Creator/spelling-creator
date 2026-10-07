@@ -1,12 +1,14 @@
 // The Turnstile-gated AI / image flow — the Worker's POST entrypoint (`POST /`).
 // `mode` selects the suggester: "text"/"question"/"lessonIdea" drive Gemini;
-// "factCheck" checks a lesson's numbers and dates against Wikidata;
+// "factCheck" checks a lesson's numbers and dates against Wikidata; "fix" asks
+// for a fix to one lesson check finding (see lib/lessonFix.js);
 // "imageSearch"/"imageFetch" proxy Pixabay. All share the Turnstile check and the
 // per-IP token-bucket rate limiter below; text suggestions and fact checks are
 // additionally cached.
 
 import { generateWithFallback, QUESTION_SCHEMAS, QUESTION_LABELS, QUESTION_INSTRUCTIONS, LESSON_IDEA_SCHEMA } from '../lib/ai/index.js';
 import { checkPassages, cleanPassages } from '../lib/factCheck.js';
+import { FixError, MAX_FIX_DOC_CHARS, cleanFixDoc, findFinding, suggestLessonFix } from '../lib/lessonFix.js';
 import { cacheKey } from '../lib/cache.js';
 import { clientIp, rateLimitStore } from '../platform/index.js';
 import { verifyTurnstile } from '../lib/turnstile.js';
@@ -26,7 +28,7 @@ const FACT_CHECK_VERSION = 'v3';
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any
 // unknown mode falls back to "text".
-const KNOWN_MODES = new Set(['text', 'question', 'imageSearch', 'imageFetch', 'lessonIdea', 'factCheck']);
+const KNOWN_MODES = new Set(['text', 'question', 'imageSearch', 'imageFetch', 'lessonIdea', 'factCheck', 'fix']);
 
 // A cached fact check holds facts by passage index; the block ids are this
 // request's, since two lessons can share a passage's text.
@@ -198,6 +200,25 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	if (mode === 'factCheck' && !passages.length) {
 		return new Response('There is no text in this lesson to check.', { status: 400, headers: cors });
 	}
+	// A fix reads the whole lesson (the checks are lesson-wide) and the key of
+	// the finding to fix, which is looked up again here. A finding that has gone,
+	// or that isn't one a model fixes, is refused before it costs anything.
+	let fixDoc = null;
+	let fixFinding = null;
+	if (mode === 'fix') {
+		fixDoc = cleanFixDoc(body.doc);
+		if (!fixDoc || typeof body.findingKey !== 'string') {
+			return new Response('A fix needs the lesson and the problem to fix.', { status: 400, headers: cors });
+		}
+		if (JSON.stringify(fixDoc).length > MAX_FIX_DOC_CHARS) {
+			return new Response('This lesson is too large to fix with AI.', { status: 413, headers: cors });
+		}
+		try {
+			fixFinding = findFinding(fixDoc, body.findingKey);
+		} catch (err) {
+			return new Response(err.message, { status: err.status || 400, headers: cors });
+		}
+	}
 
 	// Validate the request really came from our domain via Turnstile.
 	// This relies on the verified `hostname` from Cloudflare's siteverify
@@ -299,6 +320,20 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 			await kv.put(fKey, JSON.stringify(facts), { expirationTtl: FACT_CHECK_TTL });
 		}
 		return new Response(JSON.stringify({ facts: factsForRequest(facts, passages) }), { status: 200, headers: okHeaders() });
+	}
+
+	// Lesson fix: one rate-limit token, however many tries it takes (see
+	// lib/lessonFix.js). Not cached; asking again should give a different fix.
+	if (mode === 'fix') {
+		try {
+			const fix = await suggestLessonFix(fixDoc, fixFinding, { env });
+			return new Response(JSON.stringify(fix), { status: 200, headers: okHeaders() });
+		} catch (err) {
+			if (err instanceof FixError) {
+				return new Response(err.message, { status: err.status, headers: cors });
+			}
+			return new Response('Upstream AI error', { status: 502, headers: cors });
+		}
 	}
 
 	// Lesson-idea suggester: propose a handful of lesson topics suited to the
