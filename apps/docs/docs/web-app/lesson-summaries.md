@@ -178,11 +178,39 @@ most was..."), so the system message forbids that. It also loses track of an
 instruction placed before three thousand tokens of lesson, so the lesson sits
 inside `<lesson>` tags and the requested shape is repeated after it.
 
-The language options (`expectedInputLanguages` / `outputLanguage`) are left unset
-on purpose: naming a language the local model doesn't have makes `create()` throw,
-whereas omitting them lets the browser detect the lesson's language and reply in
-it. The LFM prompt asks for the summary in the lesson's own language for the
-same effect.
+A summary is written in the lesson's own language where the engine can manage
+it. The built-in engine always gets an `outputLanguage`, because Chrome warns on
+every request that leaves it out:
+
+- The availability probe asks about English output, which every build of the
+  model writes. That keeps the probe about the browser and its hardware.
+- On the click, `createSummarizer()` runs the lesson text through the browser's
+  [LanguageDetector](https://developer.mozilla.org/en-US/docs/Web/API/LanguageDetector)
+  (it ships alongside the Summarizer) and asks `availability()` whether the
+  model can write that language. If it can, a Spanish lesson gets a Spanish
+  summary. If it can't, or the language can't be told, the summary is in
+  English. The detector is only used when its model is already on the device,
+  so a detector download never eats into the click's user activation before the
+  Summarizer needs it.
+
+The model's language list differs between Chrome builds, so it is asked for
+rather than hardcoded, and a new language works as soon as Chrome ships it. `expectedInputLanguages` stays unset,
+because a lesson doesn't record its language.
+
+LFM gets the same detected language. Its
+[model card](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct) lists eight
+languages it is trained on (English, Arabic, Chinese, French, German, Japanese,
+Korean and Spanish), and it writes badly in anything else, so
+`LFM_LANGUAGES` in `fallbackSummarizer.js` keeps it to those. A Spanish lesson is
+summarised in Spanish, and a Danish one in English. (Told to answer a Danish
+lesson in the lesson's own language, it wrote garbled German.)
+
+Browsers that reach LFM usually have no LanguageDetector (Firefox and Safari),
+and there every summary is in English. Leaving the choice to the model was
+tried and doesn't work: told to use the lesson's language only if it is one of
+the eight, it wrote English for Spanish and German lessons as well, and asked to
+name a lesson's language, it answered "English" for Spanish, German and Danish
+alike.
 
 ## The LFM fallback, in a little more detail
 

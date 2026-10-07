@@ -67,6 +67,17 @@ for (const language of TRANSLATION_LANGUAGES) {
 }
 
 /**
+ * The bare language subtag of a BCP-47 tag, lowercased: "es-MX" and "es_MX"
+ * are both "es". Empty for a missing tag.
+ *
+ * @param {string} tag
+ * @returns {string}
+ */
+export function baseLanguageTag(tag) {
+  return (tag || "").trim().toLowerCase().split(/[-_]/)[0];
+}
+
+/**
  * The table row for a BCP-47 tag, or null if translation doesn't cover it.
  * Tries the whole tag first ("zh-TW" is its own row), then the bare language
  * subtag, so "pt-BR" lands on "pt".
@@ -76,7 +87,7 @@ for (const language of TRANSLATION_LANGUAGES) {
 export function languageForTag(tag) {
   const lower = (tag || "").trim().toLowerCase();
   if (!lower) return null;
-  return byTag.get(lower) || byTag.get(lower.split("-")[0]) || null;
+  return byTag.get(lower) || byTag.get(baseLanguageTag(lower)) || null;
 }
 
 /**
@@ -90,8 +101,8 @@ export function sameTranslationLanguage(a, b) {
   if (langA && langB) return langA === langB;
   // Neither (or one) is in the table: fall back to comparing bare subtags, so
   // "already in your language" still works for languages we can't translate.
-  const baseA = (a || "").trim().toLowerCase().split("-")[0];
-  const baseB = (b || "").trim().toLowerCase().split("-")[0];
+  const baseA = baseLanguageTag(a);
+  const baseB = baseLanguageTag(b);
   return Boolean(baseA) && baseA === baseB;
 }
 

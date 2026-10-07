@@ -211,7 +211,9 @@ export default function LessonSummary({ doc }) {
 
     try {
       const session = await createSummarizer(
-        { type, length },
+        // The text too, so the built-in engine can answer in the lesson's
+        // own language.
+        { type, length, text },
         {
           signal: controller.signal,
           onDownloadProgress: (loaded) => setProgress(loaded),

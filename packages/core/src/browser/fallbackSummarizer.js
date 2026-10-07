@@ -28,6 +28,7 @@ import {
   InterruptableStoppingCriteria,
   TextStreamer,
 } from "@huggingface/transformers";
+import { languageDisplayName } from "../translationLanguages.js";
 import { createDownloadProgress } from "./downloadProgress.js";
 
 // Pinned to a commit, so a later push to the repo can't change what readers
@@ -73,6 +74,23 @@ const SUMMARY_SHAPES = {
   },
 };
 
+// The languages LFM2.5 is trained to write, from its model card. Asked for
+// anything else it writes badly: told to answer a Danish lesson in the
+// lesson's language, it wrote garbled German.
+const LFM_LANGUAGES = ["en", "ar", "zh", "fr", "de", "ja", "ko", "es"];
+
+// Which language the summary is written in, as a sentence for the prompt.
+// summarizer.js passes the lesson's language when the browser could detect it
+// (a bare tag like "es"). Without one (Firefox and Safari have no
+// LanguageDetector) the summary is in English. Letting the model judge doesn't
+// work: asked to write in the lesson's language only if it is one of the
+// languages above, it wrote English for Spanish and German lessons too, and
+// asked to name a lesson's language, it said English for all of them.
+function summaryLanguageInstruction(language) {
+  const tag = LFM_LANGUAGES.includes(language) ? language : "en";
+  return `Write the summary in ${languageDisplayName(tag, "en")}.`;
+}
+
 // The same framing the built-in engine gets as sharedContext (summarizer.js),
 // for the same reason: without it, a lesson full of question prompts and word
 // lists reads like a worksheet to fill in rather than a lesson to describe.
@@ -81,7 +99,7 @@ const SUMMARY_SHAPES = {
 // most was..."), so the system message forbids that. They also lose track of
 // an instruction that sits before three thousand tokens of lesson, so the
 // shape is repeated after it, where the model reads it last.
-function summaryMessages({ type, length }, text) {
+function summaryMessages({ type, length }, languageInstruction, text) {
   const shape =
     SUMMARY_SHAPES[type]?.[length] || SUMMARY_SHAPES["key-points"].short;
   return [
@@ -92,9 +110,9 @@ function summaryMessages({ type, length }, text) {
         "deciding whether a lesson suits their class. A lesson has reading " +
         "passages, practice questions and spelling word lists. Describe what " +
         "the lesson covers. Never answer its questions, never do its " +
-        "exercises, and never write as a student. Write in the language the " +
-        "lesson is written in, even when that is not English. Reply with the " +
-        "summary only.",
+        "exercises, and never write as a student. " +
+        languageInstruction +
+        " Reply with the summary only.",
     },
     {
       role: "user",
@@ -246,7 +264,10 @@ async function* generateStream({
  * cached for the page's lifetime, like the translation pipelines, because
  * reloading 760 MB of weights per summary would make Regenerate unusable.
  *
- * @param {{type?: string, length?: string}} options
+ * @param {{type?: string, length?: string, language?: string|null}} options
+ *   language is the lesson's detected language as a bare tag, or null when
+ *   the browser couldn't tell, which means English (see
+ *   summaryLanguageInstruction).
  * @param {object} [hooks]
  * @param {AbortSignal} [hooks.signal]  Checked before the download starts,
  *   once the model is loaded, and between generated tokens; a download
@@ -267,6 +288,7 @@ export async function createFallbackSummarizer(options = {}, hooks = {}) {
 
   const { tokenizer, model } = loaded;
   const stopper = new InterruptableStoppingCriteria();
+  const languageInstruction = summaryLanguageInstruction(options.language);
 
   return {
     engine: "lfm",
@@ -286,7 +308,7 @@ export async function createFallbackSummarizer(options = {}, hooks = {}) {
         tokenizer,
         model,
         stopper,
-        messages: summaryMessages(options, text),
+        messages: summaryMessages(options, languageInstruction, text),
         signal: runSignal,
       });
     },

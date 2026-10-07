@@ -26,6 +26,7 @@
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
 import { textBlockPlain } from "../lessonText.js";
+import { baseLanguageTag } from "../translationLanguages.js";
 import { VAKT_LABEL, vaktText } from "../vakt.js";
 
 /**
@@ -148,16 +149,24 @@ function fallbackPossible() {
   return webGpuProbe;
 }
 
-// The options passed to both availability() and create(). We deliberately leave
-// the language options (expectedInputLanguages / outputLanguage) unset: naming a
-// language the local model doesn't have makes create() throw NotSupportedError,
-// whereas leaving them out lets the browser detect the lesson's language and
-// answer in it.
-function summarizerOptions({ type, length }) {
+// Chrome warns on every request that leaves outputLanguage unset, so one is
+// always named. English is the language every build of the model writes, which
+// makes it the safe answer for the availability probe and the fallback when a
+// lesson's own language can't be used.
+const DEFAULT_OUTPUT_LANGUAGE = "en";
+
+// The options passed to both availability() and create(). expectedInputLanguages
+// stays unset: a lesson doesn't record its language, and the summary's language
+// is chosen separately (outputLanguageFor below).
+function summarizerOptions(
+  { type, length },
+  outputLanguage = DEFAULT_OUTPUT_LANGUAGE,
+) {
   return {
     type: type || DEFAULT_SUMMARY_TYPE,
     length: length || DEFAULT_SUMMARY_LENGTH,
     format: "markdown",
+    outputLanguage,
     sharedContext: SHARED_CONTEXT,
   };
 }
@@ -165,21 +174,65 @@ function summarizerOptions({ type, length }) {
 // What the built-in API says about these options, failing closed: a missing
 // API, unsupported options or a probe that throws all collapse to
 // "unavailable", which hands the decision to the fallback probe.
-async function builtInAvailability(options) {
+async function builtInAvailability(options, outputLanguage) {
   const api = summarizerApi();
   if (!api) return "unavailable";
   try {
     return (
-      (await api.availability(summarizerOptions(options))) || "unavailable"
+      (await api.availability(summarizerOptions(options, outputLanguage))) ||
+      "unavailable"
     );
   } catch {
     return "unavailable";
   }
 }
 
+// The lesson's language as a bare tag ("es"), or null when it can't be told.
+// Uses only the browser's LanguageDetector, which ships alongside the built-in
+// Summarizer, and only when its model is already on the device: create() runs
+// inside the click's user activation, and a detector download would spend that
+// window before the Summarizer gets to use it. translator.js has a heavier
+// fallback detector, but it isn't worth a second model download here: with no
+// detected language, both engines write English.
+async function detectLessonLanguage(text, signal) {
+  const api = globalThis.LanguageDetector;
+  if (!api || !text) return null;
+  try {
+    if ((await api.availability()) !== "available") return null;
+    const detector = await api.create({ signal });
+    try {
+      const [best] = await detector.detect(text);
+      const tag = baseLanguageTag(best?.detectedLanguage);
+      return tag && tag !== "und" ? tag : null;
+    } finally {
+      detector.destroy?.();
+    }
+  } catch (err) {
+    if (err?.name === "AbortError") throw err;
+    return null;
+  }
+}
+
+// The language the built-in engine should write in: the lesson's own when the
+// model can write it, so a Spanish lesson gets a Spanish summary, and English
+// otherwise. The model's language list grows with Chrome releases, so it is
+// asked rather than hardcoded here.
+async function outputLanguageFor(options, detected) {
+  if (!detected || detected === DEFAULT_OUTPUT_LANGUAGE) {
+    return DEFAULT_OUTPUT_LANGUAGE;
+  }
+  return (await builtInAvailability(options, detected)) === "unavailable"
+    ? DEFAULT_OUTPUT_LANGUAGE
+    : detected;
+}
+
 /**
  * Can this device summarise with these options, with which engine, and is the
  * model ready?
+ *
+ * The built-in engine is probed with English output, which every build of its
+ * model writes: this is a question about the browser and its hardware, and the
+ * lesson's own language is only settled at create().
  *
  * @param {{type?: string, length?: string}} [options]
  * @returns {Promise<{availability: string, engine: "browser"|"lfm"|null}>}
@@ -213,7 +266,10 @@ export async function summarizerAvailability(options = {}) {
  * transient activation, and the fallback's download is far too heavy to start
  * uninvited.
  *
- * @param {{type?: string, length?: string}} options
+ * @param {{type?: string, length?: string, text?: string}} options
+ *   text is the lesson as it will be summarised (lessonSummaryText). The
+ *   lesson's language is detected from it, and each engine writes in that
+ *   language when its model supports it, and in English otherwise.
  * @param {object} [hooks]
  * @param {AbortSignal} [hooks.signal]  Aborts creation. The built-in engine
  *   also aborts its model download; the fallback's download can't be
@@ -234,11 +290,15 @@ export async function summarizerAvailability(options = {}) {
  *   property.
  */
 export async function createSummarizer(options = {}, hooks = {}) {
+  // Detected once, for whichever engine ends up answering.
+  const lessonLanguage = await detectLessonLanguage(options.text, hooks.signal);
+
   if ((await builtInAvailability(options)) !== "unavailable") {
     hooks.onEngine?.("browser");
     try {
+      const outputLanguage = await outputLanguageFor(options, lessonLanguage);
       return await summarizerApi().create({
-        ...summarizerOptions(options),
+        ...summarizerOptions(options, outputLanguage),
         signal: hooks.signal,
         monitor(monitor) {
           monitor.addEventListener("downloadprogress", (event) => {
@@ -266,7 +326,10 @@ export async function createSummarizer(options = {}, hooks = {}) {
     throw new DOMException("Summary aborted.", "AbortError");
   }
   const fallback = await loadFallback();
-  return fallback.createFallbackSummarizer(options, hooks);
+  return fallback.createFallbackSummarizer(
+    { ...options, language: lessonLanguage },
+    hooks,
+  );
 }
 
 /**
@@ -375,7 +438,7 @@ export function summarizerErrorMessage(error) {
     case "NotAllowedError":
       return "Summarising is blocked on this page.";
     case "NotSupportedError":
-      return "This lesson's language isn't supported by the on-device model.";
+      return "The on-device model can't summarise this lesson with these settings.";
     case "QuotaExceededError":
       return "This lesson is too long for the on-device model.";
     case "NetworkError":
