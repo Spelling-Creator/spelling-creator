@@ -193,9 +193,13 @@ every request that leaves it out:
   so a detector download never eats into the click's user activation before the
   Summarizer needs it.
 
-The model's language list differs between Chrome builds, so it is asked for
-rather than hardcoded, and a new language works as soon as Chrome ships it. `expectedInputLanguages` stays unset,
-because a lesson doesn't record its language.
+Only languages on Chrome's own list (`de`, `en`, `es`, `fr` and `ja`, in
+`BUILT_IN_OUTPUT_LANGUAGES`) are asked about. Asking `availability()` about any
+other language makes Chrome log a console error as well as answering
+"unavailable", so a Danish lesson goes straight to English. A listed language is
+still checked with `availability()`, because older builds of the model write
+fewer of them. `expectedInputLanguages` stays unset, because a lesson doesn't
+record its language.
 
 LFM gets the same detected language. Its
 [model card](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct) lists eight

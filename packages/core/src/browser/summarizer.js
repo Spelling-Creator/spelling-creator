@@ -213,12 +213,22 @@ async function detectLessonLanguage(text, signal) {
   }
 }
 
+// The output languages Chrome lists for the model (its own console message
+// names them). Asking availability() about any other language doesn't just
+// return "unavailable": Chrome also logs a console error, so a Danish lesson
+// is never asked about.
+const BUILT_IN_OUTPUT_LANGUAGES = ["de", "en", "es", "fr", "ja"];
+
 // The language the built-in engine should write in: the lesson's own when the
 // model can write it, so a Spanish lesson gets a Spanish summary, and English
-// otherwise. The model's language list grows with Chrome releases, so it is
-// asked rather than hardcoded here.
+// otherwise. A listed language is still checked with availability(), because
+// older builds of the model write fewer of them.
 async function outputLanguageFor(options, detected) {
-  if (!detected || detected === DEFAULT_OUTPUT_LANGUAGE) {
+  if (
+    !detected ||
+    detected === DEFAULT_OUTPUT_LANGUAGE ||
+    !BUILT_IN_OUTPUT_LANGUAGES.includes(detected)
+  ) {
     return DEFAULT_OUTPUT_LANGUAGE;
   }
   return (await builtInAvailability(options, detected)) === "unavailable"
