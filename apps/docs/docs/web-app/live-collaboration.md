@@ -181,8 +181,20 @@ token, and watches `doc` so local edits broadcast automatically.
 The server side lives in `apps/api/src/collab-room.js` (the `CollabRoom` Durable
 Object, which holds the session's authoritative Yjs document, persists it to
 SQLite so it survives hibernation, and relays updates) and `handleCollab` in
-`apps/api/src/index.js` (the JWT gate, connection rate limits, and forwarding to
-the room).
+`apps/api/src/routes/collab.js` (the JWT gate, connection rate limits, and
+forwarding to the room).
+
+Not every participant has a socket. An AI assistant joining through the
+[MCP server](/mcp-server/live-sessions) can't hold a connection between tool
+calls, so the room keeps it as a record instead: it joins, is admitted and
+removed through the same `ADMIT` and `REMOVE` frames, and appears in the roster
+like anyone else (badged **AI**), but it reads the document and its chat by
+asking over HTTP (`handleCollabAgent`, same file) rather than being pushed
+frames. The room keeps a bounded chat inbox and the latest cursor positions for
+it between asks, and a once-a-minute sweep lets go of one that stops asking,
+since it has no socket to close. Its edits arrive as ordinary Yjs updates, so
+`EDITED` credits them to its slot and version history treats them like
+anyone's.
 
 `collab.coAuthors` is how the session hands its list of editors to version
 history. Every path in `useLessonGit` that commits the live document (the

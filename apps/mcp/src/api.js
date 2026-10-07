@@ -24,6 +24,8 @@ export function createApi(config, auth) {
     `${config.apiUrl}/git/${encodeURIComponent(lessonId)}${path}`;
   const pullsUrl = (lessonId, path = "") =>
     `${lessonsUrl(`/${encodeURIComponent(lessonId)}`)}/pulls${path}`;
+  const collabUrl = (code, path = "") =>
+    `${config.apiUrl}/collab/${encodeURIComponent(code)}/agent${path}`;
 
   /**
    * One request to the Worker with a Bearer token, refreshed and retried once if
@@ -86,6 +88,44 @@ export function createApi(config, auth) {
     if (!res.ok) throw await readError(res);
     // DELETE returns a tiny JSON; everything else returns JSON too.
     return res.json().catch(() => ({}));
+  }
+
+  // One ask of a live session's room. The participant token rides in its own
+  // header, apart from the Bearer token that says who is asking: the room
+  // checks both, that the record exists and that it is this account's.
+  async function collabCall(
+    url,
+    { method = "GET", token, body, headers } = {},
+  ) {
+    const res = await request(url, {
+      method,
+      body,
+      headers: {
+        ...headers,
+        ...(token ? { "X-Collab-Agent": token } : {}),
+      },
+    });
+    // Read once: the room answers JSON, the Worker in front of it answers a
+    // bare line of text when it refuses (401, 429), and either may be empty.
+    const raw = await res.text().catch(() => "");
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      data = null;
+    }
+    if (res.status === 410) {
+      const gone = data?.gone || "the session ended";
+      throw Object.assign(new Error(gone), { gone });
+    }
+    if (!res.ok) {
+      const detail = data?.error || (data ? "" : raw.trim());
+      throw Object.assign(
+        new Error(detail || `Request failed (${res.status}).`),
+        { status: res.status },
+      );
+    }
+    return data || {};
   }
 
   /**
@@ -352,6 +392,59 @@ export function createApi(config, auth) {
         { method: "POST" },
       );
       return data.pull || null;
+    },
+
+    // ----- live sessions, as a participant with no socket -------------------
+    //
+    // The room (apps/api/src/collab-room.js) keeps an assistant as a record it
+    // can be asked about, so every one of these is an ordinary request: nothing
+    // here is held open between calls. A 410 means the session has let this
+    // participant go, and says why; it is thrown as an error with `gone` set,
+    // so the tools can tell "the host removed you" from "the hub is down".
+
+    /** Ask to join a session. Resolves to { token, slot, admitted: false, ... }. */
+    async collabJoin(code, assistant) {
+      return collabCall(collabUrl(code), {
+        method: "POST",
+        body: JSON.stringify({ assistant }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+
+    /**
+     * The session as the room holds it: whether we're admitted yet, the roster,
+     * chat since the last ask, where everyone's caret is, and the document (as
+     * a base64 Yjs update). `wait` seconds is how long the room may hold the
+     * request open for admission if it hasn't come yet.
+     */
+    async collabState(code, token, { wait = 0 } = {}) {
+      const query = wait > 0 ? `?wait=${Math.ceil(wait)}` : "";
+      return collabCall(collabUrl(code, query), { token });
+    },
+
+    /** Merge a Yjs update into the session's document. */
+    async collabUpdate(code, token, bytes) {
+      return collabCall(collabUrl(code, "/update"), {
+        method: "POST",
+        token,
+        body: bytes,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+
+    /** Say something to everyone in the session. */
+    async collabChat(code, token, text) {
+      return collabCall(collabUrl(code, "/chat"), {
+        method: "POST",
+        token,
+        body: JSON.stringify({ text }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+
+    /** Leave the session, freeing the slot. */
+    async collabLeave(code, token) {
+      return collabCall(collabUrl(code), { method: "DELETE", token });
     },
 
     /**
