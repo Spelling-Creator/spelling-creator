@@ -24,7 +24,7 @@ Each app keeps its own environment file:
 - `apps/web/.env`: `VITE_*`-prefixed values exposed to client code by Vite at
   build time (see `apps/web/vite.config.js`).
 - `apps/api/.env`: Worker secrets (e.g. `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
-  `GROQ_API_KEY`, `NOVITA_API_KEY`; the Worker tries each configured AI provider in order,
+  `GROQ_API_KEY`, `NOVITA_API_KEY`, `FIREWORKS_API_KEY`, `OPENROUTER_API_KEY`; the Worker tries each configured AI provider in order,
   skipping any without a key set). Cloudflare Workers AI needs no key; it's wired up via the `AI` binding in
   `wrangler.jsonc` instead, and serves as the no-external-dependency fallback if every other
   provider is unset or fails.
@@ -36,19 +36,29 @@ Both are gitignored.
 `generateWithFallback` (`apps/api/src/lib/ai/index.js`) tries each provider in
 order, skipping any that isn't configured, and within a provider tries its models
 in order. `AI_PROVIDER_ORDER` overrides the order; the default is
-`gemini, openai, anthropic, groq, novita, openai-compatible, workers-ai`.
+`gemini, openai, anthropic, groq, novita, fireworks, openrouter, openai-compatible, workers-ai`.
 
 The last two go last because neither needs a hosted API key, which makes them
 fallbacks rather than competitors for priority with the better models.
 
-**`groq`** and **`novita`** are hosted gateways that speak the OpenAI
-chat-completions shape, so each is a thin wrapper over the same shared call.
-Both are configured by a key (`GROQ_API_KEY`, `NOVITA_API_KEY`) and take an
-optional comma-separated model list (`GROQ_MODELS`, `NOVITA_MODELS`) that
-overrides the built-in defaults, tried in order. Both default to the
-`openai/gpt-oss-20b` and `openai/gpt-oss-120b` pair, which the two services
-happen to list under the same ids. Novita's catalogue is at
-[novita.ai/models/llm](https://novita.ai/models/llm).
+**`groq`**, **`novita`**, **`fireworks`** and **`openrouter`** are hosted
+gateways that speak the OpenAI chat-completions shape, so each is a thin wrapper
+over the same shared call. Each is configured by a key and takes an optional
+comma-separated model list that overrides the built-in defaults, tried in order.
+
+| Provider     | Key                  | Model list          | Default models                                                                      |
+| ------------ | -------------------- | ------------------- | ----------------------------------------------------------------------------------- |
+| `groq`       | `GROQ_API_KEY`       | `GROQ_MODELS`       | `openai/gpt-oss-20b`, `openai/gpt-oss-120b`                                         |
+| `novita`     | `NOVITA_API_KEY`     | `NOVITA_MODELS`     | `openai/gpt-oss-20b`, `openai/gpt-oss-120b`                                         |
+| `fireworks`  | `FIREWORKS_API_KEY`  | `FIREWORKS_MODELS`  | `accounts/fireworks/models/gpt-oss-120b`, `accounts/fireworks/models/glm-5p3-flash` |
+| `openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODELS` | `openai/gpt-oss-20b`, `openai/gpt-oss-120b`                                         |
+
+Fireworks names models by their full `accounts/fireworks/models/...` path, and
+only serves `gpt-oss-120b` serverless (the 20b needs a dedicated deployment),
+which is why its defaults differ. The catalogues are at
+[novita.ai/models/llm](https://novita.ai/models/llm),
+[fireworks.ai/models](https://fireworks.ai/models) and
+[openrouter.ai/models](https://openrouter.ai/models).
 
 **`openai-compatible`** is the one an instance with no hosted keys and no
 Cloudflare bindings can use. Ollama, llama.cpp's server, vLLM, LM Studio, LiteLLM
@@ -64,7 +74,7 @@ the app.
 | `OPENAI_COMPATIBLE_JSON`    | no       | `schema` if the server enforces JSON Schema.             |
 
 Structured output defaults to the weaker `json_object` mode, with the shape
-described in the prompt, the same thing the Groq and Novita providers do, and
+described in the prompt, the same thing the hosted gateway providers do, and
 for the same reason: whether a server honours `json_schema` depends on which
 runtime or model it is, and a wrong guess fails every question suggestion with a 400. Set
 `OPENAI_COMPATIBLE_JSON=schema` if you know yours enforces schemas.

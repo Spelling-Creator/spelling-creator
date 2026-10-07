@@ -12,6 +12,8 @@ import { chatCompletion, firstModelThatAnswers, modelList } from './chatCompleti
 import * as openai from './openai.js';
 import * as groq from './groq.js';
 import * as novita from './novita.js';
+import * as fireworks from './fireworks.js';
+import * as openrouter from './openrouter.js';
 import * as openaiCompatible from './openai-compatible.js';
 
 /** A fetch that records what it was asked and replies with `text`. */
@@ -219,6 +221,35 @@ describe('provider wiring', () => {
 	it('novita is configured by its key alone', () => {
 		expect(novita.isConfigured({ NOVITA_API_KEY: 'k' })).toBe(true);
 		expect(novita.isConfigured({})).toBe(false);
+	});
+
+	it('fireworks talks to its own endpoint and asks for json_object', async () => {
+		const server = recordingFetch();
+		vi.stubGlobal('fetch', server.fetch);
+		await fireworks.generate({ prompt: 'p', schema: SCHEMA, env: { FIREWORKS_API_KEY: 'k' } });
+		expect(server.calls[0].url).toBe('https://api.fireworks.ai/inference/v1/chat/completions');
+		expect(server.calls[0].headers.Authorization).toBe('Bearer k');
+		// Fireworks wants the full accounts/... path, not the short id the other
+		// gateways use, and it has no serverless gpt-oss-20b to fall back on.
+		expect(server.calls[0].body.model).toBe('accounts/fireworks/models/gpt-oss-120b');
+		expect(server.calls[0].body.response_format).toEqual({ type: 'json_object' });
+	});
+
+	it('openrouter talks to its own endpoint and asks for json_object', async () => {
+		const server = recordingFetch();
+		vi.stubGlobal('fetch', server.fetch);
+		await openrouter.generate({ prompt: 'p', schema: SCHEMA, env: { OPENROUTER_API_KEY: 'k', OPENROUTER_MODELS: 'vendor/model-test' } });
+		expect(server.calls[0].url).toBe('https://openrouter.ai/api/v1/chat/completions');
+		expect(server.calls[0].headers.Authorization).toBe('Bearer k');
+		expect(server.calls[0].body.model).toBe('vendor/model-test');
+		expect(server.calls[0].body.response_format).toEqual({ type: 'json_object' });
+	});
+
+	it('fireworks and openrouter are configured by their keys alone', () => {
+		expect(fireworks.isConfigured({ FIREWORKS_API_KEY: 'k' })).toBe(true);
+		expect(fireworks.isConfigured({})).toBe(false);
+		expect(openrouter.isConfigured({ OPENROUTER_API_KEY: 'k' })).toBe(true);
+		expect(openrouter.isConfigured({})).toBe(false);
 	});
 
 	it('openai-compatible defaults to json_object and honours the override', async () => {
