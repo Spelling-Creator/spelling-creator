@@ -72,8 +72,15 @@ The editor sends the whole lesson, since the checks are lesson-wide, and the
 the checks itself and looks the finding up by its key rather than trusting a
 description of it, so the prompt carries the checker's own `message`: prose
 already written for a model, naming the fix. A finding that is no longer there
-is refused with a 409, and one that isn't in `AI_FIX_CODES` with a 400, both
-before Turnstile or the rate limiter.
+is refused with a 409, and one that isn't in `AI_FIX_CODES` with a 400.
+
+Only the request's shape and size are checked before Turnstile. The finding
+lookup runs the full lesson checks, so it happens behind the verification and
+the rate limiter, where an unverified request can't make the Worker spend that
+CPU for free. The lookup's one pass is reused as the "before" side of every
+`checkFix` below, so a request validates the unchanged lesson exactly once. The
+price is that a stale finding costs its requester a token like any other
+checked request.
 
 The model sees the finding's section block by block, in the same input shape the
 [MCP server](/mcp-server/tools) takes: text blocks as markup (so formatting and
@@ -97,6 +104,13 @@ after. A fix passes only if:
 - the finding's key is gone,
 - no new error appeared (`newFindings`, the same filter `patch_lesson` uses), and
 - no text block lost a footnote.
+
+One allowance: a formatting finding's key is the formatted words themselves, so
+a fix that rewords a passage re-keys a formatting defect that predates it. A
+formatting finding whose code already fired in the same section is treated as
+pre-existing rather than new. Formatting only; for every other code a changed
+key means the fix changed the thing the check is about (a new answer, say), and
+the fix answers for it.
 
 If the first try fails, the model is shown its edits and what was wrong with
 them, and asked once more (`FIX_ATTEMPTS`). If that fails too, the Worker answers

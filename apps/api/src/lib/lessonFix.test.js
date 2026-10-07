@@ -56,8 +56,12 @@ describe('cleanFixDoc', () => {
 });
 
 describe('findFinding', () => {
-	it('finds the finding again by its key', () => {
-		expect(findFinding(cleanFixDoc(lesson()), key).code).toBe('E_GROUNDING_SINGLE');
+	it('finds the finding again by its key, with the validation pass it came from', () => {
+		const { finding, validation } = findFinding(cleanFixDoc(lesson()), key);
+		expect(finding.code).toBe('E_GROUNDING_SINGLE');
+		// The pass is handed back so suggestLessonFix never reruns it on the
+		// unchanged lesson.
+		expect(validation.errors.some((f) => f.key === key)).toBe(true);
 	});
 
 	it('refuses a finding that has gone, or one a model does not fix', () => {
@@ -71,7 +75,7 @@ describe('findFinding', () => {
 describe('fixPrompt', () => {
 	it('carries the section, the checker message and, on a retry, what went wrong', () => {
 		const doc = cleanFixDoc(lesson());
-		const finding = findFinding(doc, key);
+		const { finding } = findFinding(doc, key);
 		const context = fixContext(doc, finding);
 		const first = fixPrompt({ title: doc.title, finding, context });
 		expect(first).toContain('"gravel"');
@@ -86,7 +90,8 @@ describe('fixPrompt', () => {
 describe('suggestLessonFix', () => {
 	const run = (generate) => {
 		const doc = cleanFixDoc(lesson());
-		return suggestLessonFix(doc, findFinding(doc, key), { env: {}, generate });
+		const { finding, validation } = findFinding(doc, key);
+		return suggestLessonFix(doc, finding, { env: {}, generate, before: validation });
 	};
 
 	it('returns a fix that passes the checks', async () => {

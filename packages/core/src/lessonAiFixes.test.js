@@ -79,6 +79,10 @@ function lesson() {
             prompt: "What is the sea?",
             answer: "salty",
           }),
+          question("q4", "multiple_open", {
+            prompt: "Give a word for small stones.",
+            answers: [{ id: "a4", text: "pebble" }],
+          }),
         ],
       },
     ],
@@ -119,6 +123,9 @@ describe("fixContext", () => {
       editable: false,
     });
     expect(context.blocks[4].answers).toEqual(["boulder", "cobble", "silt"]);
+    // q4's "pebble" is missing on purpose: a loose orange question's answers
+    // are suggestions, held to nothing by the checks, so forbidding them would
+    // steer the model away from words that would pass.
     expect(context.usedElsewhere.sort()).toEqual(["harbour", "salty"]);
   });
 
@@ -281,5 +288,64 @@ describe("checkFix", () => {
     expect(textBlockMarkup(result.doc.sections[0].blocks[0])).toContain(
       "^[@smith, p. 4]",
     );
+  });
+
+  it("doesn't blame a fix for a pre-existing formatting defect it re-keyed", () => {
+    // The section already breaks the formatting rules: a bold span past the
+    // word limit, which is also most of the passage. Both findings' keys are
+    // the formatted words themselves.
+    const doc = {
+      title: "T",
+      sections: [
+        {
+          id: "s1",
+          name: "Rivers",
+          blocks: [
+            text(
+              "t1",
+              "A river carries SEDIMENT. **The waters never stop moving at all.**",
+            ),
+            question("q1", "single", {
+              prompt: "What does a river carry?",
+              answer: "gravel",
+            }),
+          ],
+        },
+      ],
+    };
+    const finding = grounding(doc);
+    // The fix grounds the answer by rewording the passage, and the bold span's
+    // words change with it, so every formatting finding gets a new key.
+    const ops = aiEditsToOperations(doc, finding, [
+      {
+        blockId: "t1",
+        text: "A river carries SEDIMENT and gravel. **The waters never once stop moving.**",
+      },
+    ]);
+    const result = checkFix(doc, ops, finding);
+    expect(result.problems).toEqual([]);
+    expect(result.ok).toBe(true);
+    // The re-keyed W_FORMAT_BOLD isn't reported as a new suggestion either.
+    expect(result.newWarnings).toEqual([]);
+    // A caller that already validated the lesson can hand the result in and
+    // gets the same verdict without a second pass over the unchanged doc.
+    const primed = checkFix(doc, ops, finding, {
+      before: validateLesson(doc),
+    });
+    expect(primed.ok).toBe(true);
+    expect(primed.problems).toEqual([]);
+  });
+
+  it("still fails a fix that swaps one ungrounded answer for another", () => {
+    // Grounding keys change when the answer changes, and that must stay a
+    // failure: the re-key allowance is for formatting findings alone.
+    const doc = lesson();
+    const finding = grounding(doc);
+    const ops = aiEditsToOperations(doc, finding, [
+      { blockId: "q1", answer: "pebbles" },
+    ]);
+    const result = checkFix(doc, ops, finding);
+    expect(result.ok).toBe(false);
+    expect(result.newErrors.map((f) => f.code)).toContain("E_GROUNDING_SINGLE");
   });
 });

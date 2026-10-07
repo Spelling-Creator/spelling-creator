@@ -201,10 +201,12 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 		return new Response('There is no text in this lesson to check.', { status: 400, headers: cors });
 	}
 	// A fix reads the whole lesson (the checks are lesson-wide) and the key of
-	// the finding to fix, which is looked up again here. A finding that has gone,
-	// or that isn't one a model fixes, is refused before it costs anything.
+	// the finding to fix. Only shape and size are checked here, pre-auth, the
+	// same as the other modes' cheap input checks. The finding itself is looked
+	// up in the handler below, after Turnstile and the rate limiter, because the
+	// lookup runs the full lesson checks and an unverified request must not get
+	// to spend that CPU for free.
 	let fixDoc = null;
-	let fixFinding = null;
 	if (mode === 'fix') {
 		fixDoc = cleanFixDoc(body.doc);
 		if (!fixDoc || typeof body.findingKey !== 'string') {
@@ -212,11 +214,6 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 		}
 		if (JSON.stringify(fixDoc).length > MAX_FIX_DOC_CHARS) {
 			return new Response('This lesson is too large to fix with AI.', { status: 413, headers: cors });
-		}
-		try {
-			fixFinding = findFinding(fixDoc, body.findingKey);
-		} catch (err) {
-			return new Response(err.message, { status: err.status || 400, headers: cors });
 		}
 	}
 
@@ -324,9 +321,13 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 
 	// Lesson fix: one rate-limit token, however many tries it takes (see
 	// lib/lessonFix.js). Not cached; asking again should give a different fix.
+	// The finding is looked up here, behind the charge: a finding that has gone
+	// stale, or that isn't one a model fixes, costs its requester a token, which
+	// is the price of keeping the lesson-wide checks off the pre-auth path.
 	if (mode === 'fix') {
 		try {
-			const fix = await suggestLessonFix(fixDoc, fixFinding, { env });
+			const { finding, validation } = findFinding(fixDoc, body.findingKey);
+			const fix = await suggestLessonFix(fixDoc, finding, { env, before: validation });
 			return new Response(JSON.stringify(fix), { status: 200, headers: okHeaders() });
 		} catch (err) {
 			if (err instanceof FixError) {

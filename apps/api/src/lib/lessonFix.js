@@ -84,15 +84,19 @@ export function cleanFixDoc(doc) {
 }
 
 /**
- * The finding a request asks about, found again in the lesson.
+ * The finding a request asks about, found again in the lesson, along with the
+ * whole validation result it came from. The caller hands that result back to
+ * suggestLessonFix as its `before`, so one request runs the lesson-wide checks
+ * over the unchanged lesson exactly once, not once more per attempt.
+ * @returns {{ finding: object, validation: { errors: any[], warnings: any[] } }}
  * @throws {FixError} when it isn't there any more, or isn't one a model fixes.
  */
 export function findFinding(doc, key) {
-	const { errors, warnings } = validateLesson(doc);
-	const finding = [...errors, ...warnings].find((f) => f.key === key);
+	const validation = validateLesson(doc);
+	const finding = [...validation.errors, ...validation.warnings].find((f) => f.key === key);
 	if (!finding) throw new FixError('That problem is no longer in the lesson.', 409);
 	if (!hasAiFix(finding)) throw new FixError("That problem can't be fixed with AI.", 400);
-	return finding;
+	return { finding, validation };
 }
 
 /**
@@ -148,11 +152,13 @@ export function fixPrompt({ title, finding, context, retry }) {
  * Ask the model for a fix, check it, and ask once more if it fails.
  * @param {object} doc      From cleanFixDoc.
  * @param {object} finding  From findFinding.
+ * @param {object} options  `before` is findFinding's validation result, reused
+ *   by every checkFix pass instead of validating the unchanged lesson again.
  * @returns {Promise<{ operations: any[], explanation: string, newWarnings: number }>}
  * @throws {FixError} 422 when no try passed; an upstream error when no AI
  *   provider answered.
  */
-export async function suggestLessonFix(doc, finding, { env, generate = generateWithFallback }) {
+export async function suggestLessonFix(doc, finding, { env, generate = generateWithFallback, before }) {
 	const context = fixContext(doc, finding);
 	if (!context) throw new FixError('That section is no longer in the lesson.', 409);
 	let retry = null;
@@ -177,7 +183,7 @@ export async function suggestLessonFix(doc, finding, { env, generate = generateW
 			retry = { edits, problems: [err.message] };
 			continue;
 		}
-		const result = checkFix(doc, operations, finding);
+		const result = checkFix(doc, operations, finding, { before });
 		if (result.ok) {
 			return {
 				operations,

@@ -22,7 +22,11 @@
 // fix comes back, since the author may have changed it in the meantime.
 
 import { applyPatch } from "./lessonPatch.js";
-import { newFindings, validateLesson } from "./lessonChecks.js";
+import {
+  isFormattingFinding,
+  newFindings,
+  validateLesson,
+} from "./lessonChecks.js";
 import {
   textBlockContent,
   textBlockFootnotes,
@@ -127,10 +131,14 @@ export function fixContext(doc, finding) {
   for (const other of doc.sections) {
     if (other === section) continue;
     for (const block of other.blocks || []) {
+      // A loose orange question's answers are suggestions, which the checks
+      // deliberately keep out of every lesson-wide pool (see lessonChecks.js).
+      // Forbidding them here would steer the model away from words the checks
+      // would accept, sometimes the only word that passes.
       const words =
         block?.type === "spelling"
           ? texts(block.words)
-          : block?.type === "question"
+          : block?.type === "question" && block.questionType !== "multiple_open"
             ? [...texts([String(block.answer ?? "")]), ...texts(block.answers)]
             : [];
       for (const word of words) usedElsewhere.add(word);
@@ -303,8 +311,11 @@ export function applyFixOperations(doc, operations) {
  * @param {object} doc
  * @param {any[]} operations
  * @param {import("./lessonChecks.js").Finding} finding
+ * @param {{ before?: { errors: any[], warnings: any[] } }} [options]
+ *   `before` is validateLesson(doc) where the caller already ran it, so one
+ *   request doesn't validate the same unchanged lesson again per attempt.
  */
-export function checkFix(doc, operations, finding) {
+export function checkFix(doc, operations, finding, { before } = {}) {
   let fixed;
   try {
     fixed = applyFixOperations(doc, operations);
@@ -317,10 +328,23 @@ export function checkFix(doc, operations, finding) {
       problems: [err.message],
     };
   }
-  const before = validateLesson(doc);
+  const prior = before ?? validateLesson(doc);
   const after = validateLesson(fixed);
-  const newErrors = newFindings(before.errors, after.errors);
-  const newWarnings = newFindings(before.warnings, after.warnings);
+  // A formatting finding's key is the formatted words themselves, so a fix
+  // that rewords a passage re-keys a defect that predates it: the same too
+  // much bold, now with different words inside. Such a finding is treated as
+  // pre-existing when its code already fired in the same section. Formatting
+  // only: for any other code, a changed key means the fix changed the very
+  // thing the check is about (a new answer, say), and it must answer for it.
+  const rekeyed = (f, priors) =>
+    isFormattingFinding(f) &&
+    priors.some((p) => p.code === f.code && p.sectionId === f.sectionId);
+  const newErrors = newFindings(prior.errors, after.errors).filter(
+    (f) => !rekeyed(f, prior.errors),
+  );
+  const newWarnings = newFindings(prior.warnings, after.warnings).filter(
+    (f) => !rekeyed(f, prior.warnings),
+  );
   const resolved = ![...after.errors, ...after.warnings].some(
     (f) => f.key === finding.key,
   );
