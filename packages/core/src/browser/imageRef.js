@@ -8,6 +8,7 @@
 // the lesson has been saved/published).
 
 import { apiUrl } from "../config.js";
+import { extFromMime } from "../image.js";
 import { getImageBlob, putImageBlob } from "./imageStore.js";
 
 // Public Worker/R2 URL for an uploaded image. Reads the base URL through the
@@ -17,15 +18,10 @@ export function imagePublicUrl(hash) {
   return `${apiUrl()}/images/${hash}`;
 }
 
-// docx ImageRun wants one of: png | jpg | gif | bmp. Mirrors the rules the old
-// imageTypeFromDataUrl used.
-export function extFromMime(mime) {
-  const raw = (mime || "").toLowerCase().replace(/^image\//, "");
-  if (raw === "jpeg") return "jpg";
-  if (raw === "svg+xml") return "png"; // svg unsupported by docx ImageRun
-  if (["png", "jpg", "gif", "bmp"].includes(raw)) return raw;
-  return "png";
-}
+// docx ImageRun wants one of: png | jpg | gif | bmp. The rule lives in
+// ../image.js so blocks built here, by the Worker and by the MCP server all
+// store the same ext; re-exported for this module's existing importers.
+export { extFromMime };
 
 // Split a data URL into raw bytes + mime. Handles both base64 (the common case:
 // FileReader, the Pixabay proxy, mammoth) and percent-encoded payloads.

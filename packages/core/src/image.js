@@ -22,16 +22,21 @@ export const IMAGE_SIZES = [
 export const IMAGE_ALIGNS = ["left", "center", "right"];
 
 /**
- * The short extension an image block stores for a mime type. svg is
- * unsupported by the docx export, so it maps to png, as does anything unknown.
+ * The short extension an image block stores for a mime type. The one copy of
+ * this rule: the web editor (browser/imageRef.js), the Worker
+ * (apps/api/src/lib/images.js) and the MCP server all take it from here, so a
+ * block built anywhere carries the same ext for the same mime.
+ *
+ * The exts are the ones the docx export's ImageRun accepts (png, jpg, gif,
+ * bmp). webp, svg and anything unknown map to png: the export transcodes webp
+ * bytes to PNG to match (see getImageBytes in browser/imageRef.js).
  * @param {string} mime
  * @returns {string}
  */
 export function extFromMime(mime) {
   const raw = (mime || "").toLowerCase().replace(/^image\//, "");
   if (raw === "jpeg") return "jpg";
-  if (raw === "svg+xml") return "png";
-  if (["png", "jpg", "gif", "bmp", "webp"].includes(raw)) return raw;
+  if (["png", "jpg", "gif", "bmp"].includes(raw)) return raw;
   return "png";
 }
 
