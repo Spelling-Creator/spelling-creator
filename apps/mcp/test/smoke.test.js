@@ -18,8 +18,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 import { createAuth } from "../src/auth.js";
-import { buildDoc } from "../src/doc.js";
-import { applyPatch } from "../src/patch.js";
+import { buildDoc } from "@spelling-creator/core/lessonBuild";
+import { applyPatch } from "@spelling-creator/core/lessonPatch";
 import { registerTools, SERVER_INFO } from "../src/tools.js";
 import { validateLesson } from "../src/validate.js";
 import { resolveWikimediaImage } from "../src/wikimedia.js";

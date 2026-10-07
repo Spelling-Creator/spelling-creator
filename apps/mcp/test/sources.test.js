@@ -8,8 +8,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
-import { buildDoc } from "../src/doc.js";
-import { applyPatch } from "../src/patch.js";
+import { buildDoc } from "@spelling-creator/core/lessonBuild";
+import { applyPatch } from "@spelling-creator/core/lessonPatch";
 import { registerTools, SERVER_INFO } from "../src/tools.js";
 import { newFindings, validateLesson } from "../src/validate.js";
 import { fakeHub } from "./fake-hub.js";

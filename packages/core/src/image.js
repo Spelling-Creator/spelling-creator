@@ -21,6 +21,20 @@ export const IMAGE_SIZES = [
 // is instead of each spelling out its own three strings.
 export const IMAGE_ALIGNS = ["left", "center", "right"];
 
+/**
+ * The short extension an image block stores for a mime type. svg is
+ * unsupported by the docx export, so it maps to png, as does anything unknown.
+ * @param {string} mime
+ * @returns {string}
+ */
+export function extFromMime(mime) {
+  const raw = (mime || "").toLowerCase().replace(/^image\//, "");
+  if (raw === "jpeg") return "jpg";
+  if (raw === "svg+xml") return "png";
+  if (["png", "jpg", "gif", "bmp", "webp"].includes(raw)) return raw;
+  return "png";
+}
+
 export const DEFAULT_IMAGE_SIZE = "full";
 export const DEFAULT_IMAGE_ALIGN = "center";
 

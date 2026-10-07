@@ -23,6 +23,7 @@ export {
   SPELLING_MIN_LETTERS,
   SPELLING_WORDS_PER_SECTION,
   isFormattingFinding,
+  newFindings,
   normalizeText,
   validateLesson,
 } from "@spelling-creator/core/lessonChecks";
@@ -146,19 +147,4 @@ export function validationErrorMessage(errors) {
     "Correct these and call the tool again. If the user genuinely wants a lesson the standard forbids, " +
     'pass "skipValidation": true to save it as-is.'
   );
-}
-
-/**
- * Findings the caller is responsible for: everything in `after` that wasn't
- * already true of `before`. Used by patch_lesson so a one-line tweak to a lesson
- * written elsewhere (in the web editor, or before these rules existed) isn't
- * blocked by defects the patch didn't introduce. Keyed on the defect's identity
- * rather than its message, so inserting a section doesn't make every later
- * finding look new.
- * @param {Finding[]} before
- * @param {Finding[]} after
- */
-export function newFindings(before, after) {
-  const existing = new Set(before.map((f) => f.key));
-  return after.filter((f) => !existing.has(f.key));
 }

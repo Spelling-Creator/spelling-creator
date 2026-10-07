@@ -14,10 +14,10 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
   buildDoc,
-  buildLessonFile,
   presentDoc,
   QUESTION_TYPES,
-} from "./doc.js";
+} from "@spelling-creator/core/lessonBuild";
+import { buildLessonFile } from "@spelling-creator/core/lessonFile";
 import {
   forkLesson,
   mergeProposal,
@@ -25,7 +25,7 @@ import {
   recordLessonHistory,
   reviewProposal,
 } from "./git.js";
-import { applyPatch, findBlock } from "./patch.js";
+import { applyPatch, findBlock } from "@spelling-creator/core/lessonPatch";
 import {
   searchWikimediaImages,
   resolveWikimediaImage,
@@ -289,7 +289,7 @@ const sectionsSchema = z
       "words, and 15 questions on that section's own content (see blocks below).",
   );
 
-// One patch operation (for patch_lesson). Kept lenient — applyPatch (patch.js)
+// One patch operation (for patch_lesson). Kept lenient — applyPatch (core's lessonPatch.js)
 // does the strict per-op validation and returns errors naming the operation.
 const operationSchema = z
   .object({

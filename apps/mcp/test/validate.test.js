@@ -10,8 +10,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildDoc } from "../src/doc.js";
-import { applyPatch } from "../src/patch.js";
+import { buildDoc } from "@spelling-creator/core/lessonBuild";
+import { applyPatch } from "@spelling-creator/core/lessonPatch";
 import {
   formatFindings,
   inputBlocksFromOperations,

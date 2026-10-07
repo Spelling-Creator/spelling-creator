@@ -1,17 +1,18 @@
 // Apply a small list of edit operations to a lesson document, instead of
 // resending the whole thing. The Worker only offers a full-replace PUT, so the
-// patch_lesson tool fetches the current doc, runs it through applyPatch here,
-// and PUTs the result — but the assistant only has to send the diff.
+// MCP server's patch_lesson tool fetches the current doc, runs it through
+// applyPatch here, and PUTs the result, while the assistant only has to send
+// the diff.
 //
 // Operations address sections and blocks by their stable `id` (the ones
 // get_lesson returns), not by array position — far more robust for a model than
 // index- or JSON-pointer-based diffs, which drift as soon as anything shifts.
 //
-// New blocks reuse the canonical builder from doc.js, so a patched block is
-// validated exactly like one created from scratch.
+// New blocks reuse the canonical builder from lessonBuild.js, so a patched
+// block is validated exactly like one created from scratch.
 
-import { removeSourceCitations } from "@spelling-creator/core/lessonText";
-import { buildBlock, buildSources, newId } from "./doc.js";
+import { removeSourceCitations } from "./lessonText.js";
+import { buildBlock, buildSources, newId } from "./lessonBuild.js";
 
 const OPS = [
   "set_title",

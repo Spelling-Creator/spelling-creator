@@ -1455,3 +1455,19 @@ function checkCitations(doc, context, error) {
 export function isFormattingFinding(finding) {
   return /^[EW]_FORMAT_/.test(finding.code);
 }
+
+/**
+ * Findings an edit is responsible for: everything in `after` that wasn't
+ * already true of `before`. The MCP server's patch_lesson uses it so a one-line
+ * tweak to a lesson written elsewhere (in the web editor, or before these rules
+ * existed) isn't blocked by defects the patch didn't introduce. Keyed on the
+ * defect's identity rather than its message, so inserting a section doesn't
+ * make every later finding look new.
+ * @param {Finding[]} before
+ * @param {Finding[]} after
+ * @returns {Finding[]}
+ */
+export function newFindings(before, after) {
+  const existing = new Set(before.map((f) => f.key));
+  return after.filter((f) => !existing.has(f.key));
+}
