@@ -23,7 +23,8 @@ runs on every write: `@spelling-creator/core/lessonChecks`.
 Nothing blocks. A lesson with problems saves, exports, publishes and prints
 exactly as before.
 
-Some findings also have a fix button under them. See [Fixing findings](#fixing-findings).
+Some findings also have a fix button under them, or **Fix with AI**. See
+[Fixing findings](#fixing-findings).
 
 Below the problems and suggestions, the panel has a **Facts** section that compares
 the passages' numbers and dates with Wikidata. It is a different kind of check: it
@@ -82,7 +83,11 @@ line goes and History is the way back. The Undo is in the panel rather than in a
 toast because the panel is modal, and while it is open nothing outside it can
 be clicked.
 
-The fixes live in `packages/core/src/lessonFixes.js`. Each takes the document
+Most findings need judgement instead: whether to change an answer or the
+passage it should be in, say. Those get **Fix with AI**, which shows the fix
+before making it. See [AI lesson fixes](./ai-lesson-fixes.md).
+
+The quick fixes live in `packages/core/src/lessonFixes.js`. Each takes the document
 and the finding and returns the fixed document, or null when there is nothing
 left to do. Only the section and blocks a fix touches are new objects, and text
 blocks are written with `withTextBlockDocument`, the way the editor writes them.

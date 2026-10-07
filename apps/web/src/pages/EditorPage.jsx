@@ -1,4 +1,4 @@
-import { hasApi } from "@spelling-creator/core/config";
+import { hasApi, hasTurnstile } from "@spelling-creator/core/config";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { DocumentMeta } from "../lib/seo.jsx";
@@ -41,6 +41,8 @@ import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
 import { useLessonChecks } from "../lib/lessonChecks.js";
 import { applyQuickFix } from "@spelling-creator/core/lessonFixes";
+import { checkFix } from "@spelling-creator/core/lessonAiFixes";
+import AiFixDialog from "../components/editor/AiFixDialog.jsx";
 import { useFactCheck } from "../lib/factCheck.js";
 import { LessonSourcesProvider } from "../lib/lessonSources.jsx";
 import { createSource } from "@spelling-creator/core/sources";
@@ -945,6 +947,18 @@ export default function EditorPage() {
       if (!applied) toast.info(tChecks("fix.gone"));
     },
     [applyLessonFix, tChecks],
+  );
+
+  // The finding AiFixDialog is open for, if any. Its fix is checked once more
+  // against the lesson as it is at the moment it's applied.
+  const [aiFixFinding, setAiFixFinding] = useState(null);
+  const applyAiFix = useCallback(
+    (operations) =>
+      applyLessonFix((current) => {
+        const result = checkFix(current, operations, aiFixFinding);
+        return result.ok ? result.doc : null;
+      }),
+    [applyLessonFix, aiFixFinding],
   );
 
   // Remember which block the user was last typing in.
@@ -3492,6 +3506,16 @@ export default function EditorPage() {
         onGoTo={goToFinding}
         onFix={quickFixFinding}
         onUndoFix={lastFix?.fixed === doc ? undoLessonFix : undefined}
+        onAiFix={hasApi() && hasTurnstile() ? setAiFixFinding : undefined}
+      />
+
+      {/* Over the Check panel, so the list is still there once a fix is in. */}
+      <AiFixDialog
+        open={Boolean(aiFixFinding)}
+        finding={aiFixFinding}
+        doc={doc}
+        onApply={applyAiFix}
+        onClose={() => setAiFixFinding(null)}
       />
 
       {/* The lesson's own version history, read out of its git repository. */}
