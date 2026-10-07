@@ -27,7 +27,12 @@ local [stdio setup](./setup.md) remains the CLI-first path.
 
 The tool layer (`src/tools.js`) and API client (`src/api.js`) are the exact
 same code the [stdio server](./setup.md) uses: the same tools, the same
-validation, the same author attribution.
+validation, the same author attribution. That includes the
+[live session](./live-sessions.md) tools: `HubMcp` hibernates between tool
+calls and rebuilds its server on the way back, so the one thing those tools
+must remember (which session the connection is in) is kept in the Durable
+Object's own storage rather than in the server. See
+[Asking, not listening](./live-sessions.md#asking-not-listening).
 
 ## Worker-side implementation
 
@@ -35,9 +40,11 @@ The whole thing is implemented in `apps/api`, not `apps/mcp`; the MCP package
 only supplies the two remote-specific pieces the Worker composes:
 
 - **`src/worker.js`** (`@spelling-creator/mcp/worker`): `buildMcpServer`
-  (build a connection-scoped `McpServer` given any auth provider) and
+  (build a connection-scoped `McpServer` given any auth provider),
   `grantAuth` (an auth provider seeded from an OAuth grant's `props`, with the
-  same getAccessToken()/forceRefresh() shape the stdio auth provider has).
+  same getAccessToken()/forceRefresh() shape the stdio auth provider has) and
+  `durableSessionStore` (the live-session handle, kept in a Durable Object's
+  storage so it survives hibernation).
 - **`src/auth.js`** (`@spelling-creator/mcp/auth`): `refreshSupabaseSession`,
   the plain Supabase refresh-token-exchange call shared by the stdio server,
   `grantAuth`'s fallback, and the Worker's token endpoint (below).

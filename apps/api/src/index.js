@@ -12,7 +12,7 @@ import { createApp, cors, registerFrontend, req, urlOf } from './app.js';
 
 import { CollabRoom } from './collab-room.js';
 import { ogImage, handleFrontend } from './routes/render.js';
-import { handleCollab } from './routes/collab.js';
+import { handleCollab, handleCollabAgent } from './routes/collab.js';
 import { HubMcp, registerOAuthConsentRoutes, buildOAuthProvider } from './routes/mcp.js';
 
 // Re-export the Durable Object classes so Wrangler can bind them (the
@@ -24,6 +24,12 @@ const app = createApp();
 
 // Open Graph preview image: a headless-Chromium screenshot of an in-site page.
 app.get('/og-image', (c) => ogImage(req(c), c.env, c.executionCtx, urlOf(c)));
+
+// An AI assistant taking part in a session over HTTP (the MCP server can't hold
+// a socket between tool calls). Registered first: its GET would otherwise be
+// taken for a WebSocket upgrade by the wildcard below.
+app.all('/collab/:code/agent', (c) => handleCollabAgent(req(c), c.env, urlOf(c), cors(c)));
+app.all('/collab/:code/agent/*', (c) => handleCollabAgent(req(c), c.env, urlOf(c), cors(c)));
 
 // Live-collaboration WebSocket. A WS upgrade arrives as a GET, so this must be
 // registered before the GET/HEAD frontend fall-through below would shadow it.

@@ -613,17 +613,17 @@ function preexistingSummary(count) {
 /**
  * Attach all tools to an MCP server.
  *
- * `ctx.live` says whether this transport can hold state between tool calls.
- * Stdio can — it is one process per client — so it gets the collaboration
- * session tools. The Worker builds a fresh server per request and has nowhere to
- * keep a WebSocket, so it doesn't, and they are left unregistered rather than
- * advertised and then failing at the one moment somebody needs them.
+ * `ctx.sessionStore` is where the live-session tools keep which session this
+ * connection is in between calls: a variable by default, which suits stdio (one
+ * process per client), or the connection's Durable Object storage on the remote
+ * transport, whose server is rebuilt after every hibernation. See collabTools.js.
  *
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server
- * @param {{ api: ReturnType<import('./api.js').createApi>, config: ReturnType<import('./config.js').loadConfig>, auth?: any, live?: boolean }} ctx
+ * @param {{ api: ReturnType<import('./api.js').createApi>, config: ReturnType<import('./config.js').loadConfig>,
+ *   sessionStore?: { get: Function, set: Function, clear: Function }, collabJoinWaitMs?: number }} ctx
  */
 export function registerTools(server, ctx) {
-  const { api, config, auth, live = false } = ctx;
+  const { api, config, sessionStore, collabJoinWaitMs } = ctx;
 
   // The `ui://` resources behind the tools that have a view. Registered
   // unconditionally: a host that doesn't do MCP Apps simply never reads them.
@@ -2408,21 +2408,20 @@ export function registerTools(server, ctx) {
     ),
   );
 
-  // Live collaboration, where the transport can hold a session open. These need
-  // the auth token directly (the room authenticates the WebSocket itself, rather
-  // than through the API client) and they share this file's tool wrapper and
-  // standard check, so what the assistant is told about a live edit matches what
-  // it is told about a saved one.
-  if (live && auth) {
-    registerCollabTools(server, {
-      config,
-      auth,
-      text,
-      tool,
-      standardFindings,
-      clientName,
-    });
-  }
+  // Live collaboration. The room keeps the assistant as a participant it can be
+  // asked about, so these go through the same API client as everything else and
+  // hold nothing open; they share this file's tool wrapper and standard check,
+  // so what the assistant is told about a live edit matches what it is told
+  // about a saved one.
+  registerCollabTools(server, {
+    api,
+    text,
+    tool,
+    standardFindings,
+    clientName,
+    sessionStore,
+    ...(collabJoinWaitMs ? { joinWaitMs: collabJoinWaitMs } : {}),
+  });
 }
 
 // The server's identifying metadata, shared by both transports.
@@ -2432,5 +2431,5 @@ export function registerTools(server, ctx) {
 // every client UI and bug report.
 export const SERVER_INFO = {
   name: "spelling-creator-hub",
-  version: "0.22.0",
+  version: "0.26.0",
 };

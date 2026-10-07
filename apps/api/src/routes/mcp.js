@@ -14,7 +14,7 @@
 
 import { OAuthProvider, GrantType } from '@cloudflare/workers-oauth-provider';
 import { McpAgent } from 'agents/mcp';
-import { buildMcpServer, grantAuth } from '@spelling-creator/mcp/worker';
+import { buildMcpServer, durableSessionStore, grantAuth } from '@spelling-creator/mcp/worker';
 import { refreshSupabaseSession } from '@spelling-creator/mcp/auth';
 import { handleAuthorize, handleOAuthRequest, handleOAuthApprove } from './oauth.js';
 
@@ -34,7 +34,13 @@ export function mcpConfig(env) {
 export class HubMcp extends McpAgent {
 	async init() {
 		const config = mcpConfig(this.env);
-		this.server = buildMcpServer(config, grantAuth(config, this.props));
+		// This object hibernates between tool calls and `init` runs again on the
+		// way back, so anything the tools must remember across calls lives in its
+		// storage rather than in the server they build. Today that is one thing:
+		// which live collaboration session the connection is taking part in.
+		this.server = buildMcpServer(config, grantAuth(config, this.props), {
+			sessionStore: durableSessionStore(this.ctx.storage),
+		});
 	}
 }
 

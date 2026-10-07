@@ -84,16 +84,32 @@ export function grantAuth(config, props) {
 }
 
 /**
+ * Where a connection remembers which live session it is in, backed by a
+ * Durable Object's storage so it survives the object hibernating or being
+ * evicted between tool calls (see collabTools.js for what is kept).
+ * @param {{ get: Function, put: Function, delete: Function }} storage
+ */
+export function durableSessionStore(storage) {
+  const KEY = "spelling-creator:collab-session";
+  return {
+    get: () => storage.get(KEY).then((v) => v || null),
+    set: (handle) => storage.put(KEY, handle),
+    clear: () => storage.delete(KEY).then(() => undefined),
+  };
+}
+
+/**
  * Build a connection-scoped MCP server bound to an auth provider (either
  * `grantAuth` above, for remote, or `createAuth` from auth.js, for stdio).
  * @param {{ apiUrl: string, supabaseUrl: string, supabaseAnonKey: string }} config
  * @param {{ getAccessToken: Function, forceRefresh: Function }} auth
+ * @param {{ sessionStore?: { get: Function, set: Function, clear: Function } }} [options]
  */
-export function buildMcpServer(config, auth) {
+export function buildMcpServer(config, auth, { sessionStore } = {}) {
   const api = createApi(config, auth);
   const server = new McpServer(SERVER_INFO, {
     instructions: LESSON_STANDARDS,
   });
-  registerTools(server, { api, config });
+  registerTools(server, { api, config, sessionStore });
   return server;
 }
