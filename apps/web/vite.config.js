@@ -84,6 +84,11 @@ const SSR_UNREACHABLE = [
   // reached only through the dynamic import() in core/browser/summarizer.js,
   // from a click on Summarise, and its model download is ~760 MB on WebGPU.
   "../../packages/core/src/browser/fallbackSummarizer.js",
+  // The on-device model behind Import from text (LFM2 Extract, fine-tuned),
+  // same story: reached only through the dynamic import() in
+  // core/browser/documentModel.js, from a click in the import dialog, and its
+  // model download is ~640 MB on WebGPU.
+  "../../packages/core/src/browser/documentModelEngine.js",
 ];
 
 function stubUnreachableOnServer() {

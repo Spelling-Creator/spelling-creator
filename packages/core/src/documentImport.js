@@ -22,7 +22,7 @@
 // answers and the wording, the same way a reader would tell them apart.
 
 import { normalizeLessonFile } from "./jsonImport.js";
-import { ANSWER_GAP } from "./questions.js";
+import { ANSWER_GAP, QUESTION_TYPES } from "./questions.js";
 
 export class DocumentImportError extends Error {
   constructor(message) {
@@ -309,8 +309,13 @@ export function deriveQuestionType(question, passage) {
   return inPassage(answers[0]) ? "single" : "background";
 }
 
+// The type is derived unless the section came from the model, whose own type
+// (when it names a real one) was right more often than the rule in the
+// experiment; the parser never sets one.
 function questionBlock(q, passage) {
-  const questionType = deriveQuestionType(q, passage);
+  const questionType = QUESTION_TYPES[q.type]
+    ? q.type
+    : deriveQuestionType(q, passage);
   const base = { type: "question", questionType, prompt: q.prompt };
   switch (questionType) {
     case "number":
@@ -349,22 +354,32 @@ export function previewLessonText(text) {
 }
 
 /**
- * The text of a document as a lesson in the editor's shape, or a
- * DocumentImportError when no lesson can be found in it.
- * @param {string} text
+ * A section the parser could not really read: it found a passage but no
+ * questions. That is the case the on-device model exists for; a section with
+ * questions is one the rules read, and the model would do no better.
+ * @param {{paragraphs: string[], questions: object[]}} parsed
+ * @returns {boolean}
+ */
+export function sectionNeedsModel(parsed) {
+  return parsed.questions.length === 0;
+}
+
+const NO_LESSON_MESSAGE =
+  "No lesson was found in this text. It needs at least one passage followed by its questions, one question per line.";
+
+/**
+ * A lesson in the editor's shape from sections already parsed (by the rules,
+ * by the model, or some of each), or a DocumentImportError when there are
+ * none.
+ * @param {string} title
+ * @param {Array<{name: string, paragraphs: string[], spellingWords: string[], questions: object[], vakt?: string[]}>} sections
  * @returns {{title: string, sections: object[]}}
  */
-export function importLessonText(text) {
-  const { title, sections } = splitSections(text);
-  if (!sections.length) {
-    throw new DocumentImportError(
-      "No lesson was found in this text. It needs at least one passage followed by its questions, one question per line.",
-    );
-  }
+export function lessonFromSections(title, sections) {
+  if (!sections.length) throw new DocumentImportError(NO_LESSON_MESSAGE);
   return normalizeLessonFile({
     title: title || "Imported lesson",
-    sections: sections.map(({ heading, lines }, i) => {
-      const s = parseSection(lines, heading);
+    sections: sections.map((s, i) => {
       const passage = s.paragraphs.join("\n");
       return {
         name: s.name || `Section ${i + 1}`,
@@ -374,9 +389,23 @@ export function importLessonText(text) {
             ? [{ type: "spelling", words: s.spellingWords }]
             : []),
           ...s.questions.map((q) => questionBlock(q, passage)),
-          ...s.vakt.map((text) => ({ type: "vakt", text, links: [] })),
+          ...(s.vakt || []).map((text) => ({ type: "vakt", text, links: [] })),
         ],
       };
     }),
   });
+}
+
+/**
+ * The text of a document as a lesson in the editor's shape, or a
+ * DocumentImportError when no lesson can be found in it.
+ * @param {string} text
+ * @returns {{title: string, sections: object[]}}
+ */
+export function importLessonText(text) {
+  const { title, sections } = splitSections(text);
+  return lessonFromSections(
+    title,
+    sections.map(({ heading, lines }) => parseSection(lines, heading)),
+  );
 }
