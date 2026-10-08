@@ -111,6 +111,10 @@ export default defineConfig({
           { text: "The platform seam", link: "/monorepo/platform-seam" },
           { text: "Self-hosting", link: "/monorepo/self-hosting" },
           { text: "Frontend migration", link: "/monorepo/frontend-migration" },
+          {
+            text: "Document import experiment",
+            link: "/monorepo/document-import-experiment",
+          },
         ],
       },
       {
