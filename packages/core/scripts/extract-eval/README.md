@@ -38,8 +38,19 @@ uploaded, pass `--local-models <dir>` and name the folder under it with
 
 `publish-colab.ipynb` picks up after a training run whose session has ended:
 from the merged model on the Hub it builds the int8 CPU export, checks that it
-copies a section rather than paraphrasing it, writes a model card and the LFM
-licence into both repos, and uploads.
+copies a section rather than paraphrasing it, and uploads it.
+
+The model cards for the two published repos are in `model-cards/`, one file
+per repo, and go up with the Hub CLI along with the base model's licence,
+which the derived repos must carry:
+
+```bash
+hf download LiquidAI/LFM2-1.2B-Extract LICENSE --local-dir /tmp/lfm2
+hf upload playforgecoding/LFM2-1.2B-Extract-lesson model-cards/LFM2-1.2B-Extract-lesson.md README.md
+hf upload playforgecoding/LFM2-1.2B-Extract-lesson /tmp/lfm2/LICENSE LICENSE
+hf upload playforgecoding/LFM2-1.2B-Extract-lesson-ONNX model-cards/LFM2-1.2B-Extract-lesson-ONNX.md README.md
+hf upload playforgecoding/LFM2-1.2B-Extract-lesson-ONNX /tmp/lfm2/LICENSE LICENSE
+```
 
 What it does:
 
