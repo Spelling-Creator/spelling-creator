@@ -36,6 +36,11 @@ details and the browser verification. To score an export before it is
 uploaded, pass `--local-models <dir>` and name the folder under it with
 `--models`.
 
+`publish-colab.ipynb` picks up after a training run whose session has ended:
+from the merged model on the Hub it builds the int8 CPU export, checks that it
+copies a section rather than paraphrasing it, writes a model card and the LFM
+licence into both repos, and uploads.
+
 What it does:
 
 1. `lessons.mjs` fetches the newest six-section lessons from the public hub and

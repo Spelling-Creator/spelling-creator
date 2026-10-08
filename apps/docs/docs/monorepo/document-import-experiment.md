@@ -251,6 +251,17 @@ with q4 (15.7 seconds, single-threaded). All three produced the same correct
 JSON. The notebook's last cells run exactly this, and the result is a repo
 `run.mjs --models` and the app's own loader can take.
 
+One caveat found on the fine-tuned checkpoint itself: its WebGPU `q4f16`
+export copies a real section faithfully, but its CPU `q4` export paraphrases
+the passage instead of copying it, with or without the embedding option and
+with full-precision matmul compute, while the stock model's CPU export is
+fine. The cause was not found. `publish-colab.ipynb` builds an int8 CPU export
+as the candidate replacement and checks it before uploading, alongside the
+model cards for both repos. The published exports:
+[LFM2-1.2B-Extract-lesson](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson)
+(merged weights) and
+[LFM2-1.2B-Extract-lesson-ONNX](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson-ONNX).
+
 ## Running it again
 
 ```bash
