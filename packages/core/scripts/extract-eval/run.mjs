@@ -47,6 +47,7 @@ const { values: args } = parseArgs({
         "onnx-community/LFM2-1.2B-Extract-ONNX,onnx-community/LFM2-350M-Extract-ONNX",
     },
     dtype: { type: "string", default: "q4" },
+    "local-models": { type: "string", default: "" },
     styles: { type: "string", default: "docx,plain" },
     "max-new-tokens": { type: "string", default: "1500" },
     out: { type: "string", default: path.join(here, "out") },
@@ -137,7 +138,13 @@ for (const id of passes) {
   let ctx = null;
   if (id !== "none") {
     log(`\nLoading ${id} (${args.dtype})`);
-    ctx = await loadModel({ id, dtype: args.dtype, cacheDir: args.cache, log });
+    ctx = await loadModel({
+      id,
+      dtype: args.dtype,
+      cacheDir: args.cache,
+      localDir: args["local-models"] || undefined,
+      log,
+    });
   }
   for (const c of cases) {
     const gtSections = c.lesson.doc.sections.map(groundTruthSection);

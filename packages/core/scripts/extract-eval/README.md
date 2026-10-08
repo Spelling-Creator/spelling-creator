@@ -32,7 +32,9 @@ onnxruntime-genai model builder, which is what the onnx-community LFM2 files
 were made with, and `relayout-onnx.py` turns the builder's output into the
 layout transformers.js loads (cache names, a concrete cache dimension, the
 chat template and config settings, the `onnx/` folder). The docs page has the
-details and the browser verification.
+details and the browser verification. To score an export before it is
+uploaded, pass `--local-models <dir>` and name the folder under it with
+`--models`.
 
 What it does:
 

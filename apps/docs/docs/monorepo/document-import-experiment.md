@@ -272,7 +272,9 @@ measures against the same held-out lessons.
 
 `--models` takes any transformers.js-compatible causal LM on the Hub; a model
 id containing "Extract" gets the model card's schema prompt, anything else the
-same schema inside an instruction. Outputs, rendered documents and the summary
+same schema inside an instruction. `--local-models <dir>` reads them from a
+folder laid out the Hub way instead (`<dir>/<name>/onnx/model_<dtype>.onnx`),
+for an export that has not been uploaded yet. Outputs, rendered documents and the summary
 table land in `scripts/extract-eval/out/` (or the `--out` folder); models are
 cached in `scripts/extract-eval/.cache/` (about 3.5 GB for the four above). All
 of it is gitignored.

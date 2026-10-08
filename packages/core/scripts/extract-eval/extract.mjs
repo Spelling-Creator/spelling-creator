@@ -152,10 +152,15 @@ export async function loadModel({
   id,
   dtype = "q4",
   cacheDir,
+  localDir,
   log = () => {},
 }) {
   env.cacheDir = cacheDir;
-  env.allowLocalModels = false;
+  // A folder of models laid out the Hub way (<id>/onnx/model_<dtype>.onnx)
+  // instead of the Hub itself: for an export that has not been uploaded yet.
+  env.allowLocalModels = Boolean(localDir);
+  env.allowRemoteModels = !localDir;
+  if (localDir) env.localModelPath = localDir;
   const seen = new Map();
   const progress_callback = (p) => {
     if (p.status !== "progress") return;
