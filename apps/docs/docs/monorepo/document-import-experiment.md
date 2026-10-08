@@ -205,6 +205,52 @@ standard would add volume without any hand labelling.
    model produces a lesson that passes the checks, mirroring the translator's
    built-in-first chain.
 
+## Converting a fine-tuned LFM2 to ONNX for transformers.js
+
+The stock LFM2 files the app loads come from onnx-community, and transformers.js
+v4 no longer ships the conversion script that made them, so the route for a
+fine-tuned checkpoint had to be worked out. The onnx-community graphs carry
+the fingerprints of Microsoft's onnxruntime-genai model builder (its node
+names, GroupQueryAttention and MatMulNBits), and that builder is public,
+supports `Lfm2ForCausalLM`, and takes a local checkpoint folder:
+
+```bash
+pip install onnxruntime-genai onnx onnx_ir onnxscript
+python -m onnxruntime_genai.models.builder -i merged -o build-cpu -p int4 -e cpu \
+    --extra_options shared_embeddings=false
+python -m onnxruntime_genai.models.builder -i merged -o build-webgpu -p int4 -e webgpu
+python relayout-onnx.py build-cpu onnx-repo q4 merged
+python relayout-onnx.py build-webgpu onnx-repo q4f16 merged
+```
+
+Neither optimum-onnx (no LFM2 support) nor Liquid's own LiquidONNX wrapper
+(its output targets onnxruntime-genai, and its README says it is not loadable
+by transformers.js) does this on its own. The builder's raw output is not
+loadable either, for three small reasons that `relayout-onnx.py` fixes:
+
+- the convolution caches are named `past.N.conv`, where transformers.js feeds
+  `past_conv.N` and maps `present_conv.N` back to it;
+- the key/value cache's head dimension is left symbolic, and transformers.js
+  sizes the first empty cache from the declared shape, so it allocated a
+  zero-width cache;
+- the chat template is a separate `chat_template.jinja` file, and the config
+  lacks the `transformers.js_config` block that tells the browser to fetch the
+  external weights file. The files also go under `onnx/model_<dtype>.onnx`.
+
+One more for the CPU build: for a model that ties its input and output
+embeddings, which LFM2 does, the builder emits an int8 embedding lookup
+(`GatherBlockQuantized`) that onnxruntime-web's wasm backend has no kernel
+for. `shared_embeddings=false` keeps the embedding as a plain table, as the
+onnx-community files have it. The WebGPU backend runs the quantised one, so
+the q4f16 build keeps the smaller default.
+
+Verified on the stock 350M Extract model with the same transformers.js version
+the app uses: through onnxruntime-node (38 tokens in 0.3 seconds), and in
+headless Chromium on both backends, WebGPU with q4f16 (0.8 seconds) and wasm
+with q4 (15.7 seconds, single-threaded). All three produced the same correct
+JSON. The notebook's last cells run exactly this, and the result is a repo
+`run.mjs --models` and the app's own loader can take.
+
 ## Running it again
 
 ```bash

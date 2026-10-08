@@ -27,7 +27,12 @@ lessons.
 the two JSONL files, fill in your Hugging Face name in the first cell and run
 it top to bottom. It trains a LoRA adapter on LFM2-1.2B-Extract, scores the
 held-out sections, merges, converts to ONNX with the transformers.js script and
-pushes a repo that `run.mjs --models` can take.
+pushes a repo that `run.mjs --models` can take. The conversion uses Microsoft's
+onnxruntime-genai model builder, which is what the onnx-community LFM2 files
+were made with, and `relayout-onnx.py` turns the builder's output into the
+layout transformers.js loads (cache names, a concrete cache dimension, the
+chat template and config settings, the `onnx/` folder). The docs page has the
+details and the browser verification.
 
 What it does:
 
