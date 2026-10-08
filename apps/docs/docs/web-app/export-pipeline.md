@@ -70,7 +70,10 @@ That is also how **import** recovers a question's type now that nothing in the
 visible text names it: `docxImport` asks mammoth for the same style map and reads
 the type off the `<span class="s2c-q-…">`. Section _divisions_ have nothing left
 to carry them, so a DOCX round trip collapses a lesson into a single section;
-Export/Import **JSON** is the lossless one. It carries the title, the age range,
+Export/Import **JSON** is the lossless one. A document that was never exported from
+here at all, a hand-typed page or a Word file written elsewhere, goes through
+[Import from text](./document-import.md) instead, which reads the lesson by its
+structure rather than by styles. Export/Import **JSON** carries the title, the age range,
 the lesson's sources and every section. The one thing it leaves out on purpose is the lesson's
 trusted-collaborator list, because that is a list of email addresses and a
 lesson file is something people pass around. On import, an age range the editor

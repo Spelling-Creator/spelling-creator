@@ -127,6 +127,7 @@ export default defineConfig({
             text: "Lessons on this device",
             link: "/web-app/local-lessons",
           },
+          { text: "Import from text", link: "/web-app/document-import" },
           { text: "Server rendering", link: "/web-app/server-rendering" },
           { text: "Question blocks", link: "/web-app/question-blocks" },
           { text: "VAKT activities", link: "/web-app/vakt-activities" },

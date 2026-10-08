@@ -193,7 +193,8 @@ standard would add volume without any hand labelling.
 1. **Ship the parser.** For any document with a recognisable layout, which
    covers the app's own export and every typed-up style tried here, the rules
    get 96 to 98 percent with no model, no download and no wait. The type is
-   derived, and the lesson checks run on the result. The parser lives in
+   derived, and the lesson checks run on the result. This is now the editor's
+   [Import from text](/web-app/document-import); the parser lives in
    `packages/core/src/documentImport.js` and the scripts here call it.
 2. **Keep the model out of the regular path.** Stock, it loses to a regular
    expression on the one job left for it. A fine-tuned LFM2 Extract is still

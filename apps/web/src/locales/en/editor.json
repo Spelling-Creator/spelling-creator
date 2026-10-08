@@ -7,6 +7,7 @@
     "lessonsTooltip": "Every lesson on this device. Switch between them, copy one, or start another; nothing you're working on is replaced.",
     "importWord": "Import Word document",
     "importJson": "Import JSON",
+    "importText": "Import from text",
     "github": "GitHub",
     "helpAriaLabel": "how to create a lesson",
     "helpTooltip": "How to create a lesson",
@@ -103,6 +104,22 @@
     "close": "Close",
     "tryAnotherFile": "Try another file"
   },
+  "documentImport": {
+    "title": "Import from text",
+    "description": "Paste a lesson from anywhere, or choose a text or Word file that wasn't made by this app. Each section needs its passage first, then its questions, one per line, with any answer after the question.",
+    "textLabel": "Lesson text",
+    "placeholder": "Paste the lesson here...",
+    "chooseFile": "Choose file",
+    "reading": "Reading...",
+    "fileTypes": ".txt, .md or .docx",
+    "foundTitle": "\"{{title}}\": {{count}} section(s) found",
+    "sectionCounts": "{{paragraphs}} paragraphs · {{words}} spelling words · {{questions}} questions ({{answered}} with answers)",
+    "typesNote": "Question types are worked out from the answers and the wording, so check them after importing.",
+    "nothingFound": "No lesson was found in this text yet. It needs at least one passage followed by its questions, one question per line.",
+    "couldNotRead": "This file couldn't be read.",
+    "cancel": "Cancel",
+    "import": "Import as a new lesson"
+  },
   "messages": {
     "addSectionBeforeExporting": "Add at least one section before exporting.",
     "wordDownloaded": "Word document downloaded.",
@@ -138,6 +155,7 @@
     "jsonImportFailed": "This JSON file couldn't be imported. Please check it and try again.",
     "importedJson": "Imported from JSON. Review the lesson, then save it to the cloud when you're ready.",
     "importedWord": "Imported from Word. Word import is best-effort, so review the lesson, as some formatting or content may have been lost.",
+    "importedText": "Imported from text. Check the question types and answers, which were worked out from the wording, then save it to the cloud when you're ready.",
     "forkedWithHistory": "Forked into a new lesson; its full history came with it. Edit freely, then save it as your own copy.",
     "forkedWithoutHistory": "Forked into a new lesson. Edit freely, then save it to the cloud as your own copy.",
     "loadedPublished": "Loaded your published lesson. Edit and save to the cloud to update it.",
