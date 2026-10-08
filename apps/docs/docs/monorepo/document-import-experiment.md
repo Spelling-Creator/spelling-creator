@@ -256,12 +256,41 @@ export copies a real section faithfully, but its CPU `q4` export paraphrases
 the passage instead of copying it, with or without the embedding option and
 with full-precision matmul compute, while the stock model's CPU export is
 fine. The cause was not found. `publish-colab.ipynb` builds an int8 CPU export
-as the candidate replacement and checks it before uploading. The model cards
-for both repos live in `scripts/extract-eval/model-cards/` and are pushed
-with the Hub CLI (the README there has the commands). The published exports:
+instead and checks it before uploading, and that one is faithful.
+
+### The fine-tuned model through the same scorer
+
+The published int8 export, scored with `run.mjs --dtype int8` on the two
+lessons held out of training (two sections each, all seven layouts):
+
+| layout  | parsed | passage words | spelling | prompts F1 | types (model) | types (derived) | answers | composite |
+| ------- | -----: | ------------: | -------: | ---------: | ------------: | --------------: | ------: | --------: |
+| docx    |   100% |          100% |     100% |       100% |           99% |             88% |    100% |       98% |
+| plain   |   100% |          100% |     100% |       100% |           96% |             88% |    100% |       98% |
+| qa      |   100% |          100% |      81% |       100% |           93% |             88% |     98% |       94% |
+| caps    |    75% |           75% |      75% |        75% |           73% |             63% |     75% |       73% |
+| bullets |   100% |          100% |     100% |       100% |           96% |             88% |    100% |       98% |
+| colon   |   100% |          100% |     100% |        98% |           94% |             89% |     96% |       97% |
+| worked  |   100% |          100% |     100% |       100% |           93% |             88% |    100% |       98% |
+
+Set beside the stock model's 74 percent composite on the typed layout and 34
+percent on the Word export, and the rules' 96 to 98 percent, the fine-tune
+has caught up with the parser on every regular layout. The one miss in the
+capitals layout is a single long section whose reply hit the 1,500-token cap
+before closing its JSON. Two things the sample in the training notebook did
+not show: the fine-tuned model's own type guesses are now right 93 to 99
+percent of the time, above the derived rule, and the answers are exact on
+every layout but the capitals one. About 30 seconds a section on an M4's CPU
+through onnxruntime-node.
+
+The model cards for both repos live in `scripts/extract-eval/model-cards/`
+and are pushed with the Hub CLI (the README there has the commands). The
+published exports:
 [LFM2-1.2B-Extract-lesson](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson)
 (merged weights) and
-[LFM2-1.2B-Extract-lesson-ONNX](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson-ONNX).
+[LFM2-1.2B-Extract-lesson-ONNX](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson-ONNX)
+(use `q4f16` on WebGPU and `int8` on a CPU; the `q4` file is kept only for
+reference).
 
 ## Running it again
 

@@ -37,11 +37,33 @@ model's card.
 
 ## Files
 
-| file                    | for                                              | note                                                                                  |
-| ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `onnx/model_q4f16.onnx` | WebGPU (`device: "webgpu"`, `dtype: "q4f16"`)    | Verified: copies a real section faithfully in Chromium. The one to ship in a browser. |
-| `onnx/model_int8.onnx`  | CPU: Node and the wasm backend (`dtype: "int8"`) | Added only once it has passed the copy check in the publish notebook.                 |
-| `onnx/model_q4.onnx`    | CPU                                              | Not faithful for this checkpoint: paraphrases instead of copying. Kept for reference. |
+| file                    | for                                              | note                                                                                                                                             |
+| ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `onnx/model_q4f16.onnx` | WebGPU (`device: "webgpu"`, `dtype: "q4f16"`)    | Verified: copies a real section faithfully in Chromium. The one to ship in a browser.                                                            |
+| `onnx/model_int8.onnx`  | CPU: Node and the wasm backend (`dtype: "int8"`) | Verified through transformers.js on the held-out lessons: answers 96 to 100% exact on six of seven layouts (see below). The one to use on a CPU. |
+| `onnx/model_q4.onnx`    | CPU                                              | Not faithful for this checkpoint: paraphrases instead of copying. Kept for reference.                                                            |
+
+## Results of the int8 export
+
+Scored through transformers.js (onnxruntime-node, `dtype: "int8"`) on the two
+lessons held out of training, two sections each, in all seven document layouts
+the training data used:
+
+| layout                      | parsed | passage words | spelling | prompts | answers |
+| --------------------------- | -----: | ------------: | -------: | ------: | ------: |
+| Word export as raw text     |   100% |          100% |     100% |    100% |    100% |
+| numbered, bracketed answers |   100% |          100% |     100% |    100% |    100% |
+| Q and A lines               |   100% |          100% |      81% |    100% |     98% |
+| bare capitals, no headings  |    75% |           75% |      75% |     75% |     75% |
+| bullets, square brackets    |   100% |          100% |     100% |    100% |    100% |
+| numbered, colon             |   100% |          100% |     100% |     98% |     96% |
+| working-out on its own line |   100% |          100% |     100% |    100% |    100% |
+
+The one miss in the capitals layout is a single long section where the reply
+hit the 1,500-token cap before closing its JSON; the other three sections in
+that layout were perfect. The model's own question types were right 93 to 99
+percent of the time here, better than on the sample scored in the training
+notebook.
 
 ## Use
 
