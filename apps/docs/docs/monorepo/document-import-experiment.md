@@ -182,11 +182,44 @@ checks' own grounding logic for that call would close most of it.
 
 **Training pairs for the fine-tune** come from the same renderers.
 `make-dataset.mjs` takes every published hub lesson (13 at the time), renders
-each in all seven layouts, splits them, and pairs every section with its
-lesson JSON in chat format (system schema, user document, assistant JSON): 412
-training examples and 84 held out from the two newest lessons. More layouts
-are a few lines each, and lessons written by a hosted model to the authoring
-standard would add volume without any hand labelling.
+each in every layout, splits them with the import's own splitter, and pairs
+every section with its lesson JSON in chat format (system schema, user
+document, assistant JSON). The first run, on the seven regular layouts, made
+412 training examples and 84 held out from the two newest lessons. Lessons
+written by a hosted model to the authoring standard would add volume without
+any hand labelling.
+
+**Layouts the rules cannot read.** That first dataset had a blind spot: the
+import only calls the model for what the rules cannot read, and the rules read
+all seven layouts, so nothing the model was trained on could ever reach it.
+Two more layouts fill that gap, both modelled on how a real document loses its
+structure:
+
+- `nomarks`: questions typed with no question marks and no numbers, the answer
+  tacked on after a space, and the spelling line unlabelled ("Words to learn
+  ...").
+- `runon`: a numbered list that lost its line breaks, as when it is copied out
+  of a web page or a PDF, so a section's questions are all on one line.
+
+For these two (`HARD_LAYOUTS`), a section becomes a training example only if
+`sectionNeedsModel` would send it to the model, and its target is what the
+document says: a prompt with no question mark where the layout dropped it, and
+no section name where the document shows no heading. The parser on them, same
+four lessons:
+
+| style   | sections found | passage words | spelling | prompts F1 | answers | composite | offered to the model |
+| ------- | -------------: | ------------: | -------: | ---------: | ------: | --------: | -------------------: |
+| nomarks |          24/24 |          100% |       0% |        98% |     61% |       66% |                24/24 |
+| runon   |          24/24 |          100% |     100% |         0% |      0% |       40% |                24/24 |
+
+Getting the sections right took two changes to the splitter, both of which
+leave the seven regular layouts exactly where they were (and none of their 168
+sections offered to the model): a line with no closing punctuation is never a
+passage however long it is, and a numbered line that runs into the next
+number is questions. Before that, a long question with no question mark
+started a section of its own, and each run-on list did too. With the two
+layouts, the dataset is 529 training examples and 108 held out, 70 and 71 of
+them from `nomarks` and `runon`.
 
 ### Where this leaves the local model
 
@@ -308,9 +341,12 @@ The fine-tune is `scripts/extract-eval/finetune-colab.ipynb`: open it in
 Google Colab on a GPU runtime, upload the two JSONL files, set your Hugging
 Face name in the first cell, and run it top to bottom. It trains a LoRA adapter
 on the base Extract model, scores the held-out sections, merges the adapter,
-converts the result to ONNX with the transformers.js conversion script, and
+converts the result to ONNX with the onnxruntime-genai builder and
+`relayout-onnx.py` (`q4f16` for WebGPU, `int8` for a CPU; see above), and
 pushes a repo in the onnx-community layout, which `run.mjs --models` then
-measures against the same held-out lessons.
+measures against the same held-out lessons. A new upload only reaches the app
+once `MODEL_REVISION` in `packages/core/src/browser/documentModelEngine.js`
+points at its commit.
 
 `--models` takes any transformers.js-compatible causal LM on the Hub; a model
 id containing "Extract" gets the model card's schema prompt, anything else the

@@ -55,6 +55,15 @@ short heading line directly before a passage names the section; the by-line
 and age line this app prints under a title do not. Anything after the last
 section (sources, footnote bodies) is dropped. The first line is the title.
 
+A passage line ends on its full stop, question mark or exclamation mark. A
+line without one is never taken for a passage, however long, and a numbered
+line that runs straight into the next number ("...? (Answer: X) 2. Why...") is
+questions, not a paragraph. Short lines that are neither a label nor anything
+else the parser knows (a question typed with no question mark, number or
+opening question word, say) are kept in their section as **unread lines**
+rather than dropped, because they are the sign that the section needs the
+model (below).
+
 The **question type** is derived, never read: "Would you rather" is `wyr`, "in
 your own words" is `paraphrase`, no answer is `open`, several answers are
 `multiple` (or `multiple_open` when one of them is not in the passage), a
@@ -80,15 +89,29 @@ line, and the rules beat all of them on every column.
 
 ## When the rules cannot read it
 
-A document with no recognisable layout, a passage followed by lines the
-classifier cannot tell are questions, parses to sections with no questions in
-them. For those the dialog offers **Read with the on-device model**, on
-devices that can run it: LFM2-1.2B-Extract fine-tuned on lesson documents,
-running in the page with transformers.js on WebGPU, a 643 MB one-time
-download. The offer appears only when the parser found a passage but no
-questions in at least one section, never for a document the rules read, since
-the rules beat the model on every regular layout (see the
-[experiment](/monorepo/document-import-experiment)).
+Some documents only look like a lesson to a person. For those the dialog
+offers **Read with the on-device model**, on devices that can run it:
+LFM2-1.2B-Extract fine-tuned on lesson documents, running in the page with
+transformers.js on WebGPU, a 643 MB one-time download. `sectionNeedsModel`
+decides which sections it is offered for, one of these:
+
+- the parser found no questions in the section;
+- the section has unread lines;
+- a question has no answer and no closing punctuation, but ends in a run of
+  capitals, so the answer is probably still glued on ("Which country
+  worshipped cats EGYPT");
+- a question holds the next question's number, so several questions came out
+  as one.
+
+A document the rules read cleanly never gets the offer, since the rules beat
+the model on every regular layout (see the
+[experiment](/monorepo/document-import-experiment)). On the 168 sections of
+the four newest hub lessons in the seven regular layouts it fires for none.
+
+When the rules find no questions anywhere, the text is still cut into
+section-sized pieces the same way (a `loose` split, which the preview and
+`importLessonText` treat as no lesson), and every piece is offered to the
+model. Only a text with no passage at all goes to it as one piece.
 
 The sections are still split by the rules, one call per section, with the
 same prompt the model was trained on (`packages/core/src/documentImportModel.js`,
@@ -117,22 +140,26 @@ that the button is not shown. There is no CPU path in the browser: the int8
 file that runs well on a CPU is 2.5 GB, and the q4 file is not faithful for
 this checkpoint.
 
-What to expect from it today: the model was trained on seven layouts, and
-the rules read all seven, so the documents that reach the model are by
-definition unlike its training data. In the first browser trial, a page with
-questions written as plain statements and no answer notation, it took every
-line for a paragraph and found no questions. The plumbing is in place; the
-model needs training examples of the layouts the rules reject before it earns
-its place, and the dataset generator is where to add them.
+What to expect from it: the first fine-tune was trained only on the seven
+layouts the rules read, so nothing that reached it looked like its training
+data. In the first browser trial, a page with questions written as plain
+statements and no answer notation, it took every line for a paragraph and
+found no questions. The dataset now adds two layouts the rules cannot read
+(questions with no question marks or numbers and the answer tacked on, and a
+numbered list run together on one line), and for those it keeps only the
+sections the import would actually send to the model, cut and laid out
+exactly as the import sends them. The model needs retraining on that dataset
+before it earns its place; see the
+[experiment](/monorepo/document-import-experiment) for the scores.
 
 ## Where the code is
 
-| File                                                      | Does                                                                                                                                                                 |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `deriveQuestionType`, `previewLessonText`, `importLessonText`. Runtime-neutral. |
-| `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                               |
-| `packages/core/src/documentImportModel.js`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                 |
-| `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                  |
-| `packages/core/src/browser/documentModelEngine.js`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                                                    |
-| `apps/web/src/components/editor/DocumentImportDialog.jsx` | The dialog: text box, file picker, live preview, import.                                                                                                             |
-| `apps/web/src/pages/EditorPage.jsx`                       | The menu items and `handleImportText`, which opens the result as a new lesson.                                                                                       |
+| File                                                      | Does                                                                                                                                                                                      |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `sectionNeedsModel`, `deriveQuestionType`, `previewLessonText`, `importLessonText`. Runtime-neutral. |
+| `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                                                    |
+| `packages/core/src/documentImportModel.js`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                                      |
+| `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                                       |
+| `packages/core/src/browser/documentModelEngine.js`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                                                                         |
+| `apps/web/src/components/editor/DocumentImportDialog.jsx` | The dialog: text box, file picker, live preview, import.                                                                                                                                  |
+| `apps/web/src/pages/EditorPage.jsx`                       | The menu items and `handleImportText`, which opens the result as a new lesson.                                                                                                            |

@@ -6,8 +6,10 @@ import {
   deriveQuestionType,
   importLessonText,
   lessonFromSections,
+  parseSection,
   previewLessonText,
   readLessonText,
+  sectionNeedsModel,
   sectionSummary,
   splitSections,
 } from "./documentImport.js";
@@ -84,7 +86,25 @@ describe("classifyLine", () => {
     expect(classifyLine(PASSAGE_1)).toBe("prose");
     expect(classifyLine("https://example.com/source")).toBe("source");
   });
+
+  it("never takes an unpunctuated line or a run-on list for a passage", () => {
+    expect(
+      classifyLine(
+        "Instead of people taming the cat, what do scientists say happened in the end THE CAT DOMESTICATED ITSELF",
+      ),
+    ).toBe("heading");
+    expect(classifyLine(RUN_ON)).toBe("question");
+  });
 });
+
+// A list of questions that lost its line breaks, long enough to pass for a
+// paragraph by length alone.
+const RUN_ON = [
+  "1. From which single wild species is every pet cat descended? (Answer: THE AFRICAN WILDCAT)",
+  "2. What drew mice, birds, and insects in enormous numbers? (Answer: GRAIN)",
+  "3. What class of warm-blooded animals does a cat belong to? (Answer: A MAMMAL)",
+  "4. Roughly how many years ago did the boldest wildcats choose to stay? (Answer: 10000)",
+].join(" ");
 
 describe("splitSections", () => {
   it("finds the sections of a typed document by structure", () => {
@@ -101,6 +121,105 @@ describe("splitSections", () => {
     expect(sections).toHaveLength(2);
     expect(sections[1].lines.some((l) => l.startsWith("Sources"))).toBe(false);
     expect(sections[1].lines.some((l) => l.includes("wikipedia"))).toBe(false);
+  });
+
+  it("keeps lines it cannot place in their section", () => {
+    const { sections, loose } = splitSections(`Title
+
+The Wildcat Ancestor
+
+${PASSAGE_1}
+
+Words to learn FELINE CREATURE PROWLED
+From which single wild species is every pet cat descended THE AFRICAN WILDCAT
+Instead of people taming the cat, what do scientists say happened in the end THE CAT DOMESTICATED ITSELF
+
+Worshipped in Egypt
+
+${PASSAGE_2}
+
+What did the boldest cats do? (Answer: STAYED)
+`);
+    expect(loose).toBe(false);
+    expect(sections.map((s) => s.heading)).toEqual([
+      "The Wildcat Ancestor",
+      "Worshipped in Egypt",
+    ]);
+    expect(sections[0].lines).toHaveLength(4);
+  });
+
+  it("still cuts a text with no questions it can read into sections", () => {
+    const text = `Title
+
+The Wildcat Ancestor
+
+${PASSAGE_1}
+
+Spelling words: FELINE, CREATURE
+
+Worshipped in Egypt
+
+${PASSAGE_2}
+`;
+    const { sections, loose } = splitSections(text);
+    expect(loose).toBe(true);
+    expect(sections.map((s) => s.heading)).toEqual([
+      "The Wildcat Ancestor",
+      "Worshipped in Egypt",
+    ]);
+    expect(previewLessonText(text).sections).toEqual([]);
+    expect(() => importLessonText(text)).toThrow(DocumentImportError);
+  });
+});
+
+describe("parseSection", () => {
+  it("splits a run of capitals after any sentence ending", () => {
+    const { questions } = parseSection([
+      "Who explained light as packets of energy in 1900? MAX PLANCK",
+      "Cats had joined human settlements about ___. 10000",
+      "Give a synonym for CRUELTY. HARSHNESS",
+      "How far could the cat walk (30 minutes)? 350",
+    ]);
+    expect(questions.map((q) => q.answers)).toEqual([
+      ["MAX PLANCK"],
+      ["10000"],
+      ["HARSHNESS"],
+      ["350"],
+    ]);
+  });
+});
+
+describe("sectionNeedsModel", () => {
+  const needs = (lines) => sectionNeedsModel(parseSection(lines));
+
+  it("leaves a section the rules read cleanly alone", () => {
+    for (const text of [TYPED, EXPORTED]) {
+      const { sections } = splitSections(text);
+      expect(
+        sections.map(({ heading, lines }) =>
+          sectionNeedsModel(parseSection(lines, heading)),
+        ),
+      ).toEqual([false, false]);
+    }
+  });
+
+  it("asks for the model when the rules could not really read it", () => {
+    // No questions at all.
+    expect(needs([PASSAGE_1])).toBe(true);
+    // A line the rules could not place.
+    expect(
+      needs([
+        PASSAGE_1,
+        "What did people store? GRAIN",
+        "Cats lived beside farmers for roughly how many years 10000",
+      ]),
+    ).toBe(true);
+    // An answer left glued to its question.
+    expect(needs([PASSAGE_1, "1. Which country worshipped cats EGYPT"])).toBe(
+      true,
+    );
+    // Several questions read as one.
+    expect(needs([PASSAGE_1, RUN_ON])).toBe(true);
   });
 });
 

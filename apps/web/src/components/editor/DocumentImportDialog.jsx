@@ -32,10 +32,13 @@ import { loadExportEngine } from "../../lib/exports/load.js";
  * what it found, section by section, before anything is imported. Import hands
  * the finished document to `onImport`, which opens it as a new lesson.
  *
- * A section the rules could not read (a passage with no questions found), or
- * a text with no sections at all, can be handed to the on-device model
- * (core/browser/documentModel.js) on a device that can run it. Only those
- * sections go to the model; the rest keep the rules' result.
+ * A section the rules could not read (no questions found, lines they could
+ * not place, an answer left glued on, questions run together) can be handed
+ * to the on-device model (core/browser/documentModel.js) on a device that can
+ * run it. Only those sections go to the model; the rest keep the rules'
+ * result. When the rules found no lesson at all, the text is still cut into
+ * section-sized pieces (a `loose` split) and every piece goes to the model;
+ * only a text with no pieces at all goes as one.
  */
 export default function DocumentImportDialog({
   open,
@@ -99,25 +102,31 @@ export default function DocumentImportDialog({
   }, [text]);
 
   // What the import would use: the model's reading where there is one, the
-  // rules' otherwise.
+  // rules' otherwise. A loose split is only pieces for the model, so nothing
+  // of it counts until the model has read it.
   const merged = useMemo(() => {
     if (!analysis) return [];
     if (!analysis.sections.length) {
       return modelSections[0] ? [modelSections[0]] : [];
+    }
+    if (analysis.loose) {
+      return analysis.sections.map((_, i) => modelSections[i]).filter(Boolean);
     }
     return analysis.sections.map((s, i) => modelSections[i] ?? s.parsed);
   }, [analysis, modelSections]);
 
   const found = merged.length > 0;
   // The section indexes the model is offered for: those the rules could not
-  // read (or the whole text as one, when the splitter found no section) that
-  // it has not read yet. A section it failed on stays here, so it can be
-  // tried again.
+  // read (every piece of a loose split, or the whole text as one when the
+  // splitter found no section) that it has not read yet. A section it failed
+  // on stays here, so it can be tried again.
   const unread = useMemo(() => {
     if (!analysis) return [];
     const targets = analysis.sections.length
       ? analysis.sections
-          .map((s, i) => (sectionNeedsModel(s.parsed) ? i : -1))
+          .map((s, i) =>
+            analysis.loose || sectionNeedsModel(s.parsed) ? i : -1,
+          )
           .filter((i) => i >= 0)
       : [0];
     return targets.filter((i) => !modelSections[i]);
@@ -316,9 +325,13 @@ export default function DocumentImportDialog({
           {modelCanHelp && !modelRunning && (
             <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-3 text-sm">
               <p className="text-muted-foreground">
-                {analysis.sections.length
-                  ? t("documentImport.modelOffer", { count: unread.length })
-                  : t("documentImport.modelOfferNothing")}
+                {!analysis.sections.length
+                  ? t("documentImport.modelOfferNothing")
+                  : analysis.loose
+                    ? t("documentImport.modelOfferLoose", {
+                        count: unread.length,
+                      })
+                    : t("documentImport.modelOffer", { count: unread.length })}
               </p>
               <Button
                 type="button"

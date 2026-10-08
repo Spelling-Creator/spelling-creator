@@ -8,13 +8,22 @@
 //
 // The newest --holdout lessons go to holdout.jsonl and never to train.jsonl,
 // so the fine-tuned model is measured on lessons it has not seen.
+//
+// Every input is built the way the import builds it (the same splitter, the
+// same section text, the same system prompt), and every target is the section
+// as the document writes it: no name where the document shows no heading, and
+// prompts as the layout wrote them. For the layouts the rules cannot read
+// (HARD_LAYOUTS), a section becomes an example only if the import would send
+// it to the model, so those examples are drawn from exactly what the model
+// will see.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { SCHEMA, TYPE_GUIDE } from "./extract.mjs";
-import { LAYOUTS } from "./layouts.mjs";
+import { parseSection, sectionNeedsModel } from "../../src/documentImport.js";
+import { systemPrompt } from "../../src/documentImportModel.js";
+import { HARD_LAYOUTS, LAYOUTS, PROMPT_AS_WRITTEN } from "./layouts.mjs";
 import { DEFAULT_API, fetchLessons } from "./lessons.mjs";
 import { renderDocxText } from "./render.mjs";
 import { groundTruthSection } from "./score.mjs";
@@ -58,9 +67,18 @@ const holdoutIds = new Set(
   lessons.slice(0, Number(args.holdout)).map((l) => l.id),
 );
 
-const system = `Return data as a JSON object with the following schema:\n${SCHEMA}\n\n${TYPE_GUIDE}`;
+// Would the import send this section to the model? Always, when the rules
+// found no lesson at all; otherwise only when the rules could not read it.
+function reachesModel(split, chunk) {
+  return (
+    split.loose || sectionNeedsModel(parseSection(chunk.lines, chunk.heading))
+  );
+}
+
+const system = systemPrompt();
 const train = [];
 const holdout = [];
+const perStyle = {};
 let skipped = 0;
 for (const lesson of lessons) {
   const renderings = [
@@ -76,14 +94,16 @@ for (const lesson of lessons) {
       skipped += 1;
       continue;
     }
+    const asWritten = PROMPT_AS_WRITTEN[style] ?? ((p) => p);
     split.sections.forEach((chunk, i) => {
+      if (HARD_LAYOUTS.has(style) && !reachesModel(split, chunk)) return;
       const gt = groundTruthSection(lesson.doc.sections[i]);
       const target = {
-        name: style === "docx" ? "" : gt.name,
+        name: chunk.heading ? gt.name : "",
         paragraphs: gt.paragraphs.map((p) => p.replace(/\n+/g, " ")),
         spellingWords: gt.spellingWords,
         questions: gt.questions.map((q) => ({
-          prompt: q.prompt,
+          prompt: asWritten(q.prompt),
           type: q.type,
           answers: q.answers,
           steps: style === "docx" || style === "worked" ? q.steps : [],
@@ -100,6 +120,7 @@ for (const lesson of lessons) {
         ],
       };
       (holdoutIds.has(lesson.id) ? holdout : train).push(example);
+      perStyle[style] = (perStyle[style] ?? 0) + 1;
     });
   }
 }
@@ -113,5 +134,14 @@ console.log(
     (skipped
       ? `, ${skipped} document(s) skipped (section count mismatch)`
       : ""),
+);
+console.log(
+  "examples per layout:",
+  Object.entries(perStyle)
+    .map(
+      ([style, n]) =>
+        `${style} ${n}${HARD_LAYOUTS.has(style) ? " (hard)" : ""}`,
+    )
+    .join(", "),
 );
 console.log(`Written to ${args.out}`);

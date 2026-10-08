@@ -21,12 +21,15 @@ at all. `layouts.mjs` holds
 the typed-up document styles (`--styles all` runs every one plus the Word
 export), and `make-dataset.mjs` renders every published lesson in every layout
 into chat-format JSONL for a supervised fine-tune, holding out the newest
-lessons.
+lessons. Two of the layouts, `nomarks` and `runon` (`HARD_LAYOUTS`), are ones
+the rules cannot read; from those the dataset keeps only the sections the
+import would send to the model (`sectionNeedsModel`), so the model trains on
+what actually reaches it. The script prints the example count per layout.
 
 `finetune-colab.ipynb` is the fine-tune itself: open it in Google Colab, upload
 the two JSONL files, fill in your Hugging Face name in the first cell and run
 it top to bottom. It trains a LoRA adapter on LFM2-1.2B-Extract, scores the
-held-out sections, merges, converts to ONNX with the transformers.js script and
+held-out sections, merges, exports `q4f16` (WebGPU) and `int8` (CPU) and
 pushes a repo that `run.mjs --models` can take. The conversion uses Microsoft's
 onnxruntime-genai model builder, which is what the onnx-community LFM2 files
 were made with, and `relayout-onnx.py` turns the builder's output into the
@@ -60,9 +63,10 @@ What it does:
    back as raw text (no headings, types only in colour), and a hand-typed style
    with headings, a "Spelling words:" line and numbered questions with answers
    in brackets. The texts land in `out/`.
-3. `split.mjs` cuts a document into sections by structure (a passage after
-   questions starts a new one), since a small model does better on one section
-   than on a whole lesson.
+3. `split.mjs` cuts a document into sections with the import's own splitter
+   (a passage after questions starts a new one), since a small model does
+   better on one section than on a whole lesson, and lays each out as the
+   import hands it to the model.
 4. `extract.mjs` runs an ONNX model from Hugging Face through transformers.js on
    the CPU, one section at a time, greedy decoding, with the lesson shape as the
    schema in the system prompt. LFM2 Extract models get the model card's
