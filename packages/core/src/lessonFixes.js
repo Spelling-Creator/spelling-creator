@@ -168,10 +168,10 @@ const FIXES = {
     }),
 
   // The list in the passage goes on past the accepted answers, so the item it
-  // goes on to is accepted too.
+  // goes on to is accepted too: its noun, "silt" for "fine silt".
   E_ORANGE_PARTIAL_LIST: (doc, finding) =>
     updateBlock(doc, finding.blockId, (block) => {
-      const item = String(finding.params?.next || "").trim();
+      const item = String(finding.params?.answer || "").trim();
       if (!item || !Array.isArray(block?.answers)) return null;
       const already = block.answers.some(
         (a) =>
