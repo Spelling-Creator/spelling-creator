@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Trans, useTranslation } from "react-i18next";
 import {
   BracesIcon,
+  ClipboardPasteIcon,
   ChevronDownIcon,
   ChevronsDownUpIcon,
   ChevronsUpDownIcon,
@@ -43,6 +44,7 @@ import { useLessonChecks } from "../lib/lessonChecks.js";
 import { applyQuickFix } from "@spelling-creator/core/lessonFixes";
 import { checkFix } from "@spelling-creator/core/lessonAiFixes";
 import AiFixDialog from "../components/editor/AiFixDialog.jsx";
+import DocumentImportDialog from "../components/editor/DocumentImportDialog.jsx";
 import { useFactCheck } from "../lib/factCheck.js";
 import { LessonSourcesProvider } from "../lib/lessonSources.jsx";
 import { createSource } from "@spelling-creator/core/sources";
@@ -265,6 +267,9 @@ export default function EditorPage() {
   const [importError, setImportError] = useState(null);
   // Which picker the rejection dialog's "Try another file" should re-open.
   const [importErrorSource, setImportErrorSource] = useState("word");
+  // Import from text: the dialog does its own parsing and preview, so the page
+  // only opens it and takes the finished document.
+  const [textImportOpen, setTextImportOpen] = useState(false);
   const importInputRef = useRef(null);
   // JSON import reuses the same rejection dialog (importError) and overwrite
   // confirmation, but skips the best-effort warning — the JSON format is a
@@ -1059,7 +1064,9 @@ export default function EditorPage() {
         message:
           source === "json"
             ? t("messages.importedJson")
-            : t("messages.importedWord"),
+            : source === "text"
+              ? t("messages.importedText")
+              : t("messages.importedWord"),
       });
       return;
     }
@@ -2416,6 +2423,24 @@ export default function EditorPage() {
     }
   };
 
+  // Import from text. The dialog has already parsed and previewed the text;
+  // what arrives here is a finished document, opened as a new lesson like any
+  // other import.
+  const handleImportText = async (imported) => {
+    setBusy("import");
+    try {
+      await applyEdit({
+        doc: imported,
+        title: imported.title,
+        mode: "import",
+        source: "text",
+      });
+      setTextImportOpen(false);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const sectionCount = doc.sections.length;
   const blockCount = useMemo(
     () => doc.sections.reduce((sum, s) => sum + s.blocks.length, 0),
@@ -2521,6 +2546,13 @@ export default function EditorPage() {
               <BracesIcon />
               {t("header.importJson")}
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setTextImportOpen(true)}
+              disabled={busy !== null}
+            >
+              <ClipboardPasteIcon />
+              {t("header.importText")}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() =>
@@ -2604,6 +2636,13 @@ export default function EditorPage() {
             >
               <BracesIcon />
               {t("header.importJson")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setTextImportOpen(true)}
+              disabled={busy !== null}
+            >
+              <ClipboardPasteIcon />
+              {t("header.importText")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -3317,6 +3356,14 @@ export default function EditorPage() {
                             <BracesIcon data-icon="inline-start" />
                             {t("header.importJson")}
                           </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setTextImportOpen(true)}
+                            disabled={busy !== null}
+                          >
+                            <ClipboardPasteIcon data-icon="inline-start" />
+                            {t("header.importText")}
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -3385,6 +3432,13 @@ export default function EditorPage() {
         accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         hidden
         onChange={handleImportFile}
+      />
+
+      <DocumentImportDialog
+        open={textImportOpen}
+        onOpenChange={setTextImportOpen}
+        onImport={handleImportText}
+        busy={busy === "import"}
       />
 
       {/* Hidden picker for JSON import (no warning dialog — the format is ours). */}

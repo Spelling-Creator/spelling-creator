@@ -84,7 +84,7 @@ are. `repoIdFor(lessonId, localId)` is the one place that decides. See
 | **Edit** on one of your hub lessons        | Opens the copy this device already has, exactly as you left it; never a second copy of the same lesson, and never overwritten by the cloud's. If the two differ, it tells you. |
 | **Fork** a lesson from the hub             | A new lesson, cloned with the original's history, titled "... (copy)".                                                                                                         |
 | **Fork into a new lesson** (in the editor) | The same, from the lesson you're in, which stays in the list, still attached to its hub row.                                                                                   |
-| **Import** a Word or JSON file             | A new lesson, with a history that starts at the import.                                                                                                                        |
+| **Import** a Word or JSON file, or text    | A new lesson, with a history that starts at the import. [Import from text](./document-import.md) reads documents that were never lesson files.                                 |
 | **Save to cloud** on a device-only lesson  | Attaches it to the hub lesson it creates, and takes its history up with it.                                                                                                    |
 | **Join** someone's live session            | Once the host adds you, a new lesson holding the session's document (or the untouched one you're in). It stays in the list after the session ends.                             |
 

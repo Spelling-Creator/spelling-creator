@@ -25,6 +25,9 @@ logs/
 
 # Caches
 .cache/
+
+# Document import experiment runs (packages/core/scripts/extract-eval)
+packages/core/scripts/extract-eval/out-*/
 *.tsbuildinfo
 
 # OS

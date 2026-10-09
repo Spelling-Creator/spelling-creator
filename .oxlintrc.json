@@ -76,7 +76,11 @@
 
     // Repo tooling — plain Node scripts run by hand, never bundled or shipped.
     {
-      "files": ["scripts/**/*.js", "scripts/**/*.mjs"],
+      "files": [
+        "scripts/**/*.js",
+        "scripts/**/*.mjs",
+        "packages/core/scripts/**/*.mjs"
+      ],
       "env": { "node": true }
     },
 

@@ -111,6 +111,10 @@ export default defineConfig({
           { text: "The platform seam", link: "/monorepo/platform-seam" },
           { text: "Self-hosting", link: "/monorepo/self-hosting" },
           { text: "Frontend migration", link: "/monorepo/frontend-migration" },
+          {
+            text: "Document import experiment",
+            link: "/monorepo/document-import-experiment",
+          },
         ],
       },
       {
@@ -123,6 +127,7 @@ export default defineConfig({
             text: "Lessons on this device",
             link: "/web-app/local-lessons",
           },
+          { text: "Import from text", link: "/web-app/document-import" },
           { text: "Server rendering", link: "/web-app/server-rendering" },
           { text: "Question blocks", link: "/web-app/question-blocks" },
           { text: "VAKT activities", link: "/web-app/vakt-activities" },
