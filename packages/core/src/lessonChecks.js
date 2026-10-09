@@ -729,6 +729,10 @@ export function validateLesson(doc) {
 
           if (complete) break;
           if (partial) {
+            // The item is quoted whole ("fine silt"), but what a speller names
+            // is its last word, the noun: that's the answer to accept, and it
+            // stays a single word, so the question can still be checked.
+            const answer = partial.split(" ").at(-1);
             error(
               "E_ORANGE_PARTIAL_LIST",
               `${questionId}:${key}`,
@@ -738,7 +742,7 @@ export function validateLesson(doc) {
                 "must be EVERY item of the one list the question blanks out, or a speller who names the item you " +
                 "left out is marked wrong for reading the passage properly. Accept the remaining item(s), or take " +
                 "them out of the list in the prose.",
-              about({ answers, next: partial }),
+              about({ answers, next: partial, answer }),
             );
           } else {
             error(

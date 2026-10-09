@@ -196,6 +196,27 @@ describe("answer fixes", () => {
     expect(answers.map((a) => a.text)).toEqual(["boulder", "cobble", "silt"]);
     expect(answers[2].id).toEqual(expect.any(String));
   });
+
+  it("accepts the noun of a two-word item, not the whole phrase", () => {
+    const doc = {
+      title: "T",
+      sections: [
+        section("s1", [
+          text("t1", "It drops boulder, cobble, and fine silt as it slows."),
+          question("q1", "multiple", {
+            prompt: "It drops ______. Name one.",
+            answers: [
+              { id: "a1", text: "boulder" },
+              { id: "a2", text: "cobble" },
+            ],
+          }),
+        ]),
+      ],
+    };
+    const fixed = fixes(doc, "E_ORANGE_PARTIAL_LIST");
+    const answers = fixed.sections[0].blocks[1].answers;
+    expect(answers.map((a) => a.text)).toEqual(["boulder", "cobble", "silt"]);
+  });
 });
 
 describe("hasQuickFix", () => {

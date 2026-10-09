@@ -33,7 +33,7 @@
     "E_FORMAT_LONG_ITALIC": "Make it plain",
     "W_VAKT_NOT_LAST": "Move it to the end",
     "W_ORANGE_ORDER": "Swap them",
-    "E_ORANGE_PARTIAL_LIST": "Accept \"{{next}}\" too"
+    "E_ORANGE_PARTIAL_LIST": "Accept \"{{answer}}\" too"
   },
   "aiFix": {
     "button": "Fix with AI",

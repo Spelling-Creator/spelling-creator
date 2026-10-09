@@ -92,7 +92,7 @@ describe("validateLesson finding locations", () => {
   it("carries the item a partial list left out, as the passage wrote it", () => {
     expect(find(errors, "E_ORANGE_PARTIAL_LIST")).toMatchObject({
       blockId: "q2",
-      params: { question: 2, next: "silt" },
+      params: { question: 2, next: "silt", answer: "silt" },
     });
   });
 

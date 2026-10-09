@@ -63,16 +63,16 @@ list once the checks rerun. A click on a finding that has already gone stale
 (the panel lags an edit by a beat, or a collaborator fixed it first) says so in
 a toast rather than doing nothing.
 
-| Code                                             | Button                                | What it does                                                                  |
-| ------------------------------------------------ | ------------------------------------- | ----------------------------------------------------------------------------- |
-| `W_FORMAT_BOLD`                                  | Remove the bold                       | Takes bold off every text block in the section. Italics and underlining stay. |
-| `W_FORMAT_UNDERLINE`                             | Remove the underlining                | The same for underlining.                                                     |
-| `W_FORMAT_CAPS`                                  | Remove the formatting                 | Unformats the ALL-CAPS spans only.                                            |
-| `E_FORMAT_HEAVY`                                 | Remove all formatting in this section | Every mark in the section's text, italics included.                           |
-| `E_FORMAT_LONG_EMPHASIS`, `E_FORMAT_LONG_ITALIC` | Make it plain                         | Unformats the one long span the finding quotes.                               |
-| `W_VAKT_NOT_LAST`                                | Move it to the end                    | Moves the section's VAKT activities to its end, keeping their order.          |
-| `W_ORANGE_ORDER`                                 | Swap them                             | Puts the tight orange question in the first orange slot.                      |
-| `E_ORANGE_PARTIAL_LIST`                          | Accept "silt" too                     | Adds the item the passage's list goes on to as an accepted answer.            |
+| Code                                             | Button                                | What it does                                                                                                                     |
+| ------------------------------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `W_FORMAT_BOLD`                                  | Remove the bold                       | Takes bold off every text block in the section. Italics and underlining stay.                                                    |
+| `W_FORMAT_UNDERLINE`                             | Remove the underlining                | The same for underlining.                                                                                                        |
+| `W_FORMAT_CAPS`                                  | Remove the formatting                 | Unformats the ALL-CAPS spans only.                                                                                               |
+| `E_FORMAT_HEAVY`                                 | Remove all formatting in this section | Every mark in the section's text, italics included.                                                                              |
+| `E_FORMAT_LONG_EMPHASIS`, `E_FORMAT_LONG_ITALIC` | Make it plain                         | Unformats the one long span the finding quotes.                                                                                  |
+| `W_VAKT_NOT_LAST`                                | Move it to the end                    | Moves the section's VAKT activities to its end, keeping their order.                                                             |
+| `W_ORANGE_ORDER`                                 | Swap them                             | Puts the tight orange question in the first orange slot.                                                                         |
+| `E_ORANGE_PARTIAL_LIST`                          | Accept "silt" too                     | Adds the item the passage's list goes on to as an accepted answer. A two-word item gives its last word: "fine silt" adds "silt". |
 
 Before a fix is made, the lesson as it stood is saved as a version, so the fix
 is a version of its own in History and History's Undo can take it back at any
