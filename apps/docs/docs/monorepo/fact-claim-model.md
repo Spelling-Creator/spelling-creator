@@ -145,6 +145,34 @@ rescored against the new held-out labels, is the bar for the second:
 | model                                   | recall | precision | invented quotes | quiet when none | subject |
 | --------------------------------------- | -----: | --------: | --------------: | --------------: | ------: |
 | LFM2-350M-Extract-facts, round 1 (int8) |    40% |       28% |               3 |            7/13 |     50% |
+| LFM2-350M-Extract-facts, round 2 (int8) |    50% |       42% |               2 |            8/13 |     50% |
+
+Better on every count but the one that matters most. The subjects are still
+wrong half the time, and now in a way that points at the model's size rather
+than the data: it misspells real names ("Annus Miroliis", "Nazwahouse of
+Einstein") and invents people ("Marcus Aelius Tarquin the Elder" as the
+discoverer of Pompeii), and it still dates Pompeii's rediscovery, which the
+rules now leave out.
+
+### What the author would see
+
+Claims are not what the author sees; findings are. `findings.mjs` runs a
+model's claims and the labels through the real checker against Wikidata and
+compares the two sets of findings. A **false alarm** is a "Wikidata disagrees"
+finding the labels do not produce, which tells the author a right fact is
+wrong; it is the costly mistake. (The checker's lookups are retried after a
+pause, since Wikipedia and Wikidata throttle a burst from one address.)
+
+| model                                   | agrees | disagrees | false alarms | label findings missed |
+| --------------------------------------- | -----: | --------: | -----------: | --------------------: |
+| labels (Claude Opus)                    |     12 |         2 |            0 |                     0 |
+| LFM2-350M-Extract-facts, round 2 (int8) |      5 |         3 |            2 |               9 of 14 |
+
+Both false alarms come from the weaknesses above: "1748" checked as when
+Pompeii began (Wikidata says the 7th or 6th century BC), and the Luitpold
+Gymnasium's city checked with Munich as the subject. On 24 passages that is
+too many to ship. The next step is the same data on LFM2-1.2B-Extract, which
+has the room to name things right.
 
 ## Running it again
 
@@ -154,4 +182,5 @@ node scripts/fact-eval/write-passages.mjs   # only topics with no passage yet
 node scripts/fact-eval/label.mjs --check    # only passages with no label yet; --check asks Wikidata too
 node scripts/fact-eval/make-dataset.mjs
 node scripts/fact-eval/run.mjs --holdout --dtype int8 --models YOUR_NAME/LFM2-350M-Extract-facts-ONNX
+node scripts/fact-eval/findings.mjs scripts/fact-eval/out/LFM2-350M-Extract-facts-ONNX.int8.json
 ```

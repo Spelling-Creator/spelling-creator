@@ -12,6 +12,7 @@ node scripts/fact-eval/write-passages.mjs     # more passages (Claude, through t
 node scripts/fact-eval/label.mjs --check      # labels for anything without one yet
 node scripts/fact-eval/make-dataset.mjs       # training pairs
 node scripts/fact-eval/run.mjs --holdout      # score models on the held-out lessons
+node scripts/fact-eval/findings.mjs out/<model>.int8.json   # what the author would see, against Wikidata
 ```
 
 `claude.mjs` makes every Claude call: `claude -p` with structured output, no
