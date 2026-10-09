@@ -241,8 +241,14 @@ function splitByHeuristic(line) {
   // The sentence before the run may end on any word character or a closing
   // bracket or quote: "in 1900? MAX PLANCK", "the year ___. 1900", "a synonym
   // for CRUELTY. HARSHNESS", "(30 minutes)? 350".
+  //
+  // The run is words with a required space or slash between each, so a run
+  // of capitals splits into words exactly one way. With the separator
+  // optional ("AB CD" as "A", "B CD" or "AB", "CD"), a long run of capitals
+  // that failed to match at its last letter took exponential time: two
+  // seconds at 26 words, on every keystroke in the dialog.
   const capsRun =
-    /^(.*?[\w)\]"'][.!?])\s+((?:[A-Z0-9][A-Z0-9',.-]*(?:\s+|\s*\/\s*)?)+)$/.exec(
+    /^(.*?[\w)\]"'][.!?])\s+([A-Z0-9][A-Z0-9',.-]*(?:(?:\s*\/\s*|\s+)[A-Z0-9][A-Z0-9',.-]*)*)\s*$/.exec(
       line,
     );
   if (capsRun && !/[a-z]/.test(capsRun[2])) {

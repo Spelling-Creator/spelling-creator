@@ -187,6 +187,17 @@ describe("parseSection", () => {
       ["350"],
     ]);
   });
+
+  it("stays fast on a long run of capitals that is not an answer", () => {
+    // With the run's word separator optional, this took about two seconds
+    // at 26 words and four times longer for every two more. 40 words keeps
+    // the line a question (under 280 characters) rather than a passage.
+    const line = `Give a synonym for this word. ${Array(40).fill("AB").join(" ")} a`;
+    const started = performance.now();
+    const [question] = parseSection([line]).questions;
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(question.answers).toEqual([]);
+  });
 });
 
 describe("sectionNeedsModel", () => {
