@@ -123,7 +123,7 @@
     "modelOffer_other": "{{count}} sections have a passage but no questions the rules could read. An on-device model can try: it runs in your browser, the text stays on this device, and the first run downloads about 640 MB.",
     "modelOfferNothing": "The rules found no lesson in this text. An on-device model can try reading it as one section: it runs in your browser, the text stays on this device, and the first run downloads about 640 MB.",
     "modelButton": "Read with the on-device model",
-    "modelStarting": "Starting the model download...",
+    "modelStarting": "Getting the model ready...",
     "modelDownloading": "Downloading the model, {{percent}}%",
     "modelReading": "Reading section {{done}} of {{total}}...",
     "modelDone_one": "{{count}} section read by the on-device model. Check it after importing.",

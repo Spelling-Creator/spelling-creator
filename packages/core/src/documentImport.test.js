@@ -5,7 +5,10 @@ import {
   classifyLine,
   deriveQuestionType,
   importLessonText,
+  lessonFromSections,
   previewLessonText,
+  readLessonText,
+  sectionSummary,
   splitSections,
 } from "./documentImport.js";
 
@@ -331,5 +334,24 @@ describe("previewLessonText", () => {
         answered: 1,
       },
     ]);
+  });
+
+  it("agrees with readLessonText, which the import dialog reads from", () => {
+    const read = readLessonText(TYPED);
+    expect(read.title).toBe(previewLessonText(TYPED).title);
+    expect(read.sections.map(({ parsed }) => sectionSummary(parsed))).toEqual(
+      previewLessonText(TYPED).sections,
+    );
+    // Every import gives its blocks fresh ids, so they are left out.
+    const withoutIds = (doc) =>
+      JSON.parse(JSON.stringify(doc, (k, v) => (k === "id" ? undefined : v)));
+    expect(
+      withoutIds(
+        lessonFromSections(
+          read.title,
+          read.sections.map(({ parsed }) => parsed),
+        ),
+      ),
+    ).toEqual(withoutIds(importLessonText(TYPED)));
   });
 });

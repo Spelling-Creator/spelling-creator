@@ -114,8 +114,10 @@ export async function readSections(sections, hooks = {}) {
   const results = [];
   for (const section of sections) {
     if (signal?.aborted) throw aborted();
+    // Before the section, so the caller can say which one is being read from
+    // the moment the model is ready, rather than only once the first is done.
+    onSection?.(results.length + 1, sections.length);
     results.push(await readOne(loaded, section, signal));
-    onSection?.(results.length, sections.length);
   }
   return results;
 }

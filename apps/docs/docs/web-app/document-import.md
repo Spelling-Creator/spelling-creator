@@ -100,6 +100,17 @@ was right more often than the derived rule in the experiment); otherwise the
 type is derived as for the parser. The result is previewed like any other
 import, and the lesson checks run on it after.
 
+While it runs, the dialog says which section it is reading from the moment the
+model is ready (the engine reports each section as it starts), and a run can be
+stopped. A section the model could not read (a reply that is not JSON) keeps
+the parser's result and stays on offer, so the button comes back for just the
+sections that failed, with a note saying so.
+
+The dialog, `previewLessonText` and `importLessonText` all start from
+`readLessonText`, which splits the text and parses each section, and the
+preview's counts come from `sectionSummary`, so what the dialog shows and what
+an import builds cannot drift apart.
+
 The device bar is the summariser's: WebGPU with f16 shaders on an adapter
 whose limits can hold the weights, and not on a metered connection. Without
 that the button is not shown. There is no CPU path in the browser: the int8
@@ -116,12 +127,12 @@ its place, and the dataset generator is where to add them.
 
 ## Where the code is
 
-| File                                                      | Does                                                                                                                                 |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `deriveQuestionType`, `previewLessonText`, `importLessonText`. Runtime-neutral.     |
-| `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                               |
-| `packages/core/src/documentImportModel.js`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts. |
-| `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                  |
-| `packages/core/src/browser/documentModelEngine.js`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                    |
-| `apps/web/src/components/editor/DocumentImportDialog.jsx` | The dialog: text box, file picker, live preview, import.                                                                             |
-| `apps/web/src/pages/EditorPage.jsx`                       | The menu items and `handleImportText`, which opens the result as a new lesson.                                                       |
+| File                                                      | Does                                                                                                                                                                 |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `deriveQuestionType`, `previewLessonText`, `importLessonText`. Runtime-neutral. |
+| `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                               |
+| `packages/core/src/documentImportModel.js`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                 |
+| `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                  |
+| `packages/core/src/browser/documentModelEngine.js`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                                                    |
+| `apps/web/src/components/editor/DocumentImportDialog.jsx` | The dialog: text box, file picker, live preview, import.                                                                                                             |
+| `apps/web/src/pages/EditorPage.jsx`                       | The menu items and `handleImportText`, which opens the result as a new lesson.                                                                                       |

@@ -74,8 +74,9 @@ function loadEngine() {
  *   between sections, and between generated tokens.
  * @param {(loaded: number) => void} [hooks.onDownloadProgress]  0-1 fraction,
  *   first run only.
- * @param {(done: number, total: number) => void} [hooks.onSection]  After each
- *   section.
+ * @param {(number: number, total: number) => void} [hooks.onSection]  Before
+ *   each section, with its number counting from 1: the model is loaded and
+ *   this one is being read.
  * @returns {Promise<Array<object|null>>}
  */
 export async function readSectionsWithModel(sections, hooks = {}) {

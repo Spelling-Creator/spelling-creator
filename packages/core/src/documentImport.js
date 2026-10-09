@@ -332,23 +332,52 @@ function questionBlock(q, passage) {
 }
 
 /**
+ * The rules' reading of a text: its sections as split, each with what the
+ * parser made of it. The import dialog, previewLessonText and
+ * importLessonText all start here, so what the dialog shows and what an
+ * import builds cannot drift apart.
+ * @param {string} text
+ * @returns {{title: string, sections: Array<{heading: string, lines: string[], parsed: ReturnType<typeof parseSection>}>}}
+ */
+export function readLessonText(text) {
+  const { title, sections } = splitSections(text);
+  return {
+    title,
+    sections: sections.map(({ heading, lines }) => ({
+      heading,
+      lines,
+      parsed: parseSection(lines, heading),
+    })),
+  };
+}
+
+/**
+ * A parsed section's counts, as a preview lists them. `name` is the section's
+ * own, or "" when it has none.
+ * @param {{name: string, paragraphs: string[], spellingWords: string[], questions: Array<{answers: string[]}>}} parsed
+ */
+export function sectionSummary(parsed) {
+  return {
+    name: parsed.name,
+    paragraphs: parsed.paragraphs.length,
+    spellingWords: parsed.spellingWords.length,
+    questions: parsed.questions.length,
+    answered: parsed.questions.filter((q) => q.answers.length).length,
+  };
+}
+
+/**
  * How much of a lesson the text holds, for showing before importing.
  * @param {string} text
  * @returns {{title: string, sections: Array<{name: string, paragraphs: number, spellingWords: number, questions: number, answered: number}>}}
  */
 export function previewLessonText(text) {
-  const { title, sections } = splitSections(text);
+  const { title, sections } = readLessonText(text);
   return {
     title,
-    sections: sections.map(({ heading, lines }, i) => {
-      const s = parseSection(lines, heading);
-      return {
-        name: s.name || `Section ${i + 1}`,
-        paragraphs: s.paragraphs.length,
-        spellingWords: s.spellingWords.length,
-        questions: s.questions.length,
-        answered: s.questions.filter((q) => q.answers.length).length,
-      };
+    sections: sections.map(({ parsed }, i) => {
+      const summary = sectionSummary(parsed);
+      return { ...summary, name: summary.name || `Section ${i + 1}` };
     }),
   };
 }
@@ -403,9 +432,9 @@ export function lessonFromSections(title, sections) {
  * @returns {{title: string, sections: object[]}}
  */
 export function importLessonText(text) {
-  const { title, sections } = splitSections(text);
+  const { title, sections } = readLessonText(text);
   return lessonFromSections(
     title,
-    sections.map(({ heading, lines }) => parseSection(lines, heading)),
+    sections.map(({ parsed }) => parsed),
   );
 }

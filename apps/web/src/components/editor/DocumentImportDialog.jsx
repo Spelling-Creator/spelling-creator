@@ -15,9 +15,9 @@ import { Alert, AlertDescription } from "../ui/alert.jsx";
 import { Progress } from "../ui/progress.jsx";
 import {
   lessonFromSections,
-  parseSection,
+  readLessonText,
   sectionNeedsModel,
-  splitSections,
+  sectionSummary,
 } from "@spelling-creator/core/documentImport";
 import {
   documentModelPossible,
@@ -50,7 +50,9 @@ export default function DocumentImportDialog({
   const fileInputRef = useRef(null);
 
   // The model: whether this device can run it, and the state of a run.
-  // "idle" -> "downloading" (first run only) -> "reading" -> "done".
+  // "idle" -> "downloading" (fetching or loading the weights) -> "reading"
+  // -> "idle". What it has read is kept in modelSections, and it is offered
+  // again for whatever it could not read.
   const [modelPossible, setModelPossible] = useState(false);
   const [modelPhase, setModelPhase] = useState("idle");
   const [modelProgress, setModelProgress] = useState(0);
@@ -83,17 +85,10 @@ export default function DocumentImportDialog({
   }, [open]);
 
   // Cheap enough to run on every keystroke: a few regular expressions per line.
-  const analysis = useMemo(() => {
-    if (!text.trim()) return null;
-    const { title, sections } = splitSections(text);
-    return {
-      title,
-      sections,
-      parsed: sections.map(({ heading, lines }) =>
-        parseSection(lines, heading),
-      ),
-    };
-  }, [text]);
+  const analysis = useMemo(
+    () => (text.trim() ? readLessonText(text) : null),
+    [text],
+  );
 
   // A new text means a new set of sections; the model's answers were for the
   // old ones.
@@ -110,19 +105,26 @@ export default function DocumentImportDialog({
     if (!analysis.sections.length) {
       return modelSections[0] ? [modelSections[0]] : [];
     }
-    return analysis.parsed.map((p, i) => modelSections[i] ?? p);
+    return analysis.sections.map((s, i) => modelSections[i] ?? s.parsed);
   }, [analysis, modelSections]);
 
   const found = merged.length > 0;
-  const needing = analysis
-    ? analysis.parsed.filter(sectionNeedsModel).length
-    : 0;
-  const modelCanHelp =
-    modelPossible &&
-    analysis !== null &&
-    modelPhase !== "done" &&
-    (needing > 0 || !analysis.sections.length);
+  // The section indexes the model is offered for: those the rules could not
+  // read (or the whole text as one, when the splitter found no section) that
+  // it has not read yet. A section it failed on stays here, so it can be
+  // tried again.
+  const unread = useMemo(() => {
+    if (!analysis) return [];
+    const targets = analysis.sections.length
+      ? analysis.sections
+          .map((s, i) => (sectionNeedsModel(s.parsed) ? i : -1))
+          .filter((i) => i >= 0)
+      : [0];
+    return targets.filter((i) => !modelSections[i]);
+  }, [analysis, modelSections]);
   const modelRunning = modelPhase === "downloading" || modelPhase === "reading";
+  const modelCanHelp =
+    modelPossible && analysis !== null && !modelRunning && unread.length > 0;
   const modelRead = Object.values(modelSections).filter(Boolean).length;
 
   const handleFile = async (e) => {
@@ -150,13 +152,9 @@ export default function DocumentImportDialog({
     setModelProgress(0);
     setModelPhase("downloading");
 
-    // The sections the rules could not read, or the whole text as one
-    // section when the splitter found none.
-    const targets = analysis.sections.length
-      ? analysis.parsed
-          .map((p, i) => (sectionNeedsModel(p) ? i : -1))
-          .filter((i) => i >= 0)
-      : [0];
+    // The sections still unread, or the whole text as one section when the
+    // splitter found none.
+    const targets = unread;
     const chunks = analysis.sections.length
       ? targets.map((i) => analysis.sections[i])
       : [
@@ -176,9 +174,11 @@ export default function DocumentImportDialog({
         onDownloadProgress: (loaded) => {
           setModelProgress(loaded);
         },
-        onSection: (done, total) => {
+        // Fires as each section starts, so "reading" shows from the moment
+        // the model is ready, not only once the first section is done.
+        onSection: (number, total) => {
           setModelPhase("reading");
-          setModelCount({ done, total });
+          setModelCount({ done: number, total });
         },
       });
       if (controller.signal.aborted) return;
@@ -186,9 +186,10 @@ export default function DocumentImportDialog({
       targets.forEach((index, k) => {
         if (results[k]) next[index] = results[k];
       });
-      setModelSections(next);
-      setModelPhase("done");
-      if (!Object.keys(next).length) {
+      setModelSections((read) => ({ ...read, ...next }));
+      setModelPhase("idle");
+      // Whatever it could not read stays unread, and is offered again.
+      if (Object.keys(next).length < targets.length) {
         setError(t("documentImport.modelFailed"));
       }
     } catch (err) {
@@ -278,18 +279,17 @@ export default function DocumentImportDialog({
                   })}
                 </p>
                 <ul className="mt-2 flex flex-col gap-1 text-muted-foreground">
-                  {merged.map((s, i) => (
+                  {merged.map(sectionSummary).map((s, i) => (
                     <li key={i} className="flex justify-between gap-3">
                       <span className="truncate">
                         {s.name || t("outline.untitledSection", { n: i + 1 })}
                       </span>
                       <span className="shrink-0 tabular-nums">
                         {t("documentImport.sectionCounts", {
-                          paragraphs: s.paragraphs.length,
-                          words: s.spellingWords.length,
-                          questions: s.questions.length,
-                          answered: s.questions.filter((q) => q.answers.length)
-                            .length,
+                          paragraphs: s.paragraphs,
+                          words: s.spellingWords,
+                          questions: s.questions,
+                          answered: s.answered,
                         })}
                       </span>
                     </li>
@@ -317,7 +317,7 @@ export default function DocumentImportDialog({
             <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-3 text-sm">
               <p className="text-muted-foreground">
                 {analysis.sections.length
-                  ? t("documentImport.modelOffer", { count: needing })
+                  ? t("documentImport.modelOffer", { count: unread.length })
                   : t("documentImport.modelOfferNothing")}
               </p>
               <Button
