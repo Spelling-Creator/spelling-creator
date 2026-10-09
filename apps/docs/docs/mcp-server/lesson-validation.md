@@ -338,23 +338,38 @@ since `cats and dogs and rabbits` has one in both places.
 
 The difficulty is that the same conjunction joins clauses: `rock, gas, and ash, and the
 valley went dark` ends its list at ASH. Nothing short of parsing the sentence separates the
-two for certain, so **length decides**: an item is a word or two before the next separator
-or the sentence's end, and anything longer reads as a clause:
+two for certain, so the check leans on whether the accepted answers have **closed their own
+list** yet.
 
-| After the last accepted answer         | Read as            | Result   |
-| -------------------------------------- | ------------------ | -------- |
-| `and silt,`                            | item               | partial  |
-| `and rabbits.`                         | item               | partial  |
-| `and the valley went dark.`            | clause             | complete |
-| `, all of them steel` (no conjunction) | not a continuation | complete |
-| nothing (sentence ends)                | series ended here  | complete |
+When the run already holds an `and` or `or` (`rock, gas, and ash`, `dust and grit`), another
+conjunction after it may well start a clause, so **length decides**: an item is a word or
+two before the next separator or the sentence's end, and anything longer reads as a clause.
+
+When the run is joined by commas only (`boulder, cobble`), the list isn't finished, and the
+`and` after it can only bring in the last item, however the sentence carries on. The item is
+cut where the rest of the sentence starts: at a word like `as`, `where`, `that`, `when`, or a
+preposition such as `of` or `into`. What's left still has to be a word or two.
+
+| After the last accepted answer         | Run         | Read as            | Result   |
+| -------------------------------------- | ----------- | ------------------ | -------- |
+| `and silt,`                            | either      | item               | partial  |
+| `and rabbits.`                         | either      | item               | partial  |
+| `and silt as it slows.`                | commas only | item `silt`        | partial  |
+| `and fine silt where the water slows.` | commas only | item `fine silt`   | partial  |
+| `and lava flowed into the valley.`     | closed      | clause             | complete |
+| `and the valley went dark.`            | either      | clause             | complete |
+| `and it slows on the plain.`           | either      | clause (a subject) | complete |
+| `, all of them steel` (no conjunction) | either      | not a continuation | complete |
+| `, all of it moving and settling`      | either      | not a continuation | complete |
+| nothing (sentence ends)                | either      | series ended here  | complete |
 
 Two shapes are therefore left alone that a stricter reading would reject: a complete series
 with no conjunction at all (`rope, hammer, pitons`), and a clause coordinated onto a
-finished list. The cost is a subset whose sentence carries on unpunctuated past the final
-item, which goes unreported, along with a subset that happens to include the final item.
-Both are the safe direction to miss in: this runs on a write path, where a false positive
-blocks an author who did nothing wrong.
+finished list. The cost is a smaller subset that goes unreported: a list closed by its own
+conjunction whose sentence then carries on past a further item, and a final item that runs
+on with no word to cut it at. Both are the safe direction to miss in: this runs on a write
+path, where a false positive blocks an author who did nothing wrong. A clause that opens
+with its subject (`and it`, `and they`, `and there`) is never read as an item.
 
 The check is skipped unless every accepted answer is a single word already found in the
 passage, so it never piles onto a question that `E_ORANGE_PARAPHRASED` or

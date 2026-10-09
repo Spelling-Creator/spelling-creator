@@ -294,34 +294,78 @@ const CONJUNCTIONS = new Set(["AND", "OR"]);
 // as a clause instead. "and silt" and "and the chough" are items; "and the
 // valley went dark" is a sentence carrying on.
 const MAX_ITEM_WORDS = 2;
+// Words that start the rest of a sentence rather than continue a noun: "silt as
+// it slows", "fine silt where the water slows", "clouds of ash".
+const ITEM_ENDERS = new Set([
+  ...["AS", "WHERE", "WHEN", "WHILE", "BECAUSE", "SINCE", "UNTIL", "TILL"],
+  ...["BEFORE", "AFTER", "ONCE", "IF", "UNLESS", "THOUGH", "ALTHOUGH"],
+  ...["THAT", "WHICH", "WHO", "WHOM", "WHOSE", "THEN", "SO", "BUT", "YET"],
+  ...["IN", "ON", "AT", "BY", "FROM", "INTO", "ONTO", "TO", "TOWARD"],
+  ...["TOWARDS", "OF", "FOR", "WITH", "WITHOUT", "ALONG", "ACROSS"],
+  ...["THROUGH", "UNDER", "OVER", "NEAR", "BEHIND", "BELOW", "BENEATH"],
+  ...["ABOVE", "AROUND", "BEYOND", "BETWEEN", "AMONG", "DURING", "DOWN"],
+]);
+// A list item doesn't open with a subject: "and it slows", "and there it sank".
+const SUBJECT_PRONOUNS = new Set([
+  ...["I", "WE", "YOU", "HE", "SHE", "IT", "THEY", "THERE"],
+]);
 
 // The next item of the series after `at`, or null if the series ends there. An
 // English series closes with "and X" / "or X", so what marks a run of accepted
 // answers as unfinished is a conjunction after it with an item attached:
 // "boulder, cobble" is unfinished in front of "and silt".
 //
-// The hard part is that the same conjunction also joins clauses — "…rock, gas,
+// The hard part is that the same conjunction also joins clauses: "…rock, gas,
 // and ash, and the valley went dark" ends its list at ASH. Nothing short of
-// parsing the sentence separates the two for certain, so length decides: an item
-// is a word or two before the next separator or the sentence's end, a clause
-// runs on. That misses a subset whose sentence continues unpunctuated past the
-// last item, which is the safe direction to miss in — a false positive here
-// blocks an author who did nothing wrong.
+// parsing the sentence separates the two for certain. What helps is whether the
+// run has closed itself already. "rock, gas, and ash" holds its own "and", so
+// another one after it may well start a clause, and length decides: an item is a
+// word or two before the next separator or the sentence's end, a clause runs on.
+// "boulder, cobble" is joined by commas only, so the series isn't finished, and
+// the "and" after it can only bring in its last item. The item is then cut where
+// the sentence carries on ("silt as it slows" gives "silt"), and only a run-on
+// with no such word in it is left unread. Every miss is the safe direction to
+// miss in: a false positive here blocks an author who did nothing wrong.
+//
+// `open` says the run has no conjunction inside it.
 //
 // The item comes back as the passage wrote it ("silt", not "SILT"): it is quoted
 // to whoever has to fix the list, and ALL CAPS in a lesson means vocabulary.
-function nextListItemAfter({ tokens, raw }, at) {
+function nextListItemAfter({ tokens, raw }, at, open) {
   const tail = tokens.slice(at + 1, at + 4 + MAX_LIST_GAP_WORDS);
   if (!tail.length || !LIST_SEPARATORS.has(tail[0])) return null;
   const conjunction = tail.findIndex((t) => CONJUNCTIONS.has(t));
   if (conjunction === -1) return null;
+  // Whatever sits between the run and the conjunction has to be list items
+  // too, or the conjunction belongs to a clause: "…cobble, all of it moving and
+  // settling" has no item called "settling".
+  const between = [];
+  for (const token of tail.slice(1, conjunction)) {
+    if (LIST_SEPARATORS.has(token)) between.length = 0;
+    else between.push(token);
+    if (between.length > MAX_ITEM_WORDS) return null;
+  }
 
   const start = at + 2 + conjunction;
   let end = start;
-  while (end < tokens.length && !LIST_SEPARATORS.has(tokens[end])) end += 1;
+  while (
+    end < tokens.length &&
+    !LIST_SEPARATORS.has(tokens[end]) &&
+    !(open && ITEM_ENDERS.has(tokens[end]))
+  ) {
+    end += 1;
+  }
   const length = end - start;
   if (!length || length > MAX_ITEM_WORDS) return null;
+  if (SUBJECT_PRONOUNS.has(tokens[start])) return null;
   return raw.slice(start, end).join(" ");
+}
+
+// Is a run of list hits joined by commas alone, with no "and"/"or" closing it?
+function runIsOpen(tokens, run) {
+  return !tokens
+    .slice(run[0].at + 1, run[run.length - 1].at)
+    .some((t) => CONJUNCTIONS.has(t));
 }
 
 // The ALL-CAPS learning vocabulary a passage teaches. Two letters minimum so
@@ -674,6 +718,7 @@ export function validateLesson(doc) {
             const nextItem = nextListItemAfter(
               sentence,
               run[run.length - 1].at,
+              runIsOpen(sentence.tokens, run),
             );
             if (!nextItem) {
               complete = true;

@@ -407,6 +407,40 @@ test("accepting only part of the passage's list is rejected", () => {
   assert.deepEqual(codes(noOxford.errors), ["E_ORANGE_PARTIAL_LIST"]);
 });
 
+test("a list is still partial when its sentence carries on past the last item", () => {
+  // "boulder, cobble" is joined by commas only, so the "and" after it can only
+  // bring in the list's last item, however the sentence goes on from there.
+  const partial = (rest) =>
+    check((input) => {
+      input.sections[0].blocks[0].text =
+        input.sections[0].blocks[0].text.replace(
+          "boulder, cobble, and silt, each size dropped where the flow can no longer lift it",
+          `boulder, cobble, and ${rest}`,
+        );
+      question(input, 0, 5).answers = ["boulder", "cobble"];
+    }).errors;
+
+  for (const [rest, next] of [
+    ["silt as it slows", "silt"],
+    ["fine silt where the water slows", "fine silt"],
+    ["clouds of silt that settle on the bed", "clouds"],
+  ]) {
+    const errors = partial(rest);
+    assert.deepEqual(codes(errors), ["E_ORANGE_PARTIAL_LIST"], rest);
+    assert.match(errors[0].message, new RegExp(`goes on to "${next}"`), rest);
+  }
+
+  // A clause after a comma-only run is still not an item: it has no word where
+  // an item would stop, or it opens with its subject.
+  for (const rest of [
+    "the valley floor slowly rises",
+    "it slows on the plain",
+    "they settle where the water slows",
+  ]) {
+    assert.deepEqual(codes(partial(rest)), [], rest);
+  }
+});
+
 test("a repeated conjunction doesn't hide the rest of the list", () => {
   // "cats and dogs and rabbits" has a conjunction inside the accepted run as
   // well as after it, so a run that merely crosses one conjunction proves
@@ -445,6 +479,25 @@ test("a clause coordinated onto a finished list is not another item", () => {
     question(input, 0, 5).answers = ["dust", "grit"];
   });
   assert.deepEqual(codes(afterPair.errors), []);
+
+  // A closed list followed by a clause that happens to have a preposition in it
+  // keeps the length rule, so "lava" isn't read as a fourth item.
+  const afterClosedList = check((input) => {
+    input.sections[0].blocks[0].text = input.sections[0].blocks[0].text.replace(
+      "boulder, cobble, and silt, each size dropped where the flow can no longer lift it",
+      "boulder, cobble, and silt, and lava flowed into the valley",
+    );
+  });
+  assert.deepEqual(codes(afterClosedList.errors), []);
+
+  // Prose between the run and an "and" means the "and" joins something else.
+  const afterProse = check((input) => {
+    input.sections[0].blocks[0].text = input.sections[0].blocks[0].text.replace(
+      "boulder, cobble, and silt",
+      "boulder, cobble, silt, all of it moving and settling as it slows",
+    );
+  });
+  assert.deepEqual(codes(afterProse.errors), []);
 });
 
 test("a complete list is accepted however it closes", () => {
