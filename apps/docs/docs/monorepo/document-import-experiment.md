@@ -351,8 +351,8 @@ published exports:
 [LFM2-1.2B-Extract-lesson](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson)
 (merged weights) and
 [LFM2-1.2B-Extract-lesson-ONNX](https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson-ONNX)
-(use `q4f16` on WebGPU and `int8` on a CPU; the `q4` file is kept only for
-reference).
+(`q4f16` for WebGPU and `int8` for a CPU; the first fine-tune's `q4` file was
+removed when the second replaced it, since its weights no longer matched).
 
 ## Running it again
 

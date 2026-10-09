@@ -6,6 +6,14 @@ import path from "node:path";
 
 export const DEFAULT_API = "https://spellingcreator.org";
 
+// Hub lessons kept out of every dataset built from the hub, the archived and
+// published ones included, because their author has not been asked whether
+// their text may be republished (the datasets are CC BY 4.0). By id, with the
+// title for the reader.
+export const NOT_ARCHIVED = [
+  "75759000-d43e-40a2-9583-633c17e0a632", // Prindsessen paa Ærten
+];
+
 async function cached(file, fetchIt) {
   try {
     return JSON.parse(await readFile(file, "utf8"));

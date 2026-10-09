@@ -25,10 +25,21 @@ lessons. Two of the layouts, `nomarks` and `runon` (`HARD_LAYOUTS`), are ones
 the rules cannot read; from those the dataset keeps only the sections the
 import would send to the model (`sectionNeedsModel`), so the model trains on
 what actually reaches it. The script prints the example count per layout.
+Lessons in `NOT_ARCHIVED` (`lessons.mjs`) are left out: their author has not
+been asked whether the text may be republished.
 
-`finetune-colab.ipynb` is the fine-tune itself: open it in Google Colab, upload
-the two JSONL files, fill in your Hugging Face name in the first cell and run
-it top to bottom. It trains a LoRA adapter on LFM2-1.2B-Extract, scores the
+The built dataset is public, CC BY 4.0, as
+[playforgecoding/spelling-creator-document-import](https://huggingface.co/datasets/playforgecoding/spelling-creator-document-import);
+its card is `dataset-card.md`. To publish a rebuilt one:
+
+```bash
+cp dataset-card.md out/dataset/README.md
+hf upload playforgecoding/spelling-creator-document-import out/dataset . --repo-type dataset
+```
+
+`finetune-colab.ipynb` is the fine-tune itself: open it in Google Colab, fill
+in your Hugging Face name in the first cell and run it top to bottom. It loads
+the published dataset, or `train.jsonl` and `holdout.jsonl` if you upload them. It trains a LoRA adapter on LFM2-1.2B-Extract, scores the
 held-out sections, merges, exports `q4f16` (WebGPU) and `int8` (CPU) and
 pushes a repo that `run.mjs --models` can take. The conversion uses Microsoft's
 onnxruntime-genai model builder, which is what the onnx-community LFM2 files

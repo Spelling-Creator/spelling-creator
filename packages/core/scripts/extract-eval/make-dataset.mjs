@@ -24,7 +24,7 @@ import { parseArgs } from "node:util";
 import { parseSection, sectionNeedsModel } from "../../src/documentImport.js";
 import { systemPrompt } from "../../src/documentImportModel.js";
 import { HARD_LAYOUTS, LAYOUTS, PROMPT_AS_WRITTEN } from "./layouts.mjs";
-import { DEFAULT_API, fetchLessons } from "./lessons.mjs";
+import { DEFAULT_API, NOT_ARCHIVED, fetchLessons } from "./lessons.mjs";
 import { renderDocxText } from "./render.mjs";
 import { groundTruthSection } from "./score.mjs";
 import { splitSections } from "./split.mjs";
@@ -41,7 +41,7 @@ const { values: args } = parseArgs({
 
 await mkdir(args.out, { recursive: true });
 
-// Every published lesson, whatever its section count.
+// Every published lesson, whatever its section count, but those NOT_ARCHIVED.
 const list = JSON.parse(
   await readFile(path.join(args.cache, "lessons", "list.json"), "utf8").catch(
     async () => {
@@ -59,6 +59,7 @@ for (const sectionCount of counts) {
       api: args.api,
       cacheDir: path.join(args.cache, "lessons"),
       sectionCount,
+      skip: NOT_ARCHIVED,
     })),
   );
 }

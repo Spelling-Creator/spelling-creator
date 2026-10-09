@@ -7,12 +7,16 @@ language:
 pipeline_tag: text-generation
 library_name: transformers
 base_model: LiquidAI/LFM2-1.2B-Extract
+datasets:
+  - playforgecoding/spelling-creator-document-import
 tags:
   - liquid
   - lfm2
   - edge
   - extraction
   - spelling-creator
+  - trl
+  - sft
 ---
 
 # LFM2-1.2B-Extract, fine-tuned for Spelling Creator lesson documents
@@ -26,11 +30,17 @@ export at
 Turns one section of a spelling lesson document, as a person might type it up
 or as the app's own Word export reads back as plain text, into the lesson's
 JSON: the passage paragraphs copied word for word, the spelling words, and
-every question with its printed answers and working-out. It is a fine-tune of
+every question with its printed answers, type and working-out. It is a
+fine-tune of
 [LiquidAI/LFM2-1.2B-Extract](https://huggingface.co/LiquidAI/LFM2-1.2B-Extract)
 for [Spelling Creator](https://github.com/Spelling-Creator/spelling-creator), a
 lesson builder for Spelling to Communicate (S2C), where lessons are read aloud
 to nonspeaking spellers.
+
+Spelling Creator reads typed lessons with rules first, and only hands this
+model the sections the rules cannot read: questions typed with no question
+marks or numbers, an answer left glued to its question, a numbered list that
+lost its line breaks. This is the second fine-tune, trained on exactly those.
 
 The stock Extract model handled this badly: it split paragraphs into
 sentences, invented answers for open questions, and often abandoned the
@@ -38,34 +48,41 @@ schema. This fine-tune copies rather than invents.
 
 ## Training
 
-LoRA (rank 16, learning rate 2e-4, 3 epochs, 4096-token context) on 412
-examples: the 13 published lessons on the Spelling Creator hub, each rendered
-in 7 document layouts (the app's Word export read as raw text, and six
-typed-up styles) and cut into sections, paired with the section's lesson JSON.
-84 sections from the two newest lessons were held out. The data generator and
-the training notebook are in the Spelling Creator repo under
+LoRA (rank 16, learning rate 2e-4, 3 epochs, 4096-token context) on the
+[spelling-creator-document-import](https://huggingface.co/datasets/playforgecoding/spelling-creator-document-import)
+dataset: 521 sections from 10 lessons published on the Spelling Creator hub,
+each rendered in 9 layouts and paired with the section's lesson JSON. Seven
+layouts the app's rules read (its Word export as raw text, and six typed-up
+styles), and two they cannot, from which only the sections the app would
+really send to the model are kept, laid out exactly as it sends them. The two
+newest lessons (108 sections) are held out. The data generator and the
+training notebook are in the Spelling Creator repo under
 `packages/core/scripts/extract-eval/`.
 
 ## Results
 
-On a sample of 20 held-out sections spread across both held-out lessons and
-all seven layouts:
+The int8 ONNX export, on every section of both held-out lessons (12 per
+layout):
 
-| metric                              | value |
-| ----------------------------------- | ----: |
-| sections parsed as JSON             |   95% |
-| spelling words exact                |   85% |
-| question prompts found              |   95% |
-| answers exact                       |   98% |
-| answers invented for open questions |     1 |
+| layout                       | parsed | answers | composite |
+| ---------------------------- | -----: | ------: | --------: |
+| no question marks or numbers |   100% |     97% |       96% |
+| numbered list on one line    |    92% |     91% |       89% |
+| Word export as raw text      |   100% |     99% |       96% |
+| numbered, bracketed answers  |   100% |    100% |       97% |
+| Q and A lines                |   100% |    100% |       94% |
+| bare capitals, no headings   |   100% |     99% |       96% |
+| bullets, square brackets     |    92% |     92% |       89% |
+| numbered, colon              |   100% |     96% |       96% |
+| working-out on its own line  |    92% |     92% |       88% |
 
-For comparison, the stock model's answers were right about half the time on a
-tidy typed document and a quarter of the time on the Word export.
-
-Question types are not reliable from this or any small model; Spelling Creator
-derives the type from the answers and the wording instead. The app's rule-based
-parser still beats this model on every regular layout, so the model is for
-documents the parser cannot read. The full write-up is at
+On the first two, the layouts the app actually sends it, Spelling Creator's
+rules score 66 and 40 percent. Every row under 94 percent is one section in
+twelve whose reply is not valid JSON (a key in the wrong place, a bare string
+where a question belonged, a reply that repeated itself), which the app shows
+as unread. On the sections that parse, every layout is 96 to 100 percent. The
+model's own question types are right 87 to 97 percent of the time, above the
+app's rule for deriving them, so the app keeps them. The full write-up is at
 [spellingcreator.org/docs/monorepo/document-import-experiment](https://spellingcreator.org/docs/monorepo/document-import-experiment).
 
 ## Prompt
@@ -73,7 +90,8 @@ documents the parser cannot read. The full write-up is at
 The system prompt is `Return data as a JSON object with the following schema:`
 followed by the JSON Schema of a section (`name`, `paragraphs`,
 `spellingWords`, and `questions`, each with `prompt`, `type`, `answers` and
-`steps`), and the user turn is the section's text. Greedy decoding.
+`steps`) and a short guide to the question types; the user turn is the
+section's text. Greedy decoding.
 
 ## Use
 

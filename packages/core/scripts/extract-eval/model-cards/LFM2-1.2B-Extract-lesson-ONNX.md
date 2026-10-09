@@ -37,33 +37,32 @@ model's card.
 
 ## Files
 
-| file                    | for                                              | note                                                                                                                                             |
-| ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `onnx/model_q4f16.onnx` | WebGPU (`device: "webgpu"`, `dtype: "q4f16"`)    | Verified: copies a real section faithfully in Chromium. The one to ship in a browser.                                                            |
-| `onnx/model_int8.onnx`  | CPU: Node and the wasm backend (`dtype: "int8"`) | Verified through transformers.js on the held-out lessons: answers 96 to 100% exact on six of seven layouts (see below). The one to use on a CPU. |
-| `onnx/model_q4.onnx`    | CPU                                              | Not faithful for this checkpoint: paraphrases instead of copying. Kept for reference.                                                            |
+| file                    | for                                              | note                                                                                                                |
+| ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `onnx/model_q4f16.onnx` | WebGPU (`device: "webgpu"`, `dtype: "q4f16"`)    | What Spelling Creator ships in the browser.                                                                         |
+| `onnx/model_int8.onnx`  | CPU: Node and the wasm backend (`dtype: "int8"`) | Scored below. The one to use on a CPU. There is no `q4` CPU file: for this model it paraphrased instead of copying. |
 
 ## Results of the int8 export
 
-Scored through transformers.js (onnxruntime-node, `dtype: "int8"`) on the two
-lessons held out of training, two sections each, in all seven document layouts
-the training data used:
+Scored through transformers.js (onnxruntime-node, `dtype: "int8"`) on every
+section of the two lessons held out of training, 12 per layout:
 
-| layout                      | parsed | passage words | spelling | prompts | answers |
-| --------------------------- | -----: | ------------: | -------: | ------: | ------: |
-| Word export as raw text     |   100% |          100% |     100% |    100% |    100% |
-| numbered, bracketed answers |   100% |          100% |     100% |    100% |    100% |
-| Q and A lines               |   100% |          100% |      81% |    100% |     98% |
-| bare capitals, no headings  |    75% |           75% |      75% |     75% |     75% |
-| bullets, square brackets    |   100% |          100% |     100% |    100% |    100% |
-| numbered, colon             |   100% |          100% |     100% |     98% |     96% |
-| working-out on its own line |   100% |          100% |     100% |    100% |    100% |
+| layout                       | parsed | passage words | spelling | prompts | answers |
+| ---------------------------- | -----: | ------------: | -------: | ------: | ------: |
+| no question marks or numbers |   100% |          100% |      98% |     98% |     97% |
+| numbered list on one line    |    92% |           92% |      92% |     91% |     91% |
+| Word export as raw text      |   100% |           99% |      98% |     97% |     99% |
+| numbered, bracketed answers  |   100% |          100% |     100% |     98% |    100% |
+| Q and A lines                |   100% |           99% |      85% |     99% |    100% |
+| bare capitals, no headings   |   100% |           99% |      98% |     98% |     99% |
+| bullets, square brackets     |    92% |           91% |      92% |     90% |     92% |
+| numbered, colon              |   100% |           99% |     100% |     99% |     96% |
+| working-out on its own line  |    92% |           89% |      92% |     89% |     92% |
 
-The one miss in the capitals layout is a single long section where the reply
-hit the 1,500-token cap before closing its JSON; the other three sections in
-that layout were perfect. The model's own question types were right 93 to 99
-percent of the time here, better than on the sample scored in the training
-notebook.
+The first two are the layouts Spelling Creator actually hands the model,
+where its rules score 66 and 40 percent. Each row under 100 percent parsed is
+one section in twelve whose reply is not valid JSON; none hit the token cap.
+About 30 seconds a section on an M4's CPU.
 
 ## Use
 
@@ -103,7 +102,7 @@ console.log(
 ## How it was converted
 
 `python -m onnxruntime_genai.models.builder -i merged -p int4 -e webgpu` for
-q4f16 and `-e cpu` for q4, then `relayout-onnx.py` from the Spelling Creator
+q4f16 and `-p int8 -e cpu` for int8, then `relayout-onnx.py` from the Spelling Creator
 repo, which renames the convolution caches to `past_conv.N`, makes the KV
 cache's head dimension concrete, moves the chat template into
 `tokenizer_config.json`, adds the `transformers.js_config` block, and puts the
