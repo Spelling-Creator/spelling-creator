@@ -310,6 +310,16 @@ const SUBJECT_PRONOUNS = new Set([
   ...["I", "WE", "YOU", "HE", "SHE", "IT", "THEY", "THERE"],
 ]);
 
+// The ending a word wears, if it looks inflected: "flows" and "rabbits" end in
+// S, "settled" in ED, "spreading" in ING. "moss", "cactus" and "axis" don't
+// count, and short words like "bed" or "wing" are left alone.
+function inflectionOf(token) {
+  if (token.length >= 5 && token.endsWith("ING")) return "ING";
+  if (token.length >= 5 && token.endsWith("ED")) return "ED";
+  if (/[^SUI]S$/.test(token)) return "S";
+  return null;
+}
+
 // The next item of the series after `at`, or null if the series ends there. An
 // English series closes with "and X" / "or X", so what marks a run of accepted
 // answers as unfinished is a conjunction after it with an item attached:
@@ -324,14 +334,19 @@ const SUBJECT_PRONOUNS = new Set([
 // "boulder, cobble" is joined by commas only, so the series isn't finished, and
 // the "and" after it can only bring in its last item. The item is then cut where
 // the sentence carries on ("silt as it slows" gives "silt"), and only a run-on
-// with no such word in it is left unread. Every miss is the safe direction to
-// miss in: a false positive here blocks an author who did nothing wrong.
-//
-// `open` says the run has no conjunction inside it.
+// with no such word in it is left unread. A verb can stand there too, though:
+// "boulder, cobble, and flows into the sea". Without a parser the tell is that
+// list items match, so a cut item may only wear an ending ("flows", "settled")
+// that one of the run's own items wears too. Plural nouns get through
+// ("cats, dogs, and rabbits in the grass"), verbs after singular nouns don't.
+// Every miss is the safe direction to miss in: a false positive here blocks an
+// author who did nothing wrong.
 //
 // The item comes back as the passage wrote it ("silt", not "SILT"): it is quoted
 // to whoever has to fix the list, and ALL CAPS in a lesson means vocabulary.
-function nextListItemAfter({ tokens, raw }, at, open) {
+function nextListItemAfter({ tokens, raw }, run) {
+  const at = run[run.length - 1].at;
+  const open = runIsOpen(tokens, run);
   const tail = tokens.slice(at + 1, at + 4 + MAX_LIST_GAP_WORDS);
   if (!tail.length || !LIST_SEPARATORS.has(tail[0])) return null;
   const conjunction = tail.findIndex((t) => CONJUNCTIONS.has(t));
@@ -358,6 +373,13 @@ function nextListItemAfter({ tokens, raw }, at, open) {
   const length = end - start;
   if (!length || length > MAX_ITEM_WORDS) return null;
   if (SUBJECT_PRONOUNS.has(tokens[start])) return null;
+  if (ITEM_ENDERS.has(tokens[end])) {
+    const endings = new Set(run.map((hit) => inflectionOf(hit.token)));
+    const item = tokens.slice(start, end);
+    if (item.some((t) => inflectionOf(t) && !endings.has(inflectionOf(t)))) {
+      return null;
+    }
+  }
   return raw.slice(start, end).join(" ");
 }
 
@@ -715,11 +737,7 @@ export function validateLesson(doc) {
             // The series has to end where the accepted answers do — checked at
             // the run's last item, wherever the conjunctions inside it fell, so
             // "cats and dogs" is caught in front of "and rabbits".
-            const nextItem = nextListItemAfter(
-              sentence,
-              run[run.length - 1].at,
-              runIsOpen(sentence.tokens, run),
-            );
+            const nextItem = nextListItemAfter(sentence, run);
             if (!nextItem) {
               complete = true;
               break;

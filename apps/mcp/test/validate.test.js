@@ -423,19 +423,31 @@ test("a list is still partial when its sentence carries on past the last item", 
   for (const [rest, next] of [
     ["silt as it slows", "silt"],
     ["fine silt where the water slows", "fine silt"],
-    ["clouds of silt that settle on the bed", "clouds"],
   ]) {
     const errors = partial(rest);
     assert.deepEqual(codes(errors), ["E_ORANGE_PARTIAL_LIST"], rest);
     assert.match(errors[0].message, new RegExp(`goes on to "${next}"`), rest);
   }
 
+  // A plural item is cut the same way when the list's own items are plural.
+  const plural = check((input) => {
+    input.sections[0].blocks[0].text +=
+      " The bank held cats, dogs, and rabbits in the long grass.";
+    question(input, 0, 5).answers = ["cats", "dogs"];
+  });
+  assert.deepEqual(codes(plural.errors), ["E_ORANGE_PARTIAL_LIST"]);
+  assert.match(plural.errors[0].message, /goes on to "rabbits"/);
+
   // A clause after a comma-only run is still not an item: it has no word where
-  // an item would stop, or it opens with its subject.
+  // an item would stop, it opens with its subject, or it opens with a verb whose
+  // ending none of the list's items share.
   for (const rest of [
     "the valley floor slowly rises",
     "it slows on the plain",
     "they settle where the water slows",
+    "flows into the sea",
+    "settled in the bay",
+    "spreads out over the plain",
   ]) {
     assert.deepEqual(codes(partial(rest)), [], rest);
   }

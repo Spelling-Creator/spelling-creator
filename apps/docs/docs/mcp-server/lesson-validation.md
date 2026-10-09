@@ -350,12 +350,20 @@ When the run is joined by commas only (`boulder, cobble`), the list isn't finish
 cut where the rest of the sentence starts: at a word like `as`, `where`, `that`, `when`, or a
 preposition such as `of` or `into`. What's left still has to be a word or two.
 
+A verb can sit in that spot too (`boulder, cobble, and flows into the sea`), and without a
+parser `flows` looks just like `rabbits`. What separates them is that list items match: a
+cut item may only end in `-s`, `-ed` or `-ing` if one of the run's own accepted answers
+does as well. So `cats, dogs, and rabbits in the grass` is read as an item, and `boulder,
+cobble, and flows into the sea` is not.
+
 | After the last accepted answer         | Run         | Read as            | Result   |
 | -------------------------------------- | ----------- | ------------------ | -------- |
 | `and silt,`                            | either      | item               | partial  |
 | `and rabbits.`                         | either      | item               | partial  |
 | `and silt as it slows.`                | commas only | item `silt`        | partial  |
 | `and fine silt where the water slows.` | commas only | item `fine silt`   | partial  |
+| `and rabbits in the grass.` (`cats`)   | commas only | item `rabbits`     | partial  |
+| `and flows into the sea.` (`cobble`)   | commas only | clause (a verb)    | complete |
 | `and lava flowed into the valley.`     | closed      | clause             | complete |
 | `and the valley went dark.`            | either      | clause             | complete |
 | `and it slows on the plain.`           | either      | clause (a subject) | complete |
@@ -366,10 +374,13 @@ preposition such as `of` or `into`. What's left still has to be a word or two.
 Two shapes are therefore left alone that a stricter reading would reject: a complete series
 with no conjunction at all (`rope, hammer, pitons`), and a clause coordinated onto a
 finished list. The cost is a smaller subset that goes unreported: a list closed by its own
-conjunction whose sentence then carries on past a further item, and a final item that runs
-on with no word to cut it at. Both are the safe direction to miss in: this runs on a write
-path, where a false positive blocks an author who did nothing wrong. A clause that opens
-with its subject (`and it`, `and they`, `and there`) is never read as an item.
+conjunction whose sentence then carries on past a further item, a final item that runs on
+with no word to cut it at, and a run-on plural after a list of singular nouns (`boulder,
+cobble, and pebbles as it slows`). All are the safe direction to miss in: this runs on a
+write path, where a false positive blocks an author who did nothing wrong. A clause that
+opens with its subject (`and it`, `and they`, `and there`) is never read as an item. One
+false positive is still possible: a verb after a list of plural nouns (`cats, dogs, and
+runs off into the field`).
 
 The check is skipped unless every accepted answer is a single word already found in the
 passage, so it never piles onto a question that `E_ORANGE_PARAPHRASED` or
