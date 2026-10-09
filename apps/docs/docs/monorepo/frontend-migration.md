@@ -261,12 +261,30 @@ Notes on the config, all of which are load-bearing:
 - **`VITE_*` env vars need no config**: Vite substitutes `import.meta.env`
   natively, so Rsbuild's `loadEnv`/`publicVars` shim is gone. The prefix that
   had been kept for continuity is now simply correct.
-- **The React Compiler runs as a Babel pass** (`@rolldown/plugin-babel` +
-  `reactCompilerPreset({ target: "19" })`), not through SWC. The target has to
-  match the installed React: on 18 it emits imports from the separate
-  `react-compiler-runtime` shim, on 19 from `react/compiler-runtime`, which
-  React itself exports. (Written as `target: "18"` originally; flipped, and the
-  shim package dropped, with the React 19 upgrade.)
+- **The React Compiler runs natively in Oxc** (`react({ compiler: true })`,
+  backed by the optional `oxc-transform-react` peer), not as a Babel pass and
+  not through SWC. It is the React team's Rust port of the compiler, run on
+  Oxc's AST before the JSX transform, so `@babel/core`, `@rolldown/plugin-babel`
+  and `babel-plugin-react-compiler` are gone. Its default target is React 19,
+  which imports the memoisation hooks from `react/compiler-runtime` that React
+  itself exports. `oxc-transform-react` is pinned with `~` because
+  `@vitejs/plugin-react` declares it as a `^0.x` peer, which only accepts one
+  minor version; bump the two together.
+  - **Why it was switched:** the Babel pass was about 2s of a 3.4s production
+    build; with Oxc the build takes about 1.35s, the same as building with no
+    compiler at all. SWC also ships the Rust port, but on Vite 8
+    `@vitejs/plugin-react-swc` turns Oxc off and runs SWC on every file, so it
+    would have swapped one extra toolchain for another.
+  - **How it was checked:** every module's transformed output was captured from
+    client and SSR builds under Babel compiler 1.0.0, under the last TypeScript
+    compiler build (`0.0.0-experimental-a1856f3-20260507`), and under Oxc. Where
+    both compile a function, Oxc's output differs from the TypeScript build only
+    in names, comment placement and helper order. The changes against 1.0.0 are
+    the compiler's own improvements since that release (for example memoising
+    `t(...)` calls and treating `useState` setters as stable). Oxc also compiles
+    files 1.0.0 gave up on (`try`/`catch` blocks containing `?.`, `&&` or
+    ternaries, and an internal error in `CollabCursors`), and, like 1.0.0, still
+    skips any function that suppresses `react-hooks/exhaustive-deps`.
 - **`codeSplitting.groups` is not optional.** Rolldown puts everything reachable
   from the entry in one chunk, where Rsbuild split vendors by default; without
   the groups, editing one app file invalidates ~3.4 MB for returning visitors.

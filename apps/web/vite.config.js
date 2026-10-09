@@ -1,8 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -147,13 +146,11 @@ export default defineConfig(({ isSsrBuild }) => ({
   plugins: [
     isSsrBuild && stubUnreachableOnServer(),
     dropOnnxWasmAssets(),
-    react(),
-    // The React Compiler runs as a Babel pass. This used to pass
-    // `target: "18"`, which makes it emit imports from the `react-compiler-runtime`
-    // shim; on React 19 the memoisation hooks it needs are exported by React
-    // itself as `react/compiler-runtime`, so the target matches the installed
-    // React and the shim package is gone.
-    babel({ presets: [reactCompilerPreset({ target: "19" })] }),
+    // `compiler` runs the React Compiler natively through `oxc-transform-react`
+    // (the React team's Rust port) before Oxc's JSX transform, so there is no
+    // Babel pass. It targets React 19 by default, which imports the memoisation
+    // hooks from `react/compiler-runtime` instead of the old shim package.
+    react({ compiler: true }),
     tailwindcss(),
     // Progressive web app: the installable manifest plus a Workbox service
     // worker that precaches the built shell. The editor already keeps lessons
