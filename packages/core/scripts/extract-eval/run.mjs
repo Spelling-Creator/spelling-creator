@@ -114,8 +114,7 @@ for (const lesson of lessons) {
     const split = splitSections(text);
     cases.push({ lesson, style, text, split, originalChecks });
     log(
-      `  ${lesson.title} [${style}]: ${split.sections.length}/${doc.sections.length} sections found` +
-        (split.dropped ? `, ${split.dropped} trailing chunk(s) dropped` : ""),
+      `  ${lesson.title} [${style}]: ${split.sections.length}/${doc.sections.length} sections found`,
     );
   }
 }
