@@ -90,6 +90,33 @@ schema are the same in every example. It scores the held-out passages, merges,
 and exports `q4f16` and `int8` with the same builder and
 `relayout-onnx.py` as the [import model](./document-import-experiment.md).
 
+### First fine-tune
+
+The 350M model after 5 epochs on the 227 training passages, its `int8` export
+scored with `run.mjs --holdout --dtype int8` (the notebook's own check gave the
+same numbers, so the export lost nothing):
+
+| model                          | in the schema | recall | precision | invented quotes | quiet when none | subject | s/passage |
+| ------------------------------ | ------------: | -----: | --------: | --------------: | --------------: | ------: | --------: |
+| LFM2-350M-Extract-facts (int8) |         24/24 |    35% |       24% |               4 |            7/12 |     57% |       3.0 |
+
+The shape is learned: every reply is a list of claims in the schema, and on
+the claims it finds, the value, unit and qualifier are always right. What is
+not learned yet is judgment:
+
+- **Subjects.** "German invasion of the United States" for Einstein leaving
+  Germany in 1933, "1895 entrance exam", a country of "VESUVIUS". The checker
+  looks a claim up by its subject, so a wrong one is a wrong finding or none.
+- **Which property.** Pompeii found in 1748 is `discovered` in the labels and
+  `began` from the model, a theory is `discoverer` in one and `creator` in the
+  other. The labels are not consistent about these either, which a small
+  model cannot learn around.
+- **Restraint.** It lists something in 5 of the 12 passages with nothing
+  checkable, and more than the labels in most others.
+
+It is also five to ten times faster than the stock models, about 3 seconds a
+passage on a CPU, because it writes short replies and stops.
+
 ## Running it again
 
 ```bash
