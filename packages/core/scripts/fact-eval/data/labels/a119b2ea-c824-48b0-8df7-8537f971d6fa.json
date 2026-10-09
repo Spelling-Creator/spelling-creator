@@ -19,7 +19,7 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "March 14, 1879",
+      "quote": "born on March 14, 1879",
       "subject": "Albert Einstein",
       "kind": "scientist",
       "property": "born",
@@ -45,7 +45,7 @@
     },
     {
       "passage": 3,
-      "quote": "Munich, the LUITPOLD GYMNASIUM",
+      "quote": "school in Munich, the LUITPOLD GYMNASIUM",
       "subject": "Luitpold Gymnasium",
       "kind": "school",
       "property": "region",
@@ -77,6 +77,19 @@
       "property": "published",
       "stated": "",
       "value": 1905,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 6,
+      "quote": "SPECIAL RELATIVITY",
+      "subject": "Special relativity",
+      "kind": "scientific theory",
+      "property": "discoverer",
+      "stated": "Albert Einstein",
+      "value": 0,
       "unit": "none",
       "month": 0,
       "day": 0,
@@ -123,7 +136,7 @@
     },
     {
       "passage": 7,
-      "quote": "Einstein",
+      "quote": "he completed his theory of GENERAL RELATIVITY",
       "subject": "General relativity",
       "kind": "scientific theory",
       "property": "discoverer",
@@ -137,8 +150,8 @@
     {
       "passage": 8,
       "quote": "In 1919",
-      "subject": "Eddington experiment",
-      "kind": "experiment",
+      "subject": "Solar eclipse of May 29, 1919",
+      "kind": "eclipse",
       "property": "happened",
       "stated": "",
       "value": 1919,
@@ -148,22 +161,9 @@
       "qualifier": "exact"
     },
     {
-      "passage": 8,
-      "quote": "about 300,000 kilometres per second",
-      "subject": "Speed of light",
-      "kind": "physical constant",
-      "property": "speed",
-      "stated": "",
-      "value": 300000,
-      "unit": "km/h",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
       "passage": 10,
       "quote": "In 1933",
-      "subject": "Nazi seizure of power",
+      "subject": "Adolf Hitler's rise to power",
       "kind": "historical event",
       "property": "happened",
       "stated": "",
@@ -189,9 +189,22 @@
     {
       "passage": 11,
       "quote": "In 1939",
+      "subject": "Nuclear fission",
+      "kind": "scientific discovery",
+      "property": "discovered",
+      "stated": "",
+      "value": 1939,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 11,
+      "quote": "In 1939",
       "subject": "Einstein–Szilard letter",
       "kind": "letter",
-      "property": "happened",
+      "property": "published",
       "stated": "",
       "value": 1939,
       "unit": "none",

@@ -20,8 +20,8 @@
     {
       "passage": 2,
       "quote": "almost 10,000 years ago",
-      "subject": "Domestication of the cat",
-      "kind": "process",
+      "subject": "Cat",
+      "kind": "domestic animal",
       "property": "began",
       "stated": "",
       "value": -10000,
@@ -46,7 +46,7 @@
     {
       "passage": 11,
       "quote": "roughly 8 billion people",
-      "subject": "World",
+      "subject": "Earth",
       "kind": "planet",
       "property": "population",
       "stated": "",

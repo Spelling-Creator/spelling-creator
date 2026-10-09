@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-william-shakespeare",
+  "title": "William Shakespeare",
+  "model": "opus",
+  "passages": [
+    "William Shakespeare was BAPTIZED on 26 April 1564 in Stratford, a busy market town on the River Avon in England. His father John made fine leather gloves, and young William probably studied Latin at the local GRAMMAR school, reading poems written by the ancient Romans. At 18 he married Anne Hathaway, and they had three children, including twins named Hamnet and Judith. Then came a turning point. By about 1592 he had moved to London, a crowded and noisy city of perhaps 200,000 people, where eager crowds packed open air theaters to watch plays.",
+    "In London he became a famous PLAYWRIGHT and actor. His company built the Globe Theatre in 1599, a round wooden building where nearly 3,000 people could gather. He wrote about 37 plays, among them Romeo and Juliet, Hamlet and Macbeth, plus 154 SONNETS. He is often credited with inventing or first writing down more than 1,700 English words, such as lonely and eyeball. Shakespeare died on 23 April 1616, aged 52. Seven years later, two friends printed 36 of his plays in a book called the First FOLIO. Today his stories are performed all over the world, from the colorful Kabuki stages of Japan to theaters in South Africa that tell them in Zulu."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "BAPTIZED on 26 April 1564",
+      "subject": "William Shakespeare",
+      "kind": "playwright",
+      "property": "born",
+      "stated": "",
+      "value": 1564,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Stratford",
+      "subject": "Stratford-upon-Avon",
+      "kind": "town",
+      "property": "country",
+      "stated": "England",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Globe Theatre in 1599",
+      "subject": "Globe Theatre",
+      "kind": "theatre",
+      "property": "began",
+      "stated": "",
+      "value": 1599,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Romeo and Juliet",
+      "subject": "Romeo and Juliet",
+      "kind": "play",
+      "property": "creator",
+      "stated": "William Shakespeare",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Hamlet",
+      "subject": "Hamlet",
+      "kind": "play",
+      "property": "creator",
+      "stated": "William Shakespeare",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Macbeth",
+      "subject": "Macbeth",
+      "kind": "play",
+      "property": "creator",
+      "stated": "William Shakespeare",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "23 April 1616",
+      "subject": "William Shakespeare",
+      "kind": "playwright",
+      "property": "died",
+      "stated": "",
+      "value": 1616,
+      "unit": "none",
+      "month": 4,
+      "day": 23,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Seven years later",
+      "subject": "First Folio",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1623,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

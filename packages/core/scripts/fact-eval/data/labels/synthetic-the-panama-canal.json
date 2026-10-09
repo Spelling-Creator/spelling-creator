@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-panama-canal",
+  "title": "The Panama Canal",
+  "model": "opus",
+  "passages": [
+    "The Panama Canal cuts across the ISTHMUS of Panama, a narrow strip of land that joins North and South America. Work first began in 1881, when a French company led by Ferdinand de Lesseps started digging. He had already built the Suez Canal in Egypt, but Panama was very different. Heavy rains, steep muddy hills and diseases such as MALARIA and yellow fever made the job terribly hard. By 1889 the French effort had collapsed, and more than 20,000 workers had died.",
+    "In 1904 the United States took over, and engineers such as John Stevens and George Goethals led a huge EXCAVATION. Tens of thousands of workers arrived, many from Caribbean islands like Barbados and Jamaica, bringing their own languages, foods and songs to the busy camps. The canal finally opened on August 15, 1914. It is about 50 miles long, and giant locks lift ships roughly 85 feet up to Gatun Lake, a man-made RESERVOIR, and back down again. A trip through takes around 8 to 10 hours. On December 31, 1999, Panama took full control of its canal."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Work first began in 1881",
+      "subject": "Panama Canal",
+      "kind": "canal",
+      "property": "began",
+      "stated": "",
+      "value": 1881,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Ferdinand de Lesseps",
+      "subject": "Suez Canal",
+      "kind": "canal",
+      "property": "creator",
+      "stated": "Ferdinand de Lesseps",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Suez Canal in Egypt",
+      "subject": "Suez Canal",
+      "kind": "canal",
+      "property": "country",
+      "stated": "Egypt",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "opened on August 15, 1914",
+      "subject": "Panama Canal",
+      "kind": "canal",
+      "property": "began",
+      "stated": "",
+      "value": 1914,
+      "unit": "none",
+      "month": 8,
+      "day": 15,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "about 50 miles long",
+      "subject": "Panama Canal",
+      "kind": "canal",
+      "property": "length",
+      "stated": "",
+      "value": 50,
+      "unit": "mi",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "roughly 85 feet up to Gatun Lake",
+      "subject": "Gatun Lake",
+      "kind": "reservoir",
+      "property": "elevation",
+      "stated": "",
+      "value": 85,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

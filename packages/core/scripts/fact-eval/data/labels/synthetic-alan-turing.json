@@ -1,0 +1,141 @@
+{
+  "lesson": "synthetic-alan-turing",
+  "title": "Alan Turing",
+  "model": "opus",
+  "passages": [
+    "Alan Turing was born on 23 June 1912 in London, England. As a boy he loved puzzles, numbers and science experiments. He studied MATHEMATICS at King's College, Cambridge. In 1936, when he was just 24, he wrote a famous paper about an imaginary machine that could follow simple rules to solve problems. People now call it the Turing machine, and it became the BLUEPRINT for every modern computer. Soon after, he sailed across the Atlantic to study at Princeton University in New Jersey, a leafy college town where scholars from many countries gathered to trade ideas.",
+    "When the Second World War began in 1939, Turing went to work in secret at Bletchley Park, a country house north of London. There he helped crack ENCRYPTED German messages made by the Enigma machine. He designed a codebreaking device called the Bombe, and more than 200 had been built by 1945. Some historians think this work shortened the war by up to two years. In 1950 he asked whether machines could think, and he suggested a test that is now named after him. Sadly, the laws of his time treated him unfairly. He died on 7 June 1954, aged 41, and in 2013 he was given a royal PARDON."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "23 June 1912",
+      "subject": "Alan Turing",
+      "kind": "mathematician",
+      "property": "born",
+      "stated": "",
+      "value": 1912,
+      "unit": "none",
+      "month": 6,
+      "day": 23,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "In 1936",
+      "subject": "Turing machine",
+      "kind": "concept",
+      "property": "discovered",
+      "stated": "",
+      "value": 1936,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Turing machine",
+      "subject": "Turing machine",
+      "kind": "concept",
+      "property": "named_after",
+      "stated": "Alan Turing",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Turing machine",
+      "subject": "Turing machine",
+      "kind": "concept",
+      "property": "discoverer",
+      "stated": "Alan Turing",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "New Jersey",
+      "subject": "Princeton University",
+      "kind": "university",
+      "property": "region",
+      "stated": "New Jersey",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1939",
+      "subject": "World War II",
+      "kind": "war",
+      "property": "began",
+      "stated": "",
+      "value": 1939,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Turing",
+      "subject": "Bombe",
+      "kind": "device",
+      "property": "discoverer",
+      "stated": "Alan Turing",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1950",
+      "subject": "Turing test",
+      "kind": "test",
+      "property": "discovered",
+      "stated": "",
+      "value": 1950,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "named after him",
+      "subject": "Turing test",
+      "kind": "test",
+      "property": "named_after",
+      "stated": "Alan Turing",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "7 June 1954",
+      "subject": "Alan Turing",
+      "kind": "mathematician",
+      "property": "died",
+      "stated": "",
+      "value": 1954,
+      "unit": "none",
+      "month": 6,
+      "day": 7,
+      "qualifier": "exact"
+    }
+  ]
+}

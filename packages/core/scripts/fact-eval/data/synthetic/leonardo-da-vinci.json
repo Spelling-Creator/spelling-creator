@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-leonardo-da-vinci",
+  "title": "Leonardo da Vinci",
+  "about": "the life of Leonardo da Vinci: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Leonardo da Vinci was born on 15 April 1452 in a small village near the town of Vinci, in the green, hilly Tuscan countryside of Italy. His name simply means Leonardo from Vinci. When he was about 14, he moved to the busy city of Florence to become an APPRENTICE to the artist Andrea del Verrocchio. In the workshop he learned to grind colors, shape metal and draw people. Around 1482 he moved to Milan, a rich city ruled by the Sforza family. Between roughly 1495 and 1498, he painted The Last Supper on the wall of a MONASTERY dining hall.",
+    "Leonardo is best known for the Mona Lisa, a portrait he began around 1503 and kept working on for many years. He was also a curious inventor who sketched flying machines, bridges and diving gear. He studied human ANATOMY by drawing muscles and bones with great care. More than 7,000 pages of his notebooks survive, many written backward in mirror writing, from right to left. In 1516 the French king Francis I invited him to France, where he lived in a MANOR house near the royal castle at Amboise, beside the Loire River. Leonardo died there on 2 May 1519, at the age of 67."
+  ]
+}

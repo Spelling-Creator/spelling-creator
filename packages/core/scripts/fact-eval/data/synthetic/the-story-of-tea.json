@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-story-of-tea",
+  "title": "The Story of Tea",
+  "about": "where tea comes from, when it reached Europe and the countries that grow the most. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Every cup of tea begins with one plant, CAMELLIA sinensis, an EVERGREEN shrub that first grew wild in the hills where China, Myanmar and India meet. A famous Chinese legend says the emperor Shen Nong discovered tea in about 2737 BC, when leaves drifted into his pot of boiling water. No one can prove that story, but people in China were certainly drinking tea more than 2,000 years ago. Over the centuries, monks and traders carried it to Japan and Korea, where it grew into graceful CEREMONIES of its own.",
+    "Tea reached Europe around 1610, when Dutch MERCHANTS shipped it to Amsterdam. It became popular in England after 1662, when the Portuguese princess Catherine of Braganza married King Charles II and brought her love of tea to court. Today China grows the most tea by far, nearly half of the world's supply. India comes second, famous for the misty hills of Assam and DARJEELING. Kenya ranks third and sends more tea abroad than almost any other country, while Sri Lanka and Turkey also grow huge amounts. In Turkey, people sip strong tea from small glasses shaped like tulips all day long."
+  ]
+}

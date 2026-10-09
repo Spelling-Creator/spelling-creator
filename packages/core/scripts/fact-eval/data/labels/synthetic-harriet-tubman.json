@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-harriet-tubman",
+  "title": "Harriet Tubman",
+  "model": "opus",
+  "passages": [
+    "Harriet Tubman was born around 1822 in Dorchester County, Maryland, near the wide, marshy shores of the CHESAPEAKE Bay. Her parents named her Araminta Ross, and she was born into slavery, which meant she was forced to work without pay or freedom. As a young teenager, she was struck in the head by a heavy weight thrown at another worker. The INJURY caused dizzy spells and vivid dreams for the rest of her life. In 1849, she made a brave escape, walking nearly 90 miles north to Philadelphia, Pennsylvania, where slavery was not allowed.",
+    "Harriet did not stay safe in the North for long. She returned to Maryland about 13 times, guiding roughly 70 people to freedom along the Underground Railroad, a secret network of hidden routes and safe houses. As a CONDUCTOR, she often traveled at night and followed the North Star. During the Civil War, she worked as a nurse and a scout, and in June 1863 she helped lead the COMBAHEE River Raid in South Carolina, which freed more than 700 people. She later settled in Auburn, New York, and died there on March 10, 1913, at around 91 years old."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "around 1822",
+      "subject": "Harriet Tubman",
+      "kind": "abolitionist",
+      "property": "born",
+      "stated": "",
+      "value": 1822,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Dorchester County, Maryland",
+      "subject": "Dorchester County",
+      "kind": "county",
+      "property": "region",
+      "stated": "Maryland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Philadelphia, Pennsylvania",
+      "subject": "Philadelphia",
+      "kind": "city",
+      "property": "region",
+      "stated": "Pennsylvania",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "June 1863",
+      "subject": "Raid on Combahee Ferry",
+      "kind": "military raid",
+      "property": "happened",
+      "stated": "",
+      "value": 1863,
+      "unit": "none",
+      "month": 6,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "South Carolina",
+      "subject": "Raid on Combahee Ferry",
+      "kind": "military raid",
+      "property": "region",
+      "stated": "South Carolina",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Auburn, New York",
+      "subject": "Auburn, New York",
+      "kind": "city",
+      "property": "region",
+      "stated": "New York",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "March 10, 1913",
+      "subject": "Harriet Tubman",
+      "kind": "abolitionist",
+      "property": "died",
+      "stated": "",
+      "value": 1913,
+      "unit": "none",
+      "month": 3,
+      "day": 10,
+      "qualifier": "exact"
+    }
+  ]
+}

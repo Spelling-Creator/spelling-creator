@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-wangari-maathai",
+  "title": "Wangari Maathai",
+  "model": "opus",
+  "passages": [
+    "Wangari Maathai was born on 1 April 1940 in Ihithe, a small village in the green highlands of central Kenya. She grew up among the Kikuyu people, where families farmed the rich red soil and children fetched water from clear streams shaded by fig trees, which were thought to be sacred. In 1960 she won a SCHOLARSHIP to study in the United States, joining nearly 300 Kenyan students on a famous airlift. She studied BIOLOGY in Kansas and Pittsburgh, then returned home. In 1971 she became the first woman in East and Central Africa to earn a doctorate.",
+    "In 1977 she started the Green Belt Movement, paying rural women to plant trees that would stop soil EROSION and provide firewood. They planted more than 30 million trees across Kenya. Her work angered powerful leaders, and she was arrested and beaten, yet she kept going. In 2002 she was elected to Kenya's PARLIAMENT, and in 2004 she won the Nobel Peace Prize, the first African woman to receive it. She loved to tell a tale about a hummingbird carrying drops of water to a forest fire. Maathai died in Nairobi on 25 September 2011, aged 71."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "1 April 1940",
+      "subject": "Wangari Maathai",
+      "kind": "activist",
+      "property": "born",
+      "stated": "",
+      "value": 1940,
+      "unit": "none",
+      "month": 4,
+      "day": 1,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Kenya",
+      "subject": "Ihithe",
+      "kind": "village",
+      "property": "country",
+      "stated": "Kenya",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1977",
+      "subject": "Green Belt Movement",
+      "kind": "organisation",
+      "property": "began",
+      "stated": "",
+      "value": 1977,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "25 September 2011",
+      "subject": "Wangari Maathai",
+      "kind": "activist",
+      "property": "died",
+      "stated": "",
+      "value": 2011,
+      "unit": "none",
+      "month": 9,
+      "day": 25,
+      "qualifier": "exact"
+    }
+  ]
+}

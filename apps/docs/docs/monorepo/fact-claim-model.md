@@ -35,14 +35,16 @@ trained on is the one the app would send.
   through the Claude Code CLI (`claude -p` with structured output), so it
   needs a Claude subscription and no API key. Every claim then passes the
   gates production applies: its quote is in a passage word for word, and its
-  shape is one the checker takes. All 127 claims from the hub passed.
+  shape is one the checker takes. Every claim has passed so far.
 - **More passages, written to cover the checker.** The 12 hub lessons hold
   about one checkable fact a passage, and leave whole properties out (no
-  capitals, no planets, one length). `write-passages.mjs` had Opus write 56
-  two-paragraph sections in the hub's style, on topics picked so every
-  property in the checker's table turns up, and eight with no checkable fact
-  at all (a made-up story, a word problem, facts about a whole kind of
-  animal). They were labelled the same way: 483 claims in all.
+  capitals, no planets, one length). `write-passages.mjs` had Opus write 116
+  two-paragraph sections in the hub's style: 56 on topics picked so every
+  property in the checker's table turns up, 60 on people and history (the
+  hub's own main subjects, added in the second round below), and 14 of them
+  with no checkable fact at all (a made-up story, a word problem, facts about
+  a whole kind of animal). They are labelled the same way: 770 claims in all,
+  in 347 training passages, 96 of them empty.
 - **Split.** Every passage is one example, empty list included. Held out:
   the hub's Pompeii and Albert Einstein lessons (24 passages, 20 claims). Not
   the newest two as in the import experiment, because those hold only 8
@@ -92,7 +94,8 @@ and exports `q4f16` and `int8` with the same builder and
 
 ### First fine-tune
 
-The 350M model after 5 epochs on the 227 training passages, its `int8` export
+The 350M model after 5 epochs on the first round's data (56 written sections,
+227 training passages, 463 claims), its `int8` export
 scored with `run.mjs --holdout --dtype int8` (the notebook's own check gave the
 same numbers, so the export lost nothing):
 
@@ -116,6 +119,32 @@ not learned yet is judgment:
 
 It is also five to ten times faster than the stock models, about 3 seconds a
 passage on a CPU, because it writes short replies and stops.
+
+### Second round of data
+
+Two changes, aimed at the first two of those:
+
+- **Consistent choices.** The shared prompt gained a short "Choosing" section
+  that settles each confusable pair by what the property means on Wikidata: a
+  theory or invention is `discovered` and has a `discoverer`, a made work has
+  a `creator`; a thing coming into being `began`, an event `happened`; a place
+  found again or dug up gets no date at all. The subject must be a real thing
+  with its own encyclopedia article, never a name made up for a sentence, and
+  moments in a life other than birth and death are left out. Because the
+  prompt is shared, this changes the Worker's fact check too (its cache
+  version went to `v4`). Everything was relabelled under it.
+- **People and history.** 60 more written sections, 30 biographies and 30
+  events and inventions, the genre of most hub lessons and of most of the
+  first model's mistakes. None mentions the held-out lessons' subjects.
+
+The held-out labels changed with the rules (Pompeii's 1748 rediscovery is no
+longer a claim, relativity has a `discoverer`), so first-round scores and
+second-round scores are not on quite the same test. The first fine-tune,
+rescored against the new held-out labels, is the bar for the second:
+
+| model                                   | recall | precision | invented quotes | quiet when none | subject |
+| --------------------------------------- | -----: | --------: | --------------: | --------------: | ------: |
+| LFM2-350M-Extract-facts, round 1 (int8) |    40% |       28% |               3 |            7/13 |     50% |
 
 ## Running it again
 

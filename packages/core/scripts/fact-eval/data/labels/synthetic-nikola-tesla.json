@@ -9,7 +9,7 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "born on July 10, 1856",
+      "quote": "July 10, 1856",
       "subject": "Nikola Tesla",
       "kind": "inventor",
       "property": "born",
@@ -22,7 +22,7 @@
     },
     {
       "passage": 1,
-      "quote": "today it is part of Croatia",
+      "quote": "Croatia",
       "subject": "Smiljan",
       "kind": "village",
       "property": "country",
@@ -35,7 +35,7 @@
     },
     {
       "passage": 1,
-      "quote": "in a mountain region called Lika",
+      "quote": "Lika",
       "subject": "Smiljan",
       "kind": "village",
       "property": "region",
@@ -47,21 +47,8 @@
       "qualifier": "exact"
     },
     {
-      "passage": 1,
-      "quote": "Graz, Austria",
-      "subject": "Graz",
-      "kind": "city",
-      "property": "country",
-      "stated": "Austria",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
       "passage": 2,
-      "quote": "1893 world's fair in Chicago",
+      "quote": "1893",
       "subject": "World's Columbian Exposition",
       "kind": "world's fair",
       "property": "happened",
@@ -74,7 +61,7 @@
     },
     {
       "passage": 2,
-      "quote": "world's fair in Chicago",
+      "quote": "Chicago",
       "subject": "World's Columbian Exposition",
       "kind": "world's fair",
       "property": "region",
@@ -87,7 +74,7 @@
     },
     {
       "passage": 2,
-      "quote": "He also built the Tesla coil",
+      "quote": "he also built the Tesla coil",
       "subject": "Tesla coil",
       "kind": "invention",
       "property": "discoverer",
@@ -100,7 +87,7 @@
     },
     {
       "passage": 2,
-      "quote": "died on January 7, 1943",
+      "quote": "January 7, 1943",
       "subject": "Nikola Tesla",
       "kind": "inventor",
       "property": "died",

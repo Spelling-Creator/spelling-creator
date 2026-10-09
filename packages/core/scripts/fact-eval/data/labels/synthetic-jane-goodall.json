@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-jane-goodall",
+  "title": "Jane Goodall",
+  "model": "opus",
+  "passages": [
+    "Jane Goodall was born on 3 April 1934 in London, England. As a child she loved animals and dreamed of visiting Africa. In 1957 she traveled to Kenya, where she met the scientist Louis Leakey. He asked her to study wild CHIMPANZEES. In July 1960, at age 26, she arrived at Gombe Stream in what is now Tanzania, a forest of steep green valleys beside the long, deep waters of Lake Tanganyika. Her mother came with her for the first few months. Jane walked the hills each day, patiently waiting for the shy animals to trust her.",
+    "In late 1960, she watched a chimpanzee she named David Greybeard strip the leaves from a twig and poke it into a termite mound to fish out insects. At the time, scientists believed only humans made tools, so this OBSERVATION changed how the world saw animals. She later earned a DOCTORATE from Cambridge University, even without a first degree. In 1977 she founded the Jane Goodall Institute, and for years she spent nearly 300 days a year traveling to speak about CONSERVATION. Research at Gombe has now continued for more than 60 years. Jane died on 1 October 2025, at age 91."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "3 April 1934",
+      "subject": "Jane Goodall",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1934,
+      "unit": "none",
+      "month": 4,
+      "day": 3,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Gombe Stream in what is now Tanzania",
+      "subject": "Gombe Stream National Park",
+      "kind": "national park",
+      "property": "country",
+      "stated": "Tanzania",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1977 she founded the Jane Goodall Institute",
+      "subject": "Jane Goodall Institute",
+      "kind": "organisation",
+      "property": "began",
+      "stated": "",
+      "value": 1977,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1 October 2025",
+      "subject": "Jane Goodall",
+      "kind": "scientist",
+      "property": "died",
+      "stated": "",
+      "value": 2025,
+      "unit": "none",
+      "month": 10,
+      "day": 1,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-louis-braille",
+  "title": "Louis Braille",
+  "model": "opus",
+  "passages": [
+    "Louis Braille was born on 4 January 1809 in Coupvray, a small village about 40 kilometers east of Paris, France. His father made leather saddles and HARNESS gear for horses, and the family workshop was full of sharp tools. When Louis was just 3 years old, he hurt one eye with a pointed tool while playing there. An INFECTION spread to his other eye, and by about age 5 he was completely blind. At 10, he moved to Paris to study at one of the world's first schools for blind children, where students read huge, heavy books with raised letters that were very slow to feel.",
+    "At the school, Louis learned about a code of raised dots invented by Charles Barbier, a French army officer, for MILITARY messages read in the dark. Barbier's system used up to 12 dots and was hard to read, so Louis made it simpler. By 1829, when he was only 20, he published a method using just 6 dots in a small cell. He later taught at the school for many years. He died of TUBERCULOSIS on 6 January 1852, aged 43. Today, people from Brazil to Japan read braille in their own languages, and in 1952 his body was moved to the PANTHEON in Paris."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "4 January 1809",
+      "subject": "Louis Braille",
+      "kind": "person",
+      "property": "born",
+      "stated": "",
+      "value": 1809,
+      "unit": "none",
+      "month": 1,
+      "day": 4,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Coupvray, a small village about 40 kilometers east of Paris, France",
+      "subject": "Coupvray",
+      "kind": "village",
+      "property": "country",
+      "stated": "France",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "invented by Charles Barbier",
+      "subject": "Night writing",
+      "kind": "tactile code",
+      "property": "discoverer",
+      "stated": "Charles Barbier",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "By 1829",
+      "subject": "Braille",
+      "kind": "writing system",
+      "property": "discovered",
+      "stated": "",
+      "value": 1829,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "6 January 1852",
+      "subject": "Louis Braille",
+      "kind": "person",
+      "property": "died",
+      "stated": "",
+      "value": 1852,
+      "unit": "none",
+      "month": 1,
+      "day": 6,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "PANTHEON in Paris",
+      "subject": "Panthéon",
+      "kind": "monument",
+      "property": "region",
+      "stated": "Paris",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

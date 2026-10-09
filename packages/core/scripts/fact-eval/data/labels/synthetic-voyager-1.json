@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-voyager-1",
+  "title": "Voyager 1",
+  "model": "opus",
+  "passages": [
+    "Voyager 1 left Earth on September 5, 1977, riding a rocket from Cape Canaveral, Florida. In March 1979 it swept past Jupiter, where its cameras caught something no one expected: active VOLCANOES on the moon Io, flinging plumes up to hundreds of kilometers high. In November 1980 it passed Saturn and studied Titan, a moon wrapped in a thick, hazy ATMOSPHERE. Then it kept going. In 1990, from about 6 billion kilometers away, it turned around and snapped the famous Pale Blue Dot photo, showing Earth as a tiny speck of light.",
+    "On August 25, 2012, Voyager 1 became the first human-made object to reach INTERSTELLAR space, the region beyond the bubble of wind blowing from our Sun. Today it is more than 25 billion kilometers from home, so far that a radio message takes nearly a day to reach it. On board is the Golden Record, a gift for anyone who might find it. It holds greetings in 55 languages and music from around the world, from Bach to a Navajo night chant, Peruvian panpipes and the shimmering GAMELAN of Java in Indonesia, each sound a small window into how people celebrate, mourn and dream."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "September 5, 1977",
+      "subject": "Voyager 1",
+      "kind": "spacecraft",
+      "property": "happened",
+      "stated": "",
+      "value": 1977,
+      "unit": "none",
+      "month": 9,
+      "day": 5,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Cape Canaveral, Florida",
+      "subject": "Cape Canaveral",
+      "kind": "cape",
+      "property": "region",
+      "stated": "Florida",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "In 1990",
+      "subject": "Pale Blue Dot",
+      "kind": "photograph",
+      "property": "began",
+      "stated": "",
+      "value": 1990,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "more than 25 billion kilometers",
+      "subject": "Voyager 1",
+      "kind": "spacecraft",
+      "property": "distance_from_earth",
+      "stated": "",
+      "value": 25000000000,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "Java in Indonesia",
+      "subject": "Java",
+      "kind": "island",
+      "property": "country",
+      "stated": "Indonesia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

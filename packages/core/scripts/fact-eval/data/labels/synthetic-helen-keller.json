@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-helen-keller",
+  "title": "Helen Keller",
+  "model": "opus",
+  "passages": [
+    "Helen Keller was born on June 27, 1880, in Tuscumbia, a small town in Alabama. When she was about 19 months old, a sudden illness left her unable to see or hear. For years she lived in a silent, dark world and grew deeply FRUSTRATED. In March 1887, a young teacher named Anne Sullivan arrived. At the water pump, Anne spelled the letters w, a, t, e, r into one of Helen's hands while cool water ran over the other. Helen suddenly understood that everything had a name. By that evening she had learned about 30 new words. This BREAKTHROUGH opened her mind to language.",
+    "Helen studied at schools in Boston and New York, then entered Radcliffe College. In 1904 she graduated with honors, becoming the first deafblind person to earn a college degree. A year earlier she had published her AUTOBIOGRAPHY, The Story of My Life. She became a passionate ADVOCATE for blind and deaf people and visited more than 35 countries. In Japan in 1937, she was curious about the loyal Akita dogs, and people there gave her one. It is believed to be the first Akita brought to the United States. Helen Keller died on June 1, 1968, at the age of 87."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "June 27, 1880",
+      "subject": "Helen Keller",
+      "kind": "person",
+      "property": "born",
+      "stated": "",
+      "value": 1880,
+      "unit": "none",
+      "month": 6,
+      "day": 27,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Alabama",
+      "subject": "Tuscumbia, Alabama",
+      "kind": "town",
+      "property": "region",
+      "stated": "Alabama",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "A year earlier",
+      "subject": "The Story of My Life",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1903,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "she had published her AUTOBIOGRAPHY, The Story of My Life",
+      "subject": "The Story of My Life",
+      "kind": "book",
+      "property": "creator",
+      "stated": "Helen Keller",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "June 1, 1968",
+      "subject": "Helen Keller",
+      "kind": "person",
+      "property": "died",
+      "stated": "",
+      "value": 1968,
+      "unit": "none",
+      "month": 6,
+      "day": 1,
+      "qualifier": "exact"
+    }
+  ]
+}

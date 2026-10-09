@@ -71,19 +71,6 @@
       "month": 0,
       "day": 0,
       "qualifier": "about"
-    },
-    {
-      "passage": 2,
-      "quote": "In 1996",
-      "subject": "Lake Baikal",
-      "kind": "lake",
-      "property": "happened",
-      "stated": "",
-      "value": 1996,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
     }
   ]
 }

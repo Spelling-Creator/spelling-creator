@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-ibn-battuta",
+  "title": "Ibn Battuta",
+  "model": "opus",
+  "passages": [
+    "Ibn Battuta was born on 24 February 1304 in Tangier, a port city in Morocco on the northern edge of Africa. His family were Muslim scholars, and as a young man he studied Islamic law. In 1325, when he was 21, he set out alone on a PILGRIMAGE to Mecca. He expected to be gone for a year or two. Instead, he kept traveling for nearly 29 years. He crossed deserts with camel CARAVANS, sailed past coral islands, and met sultans, merchants and holy men, eager to learn how each place lived, ate and prayed.",
+    "His journeys covered about 75,000 miles, through lands that now make up more than 40 countries. In India he served Sultan Muhammad bin Tughluq as a judge for about 7 years. Later he held the same job in the Maldives, where people traded using COWRIE shells. He saw busy ports in China, and in 1352 he crossed the Sahara to the Mali Empire. Back home, the Sultan of Morocco asked him to share his stories. Ibn Battuta DICTATED them to a writer named Ibn Juzayy, and the book, called the Rihla, was finished in 1355. He died around 1368 or 1369."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "24 February 1304",
+      "subject": "Ibn Battuta",
+      "kind": "explorer",
+      "property": "born",
+      "stated": "",
+      "value": 1304,
+      "unit": "none",
+      "month": 2,
+      "day": 24,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Tangier, a port city in Morocco",
+      "subject": "Tangier",
+      "kind": "city",
+      "property": "country",
+      "stated": "Morocco",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Morocco on the northern edge of Africa",
+      "subject": "Morocco",
+      "kind": "country",
+      "property": "continent",
+      "stated": "Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "finished in 1355",
+      "subject": "Rihla",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1355,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "around 1368",
+      "subject": "Ibn Battuta",
+      "kind": "explorer",
+      "property": "died",
+      "stated": "",
+      "value": 1368,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

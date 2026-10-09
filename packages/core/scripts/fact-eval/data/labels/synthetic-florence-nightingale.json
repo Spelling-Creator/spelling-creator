@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-florence-nightingale",
+  "title": "Florence Nightingale",
+  "model": "opus",
+  "passages": [
+    "Florence Nightingale was born on 12 May 1820 in the Italian city of Florence, and her parents named her after it. Her wealthy British family expected her to marry and host elegant parties, but at about 16 she felt a strong calling to help the sick. Her parents objected, because nursing was then seen as rough, lowly work. Still, she studied on her own for years. In 1850 and 1851 she visited Kaiserswerth in Germany, where Protestant DEACONESSES ran a hospital and trained nurses. Their calm, careful work inspired her and changed the course of her life.",
+    "In November 1854, during the Crimean War, she led a team of 38 nurses to a British army hospital at Scutari. It stood across the water from Istanbul, a city of domes and minarets where Europe meets Asia. The wards were filthy, and far more soldiers died of disease than of wounds. She pushed for cleaner rooms and walked the halls at night, earning the name \"the Lady with the Lamp.\" Later she used STATISTICS and colourful charts to prove that better SANITATION saved lives. In 1860 she opened a nursing school in London. She died on 13 August 1910, aged 90."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "12 May 1820",
+      "subject": "Florence Nightingale",
+      "kind": "nurse",
+      "property": "born",
+      "stated": "",
+      "value": 1820,
+      "unit": "none",
+      "month": 5,
+      "day": 12,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Italian city of Florence",
+      "subject": "Florence",
+      "kind": "city",
+      "property": "country",
+      "stated": "Italy",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "her parents named her after it",
+      "subject": "Florence Nightingale",
+      "kind": "nurse",
+      "property": "named_after",
+      "stated": "Florence",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Kaiserswerth in Germany",
+      "subject": "Kaiserswerth",
+      "kind": "town",
+      "property": "country",
+      "stated": "Germany",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1860 she opened a nursing school",
+      "subject": "Florence Nightingale Faculty of Nursing, Midwifery and Palliative Care",
+      "kind": "nursing school",
+      "property": "began",
+      "stated": "",
+      "value": 1860,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "a nursing school in London",
+      "subject": "Florence Nightingale Faculty of Nursing, Midwifery and Palliative Care",
+      "kind": "nursing school",
+      "property": "region",
+      "stated": "London",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "13 August 1910",
+      "subject": "Florence Nightingale",
+      "kind": "nurse",
+      "property": "died",
+      "stated": "",
+      "value": 1910,
+      "unit": "none",
+      "month": 8,
+      "day": 13,
+      "qualifier": "exact"
+    }
+  ]
+}

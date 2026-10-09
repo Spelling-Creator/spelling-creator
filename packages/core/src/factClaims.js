@@ -65,9 +65,23 @@ export const FACT_CLAIMS_SCHEMA = claimsSchema({
 /** One passage's claims, for the on-device model. */
 export const PASSAGE_CLAIMS_SCHEMA = claimsSchema(CLAIM_FIELDS);
 
+// The choices models (Claude labelling, the Worker's provider, the on-device
+// model) made inconsistently: which of two near properties a fact is, and what
+// counts as its subject. Each rule follows what the property means on
+// Wikidata, since that is what the claim is compared with.
+const CHOOSING = `Choosing:
+- "discovered" and "discoverer" are for a discovery, an invention, or a scientific law or theory ("Fleming discovered penicillin in 1928"). "creator" is for a made work: a book, painting, song, film, game or building. A theory is discovered, not created.
+- "began" is when a thing came into being: built, founded, formed, first made. "happened" is when an event took place: a battle, an eruption, a landing, a launch, an eclipse. "published" is when a book, paper, film, song or game came out.
+- A place found again, dug up or explored is none of these: leave that date out.
+- The subject is a real thing that has its own encyclopedia article: a person, place, work, event, discovery or organisation. Never invent a name for something that happened in a sentence ("1895 entrance exam", "Einstein's move to Berlin").
+- A person's birth and death are checkable. Other moments in a life (when they moved, studied, married, worked somewhere or won a prize) are not: leave them out, unless the date is that of a named event or work with its own subject.
+- List each fact once.`;
+
 const KINDS_OF_FACT = () =>
   `Only these kinds of fact count. Use the matching "property":
-${FACT_PROPERTY_KEYS.map((key) => `- ${key}: ${FACT_PROPERTIES[key].hint}`).join("\n")}`;
+${FACT_PROPERTY_KEYS.map((key) => `- ${key}: ${FACT_PROPERTIES[key].hint}`).join("\n")}
+
+${CHOOSING}`;
 
 const FIELD_LINES = () => [
   `- "quote": the shortest words from the passage that state the number, date or name, copied exactly, keeping its capital letters ("8,849 METRES", "CANBERRA").`,

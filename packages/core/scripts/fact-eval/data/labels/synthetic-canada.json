@@ -35,7 +35,7 @@
     },
     {
       "passage": 1,
-      "quote": "province of Ontario",
+      "quote": "Ontario",
       "subject": "Ottawa",
       "kind": "city",
       "property": "region",
@@ -132,19 +132,6 @@
       "property": "began",
       "stated": "",
       "value": 1996,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 2,
-      "quote": "a loon",
-      "subject": "Loonie",
-      "kind": "coin",
-      "property": "named_after",
-      "stated": "Common loon",
-      "value": 0,
       "unit": "none",
       "month": 0,
       "day": 0,

@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-rosetta-stone",
+  "title": "The Rosetta Stone",
+  "model": "opus",
+  "passages": [
+    "In July 1799, French soldiers were rebuilding an old fort near the town of Rashid, which Europeans called Rosetta, in Egypt's Nile Delta. An officer named Pierre-François Bouchard noticed a dark slab covered in carved writing. The stone is GRANODIORITE, about 112 centimeters tall and weighing roughly 760 kilograms. Egyptian priests had it carved in 196 BC, so it is more than 2,200 years old. Its message honored the young king Ptolemy V, and it was written three times: in HIEROGLYPHS, in an everyday script called DEMOTIC, and in ancient Greek.",
+    "Scholars could already read Greek, so the stone offered a key to a script nobody had understood for well over a thousand years. British forces took the stone in 1801, and it went on display at the British Museum in 1802, where millions of visitors still come to see it each year. An English scientist, Thomas Young, made early progress, but the French scholar Jean-François Champollion finally DECIPHERED the hieroglyphs. He shared his discovery on September 27, 1822, helped by his knowledge of Coptic, a later form of the Egyptian language. His work opened a window onto nearly 3,000 years of Egyptian stories, beliefs and daily life."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Rashid",
+      "subject": "Rashid",
+      "kind": "town",
+      "property": "country",
+      "stated": "Egypt",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 112 centimeters tall",
+      "subject": "Rosetta Stone",
+      "kind": "stele",
+      "property": "height",
+      "stated": "",
+      "value": 112,
+      "unit": "cm",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "roughly 760 kilograms",
+      "subject": "Rosetta Stone",
+      "kind": "stele",
+      "property": "mass",
+      "stated": "",
+      "value": 760,
+      "unit": "kg",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "196 BC",
+      "subject": "Rosetta Stone",
+      "kind": "stele",
+      "property": "began",
+      "stated": "",
+      "value": -196,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Jean-François Champollion",
+      "subject": "Decipherment of ancient Egyptian scripts",
+      "kind": "decipherment",
+      "property": "discoverer",
+      "stated": "Jean-François Champollion",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "September 27, 1822",
+      "subject": "Decipherment of ancient Egyptian scripts",
+      "kind": "decipherment",
+      "property": "discovered",
+      "stated": "",
+      "value": 1822,
+      "unit": "none",
+      "month": 9,
+      "day": 27,
+      "qualifier": "exact"
+    }
+  ]
+}

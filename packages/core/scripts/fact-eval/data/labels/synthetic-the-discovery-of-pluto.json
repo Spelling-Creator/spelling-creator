@@ -9,19 +9,6 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "Lowell OBSERVATORY in Flagstaff",
-      "subject": "Lowell Observatory",
-      "kind": "observatory",
-      "property": "region",
-      "stated": "Flagstaff",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 1,
       "quote": "February 18, 1930",
       "subject": "Pluto",
       "kind": "dwarf planet",
@@ -47,6 +34,19 @@
       "qualifier": "exact"
     },
     {
+      "passage": 1,
+      "quote": "Flagstaff, Arizona",
+      "subject": "Lowell Observatory",
+      "kind": "observatory",
+      "property": "region",
+      "stated": "Flagstaff",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
       "passage": 2,
       "quote": "about 5.9 billion kilometers",
       "subject": "Pluto",
@@ -55,19 +55,6 @@
       "stated": "",
       "value": 5900000000,
       "unit": "km",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
-      "passage": 2,
-      "quote": "3.7 billion miles",
-      "subject": "Pluto",
-      "kind": "dwarf planet",
-      "property": "orbit_distance",
-      "stated": "",
-      "value": 3700000000,
-      "unit": "mi",
       "month": 0,
       "day": 0,
       "qualifier": "about"

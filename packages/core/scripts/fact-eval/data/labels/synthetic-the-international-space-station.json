@@ -74,19 +74,6 @@
     },
     {
       "passage": 2,
-      "quote": "roughly 250 miles",
-      "subject": "International Space Station",
-      "kind": "space station",
-      "property": "distance_from_earth",
-      "stated": "",
-      "value": 250,
-      "unit": "mi",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
-      "passage": 2,
       "quote": "nearly 28,000 kilometers per hour",
       "subject": "International Space Station",
       "kind": "space station",
@@ -94,19 +81,6 @@
       "stated": "",
       "value": 28000,
       "unit": "km/h",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
-      "passage": 2,
-      "quote": "about 17,500 miles per hour",
-      "subject": "International Space Station",
-      "kind": "space station",
-      "property": "speed",
-      "stated": "",
-      "value": 17500,
-      "unit": "mph",
       "month": 0,
       "day": 0,
       "qualifier": "about"

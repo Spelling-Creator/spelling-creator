@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-periodic-table",
+  "title": "The Periodic Table",
+  "about": "who published it, when, and how many elements it holds now. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "In March 1869, a Russian CHEMIST named Dmitri Mendeleev shared a chart that sorted all the elements known at the time, about 63 of them, by their weight and how they behaved. He wrote each one on a card and arranged the cards in rows, a little like a game of solitaire. Mendeleev did something bold. He left empty spaces for elements nobody had found yet and PREDICTED what they would be like. Within about 17 years, scientists discovered three of them, including GERMANIUM in Germany in 1886, and they matched his guesses remarkably well.",
+    "Today the table holds 118 elements, from tiny hydrogen to heavy oganesson. Only about 90 are found in nature; the rest were made in laboratories by smashing atoms together. The last four were officially named in 2016. One of them, NIHONIUM, honors Japan, since \"Nihon\" is a Japanese name for the country. It was the first element discovered in Asia, by a team at the RIKEN institute near Tokyo. Another, moscovium, is named for the region around Moscow, where scientists in the town of Dubna have created more than a few new elements. Each name carries a small piece of a place's story."
+  ]
+}

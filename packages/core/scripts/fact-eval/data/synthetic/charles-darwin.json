@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-charles-darwin",
+  "title": "Charles Darwin",
+  "about": "the life of Charles Darwin: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Charles Darwin was born on 12 February 1809 in Shrewsbury, a market town in England. His father hoped he would become a doctor, so at 16 he went to study medicine in Edinburgh, but he could not bear to watch surgery. He moved on to Cambridge and spent much of his free time collecting beetles. In 1831, at just 22, he joined the ship HMS Beagle as its NATURALIST for a voyage that lasted nearly five years. He wandered through rainforests in Brazil, met the Yaghan people of Tierra del Fuego, who kept small fires burning in their canoes, and explored the Galápagos Islands.",
+    "Back home, Darwin married Emma Wedgwood in 1839, and in 1842 they moved to Down House in Kent, where they had ten children. For more than 20 years he quietly studied pigeons, barnacles and FOSSILS, slowly shaping his idea of natural selection. On 24 November 1859 he published On the Origin of Species, which argued that living things change over many generations and share common ANCESTORS. Today we call this process EVOLUTION. The first printing of about 1,250 copies sold out almost at once. Darwin died on 19 April 1882, aged 73, and was buried in Westminster Abbey in London."
+  ]
+}

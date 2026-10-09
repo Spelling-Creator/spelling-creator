@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-counting-marbles",
+  "title": "Counting Marbles",
+  "about": "a made-up story that works like a word problem: two friends share and swap marbles, with numbers. Nothing real or checkable.",
+  "model": "opus",
+  "passages": [
+    "Mira and Tobin met every afternoon on the front steps, each holding a small cloth bag of marbles. Mira had fourteen marbles, and Tobin had nine. Before they played, they liked to pour them all into one bowl and count together, which made twenty-three. Tobin's grandmother had grown up in a seaside town called Port Ellery, at least in the stories she told. There, children drew rings in the damp sand and rolled TRANSLUCENT marbles toward a shell in the middle. Mira found this FASCINATING and wondered how many other places had their own special way to play.",
+    "One day Tobin noticed that Mira had three marbles with blue stripes, and he offered a trade. He would give her his biggest marble, an IRIDESCENT one that shimmered like oil on a puddle, in exchange for all three striped ones. Mira agreed, and then she paused to CALCULATE. She had started with fourteen, gave away three, and got one back, so now she had twelve. Tobin had started with nine, gained three, and gave away one, which left him with eleven. When they poured everything into the bowl again, the total was still twenty-three. The marbles had moved around, but none had gone missing."
+  ]
+}

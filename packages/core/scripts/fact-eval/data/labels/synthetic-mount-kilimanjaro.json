@@ -35,7 +35,7 @@
     },
     {
       "passage": 1,
-      "quote": "19,300 feet",
+      "quote": "roughly 19,300 feet",
       "subject": "Mount Kilimanjaro",
       "kind": "mountain",
       "property": "elevation",
@@ -57,19 +57,6 @@
       "unit": "none",
       "month": 0,
       "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 2,
-      "quote": "6 October 1889",
-      "subject": "Mount Kilimanjaro",
-      "kind": "mountain",
-      "property": "happened",
-      "stated": "",
-      "value": 1889,
-      "unit": "none",
-      "month": 10,
-      "day": 6,
       "qualifier": "exact"
     }
   ]

@@ -23,7 +23,7 @@
     {
       "passage": 1,
       "quote": "May 25, 1977",
-      "subject": "Star Wars",
+      "subject": "Star Wars (film)",
       "kind": "film",
       "property": "published",
       "stated": "",
@@ -36,7 +36,7 @@
     {
       "passage": 1,
       "quote": "121 minutes",
-      "subject": "Star Wars",
+      "subject": "Star Wars (film)",
       "kind": "film",
       "property": "duration",
       "stated": "",
@@ -79,6 +79,19 @@
       "kind": "fictional planet",
       "property": "named_after",
       "stated": "Tataouine",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "North Africa",
+      "subject": "Tunisia",
+      "kind": "country",
+      "property": "continent",
+      "stated": "Africa",
       "value": 0,
       "unit": "none",
       "month": 0,

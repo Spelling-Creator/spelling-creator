@@ -9,7 +9,7 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "Tokyo is the capital of Japan",
+      "quote": "Tokyo",
       "subject": "Japan",
       "kind": "country",
       "property": "capital",
@@ -27,6 +27,19 @@
       "kind": "country",
       "property": "continent",
       "stated": "Asia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Japan's",
+      "subject": "Honshu",
+      "kind": "island",
+      "property": "country",
+      "stated": "Japan",
       "value": 0,
       "unit": "none",
       "month": 0,
@@ -61,22 +74,9 @@
     },
     {
       "passage": 2,
-      "quote": "1603",
-      "subject": "Tokugawa shogunate",
-      "kind": "government",
-      "property": "began",
-      "stated": "",
-      "value": 1603,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 2,
       "quote": "1868",
       "subject": "Meiji Restoration",
-      "kind": "event",
+      "kind": "historical event",
       "property": "happened",
       "stated": "",
       "value": 1868,

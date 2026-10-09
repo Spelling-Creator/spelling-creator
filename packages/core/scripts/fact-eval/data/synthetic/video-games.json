@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-video-games",
+  "title": "Video Games",
+  "about": "the first famous games, who made them and when they came out. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "The very first video games were built in science laboratories, not toy shops. In 1958, a PHYSICIST named William Higinbotham made Tennis for Two at a lab in New York. It showed a bouncing ball on an OSCILLOSCOPE screen only about 5 inches wide, and visitors lined up to play it. In 1962, students at MIT created Spacewar!, where two rocket ships battled around a glowing star. Ten years later, in 1972, a company called Atari released Pong, a simple game of hitting a dot between two paddles. Pong machines soon filled bars and ARCADES across America, and Atari sold more than 8,000 of them.",
+    "Some of the most loved early games came from Japan. In 1978, an ENGINEER named Tomohiro Nishikado designed Space Invaders, where rows of aliens march slowly down the screen. In 1980, Toru Iwatani created Pac-Man. He said the hungry yellow hero was partly inspired by a pizza with one slice missing. In 1985, Shigeru Miyamoto's Super Mario Bros. arrived, and it went on to sell more than 40 million copies. Far away in Moscow in 1984, a computer scientist named Alexey Pajitnov invented Tetris. Its name blends the Greek word for four with his favorite sport, tennis. Each country brought its own imagination to the screen."
+  ]
+}

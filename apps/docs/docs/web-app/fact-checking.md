@@ -64,6 +64,13 @@ deterministic and done in code. The model never says whether a fact is right, an
 whose quote isn't actually in a passage is dropped (step 2), so an invented fact can't
 reach the author as a finding.
 
+The prompt (`packages/core/src/factClaims.js`) also settles the choices models made
+inconsistently, each by what the property means on Wikidata: a theory or invention is
+`discovered` and has a `discoverer`, a made work has a `creator`; a thing coming into
+being `began`, an event `happened`; a place found again or dug up has none of these.
+The subject must be a real thing with its own encyclopedia article, never a name made up
+for a sentence, and moments in a life other than birth and death are left out.
+
 Over MCP, step 1 is the assistant itself: it passes claims to `check_facts`, and the tool
 runs steps 3 to 5 with no AI provider involved.
 

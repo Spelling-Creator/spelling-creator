@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-rosalind-franklin",
+  "title": "Rosalind Franklin",
+  "model": "opus",
+  "passages": [
+    "Rosalind Franklin was born on 25 July 1920 in London, England, into a family that valued learning and helping others. As a girl she loved science and puzzles, and at 18 she went to Newnham College at Cambridge to study CHEMISTRY. During the Second World War she researched coal, earning her doctorate in 1945. In 1947 she moved to Paris, where she spent about three happy years. She enjoyed French food, long talks with fellow scientists, and hiking in the mountains. There she mastered X-ray CRYSTALLOGRAPHY, a way of shining X-rays through materials to reveal the hidden pattern of their atoms.",
+    "In 1951 she joined King's College London to study DNA, the MOLECULE that carries the instructions for life. Around May 1952, she and her student Raymond Gosling made a sharp image called Photo 51. It showed that DNA has a twisting HELIX shape. James Watson and Francis Crick saw her work without her knowing and used it to build their famous model in 1953. Franklin later studied viruses at Birkbeck College, leading a small team that wrote many papers about them. She died of cancer on 16 April 1958, aged just 37. Today she is honored as a PIONEER whose careful work changed biology."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "25 July 1920",
+      "subject": "Rosalind Franklin",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1920,
+      "unit": "none",
+      "month": 7,
+      "day": 25,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Around May 1952",
+      "subject": "Photo 51",
+      "kind": "photograph",
+      "property": "began",
+      "stated": "",
+      "value": 1952,
+      "unit": "none",
+      "month": 5,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "Raymond Gosling",
+      "subject": "Photo 51",
+      "kind": "photograph",
+      "property": "creator",
+      "stated": "Raymond Gosling",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1953",
+      "subject": "Nucleic acid double helix",
+      "kind": "discovery",
+      "property": "discovered",
+      "stated": "",
+      "value": 1953,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "James Watson",
+      "subject": "Nucleic acid double helix",
+      "kind": "discovery",
+      "property": "discoverer",
+      "stated": "James Watson",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Francis Crick",
+      "subject": "Nucleic acid double helix",
+      "kind": "discovery",
+      "property": "discoverer",
+      "stated": "Francis Crick",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "16 April 1958",
+      "subject": "Rosalind Franklin",
+      "kind": "scientist",
+      "property": "died",
+      "stated": "",
+      "value": 1958,
+      "unit": "none",
+      "month": 4,
+      "day": 16,
+      "qualifier": "exact"
+    }
+  ]
+}

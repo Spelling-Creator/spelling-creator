@@ -35,24 +35,24 @@ Chat-format JSONL, ready for a supervised fine-tune (TRL's `SFTTrainer` takes it
 
 | split | passages | claims | from                                                                             |
 | ----- | -------: | -----: | -------------------------------------------------------------------------------- |
-| train |      227 |    463 | 10 hub lessons and 56 written sections                                           |
+| train |      347 |    750 | 10 hub lessons and 116 written sections                                          |
 | test  |       24 |     20 | 2 hub lessons: Pompeii: The City Frozen in Time, and The Life of Albert Einstein |
 
-Passages with no checkable fact are in with an empty list, on purpose: listing nothing is half the job. Eight of the written sections were made to have none (a made-up story, a word problem, facts about a whole kind of animal).
+Passages with no checkable fact are in with an empty list, on purpose: listing nothing is half the job. 96 of the training passages are empty, and 14 of the written sections were made to have none (a made-up story, a word problem, facts about a whole kind of animal).
 
 `raw/` holds the sources: `raw/synthetic/` the written sections, and `raw/labels/` one file per lesson or section with its passages and the claims as listed, before the per-passage split.
 
 ## How it was made
 
-- **Passages.** Two from each section of 12 lessons published on the Spelling Creator hub, and 56 more two-paragraph sections written by Claude Opus to cover every property the checker knows (capitals, planets, rivers, people's dates and more), in the hub lessons' style.
-- **Labels.** Claude Opus listed each lesson's facts with the same prompt and schema Spelling Creator's server sends its own AI provider. Every claim then passed the gates production applies: its quote must be in a passage word for word, and its shape must be one the checker takes. Nothing was edited by hand.
+- **Passages.** Two from each section of 12 lessons published on the Spelling Creator hub, and 116 more two-paragraph sections written by Claude Opus in the hub lessons' style: 56 chosen to cover every property the checker knows (capitals, planets, rivers and more), and 60 on people and history, the hub's own main subjects, where a life has moments that are not checkable.
+- **Labels.** Claude Opus listed each lesson's facts with the same prompt and schema Spelling Creator's server sends its own AI provider. The prompt settles the choices that came out inconsistent in a first round (a theory is `discovered`, a made work has a `creator`; a thing `began`, an event `happened`; a subject is always something with its own encyclopedia article). Every claim then passed the gates production applies: its quote must be in a passage word for word, and its shape must be one the checker takes. Nothing was edited by hand.
 - **Judging is not in the labels.** A claim says what the passage states, true or not. Whether it is right is the checker's job, against Wikidata.
 
 The scripts that made it, and the scorer, are in the [Spelling Creator repository](https://github.com/Spelling-Creator/spelling-creator) under `packages/core/scripts/fact-eval/`.
 
 ## Known gaps
 
-- Labels are one model's reading, with its judgment calls: "Quantum, discovered 1900" is in, and so is one fact about cheetahs in general that the rules say to leave out.
+- Labels are one model's reading, with its judgment calls: one fact about cheetahs in general is in although the rules say to leave those out, and a few events are named loosely ("Adolf Hitler's rise to power").
 - English only, and small. The written sections are there for coverage, not for the hub's range of topics.
 
 ## Attribution

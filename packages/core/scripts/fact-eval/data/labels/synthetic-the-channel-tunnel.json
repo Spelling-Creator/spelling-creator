@@ -9,6 +9,32 @@
   "claims": [
     {
       "passage": 1,
+      "quote": "Folkestone in Kent",
+      "subject": "Folkestone",
+      "kind": "town",
+      "property": "region",
+      "stated": "Kent",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Coquelles, near Calais in France",
+      "subject": "Coquelles",
+      "kind": "town",
+      "property": "country",
+      "stated": "France",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
       "quote": "about 50 kilometers long",
       "subject": "Channel Tunnel",
       "kind": "tunnel",
@@ -19,19 +45,6 @@
       "month": 0,
       "day": 0,
       "qualifier": "about"
-    },
-    {
-      "passage": 1,
-      "quote": "a little over 31 miles",
-      "subject": "Channel Tunnel",
-      "kind": "tunnel",
-      "property": "length",
-      "stated": "",
-      "value": 31,
-      "unit": "mi",
-      "month": 0,
-      "day": 0,
-      "qualifier": "more_than"
     },
     {
       "passage": 1,
@@ -48,7 +61,7 @@
     },
     {
       "passage": 1,
-      "quote": "up to 115 meters below the surface",
+      "quote": "up to 115 meters below the surface of the sea",
       "subject": "Channel Tunnel",
       "kind": "tunnel",
       "property": "depth",
@@ -60,47 +73,8 @@
       "qualifier": "less_than"
     },
     {
-      "passage": 1,
-      "quote": "Kent",
-      "subject": "Channel Tunnel",
-      "kind": "tunnel",
-      "property": "region",
-      "stated": "Kent",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 1,
-      "quote": "France",
-      "subject": "Channel Tunnel",
-      "kind": "tunnel",
-      "property": "country",
-      "stated": "France",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
       "passage": 2,
-      "quote": "about six years",
-      "subject": "Channel Tunnel",
-      "kind": "tunnel",
-      "property": "duration",
-      "stated": "",
-      "value": 6,
-      "unit": "year",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
-      "passage": 2,
-      "quote": "6 May 1994",
+      "quote": "opened on 6 May 1994",
       "subject": "Channel Tunnel",
       "kind": "tunnel",
       "property": "began",

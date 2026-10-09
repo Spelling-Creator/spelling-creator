@@ -9,7 +9,7 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "about 6,779 kilometers",
+      "quote": "about 6,779 kilometers across",
       "subject": "Mars",
       "kind": "planet",
       "property": "diameter",
@@ -48,11 +48,11 @@
     },
     {
       "passage": 2,
-      "quote": "Mars, their god of war",
+      "quote": "The Romans linked it to Mars, their god of war",
       "subject": "Mars",
       "kind": "planet",
       "property": "named_after",
-      "stated": "Mars",
+      "stated": "Mars (mythology)",
       "value": 0,
       "unit": "none",
       "month": 0,

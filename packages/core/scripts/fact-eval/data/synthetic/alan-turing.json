@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-alan-turing",
+  "title": "Alan Turing",
+  "about": "the life of Alan Turing: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Alan Turing was born on 23 June 1912 in London, England. As a boy he loved puzzles, numbers and science experiments. He studied MATHEMATICS at King's College, Cambridge. In 1936, when he was just 24, he wrote a famous paper about an imaginary machine that could follow simple rules to solve problems. People now call it the Turing machine, and it became the BLUEPRINT for every modern computer. Soon after, he sailed across the Atlantic to study at Princeton University in New Jersey, a leafy college town where scholars from many countries gathered to trade ideas.",
+    "When the Second World War began in 1939, Turing went to work in secret at Bletchley Park, a country house north of London. There he helped crack ENCRYPTED German messages made by the Enigma machine. He designed a codebreaking device called the Bombe, and more than 200 had been built by 1945. Some historians think this work shortened the war by up to two years. In 1950 he asked whether machines could think, and he suggested a test that is now named after him. Sadly, the laws of his time treated him unfairly. He died on 7 June 1954, aged 41, and in 2013 he was given a royal PARDON."
+  ]
+}

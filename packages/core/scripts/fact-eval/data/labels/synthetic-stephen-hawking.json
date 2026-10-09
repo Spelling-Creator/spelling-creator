@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-stephen-hawking",
+  "title": "Stephen Hawking",
+  "model": "opus",
+  "passages": [
+    "Stephen Hawking was born on 8 January 1942 in Oxford, England, exactly 300 years after the death of the astronomer Galileo. As a boy he took clocks and radios apart to see how they worked, though his school marks were only average. At 17 he went to study physics at Oxford, then moved to Cambridge to research the beginning of the universe. In 1963, when he was 21, doctors DIAGNOSED him with motor neuron disease and guessed he had about two years to live. Instead, he kept working for more than 50 years, and the illness slowly took away his ability to walk and speak.",
+    "In 1974 Hawking showed that black holes are not completely black. He worked out that they should slowly leak a faint glow, now called Hawking RADIATION, and might one day vanish. From 1979 he held a famous Cambridge post once held by Isaac Newton. Speaking through a computer voice, he wrote A Brief History of Time in 1988, and it sold more than 10 million copies around the world. He loved travel too, visiting places such as icy Antarctica and floating WEIGHTLESS on a special flight in 2007. This curious PHYSICIST died on 14 March 2018 in Cambridge, aged 76."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "8 January 1942",
+      "subject": "Stephen Hawking",
+      "kind": "physicist",
+      "property": "born",
+      "stated": "",
+      "value": 1942,
+      "unit": "none",
+      "month": 1,
+      "day": 8,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1974",
+      "subject": "Hawking radiation",
+      "kind": "physical theory",
+      "property": "discovered",
+      "stated": "",
+      "value": 1974,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Hawking showed",
+      "subject": "Hawking radiation",
+      "kind": "physical theory",
+      "property": "discoverer",
+      "stated": "Stephen Hawking",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1988",
+      "subject": "A Brief History of Time",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1988,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "he wrote A Brief History of Time",
+      "subject": "A Brief History of Time",
+      "kind": "book",
+      "property": "creator",
+      "stated": "Stephen Hawking",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "14 March 2018",
+      "subject": "Stephen Hawking",
+      "kind": "physicist",
+      "property": "died",
+      "stated": "",
+      "value": 2018,
+      "unit": "none",
+      "month": 3,
+      "day": 14,
+      "qualifier": "exact"
+    }
+  ]
+}

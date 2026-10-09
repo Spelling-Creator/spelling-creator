@@ -9,7 +9,7 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "Reykjavík",
+      "quote": "Its capital is Reykjavík",
       "subject": "Iceland",
       "kind": "country",
       "property": "capital",
@@ -38,7 +38,7 @@
       "quote": "around the year 874",
       "subject": "Settlement of Iceland",
       "kind": "historical event",
-      "property": "happened",
+      "property": "began",
       "stated": "",
       "value": 874,
       "unit": "none",

@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-william-shakespeare",
+  "title": "William Shakespeare",
+  "about": "the life of William Shakespeare: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "William Shakespeare was BAPTIZED on 26 April 1564 in Stratford, a busy market town on the River Avon in England. His father John made fine leather gloves, and young William probably studied Latin at the local GRAMMAR school, reading poems written by the ancient Romans. At 18 he married Anne Hathaway, and they had three children, including twins named Hamnet and Judith. Then came a turning point. By about 1592 he had moved to London, a crowded and noisy city of perhaps 200,000 people, where eager crowds packed open air theaters to watch plays.",
+    "In London he became a famous PLAYWRIGHT and actor. His company built the Globe Theatre in 1599, a round wooden building where nearly 3,000 people could gather. He wrote about 37 plays, among them Romeo and Juliet, Hamlet and Macbeth, plus 154 SONNETS. He is often credited with inventing or first writing down more than 1,700 English words, such as lonely and eyeball. Shakespeare died on 23 April 1616, aged 52. Seven years later, two friends printed 36 of his plays in a book called the First FOLIO. Today his stories are performed all over the world, from the colorful Kabuki stages of Japan to theaters in South Africa that tell them in Zulu."
+  ]
+}

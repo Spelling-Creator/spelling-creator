@@ -22,7 +22,7 @@
       "quote": "Charles Babbage",
       "subject": "Analytical Engine",
       "kind": "machine",
-      "property": "creator",
+      "property": "discoverer",
       "stated": "Charles Babbage",
       "value": 0,
       "unit": "none",
@@ -31,21 +31,8 @@
       "qualifier": "exact"
     },
     {
-      "passage": 3,
-      "quote": "German Enigma machine",
-      "subject": "Enigma machine",
-      "kind": "cipher machine",
-      "property": "country",
-      "stated": "Germany",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
       "passage": 4,
-      "quote": "Turing machine",
+      "quote": "Turing",
       "subject": "Turing machine",
       "kind": "theoretical device",
       "property": "discoverer",
@@ -84,7 +71,7 @@
     },
     {
       "passage": 7,
-      "quote": "1957",
+      "quote": "In 1957",
       "subject": "Fortran",
       "kind": "programming language",
       "property": "began",
@@ -97,7 +84,7 @@
     },
     {
       "passage": 8,
-      "quote": "1959",
+      "quote": "in 1959",
       "subject": "COBOL",
       "kind": "programming language",
       "property": "began",
@@ -110,7 +97,7 @@
     },
     {
       "passage": 9,
-      "quote": "1975",
+      "quote": "In 1975",
       "subject": "Microsoft",
       "kind": "company",
       "property": "began",
@@ -123,7 +110,7 @@
     },
     {
       "passage": 9,
-      "quote": "1976",
+      "quote": "in 1976",
       "subject": "Apple Inc.",
       "kind": "company",
       "property": "began",
@@ -136,9 +123,9 @@
     },
     {
       "passage": 11,
-      "quote": "1989",
+      "quote": "In 1989",
       "subject": "World Wide Web",
-      "kind": "information system",
+      "kind": "invention",
       "property": "discovered",
       "stated": "",
       "value": 1989,
@@ -151,7 +138,7 @@
       "passage": 11,
       "quote": "Tim Berners-Lee",
       "subject": "World Wide Web",
-      "kind": "information system",
+      "kind": "invention",
       "property": "discoverer",
       "stated": "Tim Berners-Lee",
       "value": 0,

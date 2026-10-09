@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-grace-hopper",
+  "title": "Grace Hopper",
+  "about": "the life of Grace Hopper: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Grace Hopper was born on December 9, 1906, in New York City. As a curious girl, she took apart about seven alarm clocks to see how they worked. She studied math and physics at Vassar College, graduating in 1928, and earned a PhD from Yale in 1934. Few women earned that degree back then. She became a MATHEMATICIAN and taught at Vassar. In 1943, during World War Two, she joined the United States Navy and was sent to Harvard. There she worked on the Mark I, a giant computer more than 50 feet long.",
+    "Hopper is best known for helping people give computers instructions in words instead of numbers. In 1952 she built one of the first COMPILERS, a program that turns written instructions into machine code. Her ideas shaped COBOL, a PROGRAMMING language from 1959 that many businesses still use. She also loved telling the story of a real moth found stuck inside a computer in 1947, often called the first computer bug. She retired from the Navy in 1986 as a rear ADMIRAL, when she was nearly 80 years old. Hopper died on January 1, 1992, and was buried at Arlington National Cemetery in Virginia."
+  ]
+}

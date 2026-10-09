@@ -22,19 +22,6 @@
     },
     {
       "passage": 1,
-      "quote": "roughly 3.6 million square miles",
-      "subject": "Sahara",
-      "kind": "desert",
-      "property": "area",
-      "stated": "",
-      "value": 3600000,
-      "unit": "mi2",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
-      "passage": 1,
       "quote": "northern Africa",
       "subject": "Sahara",
       "kind": "desert",
@@ -146,19 +133,6 @@
       "stated": "Algeria",
       "value": 0,
       "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 2,
-      "quote": "51.3 degrees",
-      "subject": "Ouargla",
-      "kind": "city",
-      "property": "temperature",
-      "stated": "",
-      "value": 51.3,
-      "unit": "celsius",
       "month": 0,
       "day": 0,
       "qualifier": "exact"

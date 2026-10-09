@@ -71,19 +71,6 @@
       "month": 0,
       "day": 0,
       "qualifier": "exact"
-    },
-    {
-      "passage": 2,
-      "quote": "1981",
-      "subject": "Great Barrier Reef",
-      "kind": "reef",
-      "property": "happened",
-      "stated": "",
-      "value": 1981,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
     }
   ]
 }

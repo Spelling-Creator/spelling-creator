@@ -237,6 +237,136 @@ const TOPICS = [
     "Making Friends",
     "what it takes to make and keep a friend. Ideas and feelings only, no facts.",
   ],
+  // People and history, the hub's own main subjects, where the first
+  // fine-tune got subjects and properties wrong. A life also has moments that
+  // are not checkable (moving, studying, marrying), which the model must leave
+  // out. Nothing about the held-out lessons (Einstein, relativity, Pompeii,
+  // Vesuvius).
+  ...[
+    "Leonardo da Vinci",
+    "Charles Darwin",
+    "Jane Goodall",
+    "Katherine Johnson",
+    "Alan Turing",
+    "Grace Hopper",
+    "Louis Braille",
+    "Helen Keller",
+    "Stephen Hawking",
+    "Temple Grandin",
+    "Ludwig van Beethoven",
+    "William Shakespeare",
+    "Cleopatra",
+    "Nelson Mandela",
+    "Amelia Earhart",
+    "Thomas Edison",
+    "Alexander Graham Bell",
+    "The Wright Brothers",
+    "Rosalind Franklin",
+    "Srinivasa Ramanujan",
+    "Hedy Lamarr",
+    "Johannes Gutenberg",
+    "Ibn Battuta",
+    "Harriet Tubman",
+    "Mary Anning",
+    "Dmitri Mendeleev",
+    "Gregor Mendel",
+    "Florence Nightingale",
+    "Hokusai",
+    "Wangari Maathai",
+  ].map((who) => [
+    who,
+    `the life of ${who}: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. ${FACTS}`,
+  ]),
+  ...[
+    [
+      "The Great Fire of London",
+      "when it started, how long it burned and what was rebuilt after",
+    ],
+    [
+      "The Panama Canal",
+      "when building began, when it opened, its length and who built it",
+    ],
+    [
+      "The Rosetta Stone",
+      "when and where it was found, how old it is and who deciphered it",
+    ],
+    [
+      "Tutankhamun's Tomb",
+      "when it was found, by whom, and when the young king lived",
+    ],
+    [
+      "The Terracotta Army",
+      "when it was made, for which emperor, when it was found and how many figures",
+    ],
+    ["Angkor Wat", "when it was built, where, and its size"],
+    ["Stonehenge", "how old it is, where it is and the size of its stones"],
+    ["Voyager 1", "when it launched, how far away it is now and what it found"],
+    [
+      "The Hubble Space Telescope",
+      "when it launched, its size, its height above Earth and what it showed",
+    ],
+    [
+      "The Printing Press",
+      "who invented it, when and where, and the first famous book it printed",
+    ],
+    [
+      "The Telephone",
+      "who invented it, when, and the first words spoken on it",
+    ],
+    [
+      "The Periodic Table",
+      "who published it, when, and how many elements it holds now",
+    ],
+    ["The Structure of DNA", "who found it, when, and where the work was done"],
+    ["Vaccines", "who made the first vaccine, when, and against which disease"],
+    ["The Silk Road", "when it began, how long it was and the cities along it"],
+    ["The Library of Alexandria", "when it was founded, where, and by whom"],
+    ["The First Bicycle", "who built it, when and where, and how it changed"],
+    [
+      "The Story of Tea",
+      "where tea comes from, when it reached Europe and the countries that grow the most",
+    ],
+    [
+      "Video Games",
+      "the first famous games, who made them and when they came out",
+    ],
+    ["The Mona Lisa", "who painted it, when, where it hangs and its size"],
+    [
+      "The Great Pyramid of Giza",
+      "when it was built, for which pharaoh, its height and its age",
+    ],
+    ["The Magna Carta", "when it was sealed, where, and by which king"],
+    ["The Battle of Hastings", "when it happened, who fought and where"],
+    [
+      "The First Transatlantic Flight",
+      "who flew it, when, from where to where and how long it took",
+    ],
+  ].map(([title, what]) => [title, `${what}. ${FACTS}`]),
+  // More with no checkable facts.
+  [
+    "A Day at the Beach",
+    "a made-up story about a family's day at the beach, with the number of shells they found and the hours they stayed. Nothing real or checkable.",
+  ],
+  [
+    "Counting Marbles",
+    "a made-up story that works like a word problem: two friends share and swap marbles, with numbers. Nothing real or checkable.",
+  ],
+  [
+    "Why We Dream",
+    "what dreams might be for and how they feel. General ideas only: no named scientist, study, place or date.",
+  ],
+  [
+    "How Plants Grow",
+    "how seeds sprout and plants use sunlight and water. General science only: no named place, person, date or measurement of one specific thing.",
+  ],
+  [
+    "Being Brave",
+    "what courage means and small brave things people do every day. Ideas and feelings only, no facts.",
+  ],
+  [
+    "Owls",
+    "how owls hunt at night, turn their heads and fly silently, as facts about owls in general. No named individual animal, place, person or date.",
+  ],
 ];
 
 const SYSTEM =

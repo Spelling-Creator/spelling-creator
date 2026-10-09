@@ -22,9 +22,9 @@
     },
     {
       "passage": 1,
-      "quote": "Coyoacán, a leafy neighborhood of Mexico City",
+      "quote": "Mexico City",
       "subject": "Coyoacán",
-      "kind": "neighborhood",
+      "kind": "borough",
       "property": "region",
       "stated": "Mexico City",
       "value": 0,
@@ -34,34 +34,8 @@
       "qualifier": "exact"
     },
     {
-      "passage": 1,
-      "quote": "Tehuantepec region of southern Mexico",
-      "subject": "Tehuantepec",
-      "kind": "region",
-      "property": "country",
-      "stated": "Mexico",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
       "passage": 2,
-      "quote": "Aztec capital, TENOCHTITLAN",
-      "subject": "Aztec Empire",
-      "kind": "empire",
-      "property": "capital",
-      "stated": "Tenochtitlan",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 2,
-      "quote": "founded around 1325",
+      "quote": "around 1325",
       "subject": "Tenochtitlan",
       "kind": "city",
       "property": "began",
@@ -74,9 +48,9 @@
     },
     {
       "passage": 2,
-      "quote": "nearly 22 million people",
-      "subject": "Greater Mexico City",
-      "kind": "metropolitan area",
+      "quote": "nearly 22 million",
+      "subject": "Mexico City",
+      "kind": "city",
       "property": "population",
       "stated": "",
       "value": 22000000,
@@ -87,7 +61,7 @@
     },
     {
       "passage": 2,
-      "quote": "Frida died in the Blue House in 1954",
+      "quote": "1954",
       "subject": "Frida Kahlo",
       "kind": "painter",
       "property": "died",
@@ -100,7 +74,7 @@
     },
     {
       "passage": 2,
-      "quote": "in 1958 it opened as a museum",
+      "quote": "1958",
       "subject": "Frida Kahlo Museum",
       "kind": "museum",
       "property": "began",

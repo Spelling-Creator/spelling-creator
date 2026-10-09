@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-periodic-table",
+  "title": "The Periodic Table",
+  "model": "opus",
+  "passages": [
+    "In March 1869, a Russian CHEMIST named Dmitri Mendeleev shared a chart that sorted all the elements known at the time, about 63 of them, by their weight and how they behaved. He wrote each one on a card and arranged the cards in rows, a little like a game of solitaire. Mendeleev did something bold. He left empty spaces for elements nobody had found yet and PREDICTED what they would be like. Within about 17 years, scientists discovered three of them, including GERMANIUM in Germany in 1886, and they matched his guesses remarkably well.",
+    "Today the table holds 118 elements, from tiny hydrogen to heavy oganesson. Only about 90 are found in nature; the rest were made in laboratories by smashing atoms together. The last four were officially named in 2016. One of them, NIHONIUM, honors Japan, since \"Nihon\" is a Japanese name for the country. It was the first element discovered in Asia, by a team at the RIKEN institute near Tokyo. Another, moscovium, is named for the region around Moscow, where scientists in the town of Dubna have created more than a few new elements. Each name carries a small piece of a place's story."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "March 1869",
+      "subject": "Periodic table",
+      "kind": "chart",
+      "property": "discovered",
+      "stated": "",
+      "value": 1869,
+      "unit": "none",
+      "month": 3,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Dmitri Mendeleev",
+      "subject": "Periodic table",
+      "kind": "chart",
+      "property": "discoverer",
+      "stated": "Dmitri Mendeleev",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1886",
+      "subject": "Germanium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1886,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "honors Japan",
+      "subject": "Nihonium",
+      "kind": "chemical element",
+      "property": "named_after",
+      "stated": "Japan",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "RIKEN",
+      "subject": "Nihonium",
+      "kind": "chemical element",
+      "property": "discoverer",
+      "stated": "RIKEN",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "the region around Moscow",
+      "subject": "Moscovium",
+      "kind": "chemical element",
+      "property": "named_after",
+      "stated": "Moscow Oblast",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -9,7 +9,20 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "Paris",
+      "quote": "about 1,083 feet tall",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "height",
+      "stated": "",
+      "value": 1083,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "PARIS",
       "subject": "Eiffel Tower",
       "kind": "tower",
       "property": "region",
@@ -32,19 +45,6 @@
       "month": 0,
       "day": 0,
       "qualifier": "exact"
-    },
-    {
-      "passage": 1,
-      "quote": "about 1,083 feet tall",
-      "subject": "Eiffel Tower",
-      "kind": "tower",
-      "property": "height",
-      "stated": "",
-      "value": 1083,
-      "unit": "ft",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
     },
     {
       "passage": 1,

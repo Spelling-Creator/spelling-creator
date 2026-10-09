@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-leonardo-da-vinci",
+  "title": "Leonardo da Vinci",
+  "model": "opus",
+  "passages": [
+    "Leonardo da Vinci was born on 15 April 1452 in a small village near the town of Vinci, in the green, hilly Tuscan countryside of Italy. His name simply means Leonardo from Vinci. When he was about 14, he moved to the busy city of Florence to become an APPRENTICE to the artist Andrea del Verrocchio. In the workshop he learned to grind colors, shape metal and draw people. Around 1482 he moved to Milan, a rich city ruled by the Sforza family. Between roughly 1495 and 1498, he painted The Last Supper on the wall of a MONASTERY dining hall.",
+    "Leonardo is best known for the Mona Lisa, a portrait he began around 1503 and kept working on for many years. He was also a curious inventor who sketched flying machines, bridges and diving gear. He studied human ANATOMY by drawing muscles and bones with great care. More than 7,000 pages of his notebooks survive, many written backward in mirror writing, from right to left. In 1516 the French king Francis I invited him to France, where he lived in a MANOR house near the royal castle at Amboise, beside the Loire River. Leonardo died there on 2 May 1519, at the age of 67."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "born on 15 April 1452",
+      "subject": "Leonardo da Vinci",
+      "kind": "artist",
+      "property": "born",
+      "stated": "",
+      "value": 1452,
+      "unit": "none",
+      "month": 4,
+      "day": 15,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "town of Vinci, in the green, hilly Tuscan countryside of Italy",
+      "subject": "Vinci",
+      "kind": "town",
+      "property": "country",
+      "stated": "Italy",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Vinci, in the green, hilly Tuscan countryside",
+      "subject": "Vinci",
+      "kind": "town",
+      "property": "region",
+      "stated": "Tuscany",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "roughly 1495",
+      "subject": "The Last Supper",
+      "kind": "painting",
+      "property": "began",
+      "stated": "",
+      "value": 1495,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "he painted The Last Supper",
+      "subject": "The Last Supper",
+      "kind": "painting",
+      "property": "creator",
+      "stated": "Leonardo da Vinci",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "around 1503",
+      "subject": "Mona Lisa",
+      "kind": "painting",
+      "property": "began",
+      "stated": "",
+      "value": 1503,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "Leonardo is best known for the Mona Lisa, a portrait he began",
+      "subject": "Mona Lisa",
+      "kind": "painting",
+      "property": "creator",
+      "stated": "Leonardo da Vinci",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "died there on 2 May 1519",
+      "subject": "Leonardo da Vinci",
+      "kind": "artist",
+      "property": "died",
+      "stated": "",
+      "value": 1519,
+      "unit": "none",
+      "month": 5,
+      "day": 2,
+      "qualifier": "exact"
+    }
+  ]
+}

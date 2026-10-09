@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-nelson-mandela",
+  "title": "Nelson Mandela",
+  "model": "opus",
+  "passages": [
+    "Nelson Mandela was born on 18 July 1918 in Mvezo, a village of round huts with grass roofs in the hills of South Africa's Eastern Cape. He belonged to the Xhosa people, and his birth name was Rolihlahla, which means \"pulling the branch of a tree,\" or troublemaker. A teacher gave him the English name Nelson on his first day of school. He studied at the University of Fort Hare, then moved to Johannesburg in 1941, a city built on gold mines. There he trained in law and joined the African National Congress in 1944, fighting against APARTHEID, a system of laws that kept people apart by race.",
+    "In 1964, after the Rivonia Trial, he was sentenced to life in prison. He spent 27 years behind bars, about 18 of them on Robben Island, a windswept island near Cape Town where prisoners broke rocks in a lime QUARRY. People around the world demanded his freedom, and he was finally released on 11 February 1990. Through careful NEGOTIATIONS, he and President F. W. de Klerk ended apartheid, and they shared the Nobel Peace Prize in 1993. In 1994 Mandela became South Africa's first Black president and called for RECONCILIATION between all its peoples. He died on 5 December 2013, aged 95, mourned by millions."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "18 July 1918",
+      "subject": "Nelson Mandela",
+      "kind": "person",
+      "property": "born",
+      "stated": "",
+      "value": 1918,
+      "unit": "none",
+      "month": 7,
+      "day": 18,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "South Africa",
+      "subject": "Mvezo",
+      "kind": "village",
+      "property": "country",
+      "stated": "South Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Eastern Cape",
+      "subject": "Mvezo",
+      "kind": "village",
+      "property": "region",
+      "stated": "Eastern Cape",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1964",
+      "subject": "Rivonia Trial",
+      "kind": "trial",
+      "property": "happened",
+      "stated": "",
+      "value": 1964,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "5 December 2013",
+      "subject": "Nelson Mandela",
+      "kind": "person",
+      "property": "died",
+      "stated": "",
+      "value": 2013,
+      "unit": "none",
+      "month": 12,
+      "day": 5,
+      "qualifier": "exact"
+    }
+  ]
+}

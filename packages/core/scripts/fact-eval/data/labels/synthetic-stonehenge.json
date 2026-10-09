@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-stonehenge",
+  "title": "Stonehenge",
+  "model": "opus",
+  "passages": [
+    "Stonehenge stands on Salisbury Plain in Wiltshire, in southern England, about 2 miles west of the town of Amesbury. Its story began around 3000 BC, more than 5,000 years ago, when NEOLITHIC people dug a circular ditch and bank there. The great stones came later, raised around 2500 BC, about the same time Egyptians were building the pyramids at Giza. Farmers and herders shaped this place mostly without metal tools, using stone, wood, antler and rope. The circle is lined up with the sunrise on the summer SOLSTICE, and crowds still gather each June to watch the sun appear.",
+    "The biggest stones are called SARSENS. They weigh about 25 tons on average, and the heaviest reach up to 30 tons. Most of them came from West Woods, about 15 miles to the north. The tall uprights rise around 13 feet, and flat LINTELS rest across their tops, held in place by joints like those a woodworker would carve. The smaller bluestones, weighing 2 to 5 tons each, travelled roughly 150 miles from the Preseli Hills in Wales. In 2024, scientists found that the Altar Stone came from northeast Scotland, more than 400 miles away. How people moved it so far is still a wonderful puzzle."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Wiltshire",
+      "subject": "Stonehenge",
+      "kind": "monument",
+      "property": "region",
+      "stated": "Wiltshire",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "England",
+      "subject": "Stonehenge",
+      "kind": "monument",
+      "property": "country",
+      "stated": "England",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "around 3000 BC",
+      "subject": "Stonehenge",
+      "kind": "monument",
+      "property": "began",
+      "stated": "",
+      "value": -3000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "around 2500 BC",
+      "subject": "Giza pyramid complex",
+      "kind": "pyramids",
+      "property": "began",
+      "stated": "",
+      "value": -2500,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "Wales",
+      "subject": "Preseli Hills",
+      "kind": "hills",
+      "property": "country",
+      "stated": "Wales",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

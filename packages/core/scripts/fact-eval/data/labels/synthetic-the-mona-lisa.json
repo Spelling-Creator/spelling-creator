@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-the-mona-lisa",
+  "title": "The Mona Lisa",
+  "model": "opus",
+  "passages": [
+    "The Mona Lisa was painted by Leonardo da Vinci, an Italian artist and inventor of the RENAISSANCE. He began it in about 1503 in Florence, a lively city full of artists' workshops, busy markets and grand churches. The woman in the picture is believed to be Lisa Gherardini, the wife of a Florentine silk merchant. Leonardo kept working on the portrait for many years and carried it with him when he moved to France. He used a soft blending method called SFUMATO, so her face seems to glow without any sharp lines. In Italy the painting is known as La Gioconda, and in France it is called La Joconde.",
+    "Today the Mona Lisa hangs in the Louvre, a former royal palace in Paris that opened as a museum in 1793. Many visitors are surprised by how small it is. It is only 77 centimeters tall and 53 centimeters wide, about the size of a small window. Leonardo painted it in oil on a thin panel of POPLAR wood, not on canvas. In 1911 a worker named Vincenzo Peruggia stole it, and it was missing for more than two years. Now it sits behind protective glass. Nearly 9 million people visit the Louvre each year, and many of them come hoping to see her MYSTERIOUS smile."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Leonardo da Vinci",
+      "subject": "Mona Lisa",
+      "kind": "painting",
+      "property": "creator",
+      "stated": "Leonardo da Vinci",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 1503",
+      "subject": "Mona Lisa",
+      "kind": "painting",
+      "property": "began",
+      "stated": "",
+      "value": 1503,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "Paris",
+      "subject": "Louvre",
+      "kind": "museum",
+      "property": "region",
+      "stated": "Paris",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1793",
+      "subject": "Louvre",
+      "kind": "museum",
+      "property": "began",
+      "stated": "",
+      "value": 1793,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "77 centimeters tall",
+      "subject": "Mona Lisa",
+      "kind": "painting",
+      "property": "height",
+      "stated": "",
+      "value": 77,
+      "unit": "cm",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "53 centimeters wide",
+      "subject": "Mona Lisa",
+      "kind": "painting",
+      "property": "width",
+      "stated": "",
+      "value": 53,
+      "unit": "cm",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1911",
+      "subject": "Theft of the Mona Lisa",
+      "kind": "theft",
+      "property": "happened",
+      "stated": "",
+      "value": 1911,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

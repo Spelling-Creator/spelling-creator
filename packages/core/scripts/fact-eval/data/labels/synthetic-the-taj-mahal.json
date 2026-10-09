@@ -35,19 +35,6 @@
     },
     {
       "passage": 1,
-      "quote": "India",
-      "subject": "Agra",
-      "kind": "city",
-      "property": "country",
-      "stated": "India",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 1,
       "quote": "Shah Jahan",
       "subject": "Taj Mahal",
       "kind": "mausoleum",
@@ -74,7 +61,7 @@
     },
     {
       "passage": 1,
-      "quote": "1631",
+      "quote": "In 1631",
       "subject": "Mumtaz Mahal",
       "kind": "empress",
       "property": "died",

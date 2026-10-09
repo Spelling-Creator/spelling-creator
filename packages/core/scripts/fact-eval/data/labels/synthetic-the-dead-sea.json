@@ -9,6 +9,19 @@
   "claims": [
     {
       "passage": 1,
+      "quote": "about 430 meters below sea level",
+      "subject": "Dead Sea",
+      "kind": "lake",
+      "property": "elevation",
+      "stated": "",
+      "value": -430,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
       "quote": "Jordan",
       "subject": "Dead Sea",
       "kind": "lake",
@@ -35,20 +48,7 @@
     },
     {
       "passage": 1,
-      "quote": "about 430 meters below sea level",
-      "subject": "Dead Sea",
-      "kind": "lake",
-      "property": "elevation",
-      "stated": "",
-      "value": -430,
-      "unit": "m",
-      "month": 0,
-      "day": 0,
-      "qualifier": "about"
-    },
-    {
-      "passage": 1,
-      "quote": "Jordan River",
+      "quote": "The sea is fed mainly by the Jordan River",
       "subject": "Jordan River",
       "kind": "river",
       "property": "flows_into",
@@ -61,7 +61,7 @@
     },
     {
       "passage": 1,
-      "quote": "King Herod",
+      "quote": "built by King Herod",
       "subject": "Masada",
       "kind": "fortress",
       "property": "creator",

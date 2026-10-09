@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-library-of-alexandria",
+  "title": "The Library of Alexandria",
+  "about": "when it was founded, where, and by whom. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "The Library of Alexandria stood in Alexandria, a busy port city on the Mediterranean coast of Egypt. Alexander the Great founded the city in 331 BCE, but he died before the library existed. It was built in the early 3rd century BCE, probably around 285 BCE, by the Greek kings who ruled Egypt after him: Ptolemy I and his son Ptolemy II. A scholar named Demetrius of Phalerum likely helped plan it. The library was part of a larger research center called the MOUSEION, a shrine to the Muses, where thinkers could live, study, write, and argue.",
+    "Egypt was a fine home for a library, because reeds growing along the Nile were made into PAPYRUS, the paper of the ancient world. Ancient writers claimed the library held up to 400,000 scrolls, though modern historians think the real number was smaller and cannot be known. Ships arriving in the harbor were reportedly searched, and any books on board were copied. Scholars gathered ideas from Greece, Persia, Babylon, and Egypt itself, and tradition says Jewish scriptures were translated into Greek here. One head librarian, ERATOSTHENES, measured the CIRCUMFERENCE of the Earth around 240 BCE and came surprisingly close."
+  ]
+}

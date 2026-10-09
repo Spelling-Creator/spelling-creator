@@ -22,19 +22,6 @@
     },
     {
       "passage": 1,
-      "quote": "Kennedy Space Center in Florida",
-      "subject": "Kennedy Space Center",
-      "kind": "spaceport",
-      "property": "region",
-      "stated": "Florida",
-      "value": 0,
-      "unit": "none",
-      "month": 0,
-      "day": 0,
-      "qualifier": "exact"
-    },
-    {
-      "passage": 1,
       "quote": "about 110 meters tall",
       "subject": "Saturn V",
       "kind": "rocket",
@@ -45,19 +32,6 @@
       "month": 0,
       "day": 0,
       "qualifier": "about"
-    },
-    {
-      "passage": 1,
-      "quote": "July 20",
-      "subject": "Eagle",
-      "kind": "lunar module",
-      "property": "happened",
-      "stated": "",
-      "value": 1969,
-      "unit": "none",
-      "month": 7,
-      "day": 20,
-      "qualifier": "exact"
     },
     {
       "passage": 1,

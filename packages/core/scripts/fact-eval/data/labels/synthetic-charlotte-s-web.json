@@ -9,9 +9,9 @@
   "claims": [
     {
       "passage": 1,
-      "quote": "E. B. White",
+      "quote": "written by E. B. White",
       "subject": "Charlotte's Web",
-      "kind": "novel",
+      "kind": "book",
       "property": "creator",
       "stated": "E. B. White",
       "value": 0,
@@ -22,9 +22,9 @@
     },
     {
       "passage": 1,
-      "quote": "E. B. White",
+      "quote": "also wrote Stuart Little",
       "subject": "Stuart Little",
-      "kind": "novel",
+      "kind": "book",
       "property": "creator",
       "stated": "E. B. White",
       "value": 0,
@@ -37,7 +37,7 @@
       "passage": 1,
       "quote": "October 15, 1952",
       "subject": "Charlotte's Web",
-      "kind": "novel",
+      "kind": "book",
       "property": "published",
       "stated": "",
       "value": 1952,
