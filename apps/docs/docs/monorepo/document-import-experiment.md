@@ -317,6 +317,34 @@ percent of the time, above the derived rule, and the answers are exact on
 every layout but the capitals one. About 30 seconds a section on an M4's CPU
 through onnxruntime-node.
 
+### The second fine-tune, with the layouts the rules cannot read
+
+Retrained on the dataset with `nomarks` and `runon` (521 training examples),
+and scored the same way but on every section of both held-out lessons, 12 per
+layout rather than 4, so the two tables are not on the same sample:
+
+| layout  | parsed | passage words | spelling | prompts F1 | types (model) | types (derived) | answers | composite |
+| ------- | -----: | ------------: | -------: | ---------: | ------------: | --------------: | ------: | --------: |
+| docx    |   100% |           99% |      98% |        97% |           93% |             87% |     99% |       96% |
+| plain   |   100% |          100% |     100% |        98% |           96% |             87% |    100% |       97% |
+| qa      |   100% |           99% |      85% |        99% |           96% |             87% |    100% |       94% |
+| caps    |   100% |           99% |      98% |        98% |           97% |             87% |     99% |       96% |
+| bullets |    92% |           91% |      92% |        90% |           87% |             80% |     92% |       89% |
+| colon   |   100% |           99% |     100% |        99% |           96% |             85% |     96% |       96% |
+| worked  |    92% |           89% |      92% |        89% |           88% |             78% |     92% |       88% |
+| nomarks |   100% |          100% |      98% |        98% |           94% |             87% |     97% |       96% |
+| runon   |    92% |           92% |      92% |        91% |           88% |             80% |     91% |       89% |
+
+The two rows that matter are the last two, since those are the sections the
+import actually hands to the model: 96 and 89 percent, where the rules get 66
+and 40. Every row below 94 is one section out of twelve whose reply is not
+valid JSON, and none of them hit the token cap: one run-on section wrote the
+`spellingWords` key inside the paragraph list, one worked section dropped an
+answer in as a bare string where a question belonged, and one bulleted
+section repeated itself. The import shows such a section as unread rather
+than guessing. On the sections that parse, every layout is 96 to 100 percent,
+and the capitals layout's long section now fits. The app pins this export.
+
 The model cards for both repos live in `scripts/extract-eval/model-cards/`
 and are pushed with the Hub CLI (the README there has the commands). The
 published exports:

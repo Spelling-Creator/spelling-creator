@@ -148,9 +148,11 @@ found no questions. The dataset now adds two layouts the rules cannot read
 (questions with no question marks or numbers and the answer tacked on, and a
 numbered list run together on one line), and for those it keeps only the
 sections the import would actually send to the model, cut and laid out
-exactly as the import sends them. The model needs retraining on that dataset
-before it earns its place; see the
-[experiment](/monorepo/document-import-experiment) for the scores.
+exactly as the import sends them. The model the app now pins was retrained
+on that dataset, and on held-out lessons in those two layouts it scores 96
+and 89 percent where the rules get 66 and 40. About one section in twelve
+comes back as JSON that does not parse, which the dialog counts as not read.
+See the [experiment](/monorepo/document-import-experiment) for the scores.
 
 ## Where the code is
 

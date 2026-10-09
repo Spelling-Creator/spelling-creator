@@ -26,7 +26,8 @@ import { createDownloadProgress } from "./downloadProgress.js";
 // Pinned to a commit, so a later push to the repo can't change what readers
 // download without someone here choosing to move the pin.
 const MODEL_ID = "playforgecoding/LFM2-1.2B-Extract-lesson-ONNX";
-const MODEL_REVISION = "982e7ca112467745b64dcf9dcaa9ffdb690f99d0";
+// The second fine-tune, trained on the layouts the rules cannot read too.
+const MODEL_REVISION = "6dbcb514d221857b5d2b17ecae1cce91b8047d08";
 
 // A section's JSON is usually 700 to 1,300 tokens; the longest sections in
 // the training data (seventeen questions with working-out) passed 1,500,
