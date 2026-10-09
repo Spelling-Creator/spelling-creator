@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-peru",
+  "title": "Peru",
+  "model": "opus",
+  "passages": [
+    "Peru is a country on the western edge of South America, home to more than 34 million people. Its capital is Lima, a busy city on the Pacific coast that Spanish settlers founded in 1535. Most Peruvians speak Spanish, but Quechua and Aymara are official languages too. These are INDIGENOUS languages, spoken in the region long before Europeans arrived, and millions of families still use them at home today. Some Quechua words even traveled into English, such as llama and condor. The land itself is full of surprises, stretching from dry coastal deserts to the snowy Andes mountains and the green Amazon rainforest.",
+    "High in the Andes sits Machu Picchu, a stone CITADEL built around 1450 for the Inca ruler Pachacuti. That makes it nearly 600 years old. It perches about 2,430 meters above sea level, which is close to 8,000 feet. At that ALTITUDE the air feels thin, and clouds sometimes drift right through the ruins. The Inca carved steep farming TERRACES into the slopes and fitted huge stones together so tightly that no mortar was needed. Spanish invaders never found the site, and it became widely known around the world after 1911. ARCHAEOLOGISTS still study how the builders worked with such skill."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "more than 34 million people",
+      "subject": "Peru",
+      "kind": "country",
+      "property": "population",
+      "stated": "",
+      "value": 34000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 1,
+      "quote": "Its capital is Lima",
+      "subject": "Peru",
+      "kind": "country",
+      "property": "capital",
+      "stated": "Lima",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "founded in 1535",
+      "subject": "Lima",
+      "kind": "city",
+      "property": "began",
+      "stated": "",
+      "value": 1535,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "western edge of South America",
+      "subject": "Peru",
+      "kind": "country",
+      "property": "continent",
+      "stated": "South America",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Spanish",
+      "subject": "Peru",
+      "kind": "country",
+      "property": "language",
+      "stated": "Spanish",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Quechua",
+      "subject": "Peru",
+      "kind": "country",
+      "property": "language",
+      "stated": "Quechua",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Aymara",
+      "subject": "Peru",
+      "kind": "country",
+      "property": "language",
+      "stated": "Aymara",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "built around 1450",
+      "subject": "Machu Picchu",
+      "kind": "citadel",
+      "property": "began",
+      "stated": "",
+      "value": 1450,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "about 2,430 meters",
+      "subject": "Machu Picchu",
+      "kind": "citadel",
+      "property": "elevation",
+      "stated": "",
+      "value": 2430,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

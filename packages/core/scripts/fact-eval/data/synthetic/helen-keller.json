@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-helen-keller",
+  "title": "Helen Keller",
+  "about": "the life of Helen Keller: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Helen Keller was born on June 27, 1880, in Tuscumbia, a small town in Alabama. When she was about 19 months old, a sudden illness left her unable to see or hear. For years she lived in a silent, dark world and grew deeply FRUSTRATED. In March 1887, a young teacher named Anne Sullivan arrived. At the water pump, Anne spelled the letters w, a, t, e, r into one of Helen's hands while cool water ran over the other. Helen suddenly understood that everything had a name. By that evening she had learned about 30 new words. This BREAKTHROUGH opened her mind to language.",
+    "Helen studied at schools in Boston and New York, then entered Radcliffe College. In 1904 she graduated with honors, becoming the first deafblind person to earn a college degree. A year earlier she had published her AUTOBIOGRAPHY, The Story of My Life. She became a passionate ADVOCATE for blind and deaf people and visited more than 35 countries. In Japan in 1937, she was curious about the loyal Akita dogs, and people there gave her one. It is believed to be the first Akita brought to the United States. Helen Keller died on June 1, 1968, at the age of 87."
+  ]
+}

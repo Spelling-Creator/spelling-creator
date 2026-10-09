@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-hubble-space-telescope",
+  "title": "The Hubble Space Telescope",
+  "about": "when it launched, its size, its height above Earth and what it showed. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "The Hubble Space Telescope launched on April 24, 1990, riding into space aboard the Space Shuttle Discovery. It was named after Edwin Hubble, an American ASTRONOMER who showed in the 1920s that our Milky Way is only one of many galaxies. The telescope is about 13.2 meters long, roughly the length of a large bus, and weighs more than 11,000 kilograms. It circles Earth in a low ORBIT about 540 kilometers up and goes all the way around in roughly 95 minutes. NASA built Hubble together with the European Space Agency, so scientists from many countries have shared its time.",
+    "At first, Hubble's pictures were blurry because its main mirror, 2.4 meters wide, had been shaped very slightly wrong. In December 1993, ASTRONAUTS fixed it during several spacewalks, and the views became sharp. In 1995, Hubble photographed the Pillars of Creation, tall clouds of gas and dust inside the Eagle NEBULA, about 6,500 light years away. That same year it stared at one tiny patch of sky for about 10 days and found nearly 3,000 faint GALAXIES. Its images helped scientists estimate that the universe is about 13.8 billion years old."
+  ]
+}

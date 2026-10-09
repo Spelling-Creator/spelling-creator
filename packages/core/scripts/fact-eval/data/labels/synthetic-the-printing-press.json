@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-the-printing-press",
+  "title": "The Printing Press",
+  "model": "opus",
+  "passages": [
+    "Around 1440, in the German city of Mainz, a GOLDSMITH named Johannes Gutenberg began building a machine that would change how people shared ideas. Before then, most books in Europe were copied by hand, and a single MANUSCRIPT could take a scribe months or even years to finish. Gutenberg cast small metal letters from an ALLOY of lead, tin and antimony. These letters could be lined up, inked, pressed onto paper, and then sorted and used again. He based his press on the screw presses that farmers used to squeeze grapes for wine.",
+    "Gutenberg's most famous work was a Bible, finished in Mainz around 1455. His workshop printed about 180 copies, some on paper and some on VELLUM, a smooth material made from calfskin. Most pages held 42 lines of text in each column, and the whole book filled nearly 1,300 pages. Fewer than 50 copies survive today. Gutenberg was not the first to try MOVABLE type, though. In China, a craftsman named Bi Sheng shaped letters from baked clay around 1040. In Korea, printers used metal type to make a Buddhist book called the Jikji in 1377, decades before Mainz."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "1440",
+      "subject": "Printing press",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1440,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Johannes Gutenberg",
+      "subject": "Printing press",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Johannes Gutenberg",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "German city of Mainz",
+      "subject": "Mainz",
+      "kind": "city",
+      "property": "country",
+      "stated": "Germany",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1455",
+      "subject": "Gutenberg Bible",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1455,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "Gutenberg's",
+      "subject": "Gutenberg Bible",
+      "kind": "book",
+      "property": "creator",
+      "stated": "Johannes Gutenberg",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Bi Sheng",
+      "subject": "Movable type",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Bi Sheng",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1040",
+      "subject": "Movable type",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1040,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "1377",
+      "subject": "Jikji",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1377,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-the-burj-khalifa",
+  "title": "The Burj Khalifa",
+  "model": "opus",
+  "passages": [
+    "The Burj Khalifa is the tallest building in the world. It stands 828 metres high, or about 2,717 feet, and rises more than 160 stories into the sky. It stands in Dubai, a city in the United Arab Emirates on the edge of the Arabian desert and the warm waters of the Persian Gulf. On a clear day, people say its SPIRE can be seen from nearly 95 kilometres away. The tower opened on January 4, 2010, after about six years of building. It was named to honour Sheikh Khalifa bin Zayed Al Nahyan, who was then the president of the country.",
+    "The tower was designed by the ARCHITECT Adrian Smith, who worked for the Chicago firm Skidmore, Owings and Merrill. Smith looked to the region for ideas. Its base has three wings, a shape inspired by a desert flower called the spider lily, and its stepped tiers echo patterns found in Islamic art. The outside is covered in glass and steel CLADDING that helps it handle the fierce summer heat. Workers from dozens of countries helped build this AMBITIOUS tower. Today visitors ride fast elevators to viewing decks more than 500 metres up, where they can look out over the sea, the sand and a busy city."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "828 metres",
+      "subject": "Burj Khalifa",
+      "kind": "skyscraper",
+      "property": "height",
+      "stated": "",
+      "value": 828,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 2,717 feet",
+      "subject": "Burj Khalifa",
+      "kind": "skyscraper",
+      "property": "height",
+      "stated": "",
+      "value": 2717,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "It stands in Dubai",
+      "subject": "Burj Khalifa",
+      "kind": "skyscraper",
+      "property": "region",
+      "stated": "Dubai",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Dubai, a city in the United Arab Emirates",
+      "subject": "Dubai",
+      "kind": "city",
+      "property": "country",
+      "stated": "United Arab Emirates",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "January 4, 2010",
+      "subject": "Burj Khalifa",
+      "kind": "skyscraper",
+      "property": "began",
+      "stated": "",
+      "value": 2010,
+      "unit": "none",
+      "month": 1,
+      "day": 4,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Sheikh Khalifa bin Zayed Al Nahyan",
+      "subject": "Burj Khalifa",
+      "kind": "skyscraper",
+      "property": "named_after",
+      "stated": "Khalifa bin Zayed Al Nahyan",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Adrian Smith",
+      "subject": "Burj Khalifa",
+      "kind": "skyscraper",
+      "property": "creator",
+      "stated": "Adrian Smith",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

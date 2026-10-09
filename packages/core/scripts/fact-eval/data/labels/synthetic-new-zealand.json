@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-new-zealand",
+  "title": "New Zealand",
+  "model": "opus",
+  "passages": [
+    "New Zealand is an island country in the southwest Pacific Ocean, roughly 2,000 kilometers east of Australia. Its two main islands are called the North Island and the South Island, and a narrow channel of water named Cook STRAIT runs between them. The South Island is larger and is home to the Southern Alps, where Aoraki, also called Mount Cook, rises to 3,724 meters. The North Island has bubbling GEOTHERMAL pools and active volcanoes. The capital city, Wellington, sits at the southern tip of the North Island and is famous for its strong, gusty winds.",
+    "More than 5.3 million people live in New Zealand, and about one third of them live in and around Auckland, the largest city. The first people to arrive were the Māori, who sailed across the ocean in great canoes around the year 1300. Māori are the INDIGENOUS people of these islands, and their name for the country is Aotearoa, often translated as \"land of the long white cloud.\" In 1840, Māori chiefs and the British Crown signed the Treaty of Waitangi, an agreement people still talk about today. Visitors are often moved by the haka, a powerful CEREMONIAL dance performed at important events."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "3,724 meters",
+      "subject": "Aoraki / Mount Cook",
+      "kind": "mountain",
+      "property": "elevation",
+      "stated": "",
+      "value": 3724,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Wellington",
+      "subject": "New Zealand",
+      "kind": "country",
+      "property": "capital",
+      "stated": "Wellington",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "More than 5.3 million",
+      "subject": "New Zealand",
+      "kind": "country",
+      "property": "population",
+      "stated": "",
+      "value": 5300000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1840",
+      "subject": "Treaty of Waitangi",
+      "kind": "treaty",
+      "property": "happened",
+      "stated": "",
+      "value": 1840,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

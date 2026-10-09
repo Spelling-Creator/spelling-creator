@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-charlotte-s-web",
+  "title": "Charlotte's Web",
+  "model": "opus",
+  "passages": [
+    "Charlotte's Web was written by E. B. White, an American ESSAYIST who also wrote Stuart Little and spent many years writing for The New Yorker magazine. The book was published on October 15, 1952, with gentle ILLUSTRATIONS by Garth Williams. It tells the story of Wilbur, a small pig, and Charlotte, a clever gray spider who saves his life by spinning words into her web. In 1953 it won a Newbery Honor. Since then it has been TRANSLATED into more than 20 languages, so children from Japan to Brazil have met the very same pig.",
+    "The story takes place on two farms. Fern Arable lives on her family's farm, where she rescues Wilbur because he is the runt of his litter. When he is about five weeks old, he is sold to her uncle, Homer Zuckerman, and moves into the big old barn on the Zuckerman farm, home to sheep, geese and a greedy rat named Templeton. White based that barn on his own farm in Brooklin, Maine, which he bought in 1933. On that COASTAL farm he once watched a real spider spin an egg sac. In the book, Charlotte's egg sac holds 514 eggs, and when they hatch in spring, all but three of the tiny spiders float away on the wind."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "written by E. B. White",
+      "subject": "Charlotte's Web",
+      "kind": "book",
+      "property": "creator",
+      "stated": "E. B. White",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "also wrote Stuart Little",
+      "subject": "Stuart Little",
+      "kind": "book",
+      "property": "creator",
+      "stated": "E. B. White",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "October 15, 1952",
+      "subject": "Charlotte's Web",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1952,
+      "unit": "none",
+      "month": 10,
+      "day": 15,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Brooklin, Maine",
+      "subject": "Brooklin, Maine",
+      "kind": "town",
+      "property": "region",
+      "stated": "Maine",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

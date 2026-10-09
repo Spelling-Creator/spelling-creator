@@ -84,15 +84,26 @@ function messagesFor(kind, text) {
 /**
  * @returns {Promise<{raw: string, json: object|null, promptTokens: number, generated: number, ms: number, truncated: boolean}>}
  */
-export async function extractSection(
+export async function extractSection(ctx, text, opts = {}) {
+  const reply = await generate(ctx, messagesFor(ctx.kind, text), opts);
+  return { ...reply, json: parseModelReply(reply.raw) };
+}
+
+/**
+ * One greedy generation for a chat, whatever it asks for; the fact-claim
+ * experiment (scripts/fact-eval) runs its own prompt through this.
+ * @returns {Promise<{raw: string, promptTokens: number, generated: number, ms: number, truncated: boolean}>}
+ */
+export async function generate(
   ctx,
-  text,
+  messages,
   { maxNewTokens = 1500, onChunk } = {},
 ) {
-  const inputs = ctx.tokenizer.apply_chat_template(
-    messagesFor(ctx.kind, text),
-    { add_generation_prompt: true, return_dict: true, enable_thinking: false },
-  );
+  const inputs = ctx.tokenizer.apply_chat_template(messages, {
+    add_generation_prompt: true,
+    return_dict: true,
+    enable_thinking: false,
+  });
   const promptTokens = inputs.input_ids.dims[1];
   const streamer = new TextStreamer(ctx.tokenizer, {
     skip_prompt: true,
@@ -114,7 +125,6 @@ export async function extractSection(
   })[0];
   return {
     raw,
-    json: parseModelReply(raw),
     promptTokens,
     generated,
     ms,

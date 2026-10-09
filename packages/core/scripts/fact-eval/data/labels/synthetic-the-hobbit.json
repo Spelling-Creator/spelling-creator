@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-hobbit",
+  "title": "The Hobbit",
+  "model": "opus",
+  "passages": [
+    "The Hobbit was written by J.R.R. Tolkien, a professor at Oxford University in England. Tolkien was born in 1892 in Bloemfontein, South Africa, and moved to England as a small child. He became a PHILOLOGIST, someone who studies the history of languages. He loved old Norse and ICELANDIC poems, where travelers in cold northern lands told stories of dragons, gold and brave journeys. Tolkien even borrowed the names of his dwarves from one of these poems. Around 1930, while grading exam papers, he wrote a single line: \"In a hole in the ground there lived a hobbit.\"",
+    "The book was published on 21 September 1937 by George Allen and Unwin in London. Tolkien drew many of the ILLUSTRATIONS and maps himself. The first printing was only about 1,500 copies, and it sold out within a few months. Readers wanted more, so Tolkien spent more than ten years writing The Lord of the Rings, which came out in three volumes in 1954 and 1955. Since then, The Hobbit has sold more than 100 million copies and has been translated into over 50 languages. Between 2012 and 2014, it was also turned into a film TRILOGY, shot among the mountains and green hills of New Zealand."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "written by J.R.R. Tolkien",
+      "subject": "The Hobbit",
+      "kind": "novel",
+      "property": "creator",
+      "stated": "J. R. R. Tolkien",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "born in 1892",
+      "subject": "J. R. R. Tolkien",
+      "kind": "writer",
+      "property": "born",
+      "stated": "",
+      "value": 1892,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Bloemfontein, South Africa",
+      "subject": "Bloemfontein",
+      "kind": "city",
+      "property": "country",
+      "stated": "South Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "21 September 1937",
+      "subject": "The Hobbit",
+      "kind": "novel",
+      "property": "published",
+      "stated": "",
+      "value": 1937,
+      "unit": "none",
+      "month": 9,
+      "day": 21,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1954",
+      "subject": "The Lord of the Rings",
+      "kind": "novel",
+      "property": "published",
+      "stated": "",
+      "value": 1954,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Between 2012 and 2014",
+      "subject": "The Hobbit (film series)",
+      "kind": "film series",
+      "property": "published",
+      "stated": "",
+      "value": 2012,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-x-rays",
+  "title": "X-rays",
+  "about": "who discovered them and when. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "On November 8, 1895, a German scientist named Wilhelm Conrad Röntgen was working late in his lab in the city of Würzburg. He was sending electricity through a glass tube wrapped in black cardboard when he noticed a FLUORESCENT screen across the room begin to glow. Some invisible ray was passing right through the cardboard. He called it X, the symbol for something UNKNOWN. A few weeks later, he made a famous picture of his wife Anna Bertha's hand, showing her bones and her wedding ring. She was said to be startled at seeing her own SKELETON.",
+    "News of the discovery spread with astonishing speed. Within about a year, more than 1,000 articles and dozens of books about the new rays had appeared, and doctors in several countries were already using them to find bullets and broken bones. In 1901, Röntgen won the very first Nobel Prize in Physics. He gave the prize money to his university and chose not to PATENT his discovery, hoping everyone could benefit. In Germany, Poland, Russia and many other places, people still call them Röntgen rays, honoring his name in everyday speech. An old unit for measuring RADIATION, the roentgen, carries his name too."
+  ]
+}

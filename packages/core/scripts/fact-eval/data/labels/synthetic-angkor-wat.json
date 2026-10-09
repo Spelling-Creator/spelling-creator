@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-angkor-wat",
+  "title": "Angkor Wat",
+  "model": "opus",
+  "passages": [
+    "Angkor Wat stands in the north of Cambodia, a country in Southeast Asia, just a few miles from the modern city of Siem Reap. It was built by the Khmer people in the early 1100s, during the REIGN of King Suryavarman II. Work probably began around 1113 and went on for about 30 years. The king wanted a grand temple to honor the Hindu god Vishnu. Over the centuries, it slowly became a Buddhist place of worship. Monks still pray there today, and PILGRIMS from many lands come to visit.",
+    "Angkor Wat is huge. The whole site covers about 400 acres, which makes it the largest religious MONUMENT in the world. A wide MOAT, nearly 200 meters across, surrounds the temple like a calm, square lake. The tallest of its five towers rises about 65 meters, and it is shaped like a lotus bud. Workers moved millions of blocks of SANDSTONE, and some were floated on rafts along canals from a quarry about 25 miles away. It is fascinating to imagine how they managed it all without modern machines."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Cambodia",
+      "subject": "Angkor Wat",
+      "kind": "temple",
+      "property": "country",
+      "stated": "Cambodia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "around 1113",
+      "subject": "Angkor Wat",
+      "kind": "temple",
+      "property": "began",
+      "stated": "",
+      "value": 1113,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "about 400 acres",
+      "subject": "Angkor Wat",
+      "kind": "temple",
+      "property": "area",
+      "stated": "",
+      "value": 400,
+      "unit": "acre",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "about 65 meters",
+      "subject": "Angkor Wat",
+      "kind": "temple",
+      "property": "height",
+      "stated": "",
+      "value": 65,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

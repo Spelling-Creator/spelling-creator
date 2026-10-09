@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-apollo-11",
+  "title": "Apollo 11",
+  "model": "opus",
+  "passages": [
+    "Apollo 11 lifted off on July 16, 1969, from Kennedy Space Center in Florida, riding a Saturn V rocket about 110 meters tall. Three ASTRONAUTS flew it. Neil Armstrong was the commander, Buzz Aldrin piloted the LUNAR module, called Eagle, and Michael Collins flew the command module, called Columbia. On July 20, Eagle landed on the moon while Collins circled overhead. Armstrong and Aldrin stayed on the surface for about 21 hours, walking outside for roughly two and a half of them. The whole mission lasted a little over 8 days.",
+    "The journey belonged to people far beyond the United States. Giant dish ANTENNAS in Australia and Spain helped catch the faint signals as Earth turned, and more than 500 million people around the world watched the grainy television pictures. Many cultures already had stories about the moon. In China, an old LEGEND tells of Chang'e, a woman who floated up to live there with a pet rabbit, and mission control even joked with the crew about her during the flight. On July 24, the capsule splashed down in the Pacific Ocean, southwest of Hawaii, bringing all three men safely home."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "July 16, 1969",
+      "subject": "Apollo 11",
+      "kind": "space mission",
+      "property": "happened",
+      "stated": "",
+      "value": 1969,
+      "unit": "none",
+      "month": 7,
+      "day": 16,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 110 meters tall",
+      "subject": "Saturn V",
+      "kind": "rocket",
+      "property": "height",
+      "stated": "",
+      "value": 110,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "a little over 8 days",
+      "subject": "Apollo 11",
+      "kind": "space mission",
+      "property": "duration",
+      "stated": "",
+      "value": 8,
+      "unit": "day",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "July 24",
+      "subject": "Apollo 11",
+      "kind": "space mission",
+      "property": "ended",
+      "stated": "",
+      "value": 1969,
+      "unit": "none",
+      "month": 7,
+      "day": 24,
+      "qualifier": "exact"
+    }
+  ]
+}

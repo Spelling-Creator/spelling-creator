@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-grace-hopper",
+  "title": "Grace Hopper",
+  "model": "opus",
+  "passages": [
+    "Grace Hopper was born on December 9, 1906, in New York City. As a curious girl, she took apart about seven alarm clocks to see how they worked. She studied math and physics at Vassar College, graduating in 1928, and earned a PhD from Yale in 1934. Few women earned that degree back then. She became a MATHEMATICIAN and taught at Vassar. In 1943, during World War Two, she joined the United States Navy and was sent to Harvard. There she worked on the Mark I, a giant computer more than 50 feet long.",
+    "Hopper is best known for helping people give computers instructions in words instead of numbers. In 1952 she built one of the first COMPILERS, a program that turns written instructions into machine code. Her ideas shaped COBOL, a PROGRAMMING language from 1959 that many businesses still use. She also loved telling the story of a real moth found stuck inside a computer in 1947, often called the first computer bug. She retired from the Navy in 1986 as a rear ADMIRAL, when she was nearly 80 years old. Hopper died on January 1, 1992, and was buried at Arlington National Cemetery in Virginia."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "December 9, 1906",
+      "subject": "Grace Hopper",
+      "kind": "computer scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1906,
+      "unit": "none",
+      "month": 12,
+      "day": 9,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "more than 50 feet long",
+      "subject": "Harvard Mark I",
+      "kind": "computer",
+      "property": "length",
+      "stated": "",
+      "value": 50,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "COBOL, a PROGRAMMING language from 1959",
+      "subject": "COBOL",
+      "kind": "programming language",
+      "property": "began",
+      "stated": "",
+      "value": 1959,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "January 1, 1992",
+      "subject": "Grace Hopper",
+      "kind": "computer scientist",
+      "property": "died",
+      "stated": "",
+      "value": 1992,
+      "unit": "none",
+      "month": 1,
+      "day": 1,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Arlington National Cemetery in Virginia",
+      "subject": "Arlington National Cemetery",
+      "kind": "cemetery",
+      "property": "region",
+      "stated": "Virginia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

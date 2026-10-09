@@ -1,0 +1,47 @@
+{
+  "lesson": "d0d80d67-17d6-43b1-8eb1-bbf38871c1dd",
+  "title": "Volcanoes",
+  "model": "opus",
+  "passages": [
+    "A volcano is an opening in the Earth's surface where heat and MOLTEN material escape from deep below. Our planet is built in three main layers: the thin, rocky CRUST that we live on, the vast and scorching MANTLE beneath it, and the metal CORE at the very centre. Within the mantle, solid rock can melt into a glowing liquid called MAGMA, which is lighter than the rock around it and slowly rises toward the surface.",
+    "When magma finally reaches the open air, its name changes to LAVA. A single eruption can hurl out three dangerous things at once: red-hot ROCK, choking GAS, and clouds of grey ASH. The crust is thinner than most people imagine. On average it reaches only about 30 kilometres down, while the mantle below it stretches roughly 2,900 kilometres toward the core.",
+    "The Earth's crust is not one solid shell. It is cracked into enormous slabs called TECTONIC PLATES that drift slowly on the hot rock below, about as fast as your fingernails grow. Most volcanoes form where these plates meet, so they line up along the plate edges rather than scattering at random. This is why the Ring of Fire runs past JAPAN, INDONESIA, and CHILE, three lands shaken by frequent eruptions.",
+    "So many volcanoes ring the edge of the Pacific Ocean that the region is nicknamed THE RING OF FIRE. A few volcanoes, though, form far from any plate edge, above a rising plume of superheated rock called A HOTSPOT. Over millions of years, these hotspots have built whole island groups, including HAWAII, SAMOA, and ICELAND. In total, the crust is broken into roughly 7 major plates and many smaller ones.",
+    "Not all volcanoes look or behave alike, and the difference comes down to their lava. A SHIELD VOLCANO is built from runny, fast-flowing lava that spreads a long way before cooling, creating a broad, gently sloping dome. Its eruptions are usually calm, with lava oozing out rather than blasting.",
+    "A STRATOVOLCANO, by contrast, is the steep, cone-shaped mountain most people picture. It forms from lava that is THICK, STICKY, and SLOW, which traps gas until the pressure suddenly breaks free. When that happens, its eruptions can be VIOLENT, EXPLOSIVE, and SUDDEN. The thickness of lava is measured by its VISCOSITY. Fresh lava can reach a searing 1,200 degrees Celsius as it emerges, and only begins to harden once it cools below about 400 degrees.",
+    "An erupting volcano unleashes far more than glowing lava. The molten rock itself moves as A LAVA FLOW, which destroys what lies in its path but usually creeps slowly enough for people to escape. Far more deadly is a PYROCLASTIC FLOW, a scorching avalanche of gas and ash that races downhill at terrifying speed, sometimes reaching 700 kilometres per hour.",
+    "Volcanoes also blast out solid fragments called TEPHRA, ranging from fine DUST to flying CINDERS to huge BOULDERS. Falling ash is destructive from above too: a thick layer can bury TOWNS, collapse ROOFS, and ground PLANES for hundreds of kilometres around. The largest eruptions throw so much ash into the sky that they can even cool the whole planet for months.",
+    "For centuries, eruptions came as a complete surprise. Today, scientists called VOLCANOLOGISTS watch dangerous volcanoes around the clock. Their most important instrument is A SEISMOMETER, which senses the tiny quakes that ripple through a mountain as magma forces its way upward. As magma rises, it leaves clues a careful watcher can spot: TREMORS underfoot, escaping STEAM, and telltale BULGING of the ground.",
+    "Modern teams no longer rely on their senses alone. They also use SATELLITES, SENSORS, and DRONES to study a volcano from a safe distance. The raw power of an eruption is graded on a scale called THE VEI, the Volcanic Explosivity Index, which runs from 0 up to 8. It is logarithmic: each step up the scale means roughly ten times as much material blasted out, so a small rise in number hides an enormous rise in power.",
+    "For all their danger, volcanoes give a great deal back, which is why millions of people live beside them. When volcanic ash breaks down, it creates extraordinarily FERTILE SOIL. Farms in this rich ground grow bumper crops of GRAPES, COFFEE, and VEGETABLES, feeding whole regions.",
+    "The heat itself is a resource. GEOTHERMAL ENERGY taps the natural warmth of volcanic ground to make electricity and heat homes cheaply. In Iceland, this warmth heats about 90 percent of all houses. Volcanoes also forge valuable materials, above all OBSIDIAN, a jet-black natural glass that ancient people shaped into TOOLS, BLADES, and ARROWHEADS."
+  ],
+  "claims": [
+    {
+      "passage": 2,
+      "quote": "about 30 kilometres",
+      "subject": "Earth's crust",
+      "kind": "planetary layer",
+      "property": "depth",
+      "stated": "",
+      "value": 30,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "roughly 2,900 kilometres",
+      "subject": "Earth's mantle",
+      "kind": "planetary layer",
+      "property": "depth",
+      "stated": "",
+      "value": 2900,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

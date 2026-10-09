@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-america-s-name",
+  "title": "America's Name",
+  "model": "opus",
+  "passages": [
+    "The Americas are named after Amerigo Vespucci, a NAVIGATOR born in Florence, Italy, in 1454. Between about 1497 and 1504, he sailed west across the Atlantic Ocean, probably making two to four voyages. Christopher Columbus believed he had reached Asia, but Vespucci came to a bolder idea. In letters that spread across Europe, he described the lands as a \"New World,\" a separate CONTINENT that Europeans had not known before. Those letters were printed in several languages and read by thousands of people. They made his name famous long before he died in Seville, Spain, in 1512.",
+    "The name first appeared in 1507, on an ENORMOUS wall map made by Martin Waldseemüller, a German CARTOGRAPHER working in eastern France. He printed \"America\" across what is now South America, choosing a feminine form to match Europa and Asia. About 1,000 copies were printed, but only one survives today. The Library of Congress bought it in 2003 for 10 million dollars. In 1538, Gerardus Mercator spread the name over North America too. Of course, the people already living there had their own names. Some Haudenosaunee and Anishinaabe peoples speak of Turtle Island, and the Guna people of Panama call the land Abya Yala."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "named after Amerigo Vespucci",
+      "subject": "Americas",
+      "kind": "continent",
+      "property": "named_after",
+      "stated": "Amerigo Vespucci",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1454",
+      "subject": "Amerigo Vespucci",
+      "kind": "navigator",
+      "property": "born",
+      "stated": "",
+      "value": 1454,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1512",
+      "subject": "Amerigo Vespucci",
+      "kind": "navigator",
+      "property": "died",
+      "stated": "",
+      "value": 1512,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1507",
+      "subject": "Waldseemüller map",
+      "kind": "map",
+      "property": "published",
+      "stated": "",
+      "value": 1507,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Martin Waldseemüller",
+      "subject": "Waldseemüller map",
+      "kind": "map",
+      "property": "creator",
+      "stated": "Martin Waldseemüller",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

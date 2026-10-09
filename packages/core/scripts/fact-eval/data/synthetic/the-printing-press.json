@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-printing-press",
+  "title": "The Printing Press",
+  "about": "who invented it, when and where, and the first famous book it printed. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Around 1440, in the German city of Mainz, a GOLDSMITH named Johannes Gutenberg began building a machine that would change how people shared ideas. Before then, most books in Europe were copied by hand, and a single MANUSCRIPT could take a scribe months or even years to finish. Gutenberg cast small metal letters from an ALLOY of lead, tin and antimony. These letters could be lined up, inked, pressed onto paper, and then sorted and used again. He based his press on the screw presses that farmers used to squeeze grapes for wine.",
+    "Gutenberg's most famous work was a Bible, finished in Mainz around 1455. His workshop printed about 180 copies, some on paper and some on VELLUM, a smooth material made from calfskin. Most pages held 42 lines of text in each column, and the whole book filled nearly 1,300 pages. Fewer than 50 copies survive today. Gutenberg was not the first to try MOVABLE type, though. In China, a craftsman named Bi Sheng shaped letters from baked clay around 1040. In Korea, printers used metal type to make a Buddhist book called the Jikji in 1377, decades before Mainz."
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-japan",
+  "title": "Japan",
+  "model": "opus",
+  "passages": [
+    "Japan is an island nation in the Pacific Ocean, off the eastern coast of Asia. Its land covers about 378,000 square kilometers, spread across an ARCHIPELAGO of more than 14,000 islands. Four main islands hold most of the people: Honshu, Hokkaido, Kyushu and Shikoku. The tallest peak is Mount Fuji, a VOLCANO that rises 3,776 meters and is often capped with snow. Because Japan sits where several plates of the Earth's crust meet, it feels many earthquakes each year, and people there have found clever ways to build strong, safe homes.",
+    "The capital is Tokyo, which was once a castle town called Edo. It became the capital in 1868, and today the greater Tokyo area is home to more than 37 million people, making it one of the largest city regions on Earth. Japan as a whole has about 123 million people. Its currency is the yen, first introduced in 1871. Visitors are often curious about how old customs, such as quiet tea CEREMONIES and bowing as a polite greeting, live side by side with fast bullet trains and bright, glowing CITYSCAPES."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "about 378,000 square kilometers",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "area",
+      "stated": "",
+      "value": 378000,
+      "unit": "km2",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "off the eastern coast of Asia",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "continent",
+      "stated": "Asia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "3,776 meters",
+      "subject": "Mount Fuji",
+      "kind": "mountain",
+      "property": "elevation",
+      "stated": "",
+      "value": 3776,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "The capital is Tokyo",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "capital",
+      "stated": "Tokyo",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "more than 37 million people",
+      "subject": "Greater Tokyo Area",
+      "kind": "metropolitan area",
+      "property": "population",
+      "stated": "",
+      "value": 37000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "about 123 million people",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "population",
+      "stated": "",
+      "value": 123000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "the yen",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "currency",
+      "stated": "Japanese yen",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1871",
+      "subject": "Japanese yen",
+      "kind": "currency",
+      "property": "began",
+      "stated": "",
+      "value": 1871,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

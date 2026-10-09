@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-the-first-bicycle",
+  "title": "The First Bicycle",
+  "model": "opus",
+  "passages": [
+    "The first bicycle was built by a German inventor named Karl Drais in the city of Mannheim. On June 12, 1817, he rode it about 7 kilometers to a roadside inn and back in roughly an hour. His wooden CONTRAPTION had two wheels, a seat and a steering bar, but no pedals. Riders pushed along the ground with their feet, as if running while sitting down. Drais called it a \"running machine.\" Some historians think he was inspired by a huge volcanic ERUPTION in Indonesia in 1815, which ruined harvests, so many horses starved and people needed a new way to travel.",
+    "The idea spread quickly to Paris and London, where fashionable young men raced these \"dandy horses\" through parks. In the 1860s, French makers added pedals to the front wheel, creating the VELOCIPEDE, nicknamed the \"boneshaker\" for its bumpy ride. Next came the tall penny farthing, with a front wheel up to about 1.5 meters high. In 1885, John Kemp Starley in England built the Rover, with a chain and two equal wheels, and soon PNEUMATIC tires filled with air made rides smooth. Today there are more than a billion bicycles worldwide. The Netherlands has more bikes than people, and Copenhagen builds highways just for cyclists."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Karl Drais",
+      "subject": "Dandy horse",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Karl Drais",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "June 12, 1817",
+      "subject": "Dandy horse",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1817,
+      "unit": "none",
+      "month": 6,
+      "day": 12,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Mannheim",
+      "subject": "Dandy horse",
+      "kind": "invention",
+      "property": "region",
+      "stated": "Mannheim",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1815",
+      "subject": "1815 eruption of Mount Tambora",
+      "kind": "eruption",
+      "property": "happened",
+      "stated": "",
+      "value": 1815,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Indonesia",
+      "subject": "1815 eruption of Mount Tambora",
+      "kind": "eruption",
+      "property": "country",
+      "stated": "Indonesia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1885",
+      "subject": "Rover safety bicycle",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1885,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "John Kemp Starley",
+      "subject": "Rover safety bicycle",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "John Kemp Starley",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

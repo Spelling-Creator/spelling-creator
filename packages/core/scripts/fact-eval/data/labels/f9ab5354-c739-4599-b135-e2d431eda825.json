@@ -1,0 +1,99 @@
+{
+  "lesson": "f9ab5354-c739-4599-b135-e2d431eda825",
+  "title": "An Introduction to Quantum Physics",
+  "model": "opus",
+  "passages": [
+    "Quantum physics is the science of the very small: the behaviour of ATOMS and the even tinier PARTICLES inside them. At this MINUSCULE scale, the ordinary rules of everyday physics break down and are replaced by strange new ones. Its central discovery is that ENERGY does not flow smoothly but arrives in tiny, separate packets. A single packet is called A QUANTUM, and this is where the whole field gets its name.",
+    "In 1900, the German physicist MAX PLANCK first proposed this radical idea, launching the quantum revolution. The physics of large, everyday objects, the world of Isaac Newton, is now called CLASSICAL PHYSICS, and it still works perfectly for footballs and planets. But in the quantum world, behaviour becomes DISCRETE, meaning it comes in separate steps, as well as UNPREDICTABLE and TINY. An atom is roughly ten to the power of minus ten metres across, far too small ever to see.",
+    "One of the strangest quantum discoveries is that light behaves as both a WAVE and a stream of particles at the same time, an idea known as wave-particle duality. The individual particles of light are called photons. A single particle of light is therefore A PHOTON. This peculiar double nature was revealed most famously by THE DOUBLE-SLIT EXPERIMENT, in which light passing through two narrow slits forms a rippling pattern like a wave, yet still arrives as individual specks like a PARTICLE.",
+    "In 1905, Albert Einstein explained a puzzle called THE PHOTOELECTRIC EFFECT by treating light as a shower of photons, work that later earned him a Nobel Prize. Remarkably, duality is not limited to light: ELECTRONS and even whole ATOMS can behave as waves too. The quantum world simply refuses to fit our everyday picture of what a particle should be.",
+    "In 1927, the physicist WERNER HEISENBERG uncovered one of the deepest truths of the quantum world: THE UNCERTAINTY PRINCIPLE. It states that you can never know both the exact POSITION AND MOMENTUM of a particle at the same time. The more precisely you pin down where a particle is, the more its SPEED and direction become blurred, and the other way around.",
+    "This is not a flaw in our instruments that better tools could one day fix; it is FUNDAMENTAL to nature itself. In fact, the uncertainty in a particle's POSITION multiplied by the uncertainty in its MOMENTUM can never fall below a fixed minimum value. Reality, at its smallest scale, is genuinely FUZZY, and no amount of care can make it perfectly sharp.",
+    "Before it is measured, a quantum particle does not sit in a single definite state. Instead it exists in a blend of every possible state at once, a condition called SUPERPOSITION. The moment someone measures it, this blend suddenly picks a single outcome. We say the superposition COLLAPSES, and until that instant the particle genuinely has no single answer.",
+    "To show how absurd this seems at human scale, the physicist ERWIN SCHRODINGER devised a thought experiment in 1935. A CAT is sealed in a BOX with a device in which a quantum event has an equal chance of triggering POISON. Until the box is opened, the rules seem to say the cat is both ALIVE and DEAD at once. Schrodinger's point was not that cats work this way, but that superposition becomes deeply strange when stretched to everyday objects.",
+    "Perhaps the eeriest quantum effect of all is ENTANGLEMENT. Two particles can become so deeply LINKED that measuring one instantly reveals the state of the other, even if the two are separated by an enormous distance. It is as though they share a single fate across empty space.",
+    "Albert Einstein distrusted this idea, famously mocking it as SPOOKY ACTION AT A DISTANCE because it seemed to break his rule that nothing travels faster than light. Yet in careful experiments over many years, ALBERT EINSTEIN was shown to be wrong: entanglement is real. The link acts INSTANTLY however far apart the PAIRED particles are, and in 2022 the Nobel Prize honoured the scientists who proved it beyond doubt.",
+    "These strange ideas are not just theory; they power revolutionary technology. The most talked-about is the quantum COMPUTER, whose basic unit is A QUBIT. Unlike an ordinary computer bit, which must be either 0 or 1, a qubit can be both at once, and each extra qubit doubles the machine's power: with n qubits, a quantum computer can represent 2 to the power of n states at the same time. Just 10 qubits can already represent 1,024 different states.",
+    "Quantum physics also underpins technology we already rely on, including LASERS and hospital SCANNERS. It even offers a way to send messages that cannot be secretly read, a field called QUANTUM CRYPTOGRAPHY. And every hospital MRI SCANNER depends on quantum behaviour to peer inside the human body, protecting our HEALTH. The strangest science ever discovered has quietly become part of daily life."
+  ],
+  "claims": [
+    {
+      "passage": 2,
+      "quote": "1900",
+      "subject": "Planck's law",
+      "kind": "scientific law",
+      "property": "discovered",
+      "stated": "",
+      "value": 1900,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "MAX PLANCK",
+      "subject": "Planck's law",
+      "kind": "scientific law",
+      "property": "discoverer",
+      "stated": "Max Planck",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 5,
+      "quote": "1927",
+      "subject": "Uncertainty principle",
+      "kind": "scientific principle",
+      "property": "discovered",
+      "stated": "",
+      "value": 1927,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 5,
+      "quote": "WERNER HEISENBERG",
+      "subject": "Uncertainty principle",
+      "kind": "scientific principle",
+      "property": "discoverer",
+      "stated": "Werner Heisenberg",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 8,
+      "quote": "1935",
+      "subject": "Schrödinger's cat",
+      "kind": "thought experiment",
+      "property": "discovered",
+      "stated": "",
+      "value": 1935,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 8,
+      "quote": "ERWIN SCHRODINGER",
+      "subject": "Schrödinger's cat",
+      "kind": "thought experiment",
+      "property": "discoverer",
+      "stated": "Erwin Schrödinger",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

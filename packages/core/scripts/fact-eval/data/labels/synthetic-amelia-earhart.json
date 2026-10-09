@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-amelia-earhart",
+  "title": "Amelia Earhart",
+  "model": "opus",
+  "passages": [
+    "Amelia Earhart was born on July 24, 1897, in Atchison, Kansas, a busy river town above the Missouri River. As a girl she climbed trees, went sledding on her belly and kept a scrapbook of stories about women who did bold jobs. During World War One she worked as a nurse's aide in Toronto, Canada, caring for wounded soldiers. In 1920, at an air show in Long Beach, California, she paid for a ride of about ten minutes and knew right away that she had to fly. She took lessons, bought a bright yellow plane she called the Canary and became a determined AVIATOR.",
+    "In 1928 Earhart crossed the Atlantic Ocean as a passenger, but she wanted to do it herself. On May 20, 1932, she took off alone from Harbour Grace, Newfoundland, and landed nearly 15 hours later in a PASTURE near Derry, Northern Ireland. That made her the first woman to fly solo across that ocean. In 1937 she set out to circle the world near the EQUATOR with her NAVIGATOR, Fred Noonan. They stopped in places like Brazil, Senegal, India and Java, seeing markets, deserts and rainforests along the way. After more than 20,000 miles, they disappeared on July 2 near tiny Howland Island in the Pacific. She was declared dead in 1939."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "July 24, 1897",
+      "subject": "Amelia Earhart",
+      "kind": "aviator",
+      "property": "born",
+      "stated": "",
+      "value": 1897,
+      "unit": "none",
+      "month": 7,
+      "day": 24,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Kansas",
+      "subject": "Atchison",
+      "kind": "city",
+      "property": "region",
+      "stated": "Kansas",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Canada",
+      "subject": "Toronto",
+      "kind": "city",
+      "property": "country",
+      "stated": "Canada",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "California",
+      "subject": "Long Beach",
+      "kind": "city",
+      "property": "region",
+      "stated": "California",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Newfoundland",
+      "subject": "Harbour Grace",
+      "kind": "town",
+      "property": "region",
+      "stated": "Newfoundland and Labrador",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Northern Ireland",
+      "subject": "Derry",
+      "kind": "city",
+      "property": "region",
+      "stated": "Northern Ireland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "July 2",
+      "subject": "Disappearance of Amelia Earhart",
+      "kind": "event",
+      "property": "happened",
+      "stated": "",
+      "value": 1937,
+      "unit": "none",
+      "month": 7,
+      "day": 2,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1939",
+      "subject": "Amelia Earhart",
+      "kind": "aviator",
+      "property": "died",
+      "stated": "",
+      "value": 1939,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

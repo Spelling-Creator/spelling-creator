@@ -1,0 +1,60 @@
+{
+  "lesson": "47172d61-fce7-4497-bd28-bbdc1bc3becb",
+  "title": "Penguins",
+  "model": "opus",
+  "passages": [
+    "Penguins are AQUATIC birds that have completely given up flying. There are about 18 SPECIES in total, and almost all of them live in the Southern Hemisphere. Instead of using their wings to fly through the air, penguins use them as FLIPPERS to 'fly' through the water, where they are superb swimmers.",
+    "On land, penguins WADDLE about in a way that looks clumsy and rather charming, but in the ocean they are fast and graceful. Like all birds, penguins have feathers, lay eggs, and are warm-blooded. The only penguin that lives north of the equator is the Galápagos penguin, found near a famous group of islands.",
+    "The emperor penguin is the LARGEST of all penguin species, standing up to 1.2 metres tall — about the height of a six-year-old child. Emperors live on the FROZEN sea ice of Antarctica and gather each year in a huge breeding COLONY, sometimes thousands of birds strong.",
+    "Remarkably, emperor penguins breed during the dark Antarctic winter, when temperatures plunge far below freezing. After the female lays a single egg, the male will INCUBATE it on top of his feet for about two months while the females travel to the sea to feed. The parents endure the brutal cold by huddling together to stay warm.",
+    "Penguins are superbly built to SURVIVE the freezing cold. Beneath their skin lies a thick layer of fat called blubber, which traps heat like a cosy blanket. On top, their feathers are packed incredibly densely — far more tightly than those of most birds — and a special oil gland keeps them completely waterproof.",
+    "Penguins also lose very little WARMTH because their wings and bills are small, reducing the surface exposed to the cold. When the icy WINTERS bring temperatures dozens of DEGREES below zero, penguins huddle together, constantly shuffling so that every bird gets a turn in the warm middle of the group.",
+    "In the water, penguins transform from clumsy waddlers into TORPEDO-shaped speed machines. Their bodies are streamlined for DIVING, and they use their stiff wings like paddles to power through the OCEANS as powerful swimmers. The gentoo penguin is the fastest of all, reaching speeds of up to 36 kilometres per hour.",
+    "Emperor penguins are the deepest divers, plunging over 500 metres below the surface and holding their breath for more than twenty minutes. As they swim, penguins often leap right out of the water in a graceful motion called porpoising. They spend much of their lives HUNTING for fish, krill, and squid in the cold southern seas.",
+    "Raising a penguin chick is hard work, and most penguin parents share it as a team. Most penguins lay one or two eggs, and the mother and father take turns keeping them warm. Once the chick has HATCHED, it is covered in soft, FLUFFY down rather than waterproof adult feathers.",
+    "Because a chick cannot yet swim or keep fully warm, the parents must PROTECT it carefully. While one parent guards the chick, the other travels to the sea to feed. In many species, chicks gather together in a large group called a crèche, and even in a noisy crowd a parent can find its own chick by recognising its unique call — keeping the whole FAMILY connected.",
+    "Sadly, many of the world's penguins now face a serious THREAT from human activity. Climate change is melting the sea ice that species like the emperor depend on, while overfishing leaves fewer fish for penguins to eat. Around 10 of the 18 penguin species are now considered threatened or endangered.",
+    "Other dangers include oil spills, which ruin the waterproofing of a penguin's feathers, and plastic pollution in the ocean. Protecting the NATURAL HABITAT of penguins is essential if we want to secure their FUTURE. Scientists, charities, and ordinary people are all working hard to make sure these much-loved birds do not disappear."
+  ],
+  "claims": [
+    {
+      "passage": 3,
+      "quote": "up to 1.2 metres tall",
+      "subject": "Emperor penguin",
+      "kind": "bird species",
+      "property": "height",
+      "stated": "",
+      "value": 1.2,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "less_than"
+    },
+    {
+      "passage": 3,
+      "quote": "Antarctica",
+      "subject": "Emperor penguin",
+      "kind": "bird species",
+      "property": "continent",
+      "stated": "Antarctica",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 7,
+      "quote": "up to 36 kilometres per hour",
+      "subject": "Gentoo penguin",
+      "kind": "bird species",
+      "property": "speed",
+      "stated": "",
+      "value": 36,
+      "unit": "km/h",
+      "month": 0,
+      "day": 0,
+      "qualifier": "less_than"
+    }
+  ]
+}

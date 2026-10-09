@@ -1,0 +1,24 @@
+{
+  "lesson": "synthetic-cheetahs",
+  "title": "Cheetahs",
+  "model": "opus",
+  "passages": [
+    "The cheetah is the fastest land animal on Earth. In a short burst, it can reach about seventy miles per hour, and it can ACCELERATE to top speed in just a few seconds. Its body is built for speed: a light frame, long legs and a flexible spine that stretches and bunches with every stride. Blunt claws grip the ground like running spikes, and a long tail works as a RUDDER, helping the cat turn sharply. Cheetahs usually hunt in daylight. They creep close to a gazelle or other prey, then sprint for less than a minute before they must stop and rest.",
+    "A cheetah mother raises her cubs on her own. She often has three to five at a time and hides them in tall grass, moving them to a new spot every few days so predators cannot follow their scent. Young cubs have a fluffy, silvery coat along their backs that gives them CAMOUFLAGE in the dry grass. As they grow, their mother brings them live prey so they can practice chasing and catching. Cubs stay with her for about a year and a half. Then they become INDEPENDENT. People in many lands have admired these swift cats for thousands of years."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "about seventy miles per hour",
+      "subject": "Cheetah",
+      "kind": "animal",
+      "property": "speed",
+      "stated": "",
+      "value": 70,
+      "unit": "mph",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

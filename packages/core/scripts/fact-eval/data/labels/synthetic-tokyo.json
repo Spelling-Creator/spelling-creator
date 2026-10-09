@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-tokyo",
+  "title": "Tokyo",
+  "model": "opus",
+  "passages": [
+    "Tokyo is the capital of Japan, an island nation in East Asia. It sits on Honshu, the largest of Japan's more than 14,000 islands, beside a wide bay that opens to the Pacific Ocean. About 14 million people live in the city itself, which is officially called the Tokyo METROPOLIS. When the nearby cities and towns are counted too, the greater Tokyo area holds roughly 37 million people. That makes it one of the most crowded places on Earth. Even so, many visitors are surprised by how calm and orderly its busy streets and packed trains can feel.",
+    "Tokyo was not always called Tokyo. Long ago it was a small town named Edo. In 1603, a powerful SHOGUN named Tokugawa Ieyasu made Edo the center of his government, and the town grew quickly. At that time the emperor still lived in Kyoto, the old IMPERIAL capital. In 1868, during a time of great change called the Meiji RESTORATION, Edo was renamed Tokyo, which means \"eastern capital.\" The young Emperor Meiji moved there soon after, and the city has been Japan's capital for more than 150 years. Today, quiet shrines and old temples still stand among its tall glass towers."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Tokyo",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "capital",
+      "stated": "Tokyo",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "East Asia",
+      "subject": "Japan",
+      "kind": "country",
+      "property": "continent",
+      "stated": "Asia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Japan's",
+      "subject": "Honshu",
+      "kind": "island",
+      "property": "country",
+      "stated": "Japan",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "About 14 million",
+      "subject": "Tokyo",
+      "kind": "city",
+      "property": "population",
+      "stated": "",
+      "value": 14000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "roughly 37 million",
+      "subject": "Greater Tokyo Area",
+      "kind": "metropolitan area",
+      "property": "population",
+      "stated": "",
+      "value": 37000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "1868",
+      "subject": "Meiji Restoration",
+      "kind": "historical event",
+      "property": "happened",
+      "stated": "",
+      "value": 1868,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

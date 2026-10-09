@@ -1,0 +1,141 @@
+{
+  "lesson": "synthetic-dmitri-mendeleev",
+  "title": "Dmitri Mendeleev",
+  "model": "opus",
+  "passages": [
+    "Dmitri Mendeleev was born on 8 February 1834 in Tobolsk, a town in SIBERIA where winters are long and the rivers freeze hard for months. He was the youngest in a very big family, with perhaps 14 or more brothers and sisters. His father died, and later the family's glass factory burned down. His mother then made a brave choice. In 1849 she set out with Dmitri on a journey of more than 2,000 kilometers to Moscow and then on to Saint Petersburg so that he could study. He started at a teachers' college there in 1850, and his mother died soon after.",
+    "Later Dmitri went to Heidelberg in Germany from 1859 to 1861, where he worked alongside scientists from all over Europe. In 1869 he took the 63 or so elements known at the time and set them out in order of ATOMIC weight. That chart became the PERIODIC table. Mendeleev also left gaps in it and PREDICTED that new elements would be found to fill them. Gallium was found in 1875, scandium in 1879 and germanium in 1886. He died in Saint Petersburg on 2 February 1907, when he was nearly 73. In 1955 scientists named element 101 mendelevium after him."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "8 February 1834",
+      "subject": "Dmitri Mendeleev",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1834,
+      "unit": "none",
+      "month": 2,
+      "day": 8,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Heidelberg in Germany",
+      "subject": "Heidelberg",
+      "kind": "city",
+      "property": "country",
+      "stated": "Germany",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1869",
+      "subject": "Periodic table",
+      "kind": "scientific discovery",
+      "property": "discovered",
+      "stated": "",
+      "value": 1869,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Mendeleev",
+      "subject": "Periodic table",
+      "kind": "scientific discovery",
+      "property": "discoverer",
+      "stated": "Dmitri Mendeleev",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Gallium was found in 1875",
+      "subject": "Gallium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1875,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "scandium in 1879",
+      "subject": "Scandium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1879,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "germanium in 1886",
+      "subject": "Germanium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1886,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "2 February 1907",
+      "subject": "Dmitri Mendeleev",
+      "kind": "scientist",
+      "property": "died",
+      "stated": "",
+      "value": 1907,
+      "unit": "none",
+      "month": 2,
+      "day": 2,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1955",
+      "subject": "Mendelevium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1955,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "mendelevium after him",
+      "subject": "Mendelevium",
+      "kind": "chemical element",
+      "property": "named_after",
+      "stated": "Dmitri Mendeleev",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

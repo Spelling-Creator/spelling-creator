@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-ada-lovelace",
+  "title": "Ada Lovelace",
+  "about": "when she was born, her famous notes and when she died. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Ada Lovelace was born in London on 10 December 1815. Her father was the famous poet Lord Byron, but he left England when she was only a few weeks old, and she never saw him again. Her mother, Annabella, wanted Ada to study MATHEMATICS and science instead of poetry. As a girl, Ada dreamed of building a flying machine and studied how birds move their wings. At about 17, she met the inventor Charles Babbage, who was designing a huge calculating machine made of brass gears.",
+    "In 1840, Babbage traveled to Turin, an Italian city of long covered walkways near the snowy Alps, to explain his newer plan, the ANALYTICAL Engine. An Italian engineer named Luigi Menabrea wrote an article about it in French. Ada TRANSLATED it into English in 1843 and added her own notes, which ended up nearly three times longer than the article. One note showed step by step how the machine could work out a special series called Bernoulli numbers. Many people call it the first computer ALGORITHM. She even guessed such machines might one day make music. She died on 27 November 1852, when she was just 36."
+  ]
+}

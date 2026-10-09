@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-vaccines",
+  "title": "Vaccines",
+  "about": "who made the first vaccine, when, and against which disease. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "In May 1796, an English country doctor named Edward Jenner tried a bold experiment. People had noticed that milkmaids often caught COWPOX, a mild illness from cows, and then rarely got smallpox, a disease that killed about three in every ten people it infected. Jenner took fluid from a sore on the hand of a milkmaid named Sarah Nelmes. He scratched it into the arm of James Phipps, a boy of eight. Weeks later, Phipps was exposed to smallpox and did not fall ill. The word vaccine comes from vacca, the Latin word for cow.",
+    "Jenner was not the first person to fight smallpox. In China, healers may have practiced INOCULATION as early as the 1500s by blowing dried, powdered smallpox scabs into a person's nose. In India and parts of Africa, people pressed material from smallpox sores into small cuts in the skin. In 1721, Lady Mary Wortley Montagu brought the idea to England after seeing it in Constantinople, the city now called Istanbul. These clever traditions helped people around the world build IMMUNITY. In 1980, nearly two centuries after Jenner's test, smallpox was declared ERADICATED. It was the first human disease ever wiped out."
+  ]
+}

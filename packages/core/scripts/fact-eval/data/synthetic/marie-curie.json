@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-marie-curie",
+  "title": "Marie Curie",
+  "about": "when and where she was born, what she discovered and when she died. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Marie Curie was born Maria Skłodowska on 7 November 1867 in Warsaw, Poland. At that time Poland was ruled by the Russian Empire, and lessons in Polish history were often taught in secret. Women could not attend university in Warsaw, so some studied at a CLANDESTINE \"Flying University\" that moved from home to home. In 1891, at about 24 years old, Maria travelled to Paris to study at the Sorbonne. She lived in a tiny attic room and sometimes wore every piece of clothing she owned to stay warm. There she met the scientist Pierre Curie, and they married in 1895.",
+    "In 1898 Marie and Pierre discovered two new elements. She named the first one POLONIUM after her homeland, and the second radium. She also helped give us the word RADIOACTIVITY. To find radium, they boiled and stirred several tonnes of an ore called PITCHBLENDE and got only about a tenth of a gram. In 1903 she shared the Nobel Prize in Physics with Pierre and Henri Becquerel, and in 1911 she won a second in Chemistry. She was the first person to win Nobel Prizes in two sciences. Years of handling radiation harmed her health, and she died in France on 4 July 1934, at the age of 66."
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-star-wars",
+  "title": "Star Wars",
+  "model": "opus",
+  "passages": [
+    "Star Wars is a space SAGA created by the American filmmaker George Lucas. The first film opened in the United States on May 25, 1977, in fewer than 50 theaters. It runs a little over two hours, 121 minutes in all. Few people expected much from it, yet crowds lined up around the block, and in some cities the movie kept playing for more than a year. It cost about 11 million dollars to make and went on to earn hundreds of millions. It became a worldwide PHENOMENON, followed by sequels, toys, books and shows.",
+    "Lucas borrowed ideas from many places. He loved the SAMURAI films of the Japanese director Akira Kurosawa, especially The Hidden Fortress from 1958, which tells its story through two bickering peasants, much like the two droids in Star Wars. The desert planet Tatooine was filmed in Tunisia, in North Africa, and takes its name from the real town of Tataouine. In the village of Matmata, Berber families have lived for centuries in homes dug deep into the ground around open courtyards, which stay cool in the scorching summer heat. One of these CAVERNOUS homes, now a hotel, became Luke Skywalker's childhood house. The ancient Maya temples of Tikal in Guatemala appeared as a hidden rebel base."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "George Lucas",
+      "subject": "Star Wars",
+      "kind": "media franchise",
+      "property": "creator",
+      "stated": "George Lucas",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "May 25, 1977",
+      "subject": "Star Wars (film)",
+      "kind": "film",
+      "property": "published",
+      "stated": "",
+      "value": 1977,
+      "unit": "none",
+      "month": 5,
+      "day": 25,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "121 minutes",
+      "subject": "Star Wars (film)",
+      "kind": "film",
+      "property": "duration",
+      "stated": "",
+      "value": 121,
+      "unit": "min",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1958",
+      "subject": "The Hidden Fortress",
+      "kind": "film",
+      "property": "published",
+      "stated": "",
+      "value": 1958,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Akira Kurosawa",
+      "subject": "The Hidden Fortress",
+      "kind": "film",
+      "property": "creator",
+      "stated": "Akira Kurosawa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Tataouine",
+      "subject": "Tatooine",
+      "kind": "fictional planet",
+      "property": "named_after",
+      "stated": "Tataouine",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "North Africa",
+      "subject": "Tunisia",
+      "kind": "country",
+      "property": "continent",
+      "stated": "Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Guatemala",
+      "subject": "Tikal",
+      "kind": "archaeological site",
+      "property": "country",
+      "stated": "Guatemala",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-thomas-edison",
+  "title": "Thomas Edison",
+  "about": "the life of Thomas Edison: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Thomas Alva Edison was born on February 11, 1847, in Milan, Ohio, a busy little canal town where boats carried wheat toward the Great Lakes. When he was about seven, his family moved north to Port Huron, Michigan. He went to school for only around three months, so his mother, Nancy, taught him at home, and he read nearly every book he could find. As a teenager he sold newspapers and snacks on trains. Later he worked as a TELEGRAPH operator, tapping out messages in code, and he began to wonder how electricity and sound could be put to new uses.",
+    "In 1876 Edison opened a famous LABORATORY in Menlo Park, New Jersey, where a team of helpers tested ideas day and night. In 1877 he invented the PHONOGRAPH, a machine that could record a voice and play it back. Two years later, in 1879, he made a practical light bulb that could glow for many hours. By 1882 his Pearl Street power station was lighting part of Lower Manhattan in New York City. Over his life he earned more than 1,000 PATENTS. He died on October 18, 1931, in West Orange, New Jersey, at the age of 84."
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-gregor-mendel",
+  "title": "Gregor Mendel",
+  "model": "opus",
+  "passages": [
+    "Gregor Mendel was born Johann Mendel on 20 July 1822 in Heinzendorf, a small farming village in what is now the Czech Republic. His family grew fruit trees, and young Johann learned to graft them in the orchard. School cost money his parents could barely spare, yet he kept studying. In 1843, he joined St Thomas's Abbey in the city of Brno, a MONASTERY where monks taught, prayed and ran a library full of science books. There he took the name Gregor. Later, from 1851 to 1853, he studied physics and biology at the University of Vienna, a busy capital of music, coffee houses and learning.",
+    "Back in Brno, Mendel planted pea plants in the monastery garden and began careful experiments around 1856. Over about eight years he grew and studied nearly 29,000 plants, tracking traits such as tall or short stems and green or yellow seeds. He saw that traits passed down in steady patterns, which explained HEREDITY in a new way. He shared his results in 1865 and published them in 1866, but few people noticed. In 1868 he became ABBOT, leading the monastery. Mendel died on 6 January 1884. In 1900, three scientists rediscovered his work, and today he is called the father of GENETICS."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "20 July 1822",
+      "subject": "Gregor Mendel",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1822,
+      "unit": "none",
+      "month": 7,
+      "day": 20,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Czech Republic",
+      "subject": "Hynčice",
+      "kind": "village",
+      "property": "country",
+      "stated": "Czech Republic",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "St Thomas's Abbey in the city of Brno",
+      "subject": "St. Thomas's Abbey, Brno",
+      "kind": "monastery",
+      "property": "region",
+      "stated": "Brno",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "published them in 1866",
+      "subject": "Experiments on Plant Hybridization",
+      "kind": "scientific paper",
+      "property": "published",
+      "stated": "",
+      "value": 1866,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "6 January 1884",
+      "subject": "Gregor Mendel",
+      "kind": "scientist",
+      "property": "died",
+      "stated": "",
+      "value": 1884,
+      "unit": "none",
+      "month": 1,
+      "day": 6,
+      "qualifier": "exact"
+    }
+  ]
+}

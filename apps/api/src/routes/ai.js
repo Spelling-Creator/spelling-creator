@@ -23,7 +23,7 @@ const FACT_CHECK_TTL = 60 * 60 * 24 * 7; // 7 days
 
 // Part of a fact check's cache key. Bump it when the prompt or the checker
 // changes what a check would find, so old results aren't served for new rules.
-const FACT_CHECK_VERSION = 'v3';
+const FACT_CHECK_VERSION = 'v4';
 
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any

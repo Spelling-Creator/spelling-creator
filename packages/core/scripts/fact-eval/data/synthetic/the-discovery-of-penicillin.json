@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-discovery-of-penicillin",
+  "title": "The Discovery of Penicillin",
+  "about": "who discovered it, when and where. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "In September 1928, a Scottish scientist named Alexander Fleming came back to his LABORATORY at St Mary's Hospital in London after a summer holiday. He had left a stack of glass dishes growing BACTERIA on his bench. On one dish, a fuzzy patch of mold had appeared, and the germs around it had died, leaving a clear ring. Fleming was curious rather than annoyed. He named the substance from the mold penicillin and wrote about it in 1929. Yet he struggled to make enough of it to help sick people, and for nearly ten years his discovery sat almost forgotten.",
+    "Around 1939, a team at Oxford University led by Howard Florey and Ernst Chain found a way to PURIFY penicillin. In 1941, a police officer named Albert Alexander became one of the first people treated with it. The search for stronger mold stretched across the ocean to Peoria, Illinois, where a moldy CANTALOUPE from a local market gave far more of the medicine. By 1944, factories were making more than 2 million doses. Fleming, Florey and Chain shared the Nobel Prize in 1945. Long before, healers in places such as ancient Egypt and Greece are said to have pressed moldy bread onto wounds, perhaps sensing its hidden power."
+  ]
+}

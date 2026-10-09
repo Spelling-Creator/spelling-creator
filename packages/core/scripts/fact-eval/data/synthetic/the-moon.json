@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-moon",
+  "title": "The Moon",
+  "about": "its distance from Earth, its diameter and the first landing. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "The Moon is Earth's closest neighbor in space, but it is still very far away. On average it sits about 384,400 kilometers from us, or roughly 238,900 miles. Its path is an ELLIPSE, so that distance changes by more than 40,000 kilometers over a month. The Moon is 3,474 kilometers across, a little more than a quarter of Earth's DIAMETER. Light reflected from its surface takes just over one second to reach us. People in many places look up and see different shapes in its dark patches. In China, Japan and Korea, many see a rabbit there, and families gather to admire the full Moon during the Mid-Autumn Festival.",
+    "On July 20, 1969, the Apollo 11 lunar module, named Eagle, touched down on a flat plain called the Sea of Tranquility. Neil Armstrong became the first person to walk on the Moon, and Buzz Aldrin joined him about 20 minutes later. Their crewmate Michael Collins stayed in ORBIT above them, circling alone in the command module. The two ASTRONAUTS spent roughly two and a half hours outside, collecting about 21.5 kilograms of rocks and soil. They left footprints in the fine dust, which may last for millions of years because the Moon has no wind or rain to wear them away. An estimated 600 million people watched on television."
+  ]
+}

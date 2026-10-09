@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-the-dead-sea",
+  "title": "The Dead Sea",
+  "model": "opus",
+  "passages": [
+    "The Dead Sea sits in a deep valley between Jordan and Israel, and its shore is the lowest dry land on Earth. The surface of the water lies about 430 meters below sea level, and it keeps sinking by roughly one meter each year. The sea is fed mainly by the Jordan River, but no river carries water out. In the fierce desert heat, the water simply EVAPORATES into the air. Nearby stands Masada, a mountaintop fortress built by King Herod more than 2,000 years ago, looking down across this strange, sunken landscape.",
+    "The Dead Sea is nearly ten times saltier than the ocean, and about 34 percent of its water is made of dissolved MINERALS. This makes the water so dense that people float easily, lying back as if resting in a chair. No fish can survive here, though tiny MICROORGANISMS manage to live in it. In Hebrew it is called Yam HaMelah, the Sea of Salt, and Arabic speakers have called it Bahr Lut, the Sea of Lot. In 1947, a Bedouin shepherd exploring nearby caves found ancient MANUSCRIPTS that are now known as the Dead Sea Scrolls."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "about 430 meters below sea level",
+      "subject": "Dead Sea",
+      "kind": "lake",
+      "property": "elevation",
+      "stated": "",
+      "value": -430,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Jordan",
+      "subject": "Dead Sea",
+      "kind": "lake",
+      "property": "country",
+      "stated": "Jordan",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Israel",
+      "subject": "Dead Sea",
+      "kind": "lake",
+      "property": "country",
+      "stated": "Israel",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "The sea is fed mainly by the Jordan River",
+      "subject": "Jordan River",
+      "kind": "river",
+      "property": "flows_into",
+      "stated": "Dead Sea",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "built by King Herod",
+      "subject": "Masada",
+      "kind": "fortress",
+      "property": "creator",
+      "stated": "Herod the Great",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "more than 2,000 years ago",
+      "subject": "Masada",
+      "kind": "fortress",
+      "property": "began",
+      "stated": "",
+      "value": -2000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "1947",
+      "subject": "Dead Sea Scrolls",
+      "kind": "manuscripts",
+      "property": "discovered",
+      "stated": "",
+      "value": 1947,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

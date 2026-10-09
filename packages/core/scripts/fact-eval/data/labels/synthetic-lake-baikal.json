@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-lake-baikal",
+  "title": "Lake Baikal",
+  "model": "opus",
+  "passages": [
+    "Lake Baikal sits in southern Siberia, in Russia, and it is the deepest lake on Earth. At its lowest point it plunges 1,642 meters, which is more than a mile straight down. The lake is long and narrow, stretching about 636 kilometers, and it covers roughly 31,500 square kilometers, close to the size of Belgium. Because it is so deep, it holds about one fifth of all the unfrozen fresh water on the surface of the planet. More than 300 rivers feed it, yet only one, the Angara, flows out. In winter the ice can be so TRANSPARENT that people can peer into the dark water below their boots.",
+    "Baikal is also the oldest lake in the world. It formed in a deep RIFT, a place where the crust of the Earth is slowly pulling apart. Scientists believe it began roughly 25 to 30 million years ago, and the gap is still widening by a few millimeters each year. Over that long stretch of time, thousands of species evolved here that live nowhere else, including the nerpa, one of very few seals that live only in fresh water. The Buryat people, who have lived along its shores for centuries, see the lake as SACRED, and SHAMANS still hold ceremonies on Olkhon Island. In 1996, UNESCO named Baikal a World Heritage Site."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "in Russia",
+      "subject": "Lake Baikal",
+      "kind": "lake",
+      "property": "country",
+      "stated": "Russia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1,642 meters",
+      "subject": "Lake Baikal",
+      "kind": "lake",
+      "property": "depth",
+      "stated": "",
+      "value": 1642,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 636 kilometers",
+      "subject": "Lake Baikal",
+      "kind": "lake",
+      "property": "length",
+      "stated": "",
+      "value": 636,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "roughly 31,500 square kilometers",
+      "subject": "Lake Baikal",
+      "kind": "lake",
+      "property": "area",
+      "stated": "",
+      "value": 31500,
+      "unit": "km2",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "roughly 25 to 30 million years ago",
+      "subject": "Lake Baikal",
+      "kind": "lake",
+      "property": "began",
+      "stated": "",
+      "value": -25000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

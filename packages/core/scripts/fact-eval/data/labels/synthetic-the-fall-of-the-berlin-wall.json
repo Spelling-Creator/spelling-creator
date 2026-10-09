@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-fall-of-the-berlin-wall",
+  "title": "The Fall of the Berlin Wall",
+  "model": "opus",
+  "passages": [
+    "On the night of August 13, 1961, soldiers and workers in East Germany began sealing the border that ran through the city of Berlin. At first it was mostly barbed wire, but it soon grew into a concrete wall up to about 12 feet tall. The barrier wound for nearly 100 miles around West Berlin, cutting through streets, parks and even families. The COMMUNIST government in the East said the wall protected its people, but its real purpose was to stop them from leaving. Today, a double row of cobblestones traces its old path across the city.",
+    "The wall stood for 28 years. During that time, about 5,000 people managed to escape by tunneling, climbing or hiding in cars, while at least 140 died trying. Then, on November 9, 1989, an official named Günter Schabowski announced by mistake that East Germans could cross freely, starting immediately. Crowds rushed to the CHECKPOINTS, and the surprised guards opened the gates. Strangers hugged, cried and danced on top of the wall, and some chipped off pieces with hammers to keep as SOUVENIRS. Less than a year later, on October 3, 1990, East and West Germany were REUNIFIED as one country."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "August 13, 1961",
+      "subject": "Berlin Wall",
+      "kind": "wall",
+      "property": "began",
+      "stated": "",
+      "value": 1961,
+      "unit": "none",
+      "month": 8,
+      "day": 13,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "up to about 12 feet",
+      "subject": "Berlin Wall",
+      "kind": "wall",
+      "property": "height",
+      "stated": "",
+      "value": 12,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "nearly 100 miles",
+      "subject": "Berlin Wall",
+      "kind": "wall",
+      "property": "length",
+      "stated": "",
+      "value": 100,
+      "unit": "mi",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "28 years",
+      "subject": "Berlin Wall",
+      "kind": "wall",
+      "property": "duration",
+      "stated": "",
+      "value": 28,
+      "unit": "year",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "November 9, 1989",
+      "subject": "Fall of the Berlin Wall",
+      "kind": "event",
+      "property": "happened",
+      "stated": "",
+      "value": 1989,
+      "unit": "none",
+      "month": 11,
+      "day": 9,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "October 3, 1990",
+      "subject": "German reunification",
+      "kind": "event",
+      "property": "happened",
+      "stated": "",
+      "value": 1990,
+      "unit": "none",
+      "month": 10,
+      "day": 3,
+      "qualifier": "exact"
+    }
+  ]
+}

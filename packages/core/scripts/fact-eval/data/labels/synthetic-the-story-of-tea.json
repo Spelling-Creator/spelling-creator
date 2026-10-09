@@ -1,0 +1,37 @@
+{
+  "lesson": "synthetic-the-story-of-tea",
+  "title": "The Story of Tea",
+  "model": "opus",
+  "passages": [
+    "Every cup of tea begins with one plant, CAMELLIA sinensis, an EVERGREEN shrub that first grew wild in the hills where China, Myanmar and India meet. A famous Chinese legend says the emperor Shen Nong discovered tea in about 2737 BC, when leaves drifted into his pot of boiling water. No one can prove that story, but people in China were certainly drinking tea more than 2,000 years ago. Over the centuries, monks and traders carried it to Japan and Korea, where it grew into graceful CEREMONIES of its own.",
+    "Tea reached Europe around 1610, when Dutch MERCHANTS shipped it to Amsterdam. It became popular in England after 1662, when the Portuguese princess Catherine of Braganza married King Charles II and brought her love of tea to court. Today China grows the most tea by far, nearly half of the world's supply. India comes second, famous for the misty hills of Assam and DARJEELING. Kenya ranks third and sends more tea abroad than almost any other country, while Sri Lanka and Turkey also grow huge amounts. In Turkey, people sip strong tea from small glasses shaped like tulips all day long."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Shen Nong",
+      "subject": "Tea",
+      "kind": "drink",
+      "property": "discoverer",
+      "stated": "Shennong",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 2737 BC",
+      "subject": "Tea",
+      "kind": "drink",
+      "property": "discovered",
+      "stated": "",
+      "value": -2737,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

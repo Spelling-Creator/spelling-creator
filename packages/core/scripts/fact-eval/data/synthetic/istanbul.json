@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-istanbul",
+  "title": "Istanbul",
+  "about": "its population, the two continents it sits on and its old names. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Istanbul is the largest city in Turkey and one of the biggest cities on Earth. More than 15 million people live there, which is more than in many whole countries. What makes this METROPOLIS truly unusual is that it sits on two continents at once. A narrow channel of water called the BOSPHORUS runs through the middle of the city, with Europe on one side and Asia on the other. The STRAIT is about 31 kilometers long and, at its narrowest point, only around 700 meters wide. Many people cross between continents every day by ferry, bridge or train just to get to work.",
+    "The city has carried several names over its long history. Greek settlers founded it as BYZANTIUM in about 660 BCE. In the year 330, the Roman emperor Constantine made it his new capital, and it became known as Constantinople, which means \"city of Constantine.\" For more than 1,000 years it was the heart of the Byzantine Empire, famous for its glittering churches and busy markets. In 1453, the Ottoman sultan Mehmed II captured the city, and it became the capital of an empire that stretched across three continents. People had long called it Istanbul in everyday speech, and that name became official in 1930."
+  ]
+}

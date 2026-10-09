@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-alexander-graham-bell",
+  "title": "Alexander Graham Bell",
+  "model": "opus",
+  "passages": [
+    "Alexander Graham Bell was born on March 3, 1847, in Edinburgh, Scotland, a city of stone buildings and steep, winding streets. Sound and speech filled his childhood. His mother was nearly deaf, and his father taught ELOCUTION, the art of clear speaking. In 1870, after two of his brothers died of illness, the family sailed across the Atlantic to Brantford, in Ontario, Canada. About a year later, Bell moved to Boston, where he taught deaf students and spent long nights on experiments with wires and sound.",
+    "On March 7, 1876, Bell received a PATENT for the telephone. Three days later, he spoke the first words through it to his assistant, Thomas Watson: \"Mr. Watson, come here, I want to see you.\" Bell married Mabel Hubbard, who was deaf, and they later built a summer home on Cape Breton Island in Nova Scotia, where many people still spoke GAELIC, an old language of Scotland. They named it Beinn Bhreagh, meaning \"beautiful mountain.\" He kept inventing all his life, testing kites, flying machines and HYDROFOIL boats, and held more than a dozen patents in his name. He died there on August 2, 1922, at age 75."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "March 3, 1847",
+      "subject": "Alexander Graham Bell",
+      "kind": "inventor",
+      "property": "born",
+      "stated": "",
+      "value": 1847,
+      "unit": "none",
+      "month": 3,
+      "day": 3,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Edinburgh, Scotland",
+      "subject": "Edinburgh",
+      "kind": "city",
+      "property": "country",
+      "stated": "Scotland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Brantford, in Ontario",
+      "subject": "Brantford",
+      "kind": "city",
+      "property": "region",
+      "stated": "Ontario",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Ontario, Canada",
+      "subject": "Brantford",
+      "kind": "city",
+      "property": "country",
+      "stated": "Canada",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "March 7, 1876",
+      "subject": "Telephone",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1876,
+      "unit": "none",
+      "month": 3,
+      "day": 7,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Bell received a PATENT for the telephone",
+      "subject": "Telephone",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Alexander Graham Bell",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Cape Breton Island in Nova Scotia",
+      "subject": "Cape Breton Island",
+      "kind": "island",
+      "property": "region",
+      "stated": "Nova Scotia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "August 2, 1922",
+      "subject": "Alexander Graham Bell",
+      "kind": "inventor",
+      "property": "died",
+      "stated": "",
+      "value": 1922,
+      "unit": "none",
+      "month": 8,
+      "day": 2,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-katherine-johnson",
+  "title": "Katherine Johnson",
+  "model": "opus",
+  "passages": [
+    "Katherine Johnson was born on August 26, 1918, in White Sulphur Springs, a small mountain town in West Virginia known for its warm mineral springs. She loved counting everything, from steps to dishes. Her town's schools for Black children stopped after eighth grade, so her family moved about 120 miles so she could keep studying. She finished high school at 14 and college at 18, earning degrees in math and French. A professor there added new classes in analytic GEOMETRY just for her. In 1939 she became one of only three Black students to enter graduate school at West Virginia University.",
+    "In 1953 she joined a team of human computers at Langley, a research lab in Hampton, Virginia, that later became part of NASA. Offices there were still SEGREGATED. She worked out the TRAJECTORY for Alan Shepard, the first American in space, in 1961. A year later, astronaut John Glenn asked her to check the electronic computer's numbers by hand before his ORBITAL flight around Earth. She later helped with the 1969 Apollo 11 trip to the Moon and coauthored 26 research papers. After 33 years she retired in 1986. In 2015 she received the Presidential Medal of Freedom, and she died on February 24, 2020, aged 101."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "August 26, 1918",
+      "subject": "Katherine Johnson",
+      "kind": "mathematician",
+      "property": "born",
+      "stated": "",
+      "value": 1918,
+      "unit": "none",
+      "month": 8,
+      "day": 26,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "West Virginia",
+      "subject": "White Sulphur Springs",
+      "kind": "town",
+      "property": "region",
+      "stated": "West Virginia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Hampton, Virginia",
+      "subject": "Langley Research Center",
+      "kind": "research center",
+      "property": "region",
+      "stated": "Hampton",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1961",
+      "subject": "Mercury-Redstone 3",
+      "kind": "spaceflight",
+      "property": "happened",
+      "stated": "",
+      "value": 1961,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1969 Apollo 11",
+      "subject": "Apollo 11",
+      "kind": "spaceflight",
+      "property": "happened",
+      "stated": "",
+      "value": 1969,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "February 24, 2020",
+      "subject": "Katherine Johnson",
+      "kind": "mathematician",
+      "property": "died",
+      "stated": "",
+      "value": 2020,
+      "unit": "none",
+      "month": 2,
+      "day": 24,
+      "qualifier": "exact"
+    }
+  ]
+}

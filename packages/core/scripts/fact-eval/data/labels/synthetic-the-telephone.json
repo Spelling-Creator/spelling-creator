@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-the-telephone",
+  "title": "The Telephone",
+  "model": "opus",
+  "passages": [
+    "The telephone was invented by Alexander Graham Bell, a teacher born in Edinburgh, Scotland, in 1847. Bell spent years studying sound and speech, partly because his mother and his wife were both deaf. On March 7, 1876, he received a PATENT for his invention. Just three days later, on March 10, he spoke into his machine in Boston while his helper, Thomas Watson, waited in another room. The first words ever carried by telephone were simple: \"Mr. Watson, come here, I want to see you.\" Watson heard the VIBRATIONS of Bell's voice through the wire and hurried over.",
+    "Bell was not the only inventor chasing this idea. In Cuba and later in New York, an Italian inventor named Antonio Meucci had been building talking machines years earlier, and many people in Italy still honor him today. Later in 1876, Bell showed his telephone at a great EXHIBITION in Philadelphia. Pedro II, the EMPEROR of Brazil, is said to have held it to his ear and cried out in surprise, \"My God, it speaks!\" Within about ten years, more than 150,000 people in the United States had telephones. Today, billions of people around the world carry one in their pocket."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Alexander Graham Bell",
+      "subject": "Telephone",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Alexander Graham Bell",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1847",
+      "subject": "Alexander Graham Bell",
+      "kind": "inventor",
+      "property": "born",
+      "stated": "",
+      "value": 1847,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "March 7, 1876",
+      "subject": "Telephone",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1876,
+      "unit": "none",
+      "month": 3,
+      "day": 7,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1876",
+      "subject": "Centennial Exposition",
+      "kind": "world's fair",
+      "property": "happened",
+      "stated": "",
+      "value": 1876,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Philadelphia",
+      "subject": "Centennial Exposition",
+      "kind": "world's fair",
+      "property": "region",
+      "stated": "Philadelphia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

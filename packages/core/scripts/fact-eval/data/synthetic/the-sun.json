@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-sun",
+  "title": "The Sun",
+  "about": "its temperature, its mass compared with Earth and its age. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "The Sun is a giant ball of glowing gas, and it is hotter than anything we could ever touch. Its visible surface, called the PHOTOSPHERE, is about 5,500 degrees Celsius. Deep in its core, the heat climbs to nearly 15 million degrees. There, hydrogen atoms crash together in a process called nuclear FUSION, which releases the light and warmth we feel on Earth. The Sun is also enormous. Its mass is about 333,000 times the mass of Earth, and it holds more than 99 percent of all the matter in our whole solar system.",
+    "Scientists think the Sun formed about 4.6 billion years ago from a spinning cloud of dust and gas. People have watched it with wonder for thousands of years. In ancient Egypt, many worshipped the sun god Ra. In Peru, the Inca honored a sun god named Inti, and people in Cusco still celebrate the festival of Inti Raymi every June 24. In England, the huge stones of Stonehenge line up with the sunrise on the summer SOLSTICE, the longest day of the year. ASTRONOMERS expect the Sun to keep shining for roughly 5 billion more years."
+  ]
+}

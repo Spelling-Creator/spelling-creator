@@ -1,0 +1,63 @@
+{
+  "lesson": "synthetic-x-rays",
+  "title": "X-rays",
+  "model": "opus",
+  "passages": [
+    "On November 8, 1895, a German scientist named Wilhelm Conrad Röntgen was working late in his lab in the city of Würzburg. He was sending electricity through a glass tube wrapped in black cardboard when he noticed a FLUORESCENT screen across the room begin to glow. Some invisible ray was passing right through the cardboard. He called it X, the symbol for something UNKNOWN. A few weeks later, he made a famous picture of his wife Anna Bertha's hand, showing her bones and her wedding ring. She was said to be startled at seeing her own SKELETON.",
+    "News of the discovery spread with astonishing speed. Within about a year, more than 1,000 articles and dozens of books about the new rays had appeared, and doctors in several countries were already using them to find bullets and broken bones. In 1901, Röntgen won the very first Nobel Prize in Physics. He gave the prize money to his university and chose not to PATENT his discovery, hoping everyone could benefit. In Germany, Poland, Russia and many other places, people still call them Röntgen rays, honoring his name in everyday speech. An old unit for measuring RADIATION, the roentgen, carries his name too."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "November 8, 1895",
+      "subject": "X-ray",
+      "kind": "radiation",
+      "property": "discovered",
+      "stated": "",
+      "value": 1895,
+      "unit": "none",
+      "month": 11,
+      "day": 8,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Wilhelm Conrad Röntgen",
+      "subject": "X-ray",
+      "kind": "radiation",
+      "property": "discoverer",
+      "stated": "Wilhelm Röntgen",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1901",
+      "subject": "Nobel Prize in Physics",
+      "kind": "award",
+      "property": "began",
+      "stated": "",
+      "value": 1901,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "carries his name",
+      "subject": "Roentgen",
+      "kind": "unit",
+      "property": "named_after",
+      "stated": "Wilhelm Röntgen",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "lesson": "synthetic-tutankhamun-s-tomb",
+  "title": "Tutankhamun's Tomb",
+  "model": "opus",
+  "passages": [
+    "In November 1922, a British ARCHAEOLOGIST named Howard Carter found a stone step buried in the sand of the Valley of the Kings, near the modern city of Luxor in Egypt. He had been searching the valley for about five years, with money from his patron, Lord Carnarvon. On November 26, Carter peered through a small hole into a dark room by candlelight. When asked if he could see anything, he is said to have replied, \"Yes, wonderful things.\" The tomb had stayed mostly untouched for more than 3,000 years.",
+    "Tutankhamun became PHARAOH around 1332 BCE, when he was only about nine years old. The young king ruled for roughly ten years and died at about nineteen, around 1323 BCE. Ancient Egyptians believed the dead would need their belongings in the AFTERLIFE, so his tomb was packed with more than 5,000 objects, from chariots and board games to jars of food. His body rested inside a nested set of coffins within a stone SARCOPHAGUS, and the innermost coffin was solid gold. His famous gold mask weighs about 10 kilograms. Carter's team spent nearly ten years recording everything they found."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Valley of the Kings, near the modern city of Luxor in Egypt",
+      "subject": "Valley of the Kings",
+      "kind": "valley",
+      "property": "country",
+      "stated": "Egypt",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "around 1323 BCE",
+      "subject": "Tutankhamun",
+      "kind": "pharaoh",
+      "property": "died",
+      "stated": "",
+      "value": -1323,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "about 10 kilograms",
+      "subject": "Mask of Tutankhamun",
+      "kind": "funerary mask",
+      "property": "mass",
+      "stated": "",
+      "value": 10,
+      "unit": "kg",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

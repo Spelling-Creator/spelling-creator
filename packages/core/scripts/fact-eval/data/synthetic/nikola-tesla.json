@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-nikola-tesla",
+  "title": "Nikola Tesla",
+  "about": "where and when he was born, his inventions and when he died. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Nikola Tesla was born on July 10, 1856, in the village of Smiljan, in a mountain region called Lika. Back then the area belonged to the Austrian Empire, and today it is part of Croatia. His father was a Serbian ORTHODOX priest, and his mother invented clever tools for the home. In villages like Smiljan, people loved long story poems, sung from memory to the sound of a fiddle with one string. Tesla had a powerful memory too. He later said he could picture whole machines in his mind before building them. He studied in Graz, Austria, and crossed the ocean to New York in 1884.",
+    "Tesla is best known for his work on ALTERNATING current, the kind of electricity that flows into most homes today. Working with the businessman George Westinghouse, he helped light up the 1893 world's fair in Chicago and send power from Niagara Falls to the city of Buffalo in 1896. He also built the Tesla coil, which throws giant sparks, and he tested early ideas for radio and remote control. Over his life he earned about 300 PATENTS in more than 25 countries. Tesla died on January 7, 1943, in a New York hotel room, at age 86. A unit of MAGNETIC strength is named the tesla in his honor."
+  ]
+}

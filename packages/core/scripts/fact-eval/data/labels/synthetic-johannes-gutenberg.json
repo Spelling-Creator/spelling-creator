@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-johannes-gutenberg",
+  "title": "Johannes Gutenberg",
+  "model": "opus",
+  "passages": [
+    "Johannes Gutenberg was born around 1400 in Mainz, a busy town on the Rhine River in what is now Germany. Nobody knows his exact birthday. As a young man he learned to work with metal and became skilled as a GOLDSMITH. Around 1434 he moved to the city of Strasbourg, where he polished mirrors and tested secret new ideas. By about 1448 he was back in Mainz. There he borrowed money to build a machine that would change the world: a printing press with MOVABLE metal letters that could be arranged, inked and used again and again.",
+    "Around 1455 his workshop finished the famous Gutenberg Bible. About 180 copies were printed, and 49 are known to survive today. Gutenberg was not the first person to print with movable pieces. In China, a craftsman named Bi Sheng made clay characters around 1040. In Korea, printers used metal type in 1377 to make a Buddhist book called the Jikji. Sadly, Gutenberg lost his workshop after a LAWSUIT with his business partner, Johann Fust. Later, in 1465, an ARCHBISHOP honored him with a yearly gift of grain, wine and clothing. Gutenberg died in Mainz on February 3, 1468."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "born around 1400",
+      "subject": "Johannes Gutenberg",
+      "kind": "inventor",
+      "property": "born",
+      "stated": "",
+      "value": 1400,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Germany",
+      "subject": "Mainz",
+      "kind": "city",
+      "property": "country",
+      "stated": "Germany",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Around 1455",
+      "subject": "Gutenberg Bible",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1455,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "Bi Sheng",
+      "subject": "Movable type",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Bi Sheng",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "around 1040",
+      "subject": "Movable type",
+      "kind": "invention",
+      "property": "discovered",
+      "stated": "",
+      "value": 1040,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "1377",
+      "subject": "Jikji",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1377,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "February 3, 1468",
+      "subject": "Johannes Gutenberg",
+      "kind": "inventor",
+      "property": "died",
+      "stated": "",
+      "value": 1468,
+      "unit": "none",
+      "month": 2,
+      "day": 3,
+      "qualifier": "exact"
+    }
+  ]
+}

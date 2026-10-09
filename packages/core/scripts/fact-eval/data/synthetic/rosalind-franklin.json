@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-rosalind-franklin",
+  "title": "Rosalind Franklin",
+  "about": "the life of Rosalind Franklin: when and where they were born, their best-known work, discovery or invention and when, a few moments from their life such as moving, studying or a turning point, and when they died if they have. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Rosalind Franklin was born on 25 July 1920 in London, England, into a family that valued learning and helping others. As a girl she loved science and puzzles, and at 18 she went to Newnham College at Cambridge to study CHEMISTRY. During the Second World War she researched coal, earning her doctorate in 1945. In 1947 she moved to Paris, where she spent about three happy years. She enjoyed French food, long talks with fellow scientists, and hiking in the mountains. There she mastered X-ray CRYSTALLOGRAPHY, a way of shining X-rays through materials to reveal the hidden pattern of their atoms.",
+    "In 1951 she joined King's College London to study DNA, the MOLECULE that carries the instructions for life. Around May 1952, she and her student Raymond Gosling made a sharp image called Photo 51. It showed that DNA has a twisting HELIX shape. James Watson and Francis Crick saw her work without her knowing and used it to build their famous model in 1953. Franklin later studied viruses at Birkbeck College, leading a small team that wrote many papers about them. She died of cancer on 16 April 1958, aged just 37. Today she is honored as a PIONEER whose careful work changed biology."
+  ]
+}

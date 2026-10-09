@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-voyager-1",
+  "title": "Voyager 1",
+  "about": "when it launched, how far away it is now and what it found. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Voyager 1 left Earth on September 5, 1977, riding a rocket from Cape Canaveral, Florida. In March 1979 it swept past Jupiter, where its cameras caught something no one expected: active VOLCANOES on the moon Io, flinging plumes up to hundreds of kilometers high. In November 1980 it passed Saturn and studied Titan, a moon wrapped in a thick, hazy ATMOSPHERE. Then it kept going. In 1990, from about 6 billion kilometers away, it turned around and snapped the famous Pale Blue Dot photo, showing Earth as a tiny speck of light.",
+    "On August 25, 2012, Voyager 1 became the first human-made object to reach INTERSTELLAR space, the region beyond the bubble of wind blowing from our Sun. Today it is more than 25 billion kilometers from home, so far that a radio message takes nearly a day to reach it. On board is the Golden Record, a gift for anyone who might find it. It holds greetings in 55 languages and music from around the world, from Bach to a Navajo night chant, Peruvian panpipes and the shimmering GAMELAN of Java in Indonesia, each sound a small window into how people celebrate, mourn and dream."
+  ]
+}

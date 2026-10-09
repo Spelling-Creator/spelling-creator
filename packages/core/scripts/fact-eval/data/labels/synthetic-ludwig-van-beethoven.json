@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-ludwig-van-beethoven",
+  "title": "Ludwig van Beethoven",
+  "model": "opus",
+  "passages": [
+    "Ludwig van Beethoven was born in Bonn, a town on the Rhine River in what is now Germany, in December 1770. His father, a singer at the local court, pushed him to practice piano for long hours, and young Ludwig gave his first public concert at about age seven. In 1792, when he was 21, he moved to Vienna, a grand city in Austria filled with palaces, coffee houses and music lovers. There he studied with the famous composer Joseph Haydn and soon won fame for his bold, stormy IMPROVISATION at the keyboard.",
+    "In his late twenties, Beethoven began to lose his hearing. In 1802 he wrote a sad letter, now called the Heiligenstadt TESTAMENT, admitting his DESPAIR, yet he chose to keep composing. He went on to write nine SYMPHONIES and 32 piano sonatas. His Ninth Symphony, which ends with a chorus singing \"Ode to Joy,\" was first performed in Vienna on 7 May 1824. By then he was nearly deaf, and the singer Caroline Unger turned him around so he could see the audience cheering. He died in Vienna on 26 March 1827, aged 56, and perhaps 20,000 people filled the streets for his funeral."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "December 1770",
+      "subject": "Ludwig van Beethoven",
+      "kind": "composer",
+      "property": "born",
+      "stated": "",
+      "value": 1770,
+      "unit": "none",
+      "month": 12,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Bonn, a town on the Rhine River in what is now Germany",
+      "subject": "Bonn",
+      "kind": "city",
+      "property": "country",
+      "stated": "Germany",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Vienna, a grand city in Austria",
+      "subject": "Vienna",
+      "kind": "city",
+      "property": "country",
+      "stated": "Austria",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1802 he wrote a sad letter",
+      "subject": "Heiligenstadt Testament",
+      "kind": "letter",
+      "property": "began",
+      "stated": "",
+      "value": 1802,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "7 May 1824",
+      "subject": "Symphony No. 9 (Beethoven)",
+      "kind": "symphony",
+      "property": "published",
+      "stated": "",
+      "value": 1824,
+      "unit": "none",
+      "month": 5,
+      "day": 7,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "26 March 1827",
+      "subject": "Ludwig van Beethoven",
+      "kind": "composer",
+      "property": "died",
+      "stated": "",
+      "value": 1827,
+      "unit": "none",
+      "month": 3,
+      "day": 26,
+      "qualifier": "exact"
+    }
+  ]
+}

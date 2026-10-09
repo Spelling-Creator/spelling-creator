@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-the-great-fire-of-london",
+  "title": "The Great Fire of London",
+  "model": "opus",
+  "passages": [
+    "In the early hours of Sunday, 2 September 1666, a fire broke out in the bakery of Thomas Farriner on Pudding Lane, in the City of London. At that time the city was a crowded maze of narrow streets, with houses built from TIMBER and pitch. A long, dry summer and a strong east wind helped the flames spread quickly. The fire burned for about four days and was mostly out by 6 September. A DIARIST named Samuel Pepys watched it from a boat on the River Thames. He wrote that he buried his wine and his Parmesan cheese in his garden to keep them safe.",
+    "By the end, the fire had destroyed more than 13,000 houses, 87 parish churches and the old St Paul's CATHEDRAL. Only a handful of deaths were recorded, but the true number was probably higher. Afterward, new laws said that buildings had to be made of brick and stone instead of wood. The ARCHITECT Christopher Wren designed a new St Paul's with a great dome, which was finished in 1710. He also rebuilt 51 of the city's churches. Wren and Robert Hooke designed the Monument too, a stone column about 61 metres tall. It stands roughly 61 metres from the spot where the bakery once stood."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "2 September 1666",
+      "subject": "Great Fire of London",
+      "kind": "event",
+      "property": "happened",
+      "stated": "",
+      "value": 1666,
+      "unit": "none",
+      "month": 9,
+      "day": 2,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about four days",
+      "subject": "Great Fire of London",
+      "kind": "event",
+      "property": "duration",
+      "stated": "",
+      "value": 4,
+      "unit": "day",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "6 September",
+      "subject": "Great Fire of London",
+      "kind": "event",
+      "property": "ended",
+      "stated": "",
+      "value": 1666,
+      "unit": "none",
+      "month": 9,
+      "day": 6,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "City of London",
+      "subject": "Pudding Lane",
+      "kind": "street",
+      "property": "region",
+      "stated": "City of London",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Christopher Wren",
+      "subject": "St Paul's Cathedral",
+      "kind": "cathedral",
+      "property": "creator",
+      "stated": "Christopher Wren",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1710",
+      "subject": "St Paul's Cathedral",
+      "kind": "cathedral",
+      "property": "began",
+      "stated": "",
+      "value": 1710,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Wren",
+      "subject": "Monument to the Great Fire of London",
+      "kind": "monument",
+      "property": "creator",
+      "stated": "Christopher Wren",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Robert Hooke",
+      "subject": "Monument to the Great Fire of London",
+      "kind": "monument",
+      "property": "creator",
+      "stated": "Robert Hooke",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "about 61 metres tall",
+      "subject": "Monument to the Great Fire of London",
+      "kind": "monument",
+      "property": "height",
+      "stated": "",
+      "value": 61,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}
