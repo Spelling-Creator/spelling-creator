@@ -77,7 +77,13 @@ export default function DocumentImportDialog({
       setError(err?.message || t("documentImport.nothingFound"));
       return;
     }
-    await onImport(doc);
+    // Opening the lesson can fail too (storage full, say). The dialog is
+    // still open, so the reason is shown here rather than nowhere.
+    try {
+      await onImport(doc);
+    } catch (err) {
+      setError(err?.message || t("documentImport.importFailed"));
+    }
   };
 
   return (
