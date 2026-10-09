@@ -146,6 +146,7 @@ rescored against the new held-out labels, is the bar for the second:
 | --------------------------------------- | -----: | --------: | --------------: | --------------: | ------: |
 | LFM2-350M-Extract-facts, round 1 (int8) |    40% |       28% |               3 |            7/13 |     50% |
 | LFM2-350M-Extract-facts, round 2 (int8) |    50% |       42% |               2 |            8/13 |     50% |
+| LFM2-1.2B-Extract-facts, round 2 (int8) |    55% |       46% |               2 |           10/13 |     64% |
 
 Better on every count but the one that matters most. The subjects are still
 wrong half the time, and now in a way that points at the model's size rather
@@ -167,12 +168,27 @@ pause, since Wikipedia and Wikidata throttle a burst from one address.)
 | --------------------------------------- | -----: | --------: | -----------: | --------------------: |
 | labels (Claude Opus)                    |     12 |         2 |            0 |                     0 |
 | LFM2-350M-Extract-facts, round 2 (int8) |      5 |         3 |            2 |               9 of 14 |
+| LFM2-1.2B-Extract-facts, round 2 (int8) |      7 |         4 |            2 |               7 of 14 |
 
-Both false alarms come from the weaknesses above: "1748" checked as when
+The 350M model's two come from the weaknesses above: "1748" checked as when
 Pompeii began (Wikidata says the 7th or 6th century BC), and the Luitpold
-Gymnasium's city checked with Munich as the subject. On 24 passages that is
-too many to ship. The next step is the same data on LFM2-1.2B-Extract, which
-has the room to name things right.
+Gymnasium's city checked with Munich as the subject.
+
+The same data on LFM2-1.2B-Extract names subjects better (64 percent, and no
+garbled or invented names), stays quiet more often, and gets every value,
+unit and qualifier right on the claims it finds, at about 10 seconds a
+passage. It still gives two false alarms, and both are facts the rules leave
+out rather than facts it read wrong: the 1748 rediscovery again, and "sunlight
+takes about 500 seconds to reach Earth" listed as Earth's orbital period,
+which Wikidata gives as 365 days. The training labels do follow the rule (no
+"found in" date for Tutankhamun's tomb, the Terracotta Army or the Rosetta
+Stone), but a model only sees such a rule as something missing from a reply,
+which is a weak signal on 347 passages.
+
+So neither size is ready to replace the hosted model: two false alarms in 24
+passages is a fact check that tells an author a right fact is wrong about
+once a lesson. Both models are published, marked experimental, and nothing in
+the app loads them.
 
 ## Running it again
 

@@ -85,10 +85,12 @@ carry. `push_to_hub` writes a blank template card on a repo that has none, so
 a new repo needs its card pushed after the notebook has run:
 
 ```bash
-hf download LiquidAI/LFM2-350M-Extract LICENSE --local-dir /tmp/lfm2-350m
-for r in LFM2-350M-Extract-facts LFM2-350M-Extract-facts-ONNX; do
-  hf upload playforgecoding/$r model-cards/$r.md README.md
-  hf upload playforgecoding/$r /tmp/lfm2-350m/LICENSE LICENSE
+for size in 350M 1.2B; do
+  hf download LiquidAI/LFM2-$size-Extract LICENSE --local-dir /tmp/lfm2-$size
+  for r in LFM2-$size-Extract-facts LFM2-$size-Extract-facts-ONNX; do
+    hf upload playforgecoding/$r model-cards/$r.md README.md
+    hf upload playforgecoding/$r /tmp/lfm2-$size/LICENSE LICENSE
+  done
 done
 ```
 
