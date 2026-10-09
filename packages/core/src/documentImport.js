@@ -22,6 +22,7 @@
 // answers and the wording, the same way a reader would tell them apart.
 
 import { normalizeLessonFile } from "./jsonImport.js";
+import { ANSWER_GAP } from "./questions.js";
 
 export class DocumentImportError extends Error {
   constructor(message) {
@@ -49,10 +50,17 @@ export function classifyLine(line) {
   if (/^VAKT:/i.test(t)) return "vakt";
   if (/^Working(?: out)?\s*:/i.test(t)) return "steps";
   if (/https?:\/\//.test(t)) return "source";
+  // This app's export puts its answer gap (a space, a no-break space and a
+  // space) after a question whatever its length, and a long multiple question
+  // with its answers runs past the length a passage is judged by. A lone
+  // no-break space is common in pasted prose, so only the export's whole gap
+  // counts before that length.
+  if (t.includes(ANSWER_GAP)) return "question";
   if (t.length >= 280) return "prose";
   if (GAP.test(t)) return "question";
   if (/^(?:q\s*)?\d+\s*[.)]\s/i.test(t)) return "question";
-  if (/^(?:[-*]\s+|[QA]\s*:\s*)/i.test(t)) return "question";
+  // "Answer: X" (or "A:", "Answers:") under its question belongs to it.
+  if (/^(?:[-*]\s+|[QA]\s*:\s*|answers?\s*:\s*)/i.test(t)) return "question";
   if (t.includes("?") || t.includes("___")) return "question";
   if (/\b(in your own words|defend your|explain)\b/i.test(t)) return "question";
   if (QUESTION_OPENERS.test(t) && t.length < 260) return "question";
@@ -83,12 +91,15 @@ export function splitSections(text) {
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const title = lines[0] || "";
+  // The first line is the title unless it is already the passage: a lesson
+  // pasted without a title keeps its opening paragraph.
+  const titled = lines.length > 0 && classifyLine(lines[0]) !== "prose";
+  const title = titled ? lines[0] : "";
   const sections = [];
   let current = null;
   let previous = "heading";
   let pendingHeading = "";
-  for (const line of lines.slice(1)) {
+  for (const line of titled ? lines.slice(1) : lines) {
     const kind = classifyLine(line);
     if (kind === "heading") {
       if (!(current === null && TITLE_BLOCK_LINE.test(line))) {

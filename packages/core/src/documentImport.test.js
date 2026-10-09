@@ -204,6 +204,58 @@ What did the boldest cats do. STAYED
     );
     expect(() => importLessonText("")).toThrow(DocumentImportError);
   });
+
+  it("reads a long exported question as a question, and a stray no-break space as nothing", () => {
+    const gap = "   ";
+    const long = `The great piles drew mice, birds, insects and many other small creatures from the fields, the marshes and the riverbanks in enormous numbers, and the wildcats followed that easy prey into the farming villages and stayed there. Name every kind of creature the piles attracted.${gap}MICE${gap}BIRDS${gap}INSECTS`;
+    expect(long.length).toBeGreaterThan(280);
+    expect(classifyLine(long)).toBe("question");
+    const prose = PASSAGE_1.replace("10,000", "10 000");
+    expect(classifyLine(`${prose} ${PASSAGE_2}`)).toBe("prose");
+
+    const doc = importLessonText(`Title\n${PASSAGE_1}\n${long}`);
+    const [question] = doc.sections[0].blocks.filter(
+      (b) => b.type === "question",
+    );
+    expect(question.answers.map((a) => a.text)).toEqual([
+      "MICE",
+      "BIRDS",
+      "INSECTS",
+    ]);
+  });
+
+  it("attaches an Answer: line to the question above it", () => {
+    const doc = importLessonText(`Title
+
+${PASSAGE_2}
+
+Words: ONE TWO
+
+1. What did people store?
+Answer: harvests of grain
+2. What followed the prey into villages?
+Answers: the wildcats; the boldest cats`);
+    const questions = doc.sections[0].blocks.filter(
+      (b) => b.type === "question",
+    );
+    expect(questions).toHaveLength(2);
+    expect(questions[0].answer).toBe("harvests of grain");
+    expect(questions[1].answers.map((a) => a.text)).toEqual([
+      "the wildcats",
+      "the boldest cats",
+    ]);
+  });
+
+  it("keeps the opening paragraph of a lesson pasted without a title", () => {
+    const { title, sections } = splitSections(
+      `${PASSAGE_1}\n\n${PASSAGE_2}\n\n1. What drew the wildcats? (Answer: PREY)`,
+    );
+    expect(title).toBe("");
+    expect(sections[0].lines.slice(0, 2)).toEqual([PASSAGE_1, PASSAGE_2]);
+    expect(importLessonText(`${PASSAGE_1}\n1. Why? (Answer: X)`).title).toBe(
+      "Imported lesson",
+    );
+  });
 });
 
 describe("deriveQuestionType", () => {
