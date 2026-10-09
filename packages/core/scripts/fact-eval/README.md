@@ -79,5 +79,18 @@ LFM2-350M-Extract, scores the held-out passages, merges, and exports `q4f16`
 and `int8` ONNX with the same builder and `../extract-eval/relayout-onnx.py` as
 the import model.
 
+The model cards are in `model-cards/`, one file per Hub repo, and go up with
+the Hub CLI along with the base model's licence, which the derived repos must
+carry. `push_to_hub` writes a blank template card on a repo that has none, so
+a new repo needs its card pushed after the notebook has run:
+
+```bash
+hf download LiquidAI/LFM2-350M-Extract LICENSE --local-dir /tmp/lfm2-350m
+for r in LFM2-350M-Extract-facts LFM2-350M-Extract-facts-ONNX; do
+  hf upload playforgecoding/$r model-cards/$r.md README.md
+  hf upload playforgecoding/$r /tmp/lfm2-350m/LICENSE LICENSE
+done
+```
+
 The results are written up in the docs site under Monorepo, "Fact claim
 model".
