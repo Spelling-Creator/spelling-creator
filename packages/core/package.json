@@ -37,6 +37,7 @@
     "./documentImport": "./src/documentImport.js",
     "./documentImportModel": "./src/documentImportModel.js",
     "./factCheck": "./src/factCheck.js",
+    "./factClaims": "./src/factClaims.js",
     "./git/doc": "./src/git/doc.js",
     "./git/layout": "./src/git/layout.js",
     "./git/memfs": "./src/git/memfs.js",

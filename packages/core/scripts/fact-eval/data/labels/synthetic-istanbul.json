@@ -1,0 +1,141 @@
+{
+  "lesson": "synthetic-istanbul",
+  "title": "Istanbul",
+  "model": "opus",
+  "passages": [
+    "Istanbul is the largest city in Turkey and one of the biggest cities on Earth. More than 15 million people live there, which is more than in many whole countries. What makes this METROPOLIS truly unusual is that it sits on two continents at once. A narrow channel of water called the BOSPHORUS runs through the middle of the city, with Europe on one side and Asia on the other. The STRAIT is about 31 kilometers long and, at its narrowest point, only around 700 meters wide. Many people cross between continents every day by ferry, bridge or train just to get to work.",
+    "The city has carried several names over its long history. Greek settlers founded it as BYZANTIUM in about 660 BCE. In the year 330, the Roman emperor Constantine made it his new capital, and it became known as Constantinople, which means \"city of Constantine.\" For more than 1,000 years it was the heart of the Byzantine Empire, famous for its glittering churches and busy markets. In 1453, the Ottoman sultan Mehmed II captured the city, and it became the capital of an empire that stretched across three continents. People had long called it Istanbul in everyday speech, and that name became official in 1930."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Turkey",
+      "subject": "Istanbul",
+      "kind": "city",
+      "property": "country",
+      "stated": "Turkey",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "More than 15 million",
+      "subject": "Istanbul",
+      "kind": "city",
+      "property": "population",
+      "stated": "",
+      "value": 15000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 1,
+      "quote": "Europe",
+      "subject": "Istanbul",
+      "kind": "city",
+      "property": "continent",
+      "stated": "Europe",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Asia",
+      "subject": "Istanbul",
+      "kind": "city",
+      "property": "continent",
+      "stated": "Asia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 31 kilometers long",
+      "subject": "Bosphorus",
+      "kind": "strait",
+      "property": "length",
+      "stated": "",
+      "value": 31,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "around 700 meters wide",
+      "subject": "Bosphorus",
+      "kind": "strait",
+      "property": "width",
+      "stated": "",
+      "value": 700,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "about 660 BCE",
+      "subject": "Byzantium",
+      "kind": "ancient city",
+      "property": "began",
+      "stated": "",
+      "value": -660,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "city of Constantine",
+      "subject": "Constantinople",
+      "kind": "city",
+      "property": "named_after",
+      "stated": "Constantine the Great",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1453",
+      "subject": "Fall of Constantinople",
+      "kind": "siege",
+      "property": "happened",
+      "stated": "",
+      "value": 1453,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Mehmed II",
+      "subject": "Fall of Constantinople",
+      "kind": "siege",
+      "property": "leader",
+      "stated": "Mehmed II",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

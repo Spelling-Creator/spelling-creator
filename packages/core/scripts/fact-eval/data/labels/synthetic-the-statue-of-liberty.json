@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-statue-of-liberty",
+  "title": "The Statue of Liberty",
+  "model": "opus",
+  "passages": [
+    "The Statue of Liberty was a gift from the people of France to the people of the United States. A French SCULPTOR named Frédéric Auguste Bartholdi designed her, and the ENGINEER Gustave Eiffel, who later built the famous tower in Paris, planned the iron skeleton hidden inside. The statue was built in France, taken apart, and shipped across the Atlantic Ocean in 350 pieces packed into more than 200 crates. Workers put her back together on a small island in New York Harbor. On October 28, 1886, she was dedicated in a ceremony with parades, boats and cheering crowds.",
+    "From her base to the tip of her torch, the copper statue stands about 151 feet tall, or 46 meters. Set on her stone PEDESTAL, she rises nearly 305 feet above the ground. Her copper skin is only about as thick as two pennies pressed together. When new, she shone a warm reddish brown, but within about 30 years the air and sea turned her a soft green. This coating, called a PATINA, actually protects the metal underneath. Bartholdi borrowed ideas from Libertas, the ancient Roman goddess of freedom, and the seven rays of her crown are often said to stand for the seven seas and seven continents."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Frédéric Auguste Bartholdi designed her",
+      "subject": "Statue of Liberty",
+      "kind": "statue",
+      "property": "creator",
+      "stated": "Frédéric Auguste Bartholdi",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Gustave Eiffel",
+      "subject": "Statue of Liberty",
+      "kind": "statue",
+      "property": "creator",
+      "stated": "Gustave Eiffel",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "October 28, 1886",
+      "subject": "Statue of Liberty",
+      "kind": "statue",
+      "property": "began",
+      "stated": "",
+      "value": 1886,
+      "unit": "none",
+      "month": 10,
+      "day": 28,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "about 151 feet",
+      "subject": "Statue of Liberty",
+      "kind": "statue",
+      "property": "height",
+      "stated": "",
+      "value": 151,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "46 meters",
+      "subject": "Statue of Liberty",
+      "kind": "statue",
+      "property": "height",
+      "stated": "",
+      "value": 46,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "nearly 305 feet",
+      "subject": "Statue of Liberty",
+      "kind": "statue",
+      "property": "height",
+      "stated": "",
+      "value": 305,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

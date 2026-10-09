@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-nikola-tesla",
+  "title": "Nikola Tesla",
+  "model": "opus",
+  "passages": [
+    "Nikola Tesla was born on July 10, 1856, in the village of Smiljan, in a mountain region called Lika. Back then the area belonged to the Austrian Empire, and today it is part of Croatia. His father was a Serbian ORTHODOX priest, and his mother invented clever tools for the home. In villages like Smiljan, people loved long story poems, sung from memory to the sound of a fiddle with one string. Tesla had a powerful memory too. He later said he could picture whole machines in his mind before building them. He studied in Graz, Austria, and crossed the ocean to New York in 1884.",
+    "Tesla is best known for his work on ALTERNATING current, the kind of electricity that flows into most homes today. Working with the businessman George Westinghouse, he helped light up the 1893 world's fair in Chicago and send power from Niagara Falls to the city of Buffalo in 1896. He also built the Tesla coil, which throws giant sparks, and he tested early ideas for radio and remote control. Over his life he earned about 300 PATENTS in more than 25 countries. Tesla died on January 7, 1943, in a New York hotel room, at age 86. A unit of MAGNETIC strength is named the tesla in his honor."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "born on July 10, 1856",
+      "subject": "Nikola Tesla",
+      "kind": "inventor",
+      "property": "born",
+      "stated": "",
+      "value": 1856,
+      "unit": "none",
+      "month": 7,
+      "day": 10,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "today it is part of Croatia",
+      "subject": "Smiljan",
+      "kind": "village",
+      "property": "country",
+      "stated": "Croatia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "in a mountain region called Lika",
+      "subject": "Smiljan",
+      "kind": "village",
+      "property": "region",
+      "stated": "Lika",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Graz, Austria",
+      "subject": "Graz",
+      "kind": "city",
+      "property": "country",
+      "stated": "Austria",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1893 world's fair in Chicago",
+      "subject": "World's Columbian Exposition",
+      "kind": "world's fair",
+      "property": "happened",
+      "stated": "",
+      "value": 1893,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "world's fair in Chicago",
+      "subject": "World's Columbian Exposition",
+      "kind": "world's fair",
+      "property": "region",
+      "stated": "Chicago",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "He also built the Tesla coil",
+      "subject": "Tesla coil",
+      "kind": "invention",
+      "property": "discoverer",
+      "stated": "Nikola Tesla",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "died on January 7, 1943",
+      "subject": "Nikola Tesla",
+      "kind": "inventor",
+      "property": "died",
+      "stated": "",
+      "value": 1943,
+      "unit": "none",
+      "month": 1,
+      "day": 7,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "named the tesla in his honor",
+      "subject": "Tesla (unit)",
+      "kind": "unit",
+      "property": "named_after",
+      "stated": "Nikola Tesla",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "lesson": "4ad249e0-ac7b-41ea-920c-d935fe2ab1b2",
+  "title": "The History of Domestic Cats",
+  "model": "opus",
+  "passages": [
+    "Every pet cat curled up on a sofa today is descended from a single wild species: the AFRICAN WILDCAT, known to scientists as Felis lybica. This sandy-coloured hunter still roams the DESERTS, GRASSLANDS, and PLAINS of North Africa and the Near East. It looks much like a large, long-legged tabby, and it lives alone, hunting by night.",
+    "The story of how this shy WILDCAT became a house cat began with farming. When people first stored harvests of grain, the great piles drew MICE, BIRDS, and INSECTS in enormous numbers. The wildcats followed that easy prey into human VILLAGES. Rather than being captured, the boldest cats simply chose to stay, and this slow, self-guided change is called DOMESTICATION. Archaeological remains show that cats had joined human settlements almost 10,000 years ago.",
+    "In ancient Egypt, the cat rose from useful hunter to sacred animal. Farmers valued cats for killing the SNAKES, SCORPIONS, and BEETLES that crept through their homes and stores. From that respect grew worship. The Egyptians honoured a goddess named BASTET, shown as a cat or as a woman with a cat's head, who guarded the home and family.",
+    "Reverence for cats ran deep. The Greek writer HERODOTUS reported that deliberately killing one was punishable by DEATH. When a family's cat died, the people of the house would shave off their eyebrows in grief, and the body was carried to the city of BUBASTIS to be MUMMIFIED and buried. People honoured the goddess with FESTIVALS, TEMPLES, and STATUES, and about 700,000 people were said to attend her yearly festival.",
+    "Egypt prized its cats, but cats are hard to keep in one place. SAILORS took them aboard SHIPS, where the cats earned their keep by hunting the rats that spoiled food and gnawed ropes. Wherever the boats landed, a few cats slipped ashore and stayed, and so the cat began to travel the world.",
+    "The greatest spread came with the Romans. A major DNA study published in 2025 found that domestic cats reached Europe from North Africa only about 2,000 years ago, thousands of years later than scientists had thought. They travelled with the Roman ARMY, TRADERS, and SETTLERS, reaching BRITAIN around the year 100. In time the cat lived across EUROPE, ASIA, and AFRICA.",
+    "In medieval Europe, the cat's fortune turned dark. Old fears linked cats, especially black ones, with magic and bad luck. Some people came to see the cat as a companion of WITCHES, and this SUPERSTITION brought cruelty. Across many towns, cats were FEARED, HUNTED, and KILLED in large numbers.",
+    "There may have been a terrible price for this fear. Cats are a natural enemy of the RAT, and rats carried the fleas that spread THE PLAGUE. The Black Death struck Europe in 1346, and with fewer cats to control them, rat numbers could climb. Historians still debate how much this mattered, but one lesson stands: CRUELTY usually grows out of fear and ignorance. Only slowly did people again welcome the cat as a friend and a hunter.",
+    "Cats were never truly tamed the way dogs, sheep, or cattle were. Scientists say the cat domesticated ITSELF, drifting into human life on its own terms and changing very little. A house cat could still survive in the wild, and it keeps the sharp INSTINCTS of its ancestor: to STALK, to POUNCE, and to CHASE.",
+    "Careful breeding by people is quite recent. Most of the fancy BREEDS we know, such as the SIAMESE, the PERSIAN, and the BENGAL, were created only in the last 150 years or so. Compared with the dog, which people reshaped into hundreds of wildly different forms, the cat has barely changed. Its body and its GENES still closely match the wild hunter it came from, and like that hunter it rests a great deal, sleeping about 16 hours a day.",
+    "From that lone desert hunter, the cat has become one of the most beloved animals on Earth. Scientists estimate there are around 1 billion cats in the world today, living alongside roughly 8 billion people. People treasure cats for their quiet company, their playfulness, and above all their INDEPENDENCE. In much of the world the cat now rivals the dog as a favourite household pet.",
+    "The modern cat lives a double life. Indoors it is a gentle COMPANION, purring on a lap; outdoors it becomes a silent PREDATOR, still driven by ancient instinct. It has even conquered the internet, where cat VIDEOS, MEMES, and PHOTOS are shared in their millions. The small hunter that once walked out of the desert has quietly made the whole world its home."
+  ],
+  "claims": [
+    {
+      "passage": 2,
+      "quote": "almost 10,000 years ago",
+      "subject": "Domestication of the cat",
+      "kind": "process",
+      "property": "began",
+      "stated": "",
+      "value": -10000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 8,
+      "quote": "1346",
+      "subject": "Black Death",
+      "kind": "pandemic",
+      "property": "happened",
+      "stated": "",
+      "value": 1346,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 11,
+      "quote": "roughly 8 billion people",
+      "subject": "World",
+      "kind": "planet",
+      "property": "population",
+      "stated": "",
+      "value": 8000000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

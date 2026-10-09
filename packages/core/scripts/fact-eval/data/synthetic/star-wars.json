@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-star-wars",
+  "title": "Star Wars",
+  "about": "who created it, when the first film came out and how long it ran. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Star Wars is a space SAGA created by the American filmmaker George Lucas. The first film opened in the United States on May 25, 1977, in fewer than 50 theaters. It runs a little over two hours, 121 minutes in all. Few people expected much from it, yet crowds lined up around the block, and in some cities the movie kept playing for more than a year. It cost about 11 million dollars to make and went on to earn hundreds of millions. It became a worldwide PHENOMENON, followed by sequels, toys, books and shows.",
+    "Lucas borrowed ideas from many places. He loved the SAMURAI films of the Japanese director Akira Kurosawa, especially The Hidden Fortress from 1958, which tells its story through two bickering peasants, much like the two droids in Star Wars. The desert planet Tatooine was filmed in Tunisia, in North Africa, and takes its name from the real town of Tataouine. In the village of Matmata, Berber families have lived for centuries in homes dug deep into the ground around open courtyards, which stay cool in the scorching summer heat. One of these CAVERNOUS homes, now a hotel, became Luke Skywalker's childhood house. The ancient Maya temples of Tikal in Guatemala appeared as a hidden rebel base."
+  ]
+}

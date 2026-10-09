@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-mars",
+  "title": "Mars",
+  "about": "its diameter, its distance from the Sun and the length of its year. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Mars is the fourth planet from the Sun and one of Earth's closest neighbors. It measures about 6,779 kilometers across, a little more than half the DIAMETER of our own planet. Mars travels on an ECCENTRIC path, an oval that is slightly stretched, so its distance from the Sun keeps changing. On average it is about 228 million kilometers away, but that distance ranges from nearly 207 million to almost 249 million kilometers. Because Mars is so far out, its sunlight is weaker, and noon there looks a bit like a dim afternoon on Earth.",
+    "A year on Mars lasts 687 Earth days, nearly twice as long as ours. Its day, called a SOL, is only a little longer than ours, at about 24 hours and 37 minutes. People around the world have watched this reddish light for thousands of years. Ancient Egyptian sky watchers called it Her Desher, meaning the red one. In China it was known as the fire star. The Romans linked it to Mars, their god of war, and we still use that name. Today ROVERS such as Perseverance, which landed in 2021, explore its dusty CRATERS up close."
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "lesson": "synthetic-the-eiffel-tower",
+  "title": "The Eiffel Tower",
+  "model": "opus",
+  "passages": [
+    "The Eiffel Tower rises over Paris, France, and stands about 1,083 feet tall, counting the antennas at its top. Work began in January 1887, and the tower opened on March 31, 1889, for a giant World's Fair called the EXPOSITION Universelle. The fair marked 100 years since the French Revolution, a turning point that the French still celebrate every July. The tower took a little over two years to finish, which was remarkably fast for something so tall. For about 41 years, it was the tallest structure people had ever built.",
+    "The tower is named after Gustave Eiffel, whose company built it, but two of his ENGINEERS, Maurice Koechlin and Émile Nouguier, sketched the first design. An ARCHITECT named Stephen Sauvestre added the graceful arches near the base. Around 300 workers fit together more than 18,000 pieces of iron, held in place by roughly 2.5 million RIVETS. Many Parisians first called the tower ugly, yet today nearly 7 million visitors from all over the world climb or ride up it each year. From the top, they can gaze at the winding Seine River and rooftops stretching for miles."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Paris",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "region",
+      "stated": "Paris",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "France",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "country",
+      "stated": "France",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 1,083 feet tall",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "height",
+      "stated": "",
+      "value": 1083,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "January 1887",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "began",
+      "stated": "",
+      "value": 1887,
+      "unit": "none",
+      "month": 1,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "March 31, 1889",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "began",
+      "stated": "",
+      "value": 1889,
+      "unit": "none",
+      "month": 3,
+      "day": 31,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "1889",
+      "subject": "Exposition Universelle (1889)",
+      "kind": "world's fair",
+      "property": "happened",
+      "stated": "",
+      "value": 1889,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Gustave Eiffel",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "named_after",
+      "stated": "Gustave Eiffel",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Maurice Koechlin",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "creator",
+      "stated": "Maurice Koechlin",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Émile Nouguier",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "creator",
+      "stated": "Émile Nouguier",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Stephen Sauvestre",
+      "subject": "Eiffel Tower",
+      "kind": "tower",
+      "property": "creator",
+      "stated": "Stephen Sauvestre",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

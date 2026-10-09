@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-iceland",
+  "title": "Iceland",
+  "model": "opus",
+  "passages": [
+    "Iceland is an island nation in the North Atlantic Ocean, just south of the Arctic Circle. Its capital is Reykjavík, the most northern capital city of any independent country in the world. Iceland has nearly 400,000 people, and about two out of every three live in or around Reykjavík. Settlers from Norway arrived around the year 874, and in 930 Icelanders founded the Althing, one of the oldest PARLIAMENTS still meeting today. Many Icelanders still enjoy sagas written hundreds of years ago. Their language has changed so little that they can read those old stories much as they were first written.",
+    "Iceland is often called the land of fire and ice. Glaciers cover about 11 percent of the land. The biggest, Vatnajökull, is the largest ice cap in Europe by volume, and in some places its ice is nearly 1,000 meters thick. Iceland also sits on the Mid-Atlantic Ridge, where two TECTONIC plates slowly pull apart. Because of this, it has more than 30 active volcanic systems. In 2010, an ERUPTION at Eyjafjallajökull sent a huge cloud of ash into the sky and stopped thousands of flights across Europe. Icelanders put this underground heat to good use: GEOTHERMAL energy warms about 9 out of 10 homes."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Reykjavík",
+      "subject": "Iceland",
+      "kind": "country",
+      "property": "capital",
+      "stated": "Reykjavík",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "nearly 400,000 people",
+      "subject": "Iceland",
+      "kind": "country",
+      "property": "population",
+      "stated": "",
+      "value": 400000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "around the year 874",
+      "subject": "Settlement of Iceland",
+      "kind": "historical event",
+      "property": "happened",
+      "stated": "",
+      "value": 874,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "in 930 Icelanders founded the Althing",
+      "subject": "Althing",
+      "kind": "parliament",
+      "property": "began",
+      "stated": "",
+      "value": 930,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 2010, an ERUPTION at Eyjafjallajökull",
+      "subject": "2010 eruptions of Eyjafjallajökull",
+      "kind": "volcanic eruption",
+      "property": "happened",
+      "stated": "",
+      "value": 2010,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

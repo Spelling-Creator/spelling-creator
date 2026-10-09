@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-the-golden-gate-bridge",
+  "title": "The Golden Gate Bridge",
+  "model": "opus",
+  "passages": [
+    "The Golden Gate Bridge crosses the narrow STRAIT where San Francisco Bay meets the Pacific Ocean in California. It is a SUSPENSION bridge, which means its road hangs from giant steel cables. From end to end, it is about 1.7 miles long. Its main span, the part between the two tall towers, measures 4,200 feet, and each tower rises about 746 feet above the water. Long before the bridge, the Ohlone people lived along these shores, fishing and gathering food. In 1846, an explorer named the strait the Golden Gate. He was thinking of the Golden Horn, a famous harbor in Byzantium, the old city now called Istanbul.",
+    "Building began on January 5, 1933, during the hard years of the Great Depression. The chief ENGINEER, Joseph Strauss, led the project. An architect named Irving Morrow chose its warm red color, called International Orange, so the bridge would stand out in the thick fog that often rolls in from the ocean. The bridge opened on May 27, 1937. That first day, about 200,000 PEDESTRIANS walked across before any cars were allowed, and cars followed the next morning. The bridge cost more than 35 million dollars. For 27 years, its main span was the longest of any suspension bridge in the world."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "California",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "region",
+      "stated": "California",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 1.7 miles",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "length",
+      "stated": "",
+      "value": 1.7,
+      "unit": "mi",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "about 746 feet",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "height",
+      "stated": "",
+      "value": 746,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Golden Horn",
+      "subject": "Golden Gate",
+      "kind": "strait",
+      "property": "named_after",
+      "stated": "Golden Horn",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Istanbul",
+      "subject": "Golden Horn",
+      "kind": "harbor",
+      "property": "region",
+      "stated": "Istanbul",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "January 5, 1933",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "began",
+      "stated": "",
+      "value": 1933,
+      "unit": "none",
+      "month": 1,
+      "day": 5,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Joseph Strauss",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "creator",
+      "stated": "Joseph Strauss",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Irving Morrow",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "creator",
+      "stated": "Irving Morrow",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "May 27, 1937",
+      "subject": "Golden Gate Bridge",
+      "kind": "bridge",
+      "property": "began",
+      "stated": "",
+      "value": 1937,
+      "unit": "none",
+      "month": 5,
+      "day": 27,
+      "qualifier": "exact"
+    }
+  ]
+}

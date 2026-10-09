@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-k2",
+  "title": "K2",
+  "model": "opus",
+  "passages": [
+    "K2 is the second highest mountain on Earth, rising 8,611 metres, or 28,251 feet, above sea level. It stands in the KARAKORAM range on the border between Pakistan and China. A British surveyor named Thomas Montgomerie gave it the label K2 in 1856. The name simply meant the second peak he listed in the Karakoram. The Balti people who live in nearby valleys have their own name for it, Chhogori, which means something like \"big mountain.\" To reach its base, climbers and local porters walk for more than a week along the Baltoro GLACIER, a river of ice nearly 63 kilometres long.",
+    "Climbers call K2 the Savage Mountain because its steep slopes, sudden storms and falling ice make it far more dangerous than Mount Everest. For decades, no one could reach the top. Then, on 31 July 1954, two Italians, Lino Lacedelli and Achille Compagnoni, finally stood on the SUMMIT. Their EXPEDITION, led by the geologist Ardito Desio, relied on the strength of Hunza and Balti porters. One of them, a man named Amir Mahdi, spent a freezing night in the open high on the mountain. No one climbed K2 in winter for much longer. In January 2021, a team of ten Nepali climbers reached the top together, singing their national anthem."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "8,611 metres",
+      "subject": "K2",
+      "kind": "mountain",
+      "property": "elevation",
+      "stated": "",
+      "value": 8611,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "28,251 feet",
+      "subject": "K2",
+      "kind": "mountain",
+      "property": "elevation",
+      "stated": "",
+      "value": 28251,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Pakistan",
+      "subject": "K2",
+      "kind": "mountain",
+      "property": "country",
+      "stated": "Pakistan",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "China",
+      "subject": "K2",
+      "kind": "mountain",
+      "property": "country",
+      "stated": "China",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "nearly 63 kilometres",
+      "subject": "Baltoro Glacier",
+      "kind": "glacier",
+      "property": "length",
+      "stated": "",
+      "value": 63,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "31 July 1954",
+      "subject": "1954 Italian expedition to K2",
+      "kind": "expedition",
+      "property": "happened",
+      "stated": "",
+      "value": 1954,
+      "unit": "none",
+      "month": 7,
+      "day": 31,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "January 2021",
+      "subject": "2021 winter ascent of K2",
+      "kind": "expedition",
+      "property": "happened",
+      "stated": "",
+      "value": 2021,
+      "unit": "none",
+      "month": 1,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "lesson": "3c982988-21db-4185-99ae-46c37ecfe708",
+  "title": "Pompeii: The City Frozen in Time",
+  "model": "opus",
+  "passages": [
+    "Nearly two thousand years ago, the Roman town of POMPEII was one of the liveliest places in the whole empire. Set on the Bay of Naples in what is now ITALY, it was home to around 20,000 people. Its streets were PAVED with stone and worn smooth by cart wheels, and its FORUM, the central square, buzzed with traders, bakers, and potters selling their wares.",
+    "Pompeii was a place of everyday Roman life at its richest. Wealthy families lived in grand houses decorated with painted walls, while ordinary people crowded the shops, public baths, and taverns. There were temples to the gods, a large open-air theatre, and an arena where crowds roared at the games. Few of its citizens paid much attention to the enormous mountain, quiet for generations, that stood on the northern skyline.",
+    "The mountain on Pompeii's skyline was MOUNT VESUVIUS, and it was no ordinary hill. It is a STRATOVOLCANO, the steep, cone-shaped kind built from thick, explosive lava. For centuries it had lain DORMANT, meaning quiet but not dead, and its slopes were so green and fertile that farmers grew grapes and olives right up its sides. The Romans did not even have a word for volcano, and had no idea of the danger beneath their feet.",
+    "Then, on the 24th day of what many historians place in August or October of the year 79, Vesuvius awoke with catastrophic force. It blasted a towering column of ASH, PUMICE, and GAS high into the sky, and the eruption thundered on for roughly 18 hours. Wind carried the choking cloud south, directly over Pompeii, and a grey rain of stone and ash began to fall upon the doomed city.",
+    "Much of what we know about that day comes from PLINY THE YOUNGER, a young Roman who watched the eruption from across the bay and later wrote it all down. Years afterward he described the scene in A LETTER to a friend, giving history its first eyewitness account of a volcanic eruption. He wrote of a cloud shaped like a giant tree, of buildings swaying, and of a darkness blacker than any closed room.",
+    "For hours, ash and PUMICE piled up on Pompeii's rooftops. The weight grew so great that ROOFS began to COLLAPSE, trapping people inside. Then came the deadliest blow of all: A PYROCLASTIC SURGE, a scorching avalanche of gas and ash that swept down the mountain and over the city, killing almost instantly. Pliny the Younger's two surviving letters remain among the most precious documents from the ancient world.",
+    "Not everyone fled. The uncle of Pliny the Younger was PLINY THE ELDER, a famous scholar who also commanded the Roman navy stationed nearby. When he saw the strange cloud rising, he ordered ships launched, partly to study the eruption up close and partly to rescue people stranded along the shore. It was a brave decision that would cost him his life.",
+    "Pliny the Elder sailed toward the disaster and landed at STABIAE, a town near Pompeii, where he tried to calm his terrified friends. To shield themselves from falling stones, people tied PILLOWS to their heads with cloths. But the air grew thick with fumes, and Pliny the Elder collapsed and died on the beach. Of Pompeii's people, most had already escaped, yet around 2,000 stayed too long and perished with the city.",
+    "After the eruption, Pompeii vanished. Buried under metres of ash, it was slowly forgotten, until its very location faded from memory for almost seventeen centuries. Then, in the year 1748, workers digging in the area struck ancient walls, and organised excavation of the lost city began. What ARCHAEOLOGISTS uncovered astonished the world: a whole Roman town frozen at the instant of its death.",
+    "The ash had sealed everything, PRESERVING loaves of bread in ovens, paintings on walls, and messages scratched beside doorways. Most hauntingly, the bodies of the victims had rotted away inside the hardened ash, leaving hollow spaces. By filling these cavities with PLASTER, archaeologists created exact casts of people in their final moments. Rich MOSAICS and brilliant FRESCOES revealed the colour of Roman life as no book ever could.",
+    "Pompeii is often called A TIME CAPSULE, because it preserves a single ordinary day frozen forever. Nowhere else can we see a Roman town so complete: its streets, its shops, even the GRAFFITI that people scratched onto walls, from election slogans to rude jokes. Because of this, Pompeii has taught historians more about daily Roman life than almost any written record.",
+    "Today the ruins are protected as a UNESCO World Heritage Site, and around 3 million visitors walk its ancient streets each year. VESUVIUS, meanwhile, is still an active volcano, and millions of people live within reach of it, watched constantly by scientists. Pompeii stands as both a wonder and a warning: a window into the past, and a reminder of nature's power over even the mightiest cities."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "ITALY",
+      "subject": "Pompeii",
+      "kind": "ancient city",
+      "property": "country",
+      "stated": "Italy",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "around 20,000 people",
+      "subject": "Pompeii",
+      "kind": "ancient city",
+      "property": "population",
+      "stated": "",
+      "value": 20000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 4,
+      "quote": "the year 79",
+      "subject": "Eruption of Mount Vesuvius in 79 AD",
+      "kind": "volcanic eruption",
+      "property": "happened",
+      "stated": "",
+      "value": 79,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 4,
+      "quote": "roughly 18 hours",
+      "subject": "Eruption of Mount Vesuvius in 79 AD",
+      "kind": "volcanic eruption",
+      "property": "duration",
+      "stated": "",
+      "value": 18,
+      "unit": "h",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 9,
+      "quote": "1748",
+      "subject": "Pompeii",
+      "kind": "ancient city",
+      "property": "discovered",
+      "stated": "",
+      "value": 1748,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-great-barrier-reef",
+  "title": "The Great Barrier Reef",
+  "model": "opus",
+  "passages": [
+    "The Great Barrier Reef lies in the Coral Sea, off the northeast coast of Australia, beside the state of Queensland. It stretches for about 2,300 kilometers and covers an area of roughly 344,400 square kilometers, which is larger than the whole of Italy. It is not one single reef but a vast MOSAIC of nearly 3,000 separate reefs and about 900 islands. All of it was built by tiny animals called coral POLYPS, which grow hard skeletons that pile up slowly over thousands of years.",
+    "People have known this reef for a very long time. More than 70 groups of Aboriginal and Torres Strait Islander Traditional Owners, the reef's original CUSTODIANS, have ties to these waters, and their stories, songs and fishing knowledge reach back many thousands of years. Australia created the Great Barrier Reef Marine Park in 1975, and in 1981 UNESCO named the reef a World Heritage Site. Today it is home to more than 1,500 kinds of fish and over 400 types of hard coral. Visitors and scientists travel from all over the world to marvel at its rich BIODIVERSITY and learn how to care for it."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Australia",
+      "subject": "Great Barrier Reef",
+      "kind": "reef",
+      "property": "country",
+      "stated": "Australia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Queensland",
+      "subject": "Great Barrier Reef",
+      "kind": "reef",
+      "property": "region",
+      "stated": "Queensland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 2,300 kilometers",
+      "subject": "Great Barrier Reef",
+      "kind": "reef",
+      "property": "length",
+      "stated": "",
+      "value": 2300,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "roughly 344,400 square kilometers",
+      "subject": "Great Barrier Reef",
+      "kind": "reef",
+      "property": "area",
+      "stated": "",
+      "value": 344400,
+      "unit": "km2",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "1975",
+      "subject": "Great Barrier Reef Marine Park",
+      "kind": "marine park",
+      "property": "began",
+      "stated": "",
+      "value": 1975,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1981",
+      "subject": "Great Barrier Reef",
+      "kind": "reef",
+      "property": "happened",
+      "stated": "",
+      "value": 1981,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

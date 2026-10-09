@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-the-channel-tunnel",
+  "title": "The Channel Tunnel",
+  "model": "opus",
+  "passages": [
+    "The Channel Tunnel runs under the stretch of sea between England and France. It starts near Folkestone in Kent and comes out at Coquelles, near Calais in France. The tunnel is about 50 kilometers long, or a little over 31 miles, and nearly 38 kilometers of it lie under the water. No other tunnel in the world has a longer stretch beneath the sea. At its deepest point, the tunnel sits about 75 meters below the SEABED, and up to 115 meters below the surface of the sea. Most of it was dug through a soft rock called chalk MARL, which cuts easily but holds back water.",
+    "Building it took about six years, and at the busiest time more than 13,000 people worked on it. Huge BORING machines started from both coasts, and on 1 December 1990 the British and French teams met under the water, shaking hands through a small gap in the rock. The tunnel opened on 6 May 1994, when Queen Elizabeth II and President François Mitterrand opened it together at a grand CEREMONY. Today, fast trains can carry passengers from London to Paris in under two and a half hours. In one morning, travelers can pass between two cultures, from English tea to French pastries, that have watched each other across the sea for centuries."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "about 50 kilometers long",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "length",
+      "stated": "",
+      "value": 50,
+      "unit": "km",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "a little over 31 miles",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "length",
+      "stated": "",
+      "value": 31,
+      "unit": "mi",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 1,
+      "quote": "about 75 meters below the SEABED",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "depth",
+      "stated": "",
+      "value": 75,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "up to 115 meters below the surface",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "depth",
+      "stated": "",
+      "value": 115,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "less_than"
+    },
+    {
+      "passage": 1,
+      "quote": "Kent",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "region",
+      "stated": "Kent",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "France",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "country",
+      "stated": "France",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "about six years",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "duration",
+      "stated": "",
+      "value": 6,
+      "unit": "year",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "6 May 1994",
+      "subject": "Channel Tunnel",
+      "kind": "tunnel",
+      "property": "began",
+      "stated": "",
+      "value": 1994,
+      "unit": "none",
+      "month": 5,
+      "day": 6,
+      "qualifier": "exact"
+    }
+  ]
+}

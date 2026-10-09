@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-marie-curie",
+  "title": "Marie Curie",
+  "model": "opus",
+  "passages": [
+    "Marie Curie was born Maria Skłodowska on 7 November 1867 in Warsaw, Poland. At that time Poland was ruled by the Russian Empire, and lessons in Polish history were often taught in secret. Women could not attend university in Warsaw, so some studied at a CLANDESTINE \"Flying University\" that moved from home to home. In 1891, at about 24 years old, Maria travelled to Paris to study at the Sorbonne. She lived in a tiny attic room and sometimes wore every piece of clothing she owned to stay warm. There she met the scientist Pierre Curie, and they married in 1895.",
+    "In 1898 Marie and Pierre discovered two new elements. She named the first one POLONIUM after her homeland, and the second radium. She also helped give us the word RADIOACTIVITY. To find radium, they boiled and stirred several tonnes of an ore called PITCHBLENDE and got only about a tenth of a gram. In 1903 she shared the Nobel Prize in Physics with Pierre and Henri Becquerel, and in 1911 she won a second in Chemistry. She was the first person to win Nobel Prizes in two sciences. Years of handling radiation harmed her health, and she died in France on 4 July 1934, at the age of 66."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "7 November 1867",
+      "subject": "Marie Curie",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1867,
+      "unit": "none",
+      "month": 11,
+      "day": 7,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1898",
+      "subject": "Polonium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1898,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 1898",
+      "subject": "Radium",
+      "kind": "chemical element",
+      "property": "discovered",
+      "stated": "",
+      "value": 1898,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Marie and Pierre",
+      "subject": "Polonium",
+      "kind": "chemical element",
+      "property": "discoverer",
+      "stated": "Marie Curie",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Marie and Pierre",
+      "subject": "Polonium",
+      "kind": "chemical element",
+      "property": "discoverer",
+      "stated": "Pierre Curie",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Marie and Pierre",
+      "subject": "Radium",
+      "kind": "chemical element",
+      "property": "discoverer",
+      "stated": "Marie Curie",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Marie and Pierre",
+      "subject": "Radium",
+      "kind": "chemical element",
+      "property": "discoverer",
+      "stated": "Pierre Curie",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "POLONIUM after her homeland",
+      "subject": "Polonium",
+      "kind": "chemical element",
+      "property": "named_after",
+      "stated": "Poland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "4 July 1934",
+      "subject": "Marie Curie",
+      "kind": "scientist",
+      "property": "died",
+      "stated": "",
+      "value": 1934,
+      "unit": "none",
+      "month": 7,
+      "day": 4,
+      "qualifier": "exact"
+    }
+  ]
+}

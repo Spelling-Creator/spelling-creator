@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-isaac-newton",
+  "title": "Isaac Newton",
+  "model": "opus",
+  "passages": [
+    "Isaac Newton was born on Christmas Day, 25 December 1642, in a stone farmhouse at Woolsthorpe, a small village in the English county of Lincolnshire. England still followed an older calendar then, so in much of Europe that same day was already 4 January 1643. He studied at Trinity College, Cambridge, and when a PLAGUE closed the university in 1665, he went home to the farm for nearly two years. In those quiet months he worked on ideas about light, motion and mathematics. He lived to the age of 84 and died in London on 20 March 1727.",
+    "His most famous book, the PRINCIPIA, came out in 1687. He wrote it in Latin, the shared language of scholars all over Europe, so readers in Paris, Leiden or Rome could study it too. In three parts, it set out his laws of motion and his idea of universal GRAVITATION, the pull that keeps the Moon circling Earth. In 1704 he published Opticks, written in English, which showed that white light splits into a SPECTRUM of colors. He later ran the Royal Mint and led the Royal Society for more than 20 years. He was buried in Westminster Abbey."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "25 December 1642",
+      "subject": "Isaac Newton",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1642,
+      "unit": "none",
+      "month": 12,
+      "day": 25,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "4 January 1643",
+      "subject": "Isaac Newton",
+      "kind": "scientist",
+      "property": "born",
+      "stated": "",
+      "value": 1643,
+      "unit": "none",
+      "month": 1,
+      "day": 4,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Lincolnshire",
+      "subject": "Woolsthorpe-by-Colsterworth",
+      "kind": "village",
+      "property": "region",
+      "stated": "Lincolnshire",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "20 March 1727",
+      "subject": "Isaac Newton",
+      "kind": "scientist",
+      "property": "died",
+      "stated": "",
+      "value": 1727,
+      "unit": "none",
+      "month": 3,
+      "day": 20,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1687",
+      "subject": "Philosophiæ Naturalis Principia Mathematica",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1687,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1704",
+      "subject": "Opticks",
+      "kind": "book",
+      "property": "published",
+      "stated": "",
+      "value": 1704,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

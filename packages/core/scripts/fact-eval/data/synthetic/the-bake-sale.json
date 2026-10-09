@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-bake-sale",
+  "title": "The Bake Sale",
+  "about": "a made-up story about a neighbourhood bake sale, with prices and numbers of cakes as a word problem would have them. Nothing real or checkable.",
+  "model": "opus",
+  "passages": [
+    "On a bright Saturday, the people of Maple Row set up a bake sale to raise money for a new park bench. Nina brought 12 lemon cakes and sold each one for 3 dollars. Her neighbour Mr. Abara carried in 8 FRAGRANT honey loaves made from a recipe his grandmother used in a faraway hill town, where bakers fold the dough into the shape of a little boat. People gathered around his table, curious and eager to taste something so UNFAMILIAR. Each loaf cost 4 dollars, and by noon he had only 2 left.",
+    "Nina sold all 12 of her cakes, so she earned 36 dollars. Mr. Abara sold 6 loaves, which made 24 dollars. Together they had 60 dollars, but the bench cost 75. A girl named Tess had an idea. She baked a tray of 10 MERINGUE stars and sold them for 1 dollar and 50 cents each. When every star was gone, she counted 15 dollars. The neighbours cheered, because now they had EXACTLY enough. Mr. Abara promised to teach everyone his boat folding trick at next year's sale, and Tess asked to learn it first."
+  ]
+}

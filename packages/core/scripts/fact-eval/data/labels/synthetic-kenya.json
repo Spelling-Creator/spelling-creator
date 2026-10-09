@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-kenya",
+  "title": "Kenya",
+  "model": "opus",
+  "passages": [
+    "Kenya is a country in East Africa, sitting right on the EQUATOR, the imaginary line that circles the middle of Earth. It borders the Indian Ocean to the southeast and shares Lake Victoria, the largest lake in Africa, with Uganda and Tanzania. Kenya gained its INDEPENDENCE from Britain on 12 December 1963, a day still celebrated every year. Its capital is Nairobi, a busy city of more than 4 million people. Remarkably, Nairobi has a national park at its edge, so giraffes and zebras graze with tall buildings in the distance.",
+    "About 55 million people live in Kenya, belonging to more than 40 ETHNIC groups, such as the Kikuyu, the Luo and the Maasai. Each group has its own traditions, foods and often its own language. To talk across these differences, Kenyans share two official languages, English and Swahili. A friendly Swahili greeting is \"Jambo,\" and the national motto, HARAMBEE, means \"let us all pull together.\" Many people speak three languages in a single day. Far from the cities, people herd cattle across the wide SAVANNA, while runners from the highlands have won some of the world's most famous marathons."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "East Africa",
+      "subject": "Kenya",
+      "kind": "country",
+      "property": "continent",
+      "stated": "Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Uganda",
+      "subject": "Lake Victoria",
+      "kind": "lake",
+      "property": "country",
+      "stated": "Uganda",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Tanzania",
+      "subject": "Lake Victoria",
+      "kind": "lake",
+      "property": "country",
+      "stated": "Tanzania",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "12 December 1963",
+      "subject": "Kenya",
+      "kind": "country",
+      "property": "began",
+      "stated": "",
+      "value": 1963,
+      "unit": "none",
+      "month": 12,
+      "day": 12,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Nairobi",
+      "subject": "Kenya",
+      "kind": "country",
+      "property": "capital",
+      "stated": "Nairobi",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "more than 4 million",
+      "subject": "Nairobi",
+      "kind": "city",
+      "property": "population",
+      "stated": "",
+      "value": 4000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 2,
+      "quote": "About 55 million",
+      "subject": "Kenya",
+      "kind": "country",
+      "property": "population",
+      "stated": "",
+      "value": 55000000,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "English",
+      "subject": "Kenya",
+      "kind": "country",
+      "property": "language",
+      "stated": "English",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Swahili",
+      "subject": "Kenya",
+      "kind": "country",
+      "property": "language",
+      "stated": "Swahili",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

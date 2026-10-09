@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-peru",
+  "title": "Peru",
+  "about": "its capital, its language and Machu Picchu's age and height above sea level. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Peru is a country on the western edge of South America, home to more than 34 million people. Its capital is Lima, a busy city on the Pacific coast that Spanish settlers founded in 1535. Most Peruvians speak Spanish, but Quechua and Aymara are official languages too. These are INDIGENOUS languages, spoken in the region long before Europeans arrived, and millions of families still use them at home today. Some Quechua words even traveled into English, such as llama and condor. The land itself is full of surprises, stretching from dry coastal deserts to the snowy Andes mountains and the green Amazon rainforest.",
+    "High in the Andes sits Machu Picchu, a stone CITADEL built around 1450 for the Inca ruler Pachacuti. That makes it nearly 600 years old. It perches about 2,430 meters above sea level, which is close to 8,000 feet. At that ALTITUDE the air feels thin, and clouds sometimes drift right through the ruins. The Inca carved steep farming TERRACES into the slopes and fitted huge stones together so tightly that no mortar was needed. Spanish invaders never found the site, and it became widely known around the world after 1911. ARCHAEOLOGISTS still study how the builders worked with such skill."
+  ]
+}

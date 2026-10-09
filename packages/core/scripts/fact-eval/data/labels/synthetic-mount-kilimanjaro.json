@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-mount-kilimanjaro",
+  "title": "Mount Kilimanjaro",
+  "model": "opus",
+  "passages": [
+    "Mount Kilimanjaro rises in northeastern Tanzania, close to the border with Kenya. At 5,895 meters, or roughly 19,300 feet, it is the highest mountain in Africa. It is also the tallest FREESTANDING mountain on Earth, which means it stands alone rather than as part of a range. Kilimanjaro is a DORMANT volcano made of three cones named Kibo, Mawenzi and Shira. Its highest point, Uhuru Peak, sits on Kibo. Uhuru means freedom in Swahili. Climbers pass through farms, rainforest, heath and rocky desert before reaching the icy summit, so a single trip can feel like walking from the equator to the Arctic.",
+    "The Chagga people have lived on the mountain's lower slopes for centuries, growing bananas and coffee in rich volcanic soil. The first recorded climb to the top came on 6 October 1889. A German GEOGRAPHER named Hans Meyer and an Austrian climber, Ludwig Purtscheller, reached the summit with help from a young Chagga guide, Yohani Kinyala Lauwo, who was about 18 years old. Lauwo is said to have lived past 100. Today, between 30,000 and 50,000 people attempt the climb each year, often taking 5 to 9 days. Many hope to see the summit GLACIERS, which have shrunk by more than 80 percent since 1912."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Tanzania",
+      "subject": "Mount Kilimanjaro",
+      "kind": "mountain",
+      "property": "country",
+      "stated": "Tanzania",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "5,895 meters",
+      "subject": "Mount Kilimanjaro",
+      "kind": "mountain",
+      "property": "elevation",
+      "stated": "",
+      "value": 5895,
+      "unit": "m",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "19,300 feet",
+      "subject": "Mount Kilimanjaro",
+      "kind": "mountain",
+      "property": "elevation",
+      "stated": "",
+      "value": 19300,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Africa",
+      "subject": "Mount Kilimanjaro",
+      "kind": "mountain",
+      "property": "continent",
+      "stated": "Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "6 October 1889",
+      "subject": "Mount Kilimanjaro",
+      "kind": "mountain",
+      "property": "happened",
+      "stated": "",
+      "value": 1889,
+      "unit": "none",
+      "month": 10,
+      "day": 6,
+      "qualifier": "exact"
+    }
+  ]
+}

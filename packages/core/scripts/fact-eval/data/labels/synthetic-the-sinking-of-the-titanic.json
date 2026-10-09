@@ -1,0 +1,128 @@
+{
+  "lesson": "synthetic-the-sinking-of-the-titanic",
+  "title": "The Sinking of the Titanic",
+  "model": "opus",
+  "passages": [
+    "The Titanic was built in Belfast, a busy port city in what is now Northern Ireland, at a SHIPYARD called Harland and Wolff. Work began in 1909, and thousands of workers spent about two years shaping its steel hull, hammering in more than three million RIVETS by hand. Belfast was famous then for its ships and its fine linen cloth, and many families there were proud of what their city could make. When it was finished, the Titanic stretched about 882 feet, nearly as long as three football fields placed end to end. It was one of the largest moving objects people had ever built.",
+    "The ship left Southampton, England, on April 10, 1912, for its MAIDEN VOYAGE, which means its very first trip. It stopped in Cherbourg, France, and then in Queenstown, Ireland, a small harbor town now called Cobh, where many passengers came aboard hoping to start a new life in America. Late at night on April 14, the ship struck an ICEBERG in the cold North Atlantic Ocean. Less than three hours later, at about 2:20 in the morning on April 15, it sank. There were roughly 2,200 people on board, and more than 1,500 of them were lost."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Harland and Wolff",
+      "subject": "Titanic",
+      "kind": "ship",
+      "property": "creator",
+      "stated": "Harland and Wolff",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Work began in 1909",
+      "subject": "Titanic",
+      "kind": "ship",
+      "property": "began",
+      "stated": "",
+      "value": 1909,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "about 882 feet",
+      "subject": "Titanic",
+      "kind": "ship",
+      "property": "length",
+      "stated": "",
+      "value": 882,
+      "unit": "ft",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 1,
+      "quote": "Northern Ireland",
+      "subject": "Belfast",
+      "kind": "city",
+      "property": "region",
+      "stated": "Northern Ireland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Southampton, England",
+      "subject": "Southampton",
+      "kind": "city",
+      "property": "country",
+      "stated": "England",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "April 10, 1912",
+      "subject": "Titanic",
+      "kind": "ship",
+      "property": "happened",
+      "stated": "",
+      "value": 1912,
+      "unit": "none",
+      "month": 4,
+      "day": 10,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Cherbourg, France",
+      "subject": "Cherbourg",
+      "kind": "town",
+      "property": "country",
+      "stated": "France",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Queenstown, Ireland",
+      "subject": "Cobh",
+      "kind": "town",
+      "property": "country",
+      "stated": "Ireland",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "April 15",
+      "subject": "Sinking of the Titanic",
+      "kind": "event",
+      "property": "happened",
+      "stated": "",
+      "value": 1912,
+      "unit": "none",
+      "month": 4,
+      "day": 15,
+      "qualifier": "exact"
+    }
+  ]
+}

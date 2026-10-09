@@ -1,0 +1,76 @@
+{
+  "lesson": "synthetic-the-discovery-of-penicillin",
+  "title": "The Discovery of Penicillin",
+  "model": "opus",
+  "passages": [
+    "In September 1928, a Scottish scientist named Alexander Fleming came back to his LABORATORY at St Mary's Hospital in London after a summer holiday. He had left a stack of glass dishes growing BACTERIA on his bench. On one dish, a fuzzy patch of mold had appeared, and the germs around it had died, leaving a clear ring. Fleming was curious rather than annoyed. He named the substance from the mold penicillin and wrote about it in 1929. Yet he struggled to make enough of it to help sick people, and for nearly ten years his discovery sat almost forgotten.",
+    "Around 1939, a team at Oxford University led by Howard Florey and Ernst Chain found a way to PURIFY penicillin. In 1941, a police officer named Albert Alexander became one of the first people treated with it. The search for stronger mold stretched across the ocean to Peoria, Illinois, where a moldy CANTALOUPE from a local market gave far more of the medicine. By 1944, factories were making more than 2 million doses. Fleming, Florey and Chain shared the Nobel Prize in 1945. Long before, healers in places such as ancient Egypt and Greece are said to have pressed moldy bread onto wounds, perhaps sensing its hidden power."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "September 1928",
+      "subject": "Penicillin",
+      "kind": "medicine",
+      "property": "discovered",
+      "stated": "",
+      "value": 1928,
+      "unit": "none",
+      "month": 9,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Alexander Fleming",
+      "subject": "Penicillin",
+      "kind": "medicine",
+      "property": "discoverer",
+      "stated": "Alexander Fleming",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "London",
+      "subject": "St Mary's Hospital",
+      "kind": "hospital",
+      "property": "region",
+      "stated": "London",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Illinois",
+      "subject": "Peoria",
+      "kind": "city",
+      "property": "region",
+      "stated": "Illinois",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "1945",
+      "subject": "1945 Nobel Prize in Physiology or Medicine",
+      "kind": "award",
+      "property": "happened",
+      "stated": "",
+      "value": 1945,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

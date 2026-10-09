@@ -259,18 +259,19 @@ provider and a Turnstile key.
 
 ## Where the code is
 
-| File                                                  | Does                                                                                                      |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparison. `checkClaims(claims, opts)`. |
-| `packages/core/src/wikidata.js`                       | The requests: name search and SPARQL, shared with the [image search](./search-images.md).                 |
-| `packages/core/src/wikipedia.js`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article.                               |
-| `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                |
-| `apps/api/src/routes/ai.js`                           | The `factCheck` mode: Turnstile, rate limit, cache.                                                       |
-| `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                         |
-| `apps/web/src/lib/factCheck.js`                       | `useFactCheck()`, and the wording of findings (`describeFact`).                                           |
-| `apps/web/src/components/editor/FactCheckSection.jsx` | The Facts section of the Check panel.                                                                     |
-| `apps/web/src/locales/en/checks.json`                 | Its wording, under `facts`.                                                                               |
-| `apps/mcp/src/tools.js`                               | `check_facts`.                                                                                            |
+| File                                                  | Does                                                                                                                            |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparison. `checkClaims(claims, opts)`.                       |
+| `packages/core/src/wikidata.js`                       | The requests: name search and SPARQL, shared with the [image search](./search-images.md).                                       |
+| `packages/core/src/wikipedia.js`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article.                                                     |
+| `packages/core/src/factClaims.js`                     | The extraction prompt and schema, and placing quotes. Shared with the [fact claim model](/monorepo/fact-claim-model)'s scripts. |
+| `apps/api/src/lib/factCheck.js`                       | Trimming the passages, asking the AI provider, and calling the checker.                                                         |
+| `apps/api/src/routes/ai.js`                           | The `factCheck` mode: Turnstile, rate limit, cache.                                                                             |
+| `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                                               |
+| `apps/web/src/lib/factCheck.js`                       | `useFactCheck()`, and the wording of findings (`describeFact`).                                                                 |
+| `apps/web/src/components/editor/FactCheckSection.jsx` | The Facts section of the Check panel.                                                                                           |
+| `apps/web/src/locales/en/checks.json`                 | Its wording, under `facts`.                                                                                                     |
+| `apps/mcp/src/tools.js`                               | `check_facts`.                                                                                                                  |
 
 `apps/web/src/lib/factCheck.test.js` fails when core gains a property or unit that
 `checks.json` can't word, the same way the lesson checks' test guards their codes.

@@ -1,0 +1,102 @@
+{
+  "lesson": "synthetic-the-taj-mahal",
+  "title": "The Taj Mahal",
+  "model": "opus",
+  "passages": [
+    "The Taj Mahal stands on the bank of the Yamuna River in the city of Agra, in northern India. It was built by Shah Jahan, a ruler of the MUGHAL Empire, which governed much of South Asia for more than 300 years. In 1631, his beloved wife Mumtaz Mahal died while giving birth to their fourteenth child. Heartbroken, Shah Jahan ordered a grand MAUSOLEUM, a building that holds a tomb, to honor her memory. Work began around 1632, and the main tomb was finished about 11 years later.",
+    "Building it took an enormous team. Roughly 20,000 workers came from across India, Persia and Central Asia, including stonecutters, painters and skilled ARTISANS. Elephants, perhaps more than 1,000 of them, helped haul heavy loads. The gleaming white marble came from Makrana, a quarry town over 300 kilometers away. Craftspeople set colorful stones into the marble to form delicate flowers, and they carved verses from the Quran in flowing Arabic CALLIGRAPHY. The whole site, with its gardens, gateway and a mosque, was completed around 1653. Today, millions of visitors from all over the world come each year to see it."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Agra",
+      "subject": "Taj Mahal",
+      "kind": "mausoleum",
+      "property": "region",
+      "stated": "Agra",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "India",
+      "subject": "Taj Mahal",
+      "kind": "mausoleum",
+      "property": "country",
+      "stated": "India",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "India",
+      "subject": "Agra",
+      "kind": "city",
+      "property": "country",
+      "stated": "India",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Shah Jahan",
+      "subject": "Taj Mahal",
+      "kind": "mausoleum",
+      "property": "creator",
+      "stated": "Shah Jahan",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "more than 300 years",
+      "subject": "Mughal Empire",
+      "kind": "empire",
+      "property": "duration",
+      "stated": "",
+      "value": 300,
+      "unit": "year",
+      "month": 0,
+      "day": 0,
+      "qualifier": "more_than"
+    },
+    {
+      "passage": 1,
+      "quote": "1631",
+      "subject": "Mumtaz Mahal",
+      "kind": "empress",
+      "property": "died",
+      "stated": "",
+      "value": 1631,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "around 1632",
+      "subject": "Taj Mahal",
+      "kind": "mausoleum",
+      "property": "began",
+      "stated": "",
+      "value": 1632,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    }
+  ]
+}

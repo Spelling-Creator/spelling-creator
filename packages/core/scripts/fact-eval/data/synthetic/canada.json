@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-canada",
+  "title": "Canada",
+  "about": "its capital, its area, its languages and its currency. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "Canada is the second largest country on Earth by area, after only Russia. It covers nearly 10 million square kilometers, stretching from the Atlantic Ocean to the Pacific and north into the frozen Arctic. Its land is divided into ten provinces and three TERRITORIES. The capital is Ottawa, a city in the province of Ontario. Queen Victoria chose it in 1857, and the country formed through CONFEDERATION on July 1, 1867. Today, lawmakers meet in the PARLIAMENT buildings on a hill above the Ottawa River. Although Canada is huge, most of its roughly 41 million people live within a few hundred kilometers of the southern border.",
+    "Canada is officially BILINGUAL, with two official languages, English and French. About one in five Canadians speaks French as a first language, and most of them live in the province of Quebec, where street signs, songs and news are mostly in French. Many other languages are spoken too, including about 70 Indigenous languages such as Cree and Inuktitut, which is an official language in the northern territory of Nunavut. Canada's money is the Canadian dollar. Its one dollar coin shows a loon, a diving water bird, so people nicknamed it the \"loonie.\" When a two dollar coin arrived in 1996, Canadians cheerfully called it the \"toonie.\""
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-the-international-space-station",
+  "title": "The International Space Station",
+  "about": "its speed, its height above Earth and when it was launched. Include several specific numbers, dates or names where the topic has them, some exact and some rounded or hedged (about, nearly, more than, up to).",
+  "model": "opus",
+  "passages": [
+    "The first piece of the International Space Station was a MODULE called Zarya, which means \"sunrise\" in Russian. It rose into space on 20 November 1998, carried by a Proton rocket from the Baikonur COSMODROME. This launch site sits on the wide, open steppe of Kazakhstan, the same place where Yuri Gagarin began the first human spaceflight in 1961. About two weeks later, the American shuttle Endeavour brought up a second piece named Unity and joined the two together. The first crew, one American and two Russians, moved in on 2 November 2000. People have lived on board ever since, and astronauts from more than 20 countries have visited.",
+    "The station circles our planet at an ALTITUDE of about 400 kilometers, or roughly 250 miles. That is far higher than any airplane flies, yet close enough that you can often spot the station from the ground as a bright, steady light gliding across the night sky. It races along at nearly 28,000 kilometers per hour, about 17,500 miles per hour, so it goes all the way around Earth in roughly 90 minutes. Because of this tremendous VELOCITY, the crew sees about 16 sunrises and 16 sunsets every day, passing over deserts, rainforests, oceans and busy cities on every inhabited continent."
+  ]
+}

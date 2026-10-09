@@ -1,0 +1,115 @@
+{
+  "lesson": "synthetic-proxima-centauri",
+  "title": "Proxima Centauri",
+  "model": "opus",
+  "passages": [
+    "Proxima Centauri is the closest known star to our Sun, about 4.24 light-years away. Its light travels for more than four years before it reaches Earth. Even so, the star is far too faint to see without a telescope. It is a small red dwarf with only about one eighth of the Sun's mass, and it glows a dim, rusty red. Proxima belongs to a family of three stars. It shares the system with Alpha Centauri A and B, two bright stars that shine low in the southern sky in the CONSTELLATION Centaurus.",
+    "The star was discovered in 1915 by Robert Innes, a Scottish ASTRONOMER working at the Union OBSERVATORY in Johannesburg, South Africa. From that southern city, Alpha Centauri climbs high on clear winter nights. In 1917, the name Proxima, a Latin word meaning \"nearest,\" was suggested. Long before telescopes, Aboriginal Australian peoples told stories about the bright pointer stars nearby, and sailors in the southern seas used them to find south. In 2016, scientists found a planet, Proxima b, that circles the star every 11.2 days. It may sit in the HABITABLE zone, where liquid water could exist."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "about 4.24 light-years",
+      "subject": "Proxima Centauri",
+      "kind": "star",
+      "property": "distance_from_earth",
+      "stated": "",
+      "value": 4.24,
+      "unit": "ly",
+      "month": 0,
+      "day": 0,
+      "qualifier": "about"
+    },
+    {
+      "passage": 2,
+      "quote": "discovered in 1915",
+      "subject": "Proxima Centauri",
+      "kind": "star",
+      "property": "discovered",
+      "stated": "",
+      "value": 1915,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Robert Innes",
+      "subject": "Proxima Centauri",
+      "kind": "star",
+      "property": "discoverer",
+      "stated": "Robert Innes",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Johannesburg",
+      "subject": "Union Observatory",
+      "kind": "observatory",
+      "property": "region",
+      "stated": "Johannesburg",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "South Africa",
+      "subject": "Union Observatory",
+      "kind": "observatory",
+      "property": "country",
+      "stated": "South Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "Johannesburg, South Africa",
+      "subject": "Johannesburg",
+      "kind": "city",
+      "property": "country",
+      "stated": "South Africa",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "In 2016",
+      "subject": "Proxima Centauri b",
+      "kind": "exoplanet",
+      "property": "discovered",
+      "stated": "",
+      "value": 2016,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "every 11.2 days",
+      "subject": "Proxima Centauri b",
+      "kind": "exoplanet",
+      "property": "orbital_period",
+      "stated": "",
+      "value": 11.2,
+      "unit": "day",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}

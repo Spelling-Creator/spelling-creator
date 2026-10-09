@@ -115,6 +115,7 @@ export default defineConfig({
             text: "Document import experiment",
             link: "/monorepo/document-import-experiment",
           },
+          { text: "Fact claim model", link: "/monorepo/fact-claim-model" },
         ],
       },
       {

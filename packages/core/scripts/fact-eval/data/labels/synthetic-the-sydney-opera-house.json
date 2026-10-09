@@ -1,0 +1,89 @@
+{
+  "lesson": "synthetic-the-sydney-opera-house",
+  "title": "The Sydney Opera House",
+  "model": "opus",
+  "passages": [
+    "The Sydney Opera House sits on Bennelong Point, a small PENINSULA that reaches out into the harbour of Sydney, Australia. Its design came from Jørn Utzon, a Danish architect who won an international COMPETITION in 1957. More than 200 designs were entered, and the judges chose his bold drawing of curved shells. Building began in 1959, but the work was slow and very costly. Utzon left the project in 1966 and never came back to see it finished. Other architects completed the inside, and Queen Elizabeth II opened the building on 20 October 1973.",
+    "The roof shells are covered with more than one million CERAMIC tiles, made in Sweden, that glow white and cream in the sunlight. Many people say the shape looks like sails on the water, and its SILHOUETTE is now known around the world. The building stands on the traditional land of the Gadigal people, who have lived around the harbour for thousands of years. The point is named after Bennelong, a Wangal man who built ties with early British settlers. Today the Opera House hosts about 1,800 performances each year, from opera to dance, and in 2007 it became a World Heritage Site."
+  ],
+  "claims": [
+    {
+      "passage": 1,
+      "quote": "Sydney",
+      "subject": "Sydney Opera House",
+      "kind": "building",
+      "property": "region",
+      "stated": "Sydney",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Australia",
+      "subject": "Sydney Opera House",
+      "kind": "building",
+      "property": "country",
+      "stated": "Australia",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Jørn Utzon",
+      "subject": "Sydney Opera House",
+      "kind": "building",
+      "property": "creator",
+      "stated": "Jørn Utzon",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "Building began in 1959",
+      "subject": "Sydney Opera House",
+      "kind": "building",
+      "property": "began",
+      "stated": "",
+      "value": 1959,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 1,
+      "quote": "20 October 1973",
+      "subject": "Sydney Opera House",
+      "kind": "building",
+      "property": "began",
+      "stated": "",
+      "value": 1973,
+      "unit": "none",
+      "month": 10,
+      "day": 20,
+      "qualifier": "exact"
+    },
+    {
+      "passage": 2,
+      "quote": "named after Bennelong",
+      "subject": "Bennelong Point",
+      "kind": "headland",
+      "property": "named_after",
+      "stated": "Bennelong",
+      "value": 0,
+      "unit": "none",
+      "month": 0,
+      "day": 0,
+      "qualifier": "exact"
+    }
+  ]
+}
