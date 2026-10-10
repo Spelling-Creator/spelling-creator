@@ -14,6 +14,7 @@
     "pace": "Pace",
     "downloadingVoice": "Downloading the natural voice (one time, about {{mb}} MB)... {{percent}}%",
     "downloadingVoiceAnnouncement": "Downloading the natural voice. The browser's voice reads until it's ready.",
+    "loadingVoice": "Getting the natural voice ready...",
     "voiceFailed": "The natural voice couldn't load, so the browser's voice is reading instead.",
     "voiceFailedRetry": "The natural voice couldn't load, so the browser's voice is reading. It will try again on the next step.",
     "voiceStopped": "The natural voice stopped working, so the browser's voice is reading instead.",

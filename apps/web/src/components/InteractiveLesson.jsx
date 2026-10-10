@@ -242,8 +242,12 @@ function VoiceLoadStatus({ speech }) {
   );
   const load = speech.enabled ? speech.voiceLoad : null;
 
+  // A voice coming out of the cache is ready in a couple of seconds, so it gets
+  // a quiet line and no announcement, rather than talk of a download.
+  const loading = load?.status === "loading";
+  const downloading = loading && !load.cached;
   let announcement = "";
-  if (load?.status === "loading") {
+  if (downloading) {
     announcement = t("speech.downloadingVoiceAnnouncement");
   } else if (load?.status === "failed") {
     announcement =
@@ -256,12 +260,17 @@ function VoiceLoadStatus({ speech }) {
 
   return (
     <p className="text-xs text-muted-foreground">
-      {load?.status === "loading" && (
+      {downloading && (
         <span className="mt-1 block" aria-hidden="true">
           {t("speech.downloadingVoice", {
             mb: DOWNLOAD_MB,
             percent: Math.round(progress * 100),
           })}
+        </span>
+      )}
+      {loading && load.cached && (
+        <span className="mt-1 block" aria-hidden="true">
+          {t("speech.loadingVoice")}
         </span>
       )}
       {/* Present while empty, so the first message is announced too: a live

@@ -28,6 +28,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  readAloudCached,
   readAloudPossible,
   VOICES as NATURAL_VOICES,
 } from "@spelling-creator/core/browser/readAloud";
@@ -110,8 +111,9 @@ export function naturalVoiceId(voiceURI) {
 /**
  * The natural voices this device can use, shaped like browser voices so the
  * picker lists both the same way: empty until the device check has run, and
- * empty for good where it fails (no WebGPU, a phone or tablet, a metered
- * connection). See core/browser/readAloud.js.
+ * empty for good where it fails (no WebGPU, a phone or tablet, or a metered
+ * connection unless the model is already downloaded). See
+ * core/browser/readAloud.js.
  *
  * @returns {{ voiceURI: string, name: string, lang: string }[]}
  */
@@ -120,16 +122,18 @@ export function useNaturalVoices() {
 
   useEffect(() => {
     let cancelled = false;
-    readAloudPossible().then((possible) => {
-      if (cancelled || !possible) return;
-      setVoices(
-        Object.entries(NATURAL_VOICES).map(([id, { name, lang }]) => ({
-          voiceURI: `${NATURAL_PREFIX}${id}`,
-          name,
-          lang,
-        })),
-      );
-    });
+    readAloudCached()
+      .then((cached) => readAloudPossible({ download: !cached }))
+      .then((possible) => {
+        if (cancelled || !possible) return;
+        setVoices(
+          Object.entries(NATURAL_VOICES).map(([id, { name, lang }]) => ({
+            voiceURI: `${NATURAL_PREFIX}${id}`,
+            name,
+            lang,
+          })),
+        );
+      });
     return () => {
       cancelled = true;
     };
