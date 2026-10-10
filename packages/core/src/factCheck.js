@@ -11,7 +11,7 @@
 // thing, already pulled out of a passage:
 //
 //   { subject: "Mount Everest", kind: "mountain", property: "elevation",
-//     value: 8849, unit: "m", qualifier: "exact", quote: "8,849 METRES" }
+//     value: 8849, unit: "m", qualifier: "exact", quote: "8,849 METERS" }
 //
 // Pulling claims out of prose is a language problem, so callers do that part
 // with a model: the Worker asks its AI provider (apps/api/src/lib/factCheck.js),
@@ -26,27 +26,31 @@
 //   Smithsonian  a volcano's height and eruptions, from the Global Volcanism
 //                Program (./smithsonian.js), for an item Wikidata gives a GVP
 //                number. Asked alongside Wikidata, not instead of it.
-//   Wikipedia    the subject's article (./factText.js), read only when neither
-//                has a value to compare with. It can confirm a claim, never
-//                contradict one: prose is too loose to prove a figure wrong.
+//   Wikipedia    the subject's article (./factText.js), read when neither can
+//                settle the claim: no value to compare with, or a value that
+//                could only ever confirm it ("varies" and "before-record",
+//                below). It can confirm a claim, never contradict one: prose is
+//                too loose to prove a figure wrong.
 //
 // Every claim gets one of three verdicts:
 //
 //   agrees     a current value from some source is close enough.
-//   disagrees  a source has the property, no source's value is close, and the
-//              subject isn't a kind of living thing (below).
+//   disagrees  a source has the property, no source's value is close, every
+//              source asked answered, and the fact can be wrong (below).
 //   unknown    the thing or the property isn't in any source, its unit is one
-//              this can't convert, a source couldn't be reached, or the subject
-//              is a kind of living thing whose value didn't match. This says
+//              this can't convert, a source couldn't be reached, or the fact
+//              varies from one animal to the next and didn't match. This says
 //              nothing about whether the passage is right, and callers report
 //              it as that.
 //
 // A fact about a kind of animal or plant ("cats weigh about 4 kg") is about
 // something that varies from one animal to the next, and Wikidata's figures for
-// species are patchy besides. So for a kind of living thing (see isKind), and
-// for the properties only one has (a lifespan, a litter), a value that doesn't
-// match leaves the claim unknown, with reason "varies", rather than wrong.
-// Such a claim can be confirmed, never flagged.
+// species are patchy besides. So for the properties only an animal has (a
+// lifespan, a litter), and for a kind of living thing's (see isKind) size,
+// weight and speed, a value that doesn't match leaves the claim unknown, with
+// reason "varies", rather than wrong. Such a claim can be confirmed, never
+// flagged. What doesn't vary by animal, like when a species was discovered or
+// who it is named after, is checked as for anything else.
 //
 // No source is an oracle. Any can be out of date, and a search for "Georgia"
 // can land on the wrong one. So every verdict carries the Wikidata item it was
@@ -69,14 +73,17 @@
 // server callers must pass a User-Agent (see there).
 
 import {
+  clausesOf,
   datesIn,
   mentions,
   paragraphsOf,
   quantitiesIn,
   stemTest,
+  withoutFigures,
 } from "./factText.js";
 import { textBlockPlain } from "./lessonText.js";
 import {
+  GVP_WFS,
   dateSpan,
   eruptionOverlaps,
   latestEruption,
@@ -99,8 +106,9 @@ import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.js";
 
 // The Worker places a quote in its passage with squashText, and the editor
 // asks whether it is still there with it. Both take it from here, so the two
-// can't drift apart.
-export { squashText };
+// can't drift apart. The Worker also needs to know which requests are the
+// Smithsonian's, to keep them out of its cache.
+export { GVP_WFS, squashText };
 
 /**
  * A lesson's passages in reading order: every text block with words in it, as
@@ -154,7 +162,9 @@ const JULIAN = "Q1985786";
  *
  * `varies` marks a property only a kind of animal has, so that a claim about
  * it can be confirmed but never called wrong, whatever the item turns out to
- * be (see the top of this file).
+ * be (see the top of this file). `animal` marks one that differs from one
+ * animal to the next (how big, heavy or fast it is), so that it varies when
+ * the item is a kind of living thing, and only then.
  *
  * `hint` is the plain description a model is given when choosing.
  */
@@ -164,6 +174,7 @@ export const FACT_PROPERTIES = {
     dimension: "length",
     pids: ["P2048", "P2044"],
     smithsonian: "elevation",
+    animal: true,
     hint: "how tall something is: a building, statue, tree, animal or mountain",
   },
   elevation: {
@@ -177,12 +188,14 @@ export const FACT_PROPERTIES = {
     kind: "quantity",
     dimension: "length",
     pids: ["P2043"],
+    animal: true,
     hint: "how long something is: a river, bridge, wall, road or animal",
   },
   width: {
     kind: "quantity",
     dimension: "length",
     pids: ["P2049"],
+    animal: true,
     hint: "how wide something is",
   },
   depth: {
@@ -225,12 +238,14 @@ export const FACT_PROPERTIES = {
     kind: "quantity",
     dimension: "mass",
     pids: ["P2067"],
+    animal: true,
     hint: "how much something weighs",
   },
   speed: {
     kind: "quantity",
     dimension: "speed",
     pids: ["P2052"],
+    animal: true,
     hint: "how fast something goes",
   },
   temperature: {
@@ -542,7 +557,7 @@ const RELATIVE_SLACK = {
 /**
  * Half a unit in the last place the number was written to: 8,849 allows 0.5,
  * 9,000 allows 500, 4.5 billion allows 50 million. A passage that says "9,000
- * metres" has told you how precise it means to be.
+ * meters" has told you how precise it means to be.
  * @param {number} n
  * @returns {number}
  */
@@ -874,7 +889,7 @@ function inClaimUnit(statement, unit) {
 export function quantityAgrees(claim, wd) {
   const relative = RELATIVE_SLACK[claim.qualifier] * Math.abs(wd.value);
   // "More than 10,000" is a bound, not a figure rounded to the nearest 10,000,
-  // so it gets no rounding room: Everest's 8,849 metres is not more than it.
+  // so it gets no rounding room: Everest's 8,849 meters is not more than it.
   const bound =
     claim.qualifier === "more_than" || claim.qualifier === "less_than";
   const slack = bound
@@ -1232,9 +1247,44 @@ const TEXT_WORDS = {
 
 export const FACT_TEXT_WORDS = TEXT_WORDS;
 
+// Each property's words as a test, and a test for the words of the other
+// properties measured the same way (a width's, for a height): built once, and
+// run on every sentence of every article.
+const wordTests = new Map();
+function wordTestsFor(property) {
+  if (wordTests.has(property)) return wordTests.get(property);
+  const spec = FACT_PROPERTIES[property];
+  const own = TEXT_WORDS[property] || [];
+  const rivals =
+    spec.kind === "quantity"
+      ? Object.keys(FACT_PROPERTIES)
+          .filter(
+            (key) =>
+              key !== property &&
+              FACT_PROPERTIES[key].kind === "quantity" &&
+              FACT_PROPERTIES[key].dimension === spec.dimension,
+          )
+          .flatMap((key) => TEXT_WORDS[key] || [])
+          .filter((word) => !own.includes(word))
+      : [];
+  const tests = {
+    own,
+    about: stemTest(own),
+    rival: rivals.length ? stemTest([...new Set(rivals)]) : () => false,
+  };
+  wordTests.set(property, tests);
+  return tests;
+}
+
 // Whether one sentence states what a claim says, by the same rules as a
 // Wikidata value: a quantity converted and given the claim's rounding, a date
 // to the precision both give, a name as words.
+//
+// A quantity is read with its own clause: one whose clause has another
+// property's words and not the claim's is about that other property, so in
+// "it is 100 m high and its crater is 200 m wide" the 200 m is no height. A
+// clause with no such words ("females weigh 56 kg and males 96 kg") goes with
+// the sentence it is in.
 function sentenceStates(claim, spec, sentence) {
   if (spec.kind === "item") return mentions(sentence, claim.stated);
   if (spec.kind === "time") {
@@ -1250,7 +1300,8 @@ function sentenceStates(claim, spec, sentence) {
         ),
     );
   }
-  return quantitiesIn(sentence).some((q) => {
+  const { about, rival } = wordTestsFor(claim.property);
+  const states = (q) => {
     if (UNIT_DEFS[q.unit]?.dimension !== spec.dimension) return false;
     const to = (n) =>
       n == null ? undefined : convertUnit(n, q.unit, claim.unit);
@@ -1259,6 +1310,11 @@ function sentenceStates(claim, spec, sentence) {
       value != null &&
       quantityAgrees(claim, { value, lower: to(q.lower), upper: to(q.upper) })
     );
+  };
+  return clausesOf(sentence).some((clause) => {
+    const words = withoutFigures(clause);
+    if (!about(words) && rival(words)) return false;
+    return quantitiesIn(clause).some(states);
   });
 }
 
@@ -1285,10 +1341,15 @@ function excerpt(text, max = 300) {
  *   quote, or null.
  */
 export function confirmFromText(claim, text) {
+  return confirmFromParagraphs(claim, paragraphsOf(text));
+}
+
+// confirmFromText for an article already split with paragraphsOf, so one
+// read for several claims is split once.
+function confirmFromParagraphs(claim, paragraphs) {
   const spec = FACT_PROPERTIES[claim.property];
-  const words = TEXT_WORDS[claim.property] || [];
-  const about = stemTest(words);
-  for (const { lead, sentences } of paragraphsOf(text)) {
+  const { own: words, about } = wordTestsFor(claim.property);
+  for (const { lead, sentences } of paragraphs) {
     if (!words.length && !lead) continue;
     for (let i = 0; i < sentences.length; i++) {
       const sentence = sentences[i];
@@ -1419,15 +1480,17 @@ async function findCandidates(name, kind, settings) {
 
 /**
  * The verdict that stands when several sources were asked about one claim:
- * any source agreeing, then any disagreeing, then the most telling reason it
- * is unknown. A source that couldn't be reached comes before "no value", so a
- * check that may have missed something isn't cached as complete.
+ * any source agreeing, then a source that couldn't be reached, then any
+ * disagreeing, then the most telling reason it is unknown. Any source agreeing
+ * is enough, so a claim is only wrong once every source has answered: one
+ * that didn't might have agreed. And a check that may have missed something
+ * isn't cached as complete.
  */
 function strongest(verdicts) {
   return (
     verdicts.find((v) => v.status === "agrees") ||
-    verdicts.find((v) => v.status === "disagrees") ||
     verdicts.find((v) => v.reason === "lookup-failed") ||
+    verdicts.find((v) => v.status === "disagrees") ||
     verdicts.find((v) => v.reason !== "no-value") ||
     verdicts[0]
   );
@@ -1458,7 +1521,10 @@ const ARTICLE_REASONS = new Set(["no-value", "varies", "before-record"]);
  *                for Wikipedia `{ text }`, the words that say it
  *
  *   An unknown "varies" or "before-record" carries the source and what it
- *   found too, since that is still worth showing.
+ *   found too, since that is still worth showing. When its article couldn't
+ *   be read, it keeps that and is marked `incomplete: true`: asking again
+ *   might confirm it, so a caller that caches results shouldn't cache it, as
+ *   for a "lookup-failed".
  */
 export async function checkClaims(rawClaims, opts = {}) {
   return checkPreparedClaims(prepareClaims(rawClaims, opts).claims, opts);
@@ -1586,15 +1652,16 @@ export async function checkPreparedClaims(claims, opts = {}) {
   const numbers = picked.map((p) => p.volcano).filter(Boolean);
   let volcanoes = new Map();
   let volcanoesFailed = false;
-  if (numbers.length) {
+  const askSmithsonian = async () => {
+    if (!numbers.length) return;
     try {
       volcanoes = await volcanoRecords(numbers, settings);
     } catch {
       volcanoesFailed = true;
     }
-  }
+  };
 
-  const judged = picked.map((p) => {
+  const judge = (p) => {
     if (p.done) return p.done;
     const { claim, entity, byPid, volcano } = p;
     const verdicts = [
@@ -1615,37 +1682,60 @@ export async function checkPreparedClaims(claims, opts = {}) {
     if (verdict.source === "wikidata") {
       verdict = { ...verdict, sourceUrl: entity.url };
     }
-    // A kind of living thing varies (see the top of this file).
-    const varies = FACT_PROPERTIES[claim.property].varies || isKind(byPid);
+    // What varies from one animal to the next (see the top of this file).
+    const spec = FACT_PROPERTIES[claim.property];
+    const varies = spec.varies || (spec.animal && isKind(byPid));
     if (verdict.status === "disagrees" && varies) {
       verdict = { ...verdict, status: "unknown", reason: "varies" };
     }
     return { ...claim, entity, ...verdict };
-  });
+  };
 
-  // Wikipedia, for what none of that could settle: each article once.
+  // Wikipedia, for what none of that could settle: each article once, split
+  // into sentences once.
   const articleOf = (result, i) =>
     settings.language === "en" &&
-    result.status === "unknown" &&
+    result?.status === "unknown" &&
     ARTICLE_REASONS.has(result.reason)
       ? picked[i].item?.title || ""
       : "";
-  const titles = [...new Set(judged.map(articleOf).filter(Boolean))];
-  const texts = new Map();
+  const paragraphs = new Map();
   const unread = new Set();
-  await eachLimited(titles, 4, async (title) => {
-    try {
-      texts.set(title, await articleText(title, settings));
-    } catch {
-      unread.add(title);
-    }
+  const readArticles = (results) => {
+    const titles = [...new Set(results.map(articleOf).filter(Boolean))].filter(
+      (title) => !paragraphs.has(title) && !unread.has(title),
+    );
+    return eachLimited(titles, 4, async (title) => {
+      try {
+        paragraphs.set(title, paragraphsOf(await articleText(title, settings)));
+      } catch {
+        unread.add(title);
+      }
+    });
+  };
+
+  // A claim with no volcano to ask about is settled by Wikidata alone, so its
+  // article is read while the Smithsonian answers. The volcanoes' own claims
+  // are judged after, and read what they still need.
+  const judged = picked.map((p) => (p.volcano ? null : judge(p)));
+  await Promise.all([askSmithsonian(), readArticles(judged)]);
+  picked.forEach((p, i) => {
+    if (p.volcano) judged[i] = judge(p);
   });
+  await readArticles(judged);
 
   return judged.map((result, i) => {
     const title = articleOf(result, i);
     if (!title) return result;
-    if (unread.has(title)) return { ...result, reason: "lookup-failed" };
-    const words = confirmFromText(result, texts.get(title));
+    if (unread.has(title)) {
+      // Only a claim nothing had a value for is left with nothing to show.
+      // One that varies, or is from before a volcano's record, keeps what
+      // its source said, since the article could only have confirmed it.
+      return result.reason === "no-value"
+        ? { ...result, reason: "lookup-failed" }
+        : { ...result, incomplete: true };
+    }
+    const words = confirmFromParagraphs(result, paragraphs.get(title));
     if (!words) return result;
     // What another source said gives way to the article's words.
     const {

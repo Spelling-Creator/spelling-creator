@@ -162,10 +162,21 @@ export function eruptionOverlaps(eruption, span, years = 0) {
   return span[0] <= Math.max(to, from) + pad && span[1] >= from - pad;
 }
 
-/** The most recent confirmed eruption, or null for a volcano with none. */
+/**
+ * The most recent confirmed eruption: the one that went on latest, which is
+ * not always the one that started latest. One from 1983 to 2018 is more
+ * recent than one from 2008 to 2009. Null for a volcano with none.
+ */
 export function latestEruption(record) {
-  const confirmed = (record?.eruptions || []).filter((e) => e.confirmed);
-  return confirmed[confirmed.length - 1] || null;
+  const lastDay = (e) =>
+    Math.max(dateSpan(e.start)[1], dateSpan(e.end || e.start)[1]);
+  let latest = null;
+  for (const e of record?.eruptions || []) {
+    if (!e.confirmed) continue;
+    // Eruptions are oldest first, so a tie goes to the one that started later.
+    if (!latest || lastDay(e) >= lastDay(latest)) latest = e;
+  }
+  return latest;
 }
 
 /** The eruption nearest a span, to show beside a date that matches none. */

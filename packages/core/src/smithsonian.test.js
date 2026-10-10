@@ -126,4 +126,16 @@ describe("eruption dates", () => {
     expect(recordedSince(record)).toBe(79);
     expect(recordedSince({ eruptions: [] })).toBeNull();
   });
+
+  it("takes the eruption that went on latest, not the one that started latest", () => {
+    const long = eruption(
+      { year: 1983, month: 1, day: 3 },
+      { year: 2018, month: 4, day: 30 },
+    );
+    const short = eruption(
+      { year: 2008, month: 3, day: 19 },
+      { year: 2009, month: 1, day: 1 },
+    );
+    expect(latestEruption({ eruptions: [long, short] })).toBe(long);
+  });
 });

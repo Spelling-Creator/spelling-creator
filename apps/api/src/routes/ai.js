@@ -317,7 +317,7 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 		}
 		// Only cache a check that reached every source it asked, so a blip isn't
 		// remembered for a week.
-		if (!facts.some((f) => f.reason === 'lookup-failed')) {
+		if (!facts.some((f) => f.reason === 'lookup-failed' || f.incomplete)) {
 			await kv.put(fKey, JSON.stringify(facts), { expirationTtl: FACT_CHECK_TTL });
 		}
 		return new Response(JSON.stringify({ facts: factsForRequest(facts, passages) }), { status: 200, headers: okHeaders() });

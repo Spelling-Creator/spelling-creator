@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clausesOf,
   datesIn,
   mentions,
   paragraphsOf,
   quantitiesIn,
   stemTest,
+  withoutFigures,
 } from "./factText.js";
 
 describe("quantities in a sentence", () => {
@@ -39,6 +41,16 @@ describe("quantities in a sentence", () => {
     expect(quantitiesIn("Seen by 5 monks.")).toEqual([{ value: 5, unit: "" }]);
     expect(quantitiesIn("All 3 kinds.")).toEqual([{ value: 3, unit: "" }]);
   });
+
+  it("doesn't count a year", () => {
+    expect(
+      quantitiesIn("In the 2011 census the village had a population of 812."),
+    ).toEqual([{ value: 812, unit: "" }]);
+    expect(quantitiesIn("In 1990, researchers first filmed cubs.")).toEqual([]);
+    expect(quantitiesIn("1200 workers built it.")).toEqual([
+      { value: 1200, unit: "" },
+    ]);
+  });
 });
 
 describe("dates in a sentence", () => {
@@ -70,6 +82,32 @@ describe("dates in a sentence", () => {
       { year: 1980, month: 5, day: 18 },
     ]);
     expect(datesIn("It is 1,980.5 m and 21980 people.")).toEqual([]);
+  });
+
+  it("reads a bare year only after a word for one, and not before a unit", () => {
+    expect(datesIn("The 1980 eruption, (1920–2001), c. 1480.")).toEqual([
+      { year: 1980, month: 0, day: 0 },
+      { year: 1920, month: 0, day: 0 },
+      { year: 2001, month: 0, day: 0 },
+      { year: 1480, month: 0, day: 0 },
+    ]);
+    expect(datesIn("The eruption sent ash 1500 m into the air.")).toEqual([]);
+    expect(datesIn("In all, 1200 workers built it.")).toEqual([]);
+  });
+});
+
+describe("a sentence's clauses", () => {
+  it("splits at a semicolon and a joining word, not inside a range", () => {
+    expect(
+      clausesOf("It is 100 m high and its crater is 200 m wide; it is old."),
+    ).toEqual(["It is 100 m high", "its crater is 200 m wide", "it is old."]);
+    expect(clausesOf("It lasts between 64 and 67 days.")).toEqual([
+      "It lasts between 64 and 67 days.",
+    ]);
+  });
+
+  it("takes figures out, units and all", () => {
+    expect(withoutFigures("Cats live 15 years.")).toBe("Cats live  .");
   });
 });
 

@@ -360,7 +360,7 @@ The assistant passes claims rather than prose, one per fact:
       "property": "height",
       "value": 8849,
       "unit": "m",
-      "quote": "8,849 METRES"
+      "quote": "8,849 METERS"
     }
   ]
 }

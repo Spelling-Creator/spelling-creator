@@ -1,22 +1,23 @@
 // Reading figures and dates out of an encyclopedia's sentences, for the fact
 // check.
 //
-// When no structured source has a value for a fact, ./factCheck.js reads the
-// subject's Wikipedia article (./wikipedia.js articleText) and looks for a
-// sentence that says the same thing. This file is the reading: splitting the
-// text into paragraphs and sentences, and finding in each the quantities ("4-5 kg",
-// "8,848.86 m", "about 13 years"), the dates ("24 October 79", "2560 BC") and
-// the names it mentions. Deciding whether one of them agrees with a claim is
-// left to ./factCheck.js, with the same rules as for a Wikidata value.
+// When the structured sources can't settle a fact (none has a value, or one
+// has a value that can only confirm it), ./factCheck.js reads the subject's
+// Wikipedia article (./wikipedia.js articleText) and looks for a sentence that
+// says the same thing. This file is the reading: splitting the text into
+// paragraphs, sentences and clauses, and finding in each the quantities ("4-5
+// kg", "8,848.86 m", "about 13 years"), the dates ("24 October 79", "2560 BC")
+// and the names it mentions. Deciding whether one of them agrees with a claim
+// is left to ./factCheck.js, with the same rules as for a Wikidata value.
 //
 // English only: the unit words and month names are English, as are the words
-// ./factCheck.js looks for (FACT_PROPERTIES' `words`).
+// ./factCheck.js looks for (its TEXT_WORDS).
 //
 // Units come back as the keys of factCheck's FACT_UNITS ("km2", "celsius"),
 // and a plain number with no unit as "".
 
 // Each unit's spellings in running text. Case matters, so that "K" (kelvin)
-// and "L" (litres) aren't read into every "k" and "l". Short spellings that
+// and "L" (liters) aren't read into every "k" and "l". Short spellings that
 // are also common words ("in", "t", "h", "s") are left out; Wikipedia gives a
 // metric figure beside them anyway.
 const UNIT_WORDS = {
@@ -113,15 +114,25 @@ const toNumber = (text) =>
 /**
  * The quantities a sentence states, each in the unit it was written in. A
  * range comes back as its middle with `lower` and `upper`.
+ *
+ * A plain number that is part of a date ("in 2011", "18 May 1980") isn't a
+ * count, so "In the 2011 census it had 812 people" gives only 812.
  * @param {string} sentence
  * @returns {{ value: number, lower?: number, upper?: number, unit: string }[]}
  */
 export function quantitiesIn(sentence) {
+  const text = String(sentence || "");
   const out = [];
-  for (const match of String(sentence || "").matchAll(QUANTITY)) {
+  let dates;
+  for (const match of text.matchAll(QUANTITY)) {
     const [, first, second, scaleWord, unitWord] = match;
     const scale = SCALES[scaleWord] || 1;
     const unit = unitWord ? UNIT_BY_WORD.get(unitWord) : "";
+    if (!unit) {
+      dates ??= dateMatches(text);
+      if (dates.some(({ from, to }) => match.index >= from && match.index < to))
+        continue;
+    }
     const a = toNumber(first) * scale;
     if (!Number.isFinite(a)) continue;
     if (second != null) {
@@ -173,13 +184,22 @@ const MONTH_YEAR = new RegExp(
   `\\b${MONTH_PATTERN}${SP}+(?:AD${SP}+)?${YEAR}${ERA}(?!\\d)`,
   "g",
 );
-// A year with its era ("2560 BC", "AD 79"), or a bare one from 1000 to 2099
-// that isn't part of a bigger number.
+// A year with its era ("2560 BC", "AD 79").
 const ERA_YEAR = new RegExp(
   `(?<![\\d.,])(?:${YEAR}${SP}*(BCE|BC|CE|AD)\\b|AD${SP}+${YEAR}\\b)`,
   "g",
 );
-const BARE_YEAR = /(?<![\d.,−-])\b(1\d{3}|20\d{2})\b(?![.,]?\d)/g;
+// Or a bare one from 1000 to 2099 that isn't part of a bigger number and has
+// no unit after it: "1500 m" is a height.
+const BARE_YEAR = new RegExp(
+  `(?<![\\d.,\\u2212-])\\b(1\\d{3}|20\\d{2})\\b(?![.,]?\\d)(?!${SP}*(?:${UNIT_PATTERN})(?![\\p{L}\\p{N}]))`,
+  "gu",
+);
+// A bare number is only a year after a word that introduces one ("in 1887",
+// "the 1980 eruption", "from 1887 to 1889", "(1920-2001)"). Without one, "1200
+// workers" would be a year.
+const BEFORE_YEAR =
+  /(?:\b(?:in|on|since|from|until|till|by|of|after|before|around|circa|c\.|ca\.|between|and|to|through|during|the|early|late|mid|year|born|died|spring|summer|autumn|fall|winter)|[(–—])\s*$/i;
 // "4.5 billion years ago", "10,000 years ago".
 const YEARS_AGO = new RegExp(
   `(?<![\\p{L}\\p{N}.,])(${NUM})${SCALE}${SP}+years${SP}+ago`,
@@ -196,16 +216,19 @@ const signed = (year, era) =>
  * @returns {{ year: number, month: number, day: number }[]}
  */
 export function datesIn(sentence) {
-  const text = String(sentence || "");
+  return dateMatches(String(sentence || "")).map(({ date }) => date);
+}
+
+// The dates in a text, each with where it is.
+function dateMatches(text) {
   const out = [];
-  const taken = [];
   const free = (match) =>
-    !taken.some(
-      ([a, b]) => match.index < b && match.index + match[0].length > a,
+    !out.some(
+      ({ from, to }) =>
+        match.index < to && match.index + match[0].length > from,
     );
   const take = (match, date) => {
-    taken.push([match.index, match.index + match[0].length]);
-    out.push(date);
+    out.push({ date, from: match.index, to: match.index + match[0].length });
   };
   for (const m of text.matchAll(DAY_MONTH_YEAR)) {
     take(m, { year: signed(m[3], m[4]), month: monthNumber(m[2]), day: +m[1] });
@@ -229,7 +252,7 @@ export function datesIn(sentence) {
     take(m, { year, month: 0, day: 0 });
   }
   for (const m of text.matchAll(BARE_YEAR)) {
-    if (!free(m)) continue;
+    if (!free(m) || !BEFORE_YEAR.test(text.slice(0, m.index))) continue;
     take(m, { year: Number(m[1]), month: 0, day: 0 });
   }
   return out;
@@ -266,6 +289,35 @@ export function paragraphsOf(text) {
     if (sentences.length) out.push({ lead, sentences });
   }
   return out;
+}
+
+// Where one clause of a sentence ends and the next begins: a semicolon, or
+// "and", "but", "while" or "whereas" joining two statements. Not the "and" of
+// a range ("between 64 and 67 days"), which has a number on each side.
+const CLAUSE_BREAK =
+  /\s*;\s*|(?<![\d−])(?:,\s*|\s+)(?:and|but|while|whilst|whereas|although)\s+(?![-−]?\d)/u;
+
+/**
+ * A sentence's clauses, so that a figure is read with the words of its own
+ * clause: in "it is 100 m high and its crater is 200 m wide", 200 m is a
+ * width.
+ * @param {string} sentence
+ * @returns {string[]}
+ */
+export function clausesOf(sentence) {
+  return String(sentence || "")
+    .split(CLAUSE_BREAK)
+    .filter(Boolean);
+}
+
+/**
+ * A text with its figures taken out, so that the unit in "15 years" isn't
+ * read as the word "year".
+ * @param {string} text
+ * @returns {string}
+ */
+export function withoutFigures(text) {
+  return String(text || "").replace(QUANTITY, " ");
 }
 
 const lower = (s) => String(s || "").toLowerCase();

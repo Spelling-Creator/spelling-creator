@@ -967,6 +967,28 @@ describe("judging a claim against the Smithsonian", () => {
     expect(judgeVolcano(claim("last_eruption", 2008), ST_HELENS).status).toBe(
       "agrees",
     );
+    // A long eruption outlasting a shorter, later one is still the latest.
+    const kilauea = {
+      number: "332010",
+      eruptions: [
+        {
+          confirmed: true,
+          start: { year: 1983, month: 1, day: 3 },
+          end: { year: 2018, month: 4, day: 30 },
+          uncertainty: 0,
+        },
+        {
+          confirmed: true,
+          start: { year: 2008, month: 3, day: 19 },
+          end: { year: 2009, month: 1, day: 1 },
+          uncertainty: 0,
+        },
+      ],
+    };
+    expect(judgeVolcano(claim("last_eruption", 2018), kilauea)).toMatchObject({
+      status: "agrees",
+      found: { year: 1983, until: { year: 2018 } },
+    });
     // Out of date: it has erupted since.
     expect(judgeVolcano(claim("last_eruption", 1980), ST_HELENS)).toMatchObject(
       {
@@ -1089,6 +1111,42 @@ describe("confirming a claim from an article's words", () => {
       confirmFromText(
         claim({ property: "gestation", value: 7, unit: "year" }),
         CAT,
+      ),
+    ).toBeNull();
+  });
+
+  it("reads a figure with its own clause", () => {
+    const text =
+      "The volcano is 100 metres high and its crater is 200 metres wide.";
+    const height = (value) =>
+      normalizeClaim({ subject: "X", property: "height", value, unit: "m" });
+    expect(confirmFromText(height(100), text)).toBe(text);
+    expect(confirmFromText(height(200), text)).toBeNull();
+    // A clause with no words of its own goes with its sentence.
+    expect(
+      confirmFromText(
+        claim({ property: "mass", value: 158, unit: "kg" }),
+        "Females weigh 56–96 kg and males 76–158 kg.",
+      ),
+    ).not.toBeNull();
+  });
+
+  it("doesn't take a year for a count, or a measurement for a year", () => {
+    expect(
+      confirmFromText(
+        normalizeClaim({
+          subject: "X",
+          property: "population",
+          value: 2000,
+          qualifier: "about",
+        }),
+        "In the 2011 census the village had a population of 812.",
+      ),
+    ).toBeNull();
+    expect(
+      confirmFromText(
+        normalizeClaim({ subject: "X", property: "erupted", value: 1500 }),
+        "The eruption sent ash 1500 m into the air.",
       ),
     ).toBeNull();
   });
@@ -1280,6 +1338,71 @@ describe("checking claims against every source", () => {
       reason: "varies",
       source: "wikidata",
       found: { value: 100, unit: "kg" },
+    });
+  });
+
+  it("still calls a kind of animal's fixed facts wrong", async () => {
+    const fetch = fakeWikidata({
+      articles: { Coelacanth: [{ id: "Q190088", title: "Coelacanth" }] },
+      bindings: [
+        textStatement("Q190088", "P225", "Coelacanthiformes"),
+        {
+          item: { value: "http://www.wikidata.org/entity/Q190088" },
+          pid: { value: "P575" },
+          st: { value: "Q190088-P575" },
+          rank: { value: "http://wikiba.se/ontology#NormalRank" },
+          time: { value: "1938-12-23T00:00:00Z" },
+          precision: { value: "11" },
+          calendar: { value: "http://www.wikidata.org/entity/Q1985727" },
+        },
+      ],
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Coelacanth", property: "discovered", value: 1950 }],
+      { fetch },
+    );
+    expect(result).toMatchObject({ status: "disagrees", source: "wikidata" });
+  });
+
+  it("calls nothing wrong while a source that might agree is down", async () => {
+    const fetch = fakeWikidata({
+      articles: { "Mount Fuji": [{ id: "Q39231", title: "Mount Fuji" }] },
+      bindings: [
+        textStatement("Q39231", "P1886", "283030"),
+        statement("Q39231", "P2044", 3776),
+      ],
+      fail: { smithsonian: true },
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Mount Fuji", property: "height", value: 3700, unit: "m" }],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "lookup-failed",
+    });
+  });
+
+  it("keeps what a source said when the article that might confirm it can't be read", async () => {
+    const fetch = fakeWikidata({
+      articles: { Cat: [{ id: "Q146", title: "Cat" }] },
+      bindings: [
+        itemStatement("Q146", "P31", "Q55983715", "organisms"),
+        statement("Q146", "P2067", 4.5, {
+          unit: { value: "http://www.wikidata.org/entity/Q11570" },
+        }),
+      ],
+      fail: { text: true },
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Cat", property: "mass", value: 10, unit: "kg" }],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "varies",
+      found: { value: 4.5, unit: "kg" },
+      incomplete: true,
     });
   });
 

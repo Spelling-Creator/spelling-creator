@@ -15,6 +15,7 @@ import {
 	FACT_PROPERTY_KEYS,
 	FACT_QUALIFIERS,
 	FACT_UNIT_KEYS,
+	GVP_WFS,
 	checkClaims,
 	squashText,
 } from '@spelling-creator/core/factCheck';
@@ -103,7 +104,7 @@ Leave out everything else: opinions, comparisons ("bigger than a bus"), any othe
 
 For each fact give:
 - "passage": the number of the passage it is in.
-- "quote": the shortest words from the passage that state the number, date or name, copied exactly, keeping its capital letters ("8,849 METRES", "CANBERRA").
+- "quote": the shortest words from the passage that state the number, date or name, copied exactly, keeping its capital letters ("8,849 METERS", "CANBERRA").
 - "subject": the English name of the thing, the way an encyclopedia titles it, with no "the" and nothing in brackets ("Mount Everest", "Nile", "Marie Curie"). For a kind of animal, its name in the singular ("Cat", "African elephant").
 - "kind": one or two words for what sort of thing it is ("mountain", "river", "scientist", "country", "volcano", "animal").
 - "property": one of the keys above.
@@ -140,12 +141,18 @@ export function placeClaims(claims, passages) {
 	return out;
 }
 
-// The sources' answers change slowly; hold them at the edge for a day so a
+// Wikimedia's answers change slowly; hold them at the edge for a day so a
 // lesson checked twice, or two lessons about Everest, don't ask twice. That
-// matters most for Wikipedia, whose 200 requests a minute are the whole
-// Worker's, not each author's. The option is Cloudflare's and other runtimes
-// ignore it.
-const cachedFetch = (url, init) => fetch(url, { ...init, cf: { cacheTtl: 86400, cacheEverything: true } });
+// matters because its 200 requests a minute are the whole Worker's, not each
+// author's. The option is Cloudflare's and other runtimes ignore it.
+//
+// Not the Smithsonian's: its GeoServer can report an error as a 200 with an
+// XML body, and holding that for a day would leave every volcano unchecked
+// long after it recovered. It has no shared limit to protect, and a check
+// asks it at most twice.
+const UNCACHED_HOSTS = new Set([new URL(GVP_WFS).hostname]);
+export const cachedFetch = (url, init) =>
+	UNCACHED_HOSTS.has(new URL(url).hostname) ? fetch(url, init) : fetch(url, { ...init, cf: { cacheTtl: 86400, cacheEverything: true } });
 
 /**
  * Check a lesson's passages. Returns the facts with `passage` as an index into

@@ -11,8 +11,9 @@
 // (pageprops.wikibase_item). So names become items here, and everything after
 // that is read from Wikidata.
 //
-// When Wikidata has no value for a fact, the article itself may state it, so
-// articleText reads an article as plain prose for ./factText.js to search.
+// When the structured sources can't settle a fact (no value, or one that can
+// only confirm it), the article itself may state it, so articleText reads an
+// article as plain prose for ./factText.js to search.
 //
 // Same terms as the Wikidata requests: anonymous and cross-origin, with a
 // descriptive User-Agent from a server (see ./wikidata.js).

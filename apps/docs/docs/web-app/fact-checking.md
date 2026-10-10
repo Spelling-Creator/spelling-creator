@@ -13,8 +13,8 @@ numbers and dates with three sources:
 - **[Wikidata](https://www.wikidata.org)**, for every fact.
 - **The Smithsonian's [Global Volcanism Program](https://volcano.si.edu)** (GVP), for a
   volcano's height and eruptions.
-- **[Wikipedia](https://en.wikipedia.org)**, read only when neither of those has a value,
-  and only ever to confirm a fact.
+- **[Wikipedia](https://en.wikipedia.org)**, read when neither of those can settle a
+  fact, and only ever to confirm one.
 
 It is in two places, which share one checker:
 
@@ -29,7 +29,7 @@ Pressing **Check facts** (after the usual Turnstile challenge) shows skeleton ro
 the check runs, then:
 
 - **Facts a source disagrees with**, grouped by section. Each reads like
-  _"8,000 METRES": Wikidata gives the height of Mount Everest as 8,848.86 meters._ and,
+  _"8,000 METERS": Wikidata gives the height of Mount Everest as 8,848.86 meters._ and,
   like any finding, leads to its passage. Under it is the Wikidata item it was checked
   against, with its description and a link, because a name can match the wrong thing and
   the author is the one who can tell. When the verdict came from the Smithsonian or
@@ -88,7 +88,7 @@ A claim looks like this:
   "value": 8849,
   "unit": "m",
   "qualifier": "exact",
-  "quote": "8,849 METRES"
+  "quote": "8,849 METERS"
 }
 ```
 
@@ -167,8 +167,10 @@ deliberately generous and "disagrees" means something.
 
 - **Any source agreeing is enough.** Wikidata is asked first, then the Smithsonian for a
   volcano, and a claim agrees if either has a value close enough. It disagrees only when a
-  source has the property and none agrees. Wikipedia is read only when neither had a value
-  (below).
+  source has the property, none agrees, and every source asked answered: if the
+  Smithsonian can't be reached, a volcano's height that Wikidata disagrees with is unknown
+  (`lookup-failed`), since the Smithsonian might have agreed. Wikipedia is read when
+  neither had a value, or when the one they had could only confirm the claim (below).
 - **Every current value counts.** Deprecated statements never do. Everest has 8,848,
   8,848.86 and 8,850; the Eiffel Tower started in 1887 and opened in 1889. A passage using
   any of them is not wrong.
@@ -186,11 +188,11 @@ deliberately generous and "disagrees" means something.
   year it is from ("2,103,778 as of 2023"). A passage agreeing with the 1910 census is out of
   date, not right.
 - **A figure gets the rounding it was written with**: half a unit in its last place. "9,000
-  metres" allows 500 either way; "8,849" allows 0.5. On top of that, 2% of the source's
+  meters" allows 500 either way; "8,849" allows 0.5. On top of that, 2% of the source's
   value, or 10% when the passage hedges ("about", "nearly").
 - **"More than" and "less than" are bounds**, not rounded figures, so "more than 10,000
-  metres" disagrees with Everest even though 10,000 is a round number. "Up to" is a
-  "less than": "grows up to 2 metres long" is true of anything 2 metres or under, so it is
+  meters" disagrees with Everest even though 10,000 is a round number. "Up to" is a
+  "less than": "grows up to 2 meters long" is true of anything 2 meters or under, so it is
   checked as a ceiling rather than as a hedged figure near 2.
 - **Wikidata's own error bounds** (a population "between 7 and 8 million") are honored.
 - **Dates are compared as precisely as the source knows them.** A date known to the day is
@@ -206,16 +208,20 @@ quotes the source in: a passage in feet is told "29,031.69 feet", not "8,848.86 
 
 "Cats weigh about 4 kg" is true of a typical cat and false of plenty of real ones, and
 Wikidata's figures for species are patchy: the jaguar's only mass is 800 grams, its birth
-weight, so "jaguars weigh up to 100 kg" would read as wrong. So a fact about a kind of
-living thing can be confirmed but is never called wrong. When a source has a value and it doesn't match, the fact is unknown
-with reason `varies`, and the finding still says what the source gives:
+weight, so "jaguars weigh up to 100 kg" would read as wrong. So a fact about how a kind of
+living thing is built or lives can be confirmed but is never called wrong. When a source
+has a value and it doesn't match, the fact is unknown with reason `varies`, and the
+finding still says what the source gives:
 _"20 YEARS": Wikidata gives the lifespan of cat as 15 years. Animals vary, so this isn't
 counted as wrong._
 
-That applies to `lifespan`, `gestation` and `litter_size` always, and to any property
-when the item is a kind of living thing: it has a scientific name (P225), or is a taxon,
-a breed, or one of Wikidata's "organisms known by a particular common name" (P31). The
-house cat is the last kind: it has no scientific name of its own on Wikidata.
+That applies to `lifespan`, `gestation` and `litter_size` always, and to `height`,
+`length`, `width`, `mass` and `speed` when the item is a kind of living thing: it has a
+scientific name (P225), or is a taxon, a breed, or one of Wikidata's "organisms known by
+a particular common name" (P31). The house cat is the last kind: it has no scientific
+name of its own on Wikidata. Facts that don't change from one animal to the next, like
+when a species was discovered or who it is named after, are checked as for anything
+else, and can be wrong.
 
 `lifespan` pools life expectancy and the longest recorded life, so "cats live about 15
 years" and "jaguars can live up to 28 years" both have something to match.
@@ -235,8 +241,10 @@ eruptions, however many volcanoes the lesson mentions (`packages/core/src/smiths
 
 - **`height` and `elevation`** compare with the summit's height, alongside Wikidata's.
 - **`last_eruption`** compares with the latest confirmed eruption, anywhere from its start
-  to its end: "Mount St. Helens last erupted in 2004" and "in 2008" are both right. A date
-  before it is out of date, and disagrees.
+  to its end: "Mount St. Helens last erupted in 2004" and "in 2008" are both right. The
+  latest is the one that went on latest, not the one that started latest: a long eruption
+  can outlast a short one that began inside it. A date before it is out of date, and
+  disagrees.
 - **`erupted`** agrees with any eruption, confirmed or possible, the date falls in,
   allowing the eruption's own uncertainty (a radiocarbon date can be out by 150 years
   either way).
@@ -255,21 +263,34 @@ read; an older one has no record, and is left to Wikidata and Wikipedia.
 
 ### Wikipedia's words
 
-When no structured source has a value for a fact (or, for a kind of animal, its value
-didn't match), the checker reads the subject's English Wikipedia article as plain text
-(`articleText` in `packages/core/src/wikipedia.js`) and looks for a sentence that says
-the same thing (`packages/core/src/factText.js`):
+When the structured sources can't settle a fact, the checker reads the subject's English
+Wikipedia article as plain text (`articleText` in `packages/core/src/wikipedia.js`) and
+looks for a sentence that says the same thing (`packages/core/src/factText.js`). That is
+when no source has a value (`no-value`), and also when the value a source had could only
+ever confirm the fact: one that `varies`, or an eruption from `before-record`. A match
+there turns the fact into agrees; no match leaves it as it was.
 
 - **The sentence must be about the property.** Each property has a few words a sentence
   about it uses (`weigh` and `mass` for mass, `erupt` for an eruption), matched as the
   start of a word, and the sentence or the one before it must have one. Wikipedia often
   says "The average lifespan of pet cats has risen" and gives the figure in the next
   sentence.
+- **So must the figure's clause.** A sentence is split into clauses at semicolons and at
+  "and", "but", "while" and "whereas" (not the "and" of "between 64 and 67 days"). A
+  figure whose clause has another property's words and none of the claim's is about that
+  other property: in "it is 100 meters high and its crater is 200 meters wide", 200 meters
+  can't confirm a height. A clause with no such words ("and males 76 to 158 kg") goes with
+  its sentence.
 - **Then its numbers, dates or names are compared with the same rules as a Wikidata
   value.** "Adult domestic cats typically weigh 4 to 5 kg (8.8 to 11.0 lb)", as the cat
   article says it with dashes, is read as a range in kilograms and one in pounds, so
-  "about 10 pounds" matches. A claim's month or day has
-  to be in the sentence too, not assumed from its year.
+  "about 10 pounds" matches. A claim's month or day has to be in the sentence too, not
+  assumed from its year.
+- **A year is not a count, and a measurement is not a year.** A plain four-digit number is
+  read as a year only after a word that introduces one ("in 1887", "the 1980 eruption",
+  "from 1887 to 1889") and with no unit after it, so "1500 m" and "1200 workers" can't
+  confirm a date. A number read as a year (or as part of any date) isn't a count, so "In
+  the 2011 census the village had 812 people" can't confirm a population of 2,000.
 - **Where something is** (`country`, `continent`, `region`) has no such words, since an
   article can say it a dozen ways. It is read from the article's opening paragraphs only,
   which are about the subject; a country named further down could be a neighbor.
@@ -278,10 +299,15 @@ the same thing (`packages/core/src/factText.js`):
   A fact Wikipedia doesn't confirm keeps whatever verdict it had (unknown).
 - **English only**, since the words and month names are English. A check in another
   language skips this step.
-- **Each article is read once**, however many claims need it.
+- **Each article is read once**, however many claims need it, and split into sentences
+  once. Articles for claims that don't involve a volcano are read while the Smithsonian is
+  being asked.
+- **An article that can't be read** leaves a `no-value` fact as `lookup-failed`. A
+  `varies` or `before-record` fact keeps its reason and what its source said, and is
+  marked `incomplete`; either way the check isn't cached.
 
-This is looser than a structured value, so it is never used when Wikidata or the
-Smithsonian has one, and the finding quotes the sentence (_"4 KG" matches Wikipedia, which
+This is looser than a structured value, so it never overrides one that settles the fact
+(an agree or a disagree), and the finding quotes the sentence (_"4 KG" matches Wikipedia, which
 says: Adult domestic cats typically weigh 4-5 kg (8.8-11.0 lb)._) so the author can judge
 it. It can still be fooled by a sentence about something else that happens to have the
 property's word and the same figure.
@@ -364,9 +390,11 @@ token.
   before the rate limiter and costs nothing. Block ids are not part of the key: they are
   attached to the cached facts per request, so two lessons with the same text both get
   their own ids back.
-- A check where any source couldn't be reached is **not cached**, so a blip isn't
-  remembered for a week.
-- **The sources' responses** are held at the Cloudflare edge for a day.
+- A check where any source couldn't be reached (a fact with `lookup-failed`, or one marked
+  `incomplete`) is **not cached**, so a blip isn't remembered for a week.
+- **Wikimedia's responses** are held at the Cloudflare edge for a day. The Smithsonian's
+  aren't: its GeoServer can report an error as an HTTP 200 with an XML body, and caching
+  that would leave every volcano unchecked for a day after it recovered.
 - **Wikimedia's rate limit.** Wikimedia allows a client with a descriptive User-Agent 200
   requests a minute across its APIs, and one without 10. The Worker's limit is shared by
   every author using it, which is the main reason for the edge cache. A request turned
@@ -410,8 +438,8 @@ Wikipedia.
 - **Facts about a whole kind of thing** are limited to the animal properties above.
   "Octopuses have three hearts" and "cats sleep 16 hours a day" aren't values any source
   holds, and are left out by the prompt.
-- **It doesn't flag a fact about a kind of animal**, or one only Wikipedia could speak to.
-  Both can only be confirmed.
+- **It doesn't flag how big, heavy or fast a kind of animal is, how long it lives, or
+  its young**, or a fact only Wikipedia could speak to. Those can only be confirmed.
 - **Other sources were considered and left out.** REST Countries now needs an account
   and key, and its populations don't say what year they are from, so under "any source
   agreeing is enough" an out-of-date figure could match it. NASA's JPL API has no endpoint

@@ -1154,7 +1154,7 @@ export function registerTools(server, ctx) {
                 .optional()
                 .describe(
                   "'about' for a hedged figure ('around', 'nearly'), 'more_than' and 'less_than' for bounds ('over " +
-                    "8,000 metres', 'up to 2 metres long'). Default 'exact'. A figure is always allowed the rounding " +
+                    "8,000 meters', 'up to 2 meters long'). Default 'exact'. A figure is always allowed the rounding " +
                     "it was written with: 9,000 agrees with anything from 8,500 to 9,500.",
                 ),
               quote: z
@@ -1221,7 +1221,8 @@ export function registerTools(server, ctx) {
           "unit (a unit this can't convert), varies (a fact about a kind of animal that didn't match: animals " +
           "vary, so it isn't called wrong; `found` has the source's figure), before-record (a date before the " +
           "Smithsonian's record of that volcano is complete), lookup-failed (a source didn't answer; try " +
-          "again later).",
+          "again later). A varies or before-record marked `incomplete` couldn't have its Wikipedia " +
+          "article read, and asking again might confirm it.",
       });
     }),
   );

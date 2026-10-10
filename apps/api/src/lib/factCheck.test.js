@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { FACT_PROPERTY_KEYS } from '@spelling-creator/core/factCheck';
-import { FACT_CLAIMS_SCHEMA, MAX_PASSAGES, cleanPassages, factCheckPrompt, placeClaims } from './factCheck.js';
+import { FACT_CLAIMS_SCHEMA, MAX_PASSAGES, cachedFetch, cleanPassages, factCheckPrompt, placeClaims } from './factCheck.js';
 import { toGeminiSchema } from './ai/jsonSchema.js';
 
 const passages = [
@@ -60,5 +60,18 @@ describe('the extraction request', () => {
 		// Every field is required, as OpenAI's strict mode demands.
 		expect(item.required.sort()).toEqual(Object.keys(item.properties).sort());
 		expect(toGeminiSchema(FACT_CLAIMS_SCHEMA).properties.claims.items.properties.passage.type).toBe('INTEGER');
+	});
+});
+
+describe('cachedFetch', () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	it("holds Wikimedia's answers at the edge, and not the Smithsonian's", async () => {
+		const fetch = vi.fn(async () => new Response('{}'));
+		vi.stubGlobal('fetch', fetch);
+		await cachedFetch('https://en.wikipedia.org/w/api.php?action=query', { headers: { A: '1' } });
+		await cachedFetch('https://webservices.volcano.si.edu/geoserver/GVP-VOTW/wfs?service=WFS', { headers: { A: '1' } });
+		expect(fetch.mock.calls[0][1]).toEqual({ headers: { A: '1' }, cf: { cacheTtl: 86400, cacheEverything: true } });
+		expect(fetch.mock.calls[1][1]).toEqual({ headers: { A: '1' } });
 	});
 });
