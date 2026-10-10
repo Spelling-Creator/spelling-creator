@@ -1,15 +1,16 @@
 // The Check panel's fact check: the passages' numbers and dates, compared with
-// Wikidata.
+// Wikidata, the Smithsonian's record of volcanoes and Wikipedia.
 //
 // Run on request, behind a Turnstile challenge, because it costs a model call
 // and a round of lookups (see lib/factCheck.js). What it shows:
 //
-//   - Facts Wikidata disagrees with, grouped by section. Each leads to its
+//   - Facts a source disagrees with, grouped by section. Each leads to its
 //     passage like any other finding, and names the Wikidata item it was
 //     checked against, because a search for "Georgia" can land on the wrong one
-//     and the author is the one who can tell.
+//     and the author is the one who can tell, with a link to the source when
+//     that wasn't Wikidata.
 //   - Behind a toggle, the facts that matched and the ones that couldn't be
-//     checked. The second kind isn't a problem, only a gap in Wikidata.
+//     checked. The second kind isn't a problem, only a gap in the sources.
 //
 // A result is a snapshot. A fact whose words have changed in the lesson since
 // is dropped from the list and counted instead, so fixing a number clears its
@@ -99,6 +100,16 @@ function FactList({ facts, sections, onChoose }) {
                       >
                         {t("facts.viewOnWikidata")}
                       </a>
+                      {fact.sourceUrl && fact.source !== "wikidata" && (
+                        <a
+                          href={fact.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-3 text-foreground underline underline-offset-2"
+                        >
+                          {t(`facts.openSource.${fact.source}`)}
+                        </a>
+                      )}
                     </p>
                   )}
                 </li>

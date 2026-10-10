@@ -1065,26 +1065,31 @@ export function registerTools(server, ctx) {
 
   // The editor's Check panel has the same check, but there the Worker's model
   // pulls the claims out of the passages. Here the client is a model already,
-  // so it states the claims itself and nothing but Wikidata is called.
+  // so it states the claims itself and only the sources are called.
   server.registerTool(
     "check_facts",
     {
-      title: "Check facts against Wikidata",
+      title: "Check facts",
       description:
         "Compare numbers, dates and named facts (the capital of a country, who discovered something) you have " +
-        "written (or are about to write) into a lesson with Wikidata. The standard asks for anything " +
-        "time-sensitive to be verified before it goes in, and every fact a math question uses is one a speller " +
-        "will be marked on, so check those.\n\n" +
+        "written (or are about to write) into a lesson with Wikidata, the Smithsonian's Global Volcanism " +
+        "Program (for volcanoes) and Wikipedia. The standard asks for anything time-sensitive to be verified " +
+        "before it goes in, and every fact a math question uses is one a speller will be marked on, so check " +
+        "those.\n\n" +
         "You pass claims, not prose: one per fact, each naming the thing (`subject`), what is said about it " +
-        "(`property`), and the number, the year, or the name stated (`stated`). Only facts about a specific, " +
-        "named, real thing can be checked; leave out opinions, comparisons, and facts about a whole kind of " +
-        "thing ('cats sleep 16 hours a day'). Nothing is saved; the only services called are Wikipedia's " +
-        "article search (to find which thing a name means) and Wikidata (for what is known about it).\n\n" +
+        "(`property`), and the number, the year, or the name stated (`stated`). Facts about a specific, named, " +
+        "real thing can be checked, and so can a number about a kind of animal (its size, weight, speed, " +
+        "lifespan, pregnancy or litter: 'cats weigh about 4 kg', with the subject 'Cat'). Leave out opinions, " +
+        "comparisons, and any other fact about a whole kind of thing ('cats sleep 16 hours a day'). Nothing " +
+        "is saved; the only services called are Wikipedia (to find which thing a name means, and to read its " +
+        "article when no other source has a value), Wikidata (for what is known about it) and, for a volcano, " +
+        "the Smithsonian.\n\n" +
         "Each claim comes back `agrees`, `disagrees` or `unknown`, with the Wikidata item it was checked " +
-        "against. Read that item's description before acting: a name can match the wrong thing. `unknown` means " +
-        "Wikidata couldn't say (no such item, no such value, or no reply), not that the fact is wrong. Wikidata " +
-        "can be out of date or mistaken too, so when a fact disagrees, correct it only if you are confident; " +
-        "otherwise tell the user what Wikidata says and let them decide.",
+        "against and which source said what. Read that item's description before acting: a name can match " +
+        "the wrong thing. `unknown` means no source could say, not that the fact is wrong. A fact about a kind " +
+        "of animal is never `disagrees`, since animals vary. The sources can be out of date or mistaken too, " +
+        "so when a fact disagrees, correct it only if you are confident; otherwise tell the user what the " +
+        "source says and let them decide.",
       inputSchema: {
         claims: z
           .array(
@@ -1093,7 +1098,8 @@ export function registerTools(server, ctx) {
                 .string()
                 .describe(
                   "The thing's English name as an encyclopedia titles it, with no 'the' and nothing in " +
-                    "brackets: 'Mount Everest', 'Nile', 'Marie Curie'.",
+                    "brackets: 'Mount Everest', 'Nile', 'Marie Curie'. For a kind of animal, its name in the " +
+                    "singular: 'Cat', 'African elephant'.",
                 ),
               kind: z
                 .string()
@@ -1130,8 +1136,8 @@ export function registerTools(server, ctx) {
                 .enum(FACT_UNIT_KEYS)
                 .optional()
                 .describe(
-                  "The unit the claim uses. Leave it out for a population or a date. A unit that measures the " +
-                    "wrong thing for the property (a height in kg) gets the claim dropped.",
+                  "The unit the claim uses. Leave it out for a population, a number of young, or a date. A " +
+                    "unit that measures the wrong thing for the property (a height in kg) gets the claim dropped.",
                 ),
               month: z
                 .number()
@@ -1148,7 +1154,7 @@ export function registerTools(server, ctx) {
                 .optional()
                 .describe(
                   "'about' for a hedged figure ('around', 'nearly'), 'more_than' and 'less_than' for bounds ('over " +
-                    "8,000 metres', 'up to 2 metres long'). Default 'exact'. A figure is always allowed the rounding " +
+                    "8,000 meters', 'up to 2 meters long'). Default 'exact'. A figure is always allowed the rounding " +
                     "it was written with: 9,000 agrees with anything from 8,500 to 9,500.",
                 ),
               quote: z
@@ -1182,7 +1188,8 @@ export function registerTools(server, ctx) {
           ...(r.day ? { day: r.day } : {}),
           qualifier: r.qualifier,
         },
-        ...(r.wikidata ? { wikidata: r.wikidata } : {}),
+        ...(r.source ? { source: r.source, sourceUrl: r.sourceUrl } : {}),
+        ...(r.found ? { found: r.found } : {}),
         ...(r.entity ? { item: r.entity } : {}),
         ...(r.reason ? { reason: r.reason } : {}),
       });
@@ -1203,12 +1210,19 @@ export function registerTools(server, ctx) {
             }
           : {}),
         note:
-          "Wikidata's values are in the claim's own unit. `wikidata.asOf` is the year a dated figure (a " +
-          "population) was taken; only the latest is compared. `wikidata.items` lists what Wikidata currently " +
-          "names for a named fact; a former capital or leader (one with an end date) is not among them. " +
-          "`reason` on an unknown: no-item (no match for " +
-          "the name), no-value (the item has no such value), unit (a unit this can't convert), lookup-failed " +
-          "(Wikidata didn't answer; try again later).",
+          "`source` says which source a verdict comes from (wikidata, smithsonian or wikipedia) and " +
+          "`sourceUrl` where to see it. `found` is what that source says, in the claim's own unit. " +
+          "`found.asOf` is the year a dated figure (a population) was taken; only the latest is compared. " +
+          "`found.items` lists what Wikidata currently names for a named fact; a former capital or leader " +
+          "(one with an end date) is not among them. For an eruption, `found` is its start date, with " +
+          "`until` for one that went on. From Wikipedia, `found.text` is the article's own words; Wikipedia " +
+          "can only confirm a fact, never contradict one. " +
+          "`reason` on an unknown: no-item (no match for the name), no-value (no source has such a value), " +
+          "unit (a unit this can't convert), varies (a fact about a kind of animal that didn't match: animals " +
+          "vary, so it isn't called wrong; `found` has the source's figure), before-record (a date before the " +
+          "Smithsonian's record of that volcano is complete), lookup-failed (a source didn't answer; try " +
+          "again later). A varies or before-record marked `incomplete` couldn't have its Wikipedia " +
+          "article read, and asking again might confirm it.",
       });
     }),
   );

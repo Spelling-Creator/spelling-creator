@@ -1,10 +1,10 @@
-// check_facts: claims in, Wikidata's verdict out, with nothing else called.
+// check_facts: claims in, the sources' verdicts out, with nothing else called.
 //
-// Wikidata is stubbed at the global fetch, which is what the shared checker
-// uses when it isn't handed one. The checking itself is tested in core
+// The sources are stubbed at the global fetch, which is what the shared
+// checker uses when it isn't handed one. The checking itself is tested in core
 // (packages/core/src/factCheck.test.js); this covers the tool's contract: that
-// it reaches Wikidata politely, sorts the verdicts, and says why it dropped a
-// claim.
+// it reaches the sources politely, sorts the verdicts, says where each came
+// from, and says why it dropped a claim.
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -84,7 +84,12 @@ test("check_facts sorts claims by verdict and says why it dropped the rest", asy
   assert.equal(body.checked, 2);
   assert.equal(body.disagrees.length, 1);
   assert.equal(body.disagrees[0].quote, "8,000 METRES");
-  assert.equal(body.disagrees[0].wikidata.value, 8848.86);
+  assert.equal(body.disagrees[0].found.value, 8848.86);
+  assert.equal(body.disagrees[0].source, "wikidata");
+  assert.equal(
+    body.disagrees[0].sourceUrl,
+    "https://www.wikidata.org/wiki/Q513",
+  );
   assert.equal(body.disagrees[0].item.id, "Q513");
   assert.equal(body.agrees.length, 1);
   assert.equal(body.agrees[0].stated.unit, "ft");

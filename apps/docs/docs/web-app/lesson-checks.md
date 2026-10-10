@@ -27,7 +27,8 @@ Some findings also have a fix button under them, or **Fix with AI**. See
 [Fixing findings](#fixing-findings).
 
 Below the problems and suggestions, the panel has a **Facts** section that compares
-the passages' numbers and dates with Wikidata. It is a different kind of check: it
+the passages' numbers and dates with Wikidata, the Smithsonian's record of volcanoes and
+Wikipedia. It is a different kind of check: it
 costs a model call and a round of lookups, so it runs only when the author presses
 **Check facts**, and nothing it finds is counted in the bar or the outline. See
 [Fact checking](./fact-checking.md).
