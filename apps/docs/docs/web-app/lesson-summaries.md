@@ -45,6 +45,8 @@ adapters, and deliberately no higher: desktop browsers cap the limits they
 report a few bytes short of 2 GiB however capable the GPU, so a bigger bar
 would shut out the very browsers the fallback exists for), and, where the
 browser can tell (the Network Information API), not a metered connection.
+Both checks live in `packages/core/src/browser/deviceCheck.js`, shared with
+the import model and the natural read-aloud voice.
 
 So the card is **capability-gated**: on mount it probes
 `summarizerAvailability()`, which asks the built-in API first and, when that
@@ -353,7 +355,8 @@ shows the "didn't start" message when LFM can't run.
 The LFM path can be exercised the same way without the 760 MB download: stub
 `navigator.gpu` so the probe says yes (an object whose `requestAdapter()`
 resolves to `{ features: new Set(["shader-f16"]), limits: { maxBufferSize: 2147483644, maxStorageBufferBindingSize: 2147483644 } }`,
-the limits real desktop browsers report), make sure
+the limits real desktop browsers report; the adapter is asked for once a page,
+so stub before the page loads), make sure
 `window.Summarizer` is absent, and serve a stub module in place of
 `fallbackSummarizer.js` with your browser driver's network mocking (it only
 needs `createFallbackSummarizer` returning the session shape above plus

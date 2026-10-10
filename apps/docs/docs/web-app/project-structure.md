@@ -226,6 +226,7 @@ the MCP server cannot reach it by accident:
   fallbackSummarizer    the fallback itself: LFM2.5 via transformers.js on WebGPU, a lazy chunk only a click ever loads
   translator            on-device comment translation: browser Translator API with an in-page fallback
   fallbackTranslator    the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
+  deviceCheck           the checks the in-page models share: the WebGPU adapter (asked for once a page), the large-model limits, a metered connection
   readAloud             the natural read-aloud voice (Kokoro): the device check, and the door to its engine
   readAloudEngine       the engine itself: text clean-up, espeak-ng phonemes (Spellophone), Kokoro via transformers.js on WebGPU, a lazy chunk only speaking ever loads
   readAloudVoices       the Kokoro voices on offer, listable without the engine

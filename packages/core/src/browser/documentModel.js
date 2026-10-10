@@ -13,39 +13,21 @@
 // checkpoint (see the docs page "Document import experiment"). Fails closed:
 // a device that cannot run it is never offered the button.
 
-const MIN_BUFFER_BYTES = 1024 ** 3;
-const MIN_STORAGE_BINDING_BYTES = 1024 ** 3;
-
-function meteredConnection() {
-  const connection = globalThis.navigator?.connection;
-  if (!connection) return false;
-  return Boolean(connection.saveData) || connection.type === "cellular";
-}
-
-let webGpuProbe = null;
+import {
+  holdsLargeModel,
+  meteredConnection,
+  webGpuAdapter,
+} from "./deviceCheck.js";
 
 /**
- * Can this device run the model? Cheap, needs no chunk, memoised on the
- * adapter part (that answer never changes within a page); the connection
- * check stays live because tethering can start mid-visit.
+ * Can this device run the model? Cheap and needs no chunk. The adapter is
+ * asked for once a page (deviceCheck.js); the connection check stays live
+ * because tethering can start mid-visit.
  * @returns {Promise<boolean>}
  */
-export function documentModelPossible() {
-  if (!globalThis.navigator?.gpu) return Promise.resolve(false);
-  if (meteredConnection()) return Promise.resolve(false);
-  if (!webGpuProbe) {
-    webGpuProbe = navigator.gpu
-      .requestAdapter()
-      .then(
-        (adapter) =>
-          Boolean(adapter?.features?.has("shader-f16")) &&
-          adapter.limits.maxBufferSize >= MIN_BUFFER_BYTES &&
-          adapter.limits.maxStorageBufferBindingSize >=
-            MIN_STORAGE_BINDING_BYTES,
-      )
-      .catch(() => false);
-  }
-  return webGpuProbe;
+export async function documentModelPossible() {
+  if (meteredConnection()) return false;
+  return holdsLargeModel(await webGpuAdapter());
 }
 
 // Only a successful load is memoised: a cached rejection would disable the

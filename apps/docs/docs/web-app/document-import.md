@@ -135,8 +135,10 @@ preview's counts come from `sectionSummary`, so what the dialog shows and what
 an import builds cannot drift apart.
 
 The device bar is the summariser's: WebGPU with f16 shaders on an adapter
-whose limits can hold the weights, and not on a metered connection. Without
-that the button is not shown. There is no CPU path in the browser: the int8
+whose limits can hold the weights, and not on a metered connection. Both use
+the same check, `holdsLargeModel` and `meteredConnection` in
+`packages/core/src/browser/deviceCheck.js`. Without that the button is not
+shown. There is no CPU path in the browser: the int8
 file that runs well on a CPU is 2.5 GB, and the q4 file is not faithful for
 this checkpoint.
 
