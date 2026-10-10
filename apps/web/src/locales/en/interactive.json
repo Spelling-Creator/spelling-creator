@@ -11,8 +11,9 @@
     "readAgain": "Read this step again",
     "settings": "Voice settings",
     "voice": "Voice",
-    "defaultVoice": "Browser default",
     "pace": "Pace",
+    "downloadingVoice": "Downloading the natural voice (one time, about {{mb}} MB)... {{percent}}%",
+    "voiceFailed": "The natural voice couldn't load here, so the browser's voice is reading instead.",
     "paceOption_one": "Normal speed",
     "paceOption_other": "{{rate}} times normal speed"
   },

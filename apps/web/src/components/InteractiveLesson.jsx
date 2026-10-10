@@ -71,13 +71,7 @@ import { Spinner } from "./ui/spinner.jsx";
 import { Textarea } from "./ui/textarea.jsx";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog.jsx";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover.jsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select.jsx";
+import { SpeechVoiceSelect } from "./SpeechVoiceSelect.jsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip.jsx";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.jsx";
 import { fitWithin } from "@spelling-creator/core/image";
@@ -104,6 +98,7 @@ import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import { textBlockParagraphs } from "@spelling-creator/core/lessonText";
 import { TextRuns } from "./TextRuns.jsx";
+import { DOWNLOAD_MB } from "@spelling-creator/core/browser/readAloud";
 import { SPEECH_RATES } from "../lib/speechPrefs.js";
 import { useSpeech } from "../lib/useSpeech.js";
 import { useAuth } from "../lib/auth.jsx";
@@ -177,26 +172,14 @@ function SpeechControls({ speech, onReplay }) {
                   <FieldLabel htmlFor="tts-voice">
                     {t("speech.voice")}
                   </FieldLabel>
-                  <Select
-                    value={speech.voiceURI || "default"}
-                    onValueChange={(next) =>
-                      speech.setVoiceURI(next === "default" ? "" : next)
-                    }
-                  >
-                    <SelectTrigger id="tts-voice" className="w-full">
-                      <SelectValue placeholder={t("speech.defaultVoice")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="default">
-                        {t("speech.defaultVoice")}
-                      </SelectItem>
-                      {speech.voices.map((voice) => (
-                        <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
-                          {voice.name} ({voice.lang})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SpeechVoiceSelect
+                    id="tts-voice"
+                    voiceURI={speech.voiceURI}
+                    onVoiceURIChange={speech.setVoiceURI}
+                    voices={speech.voices}
+                    naturalVoices={speech.naturalVoices}
+                    className="w-full"
+                  />
                 </Field>
                 <Field>
                   <FieldLabel>{t("speech.pace")}</FieldLabel>
@@ -232,6 +215,33 @@ function SpeechControls({ speech, onReplay }) {
       )}
     </div>
   );
+}
+
+// The natural voice's one-time download, and what happens if it can't load,
+// under the step count. The browser's voice reads meanwhile, so this is news,
+// not a wait: it's a line of text, not a second progress bar to be mistaken
+// for the lesson's.
+function VoiceLoadStatus({ speech }) {
+  const { t } = useTranslation("interactive");
+  const status = speech.enabled ? speech.voiceLoad?.status : null;
+  if (status === "loading") {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground" role="status">
+        {t("speech.downloadingVoice", {
+          mb: DOWNLOAD_MB,
+          percent: Math.round(speech.voiceLoad.progress * 100),
+        })}
+      </p>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground" role="status">
+        {t("speech.voiceFailed")}
+      </p>
+    );
+  }
+  return null;
 }
 
 // The presenter's reveal, sat beside the speech controls in the top bar. Only
@@ -930,6 +940,18 @@ export default function InteractiveLesson({
     speech.speak(stepSpeechText(step));
   }, [open, phase, speech, step, spokenKey]);
 
+  // With a natural voice, make the start of the next step while this one plays,
+  // so moving on starts at once (see lib/useSpeech.js). After the effect above,
+  // so this step is already being made and the next one queues behind it. It
+  // runs again once the voice has loaded, which may be mid-step. Without a
+  // natural voice ready, prepare does nothing.
+  const nextStep = steps[index + 1] || null;
+  const { prepare } = speech;
+  useEffect(() => {
+    if (!open || !speech.enabled || phase !== "running" || !nextStep) return;
+    prepare(stepSpeechText(nextStep));
+  }, [open, speech.enabled, phase, nextStep, prepare]);
+
   // Nothing should still be talking once it's closed.
   useEffect(() => {
     if (open) return;
@@ -1158,6 +1180,7 @@ export default function InteractiveLesson({
                     total: questionSteps.length,
                   })}`}
               </p>
+              <VoiceLoadStatus speech={speech} />
             </div>
           )}
         </header>

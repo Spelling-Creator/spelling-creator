@@ -22,7 +22,6 @@
     "on": "On",
     "off": "Off",
     "voice": "Voice",
-    "defaultVoice": "Browser default",
     "pace": "Pace",
     "paceOption_one": "Normal speed",
     "paceOption_other": "{{rate}} times normal speed"

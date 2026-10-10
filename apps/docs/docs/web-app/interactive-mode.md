@@ -237,11 +237,13 @@ summary; there's just no account to save it to, and the summary says so.
 
 The speaker button in the top bar turns on **read aloud**, using the browser's
 [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)
-(`speechSynthesis`). Like [lesson summaries](./lesson-summaries.md), this runs
+(`speechSynthesis`), or a [natural voice](#natural-voices) where the device
+can run one. Like [lesson summaries](./lesson-summaries.md), this runs
 entirely on the reader's own device: no Worker call, no API key, no cost, and the
-lesson text never leaves the machine. Unlike summaries, it needs no special
-hardware and is supported across current browsers, but it's still probed for
-rather than assumed, and where it's missing the controls aren't rendered at all.
+lesson text never leaves the machine. Unlike summaries, the browser's voices
+need no special hardware and are supported across current browsers, but speech
+is still probed for rather than assumed, and where it's missing the controls
+aren't rendered at all.
 
 With it on:
 
@@ -252,8 +254,9 @@ With it on:
 - every **spelling word gets its own speaker button**, because hearing one word
   again is the commonest thing a learner wants and a different job from hearing
   the whole step;
-- the settings popover picks a **voice** from the ones the browser offers and a
-  **pace** from 0.7x to 1.5x.
+- the settings popover picks a **voice** (the natural voices, if this device
+  can run them, then the ones the browser offers) and a **pace** from 0.7x to
+  1.5x.
 
 A question's answer is never spoken, even with
 [show answers](#showing-the-answers-for-whoever-is-presenting) on: speech is a
@@ -279,6 +282,95 @@ the one that belongs to the voice list: voices load asynchronously, announced by
 cuts off a single utterance after about 15 seconds (so text is split into
 sentence-sized chunks and queued), and `cancel()` isn't synchronous (so a new
 utterance is deferred a tick after one).
+
+### Natural voices
+
+The browser's voices depend on the device, and some are robotic. The natural
+voices are [Kokoro](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX),
+an 82M-parameter voice model that runs in the page with transformers.js, like
+the summary and import models. Eight of its English voices (the ones graded C+
+or better) are listed under **Natural voices** in the voice picker, above the
+browser's own, in both the popover and the settings page
+(`apps/web/src/components/SpeechVoiceSelect.jsx`). The choice is stored in the
+same voice preference as `kokoro:<voice id>`.
+
+How it behaves:
+
+- **Only where it can run.** The list is shown only on a device with WebGPU
+  that isn't a phone or tablet and isn't on a metered connection
+  (`readAloudPossible` in `packages/core/src/browser/readAloud.js`). Phones
+  and tablets are excluded by name, because WebGPU alone doesn't rule them
+  out: an iPad has it, and Kokoro froze and then crashed Safari on one.
+  iPadOS calls itself a Mac, so it's recognised by having a touch screen.
+- **Opt-in, because of the download.** The browser default stays the
+  default. Choosing a natural voice says that the first use downloads about
+  330 MB, once. Choosing one on the settings page downloads nothing; the model
+  loads the first time practice mode speaks with it.
+- **Never silent while it loads.** During the download the browser's voice
+  reads, and a line under the step count shows the progress. The natural
+  voice takes over from the next thing spoken.
+- **The browser's voice is the fallback.** If the model can't load, or can't
+  read a chunk, the browser's voice reads instead for the rest of the visit,
+  and the same line says so.
+- **Steps play as one stream.** Each chunk is made, then queued on a Web Audio
+  timeline straight after the one before, so playback runs on while the next
+  chunk is made.
+- **The next step is made ahead.** While a step plays, the first two chunks of
+  the next step are made too (`prepare` in `useSpeech.js`), so pressing Next
+  starts speaking at once. This waits until the current step has been made:
+  the model does one thing at a time, so running it alongside would hold up
+  the chunks being listened to. Made chunks are kept for a few steps, so
+  replaying a step or a spelling word doesn't make it again.
+- **English only.** Like choosing an English browser voice, picking one for a
+  lesson in another language reads it with English pronunciation.
+
+Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudEngine.js`
+spells out numbers and abbreviations, turns the words into IPA with
+[Spellophone](https://spellophone.spellingcreator.org/) (our WebAssembly build
+of espeak-ng, the phonemizer Kokoro was trained against), and passes that to
+the model. The text clean-up follows kokoro.js, the reference JavaScript port.
+That package isn't used itself because it pins transformers.js 3, which would
+put a second ONNX runtime in the bundle. Only Spellophone's English data is
+bundled (about 830 KB), as hashed assets of the build, not fetched from a CDN.
+
+To time it on a device, run `pnpm dev:web` and open
+`/bench/read-aloud.html`. The page reads the first six steps of a real hub
+lesson, chunked as `useSpeech.js` chunks them, and reports:
+
+- **first audio**: from pressing play to sound, once the model is loaded;
+- **RTF** (real-time factor): time to make a chunk over how long it speaks.
+  Under 1 keeps ahead of playback;
+- **stalls**: silence mid-step while the next chunk is still being made.
+
+The page is served by the dev server only; the production build's one entry is
+`index.html`. WebGPU needs a secure context, so a phone or tablet has to reach
+it over HTTPS.
+
+Measured on a Mac, 110 s of speech, `af_heart`:
+
+| Browser and backend       | First audio | Median RTF | Stalls |
+| ------------------------- | ----------- | ---------- | ------ |
+| Chrome 154, WebGPU, fp32  | 0.56 s      | 0.17       | none   |
+| WebKit 26.6, WebGPU, fp32 | 0.85 s      | 0.25       | 0.4 s  |
+| Chrome 154, WASM, fp32    | 2.4 s       | 1.16       | 39 s   |
+| Chrome 154, WASM, q8      | 3.0 s       | 1.48       | 70 s   |
+
+What the numbers decided:
+
+- **WebGPU or nothing.** The site isn't cross-origin isolated, so the WASM
+  backend runs on one thread, and on one thread Kokoro is slower than speech
+  even on a Mac. q8 is slower than fp32 there, too. The device check asks for
+  WebGPU for this reason.
+- **A throwaway run while loading.** The first run is slow while WebGPU
+  compiles its shaders (1.9 s against 0.4 s for the same short line), so the
+  engine does one as part of loading.
+- **Making the next step ahead.** The one WebKit stall is a short section name
+  followed by a long chunk: the name finishes playing before the next chunk is
+  ready. The first two chunks of every step after the first are made while the
+  step before plays.
+- **Computers only.** On an iPad it freezes and then crashes (Safari, WebGPU,
+  fp32). Kokoro is aimed at computers, which is what the spellers we know use
+  for sessions, and phones and tablets keep the browser's voices.
 
 ## Worker endpoints
 
@@ -339,5 +431,10 @@ The full schema, with the reasoning in comments, is `apps/api/schema.sql`.
 | `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough.                                                      |
 | `apps/web/src/components/MyLessonAnswers.jsx`      | The private "Your answers" panel on the lesson page.                              |
 | `apps/web/src/pages/lesson/LessonLayout.jsx`       | Start vs. **Continue lesson** on the lesson page's button.                        |
-| `apps/web/src/lib/useSpeech.js`                    | Web Speech API wrapper: speaking, and the two platform quirks it owns.            |
-| `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice list, shared with the settings page.         |
+| `apps/web/src/lib/useSpeech.js`                    | Speaking: the browser's voices or a natural one, the fallback, making ahead.      |
+| `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice lists, shared with the settings page.        |
+| `apps/web/src/components/SpeechVoiceSelect.jsx`    | The voice picker the popover and the settings page share.                         |
+| `packages/core/src/browser/readAloud.js`           | The device check for natural voices, and the door to their engine.                |
+| `packages/core/src/browser/readAloudEngine.js`     | Kokoro: text clean-up, espeak-ng phonemes, the model.                             |
+| `packages/core/src/browser/readAloudVoices.js`     | The Kokoro voices on offer, listable without loading the engine.                  |
+| `apps/web/bench/read-aloud.html`                   | The dev-only timing page for Kokoro.                                              |
