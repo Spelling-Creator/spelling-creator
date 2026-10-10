@@ -49,6 +49,7 @@
     "./git/repo": "./src/git/repo.js",
     "./id": "./src/id.js",
     "./image": "./src/image.js",
+    "./imageCredit": "./src/imageCredit.js",
     "./imagesClient": "./src/imagesClient.js",
     "./interactive": "./src/interactive.js",
     "./jsonImport": "./src/jsonImport.js",

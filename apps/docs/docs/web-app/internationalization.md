@@ -87,8 +87,9 @@ Not every string in a migrated file goes through `t()`. Left as-is, deliberately
   [Lesson translation](./lesson-translation.md). Those are separate features from
   this page's locale files, though both use `i18n.resolvedLanguage` as the
   target language.)
-- Third-party attribution text supplied by an API (e.g. a Wikimedia image's own
-  caption).
+- Third-party attribution text supplied by an API (e.g. a Wikimedia image's
+  [credit](./image-credits.md)). Pixabay's credit line is the exception: it's
+  built from a template in `editorTools.json`.
 
 ## Adding a language
 

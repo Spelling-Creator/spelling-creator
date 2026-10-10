@@ -7,9 +7,9 @@
 // MCP — it is proxied through the Worker behind a Turnstile challenge the server
 // can't satisfy.
 //
-// Every Commons image carries a licence and most require attribution, so each
-// hit (and the resolved download) comes with a ready-made attribution string the
-// tools surface as the image caption.
+// Every Commons image carries a license and most require attribution, so each
+// hit (and the resolved download) comes with a ready-made credit line the tools
+// set as the image's `credit`, apart from its caption.
 //
 // The Commons round-trip and the attribution handling are shared with the web
 // app — see @spelling-creator/core/wikimedia. What differs, and so stays here:
@@ -20,7 +20,7 @@ import {
   IMAGEINFO_PARAMS,
   cleanFileTitle,
   commonsQuery,
-  extmetaCaption,
+  extmetaCredit,
   isUsableImage,
   rankPages,
   wikidataPickPages,
@@ -36,12 +36,12 @@ export const USER_AGENT =
   "SpellingCreatorMCP/0.6.0 (https://spellingcreator.org; MCP server for the Spelling Creator hub)";
 
 function toHit(page, info) {
-  const { author, license, caption } = extmetaCaption(info.extmetadata);
+  const { author, license, credit } = extmetaCredit(info.extmetadata);
   return {
     // The full "File:" title, which resolveWikimediaImage takes as its handle.
     ref: page.title,
     description: cleanFileTitle(page.title),
-    caption,
+    credit,
     author,
     license,
     width: info.width,
@@ -206,12 +206,12 @@ async function downloadImage(src, limit) {
 }
 
 /**
- * Download a Commons image for embedding by its "File:…" title, plus the
- * attribution caption. Fetches a downscaled thumbnail rather than the original
+ * Download a Commons image for embedding by its "File:…" title, plus its
+ * credit line. Fetches a downscaled thumbnail rather than the original
  * (see THUMB_WIDTH), so the caller never has to size-shop for a candidate that
  * will survive the upload.
  * @param {string} ref  A "File:…" title from searchWikimediaImages (hit.ref).
- * @returns {Promise<{ bytes: Uint8Array, mime: string, width: number, height: number, caption: string, source: string }>}
+ * @returns {Promise<{ bytes: Uint8Array, mime: string, width: number, height: number, credit: string, source: string }>}
  */
 export async function resolveWikimediaImage(ref) {
   const title = (ref || "").trim();
@@ -264,13 +264,13 @@ export async function resolveWikimediaImage(ref) {
     );
   }
 
-  const { caption } = extmetaCaption(info.extmetadata);
+  const { credit } = extmetaCredit(info.extmetadata);
   return {
     bytes: download.bytes,
     mime: download.mime || info.mime || "image/jpeg",
     width: info.thumbwidth || info.width,
     height: info.thumbheight || info.height,
-    caption,
+    credit,
     source: info.descriptionurl || "",
   };
 }

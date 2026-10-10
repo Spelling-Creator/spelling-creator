@@ -22,7 +22,12 @@ import { ArrowUpIcon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton.jsx";
 import { CitationParts, TextRuns } from "./TextRuns.jsx";
 import { fitWithin, imageSizeScale } from "@spelling-creator/core/image";
-import { DOCX_MAX_IMAGE_WIDTH } from "@spelling-creator/core/lessonLayout";
+import { imageCaptionParts } from "@spelling-creator/core/imageCredit";
+import {
+  CAPTION_CLASS,
+  CREDIT_CLASS,
+  DOCX_MAX_IMAGE_WIDTH,
+} from "@spelling-creator/core/lessonLayout";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import {
   footnoteParts,
@@ -113,10 +118,22 @@ const LESSON_STYLES = `
   }
   .s2c-lesson-root figcaption {
     text-align: center;
-    font-style: italic;
     color: var(--muted-foreground);
-    font-size: 12px;
     margin-top: 6px;
+  }
+  /* The same class names the Word export's caption and credit styles map to,
+     so a lesson page and a converted export mark the two lines alike. */
+  .s2c-lesson-root .${CAPTION_CLASS} {
+    display: block;
+    font-style: italic;
+    font-size: 12px;
+  }
+  /* The license credit: there because it has to be, so smaller than the
+     caption and out of its way. */
+  .s2c-lesson-root .${CREDIT_CLASS} {
+    display: block;
+    font-size: 10px;
+    margin-top: 2px;
   }
   .s2c-lesson-root .s2c-label {
     color: color-mix(in oklab, var(--s2c-label) 78%, black);
@@ -278,12 +295,15 @@ function figureMargin(align) {
 
 // `si`/`bi` and the map are only handed in by the lesson page's own Block,
 // for the caption; the VAKT picture below renders through here without them
-// (a VAKT block has no caption to translate).
+// (a VAKT block has no caption to translate). The credit is never translated:
+// it's a name and a license.
 function ImageBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
   const src = useImageSrc(block);
+  const parts = imageCaptionParts(block);
   const caption =
-    translation?.get(lessonSegmentKey.caption(si, bi)) ?? block.caption;
+    translation?.get(lessonSegmentKey.caption(si, bi)) ?? parts.caption;
+  const { credit } = parts;
   const align = block.align || "center";
   const { width, height } = fitWithin(
     block.width,
@@ -322,7 +342,12 @@ function ImageBlock({ block, si, bi, translation }) {
       )}
       {/* Styled by LESSON_STYLES, so the caption follows the theme with the
           rest of the page. */}
-      {caption ? <figcaption>{caption}</figcaption> : null}
+      {caption || credit ? (
+        <figcaption>
+          {caption ? <span className={CAPTION_CLASS}>{caption}</span> : null}
+          {credit ? <span className={CREDIT_CLASS}>{credit}</span> : null}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }
@@ -521,9 +546,10 @@ export default function LessonView({ doc, translation }) {
 // Plain-text summary of a lesson document, in reading order, for the page's
 // meta/SEO description. Pulls the actual lesson prose — text, question prompts
 // and spelling words — so the description leads with content, without rendering
-// the document to a string first. Image captions are skipped on purpose: they're
-// usually attribution boilerplate ("Image by … via Wikimedia Commons") that
-// reads as noise at the front of a social/search snippet.
+// the document to a string first. Images are skipped on purpose: a caption
+// describes a picture the snippet can't show, and a credit line ("Image by …
+// via Wikimedia Commons") reads as noise at the front of a social/search
+// snippet.
 export function lessonPlainText(doc) {
   const parts = [];
   for (const section of doc?.sections || []) {

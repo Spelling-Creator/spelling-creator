@@ -44,7 +44,7 @@ function el(tag, className, text) {
 }
 
 // The attribution line Commons requires, kept short enough for a card. The full
-// string still travels with the block: add_image sets it as the caption.
+// string still travels with the block: add_image sets it as the credit.
 function metaLine(image) {
   return [image.license, image.author].filter(Boolean).join(" · ");
 }
@@ -74,7 +74,7 @@ function reportChoice(image, added) {
             `The user ${what} from the image picker for "${state.query}".` +
             (added
               ? " The image block is already in the lesson — don't call add_image for it again."
-              : ` Use that ref with add_image. Its caption is: ${image.caption}`),
+              : " Use that ref with add_image, which sets its credit line by itself."),
         },
       ],
     })

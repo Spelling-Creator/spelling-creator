@@ -11,7 +11,17 @@ import { useEffect, useRef, useState } from "react";
 // field and leaving it never writes a stale value over a remote edit that
 // arrived in between; it catches up with that edit instead. Returns the value the input should display plus change/focus/
 // blur handlers; callers wire those onto whatever input element they're using.
-export function useLiveField(value, onCommit, commitDelay = 200) {
+//
+// `waitForBlur(next)`, when given, picks out values that are only committed
+// once the field is left, never on a pause in typing. The image credit uses it
+// for an empty value: clearing the field to retype it isn't a deletion, and
+// the deletion it asks to confirm shouldn't interrupt someone mid-edit.
+export function useLiveField(
+  value,
+  onCommit,
+  commitDelay = 200,
+  { waitForBlur } = {},
+) {
   const [local, setLocal] = useState(value ?? "");
   const focusedRef = useRef(false);
   // Typed since the last commit. Only typing sets it.
@@ -48,6 +58,8 @@ export function useLiveField(value, onCommit, commitDelay = 200) {
     setLocal(next);
     dirtyRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    if (waitForBlur?.(next)) return;
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       dirtyRef.current = false;

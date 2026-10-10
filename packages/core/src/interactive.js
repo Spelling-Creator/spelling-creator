@@ -25,6 +25,7 @@
 // are shared with the Worker so the browser and server agree on what a valid
 // submission is.
 
+import { imageCaptionParts } from "./imageCredit.js";
 import { textBlockPlain } from "./lessonText.js";
 import { vaktText } from "./vakt.js";
 
@@ -178,7 +179,8 @@ export function stepSpeechText(step) {
       const text = textBlockPlain(block).trim();
       if (text) lines.push(text);
     } else if (block.type === "image") {
-      const caption = (block.caption || "").trim();
+      // The caption, never the credit: a license read out mid-lesson is noise.
+      const { caption } = imageCaptionParts(block);
       if (caption) lines.push(caption);
     } else if (block.type === "spelling") {
       const words = (block.words || [])

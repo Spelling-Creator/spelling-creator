@@ -45,7 +45,8 @@ function escapeHtml(text) {
 
 // mammoth converts each image to a natural-size <img> in its own <p> and drops the
 // block's picked size + alignment (and the caption's alignment). Re-apply both by
-// wrapping each image — and its caption, if any — in a fixed-width <figure>:
+// wrapping each image, and its caption and credit if it has them, in a
+// fixed-width <figure>:
 //
 //   - The figure's width is the SAME px size the docx used — not recomputed
 //     here, but reported by buildDocument as it embedded each picture — so the
@@ -62,27 +63,33 @@ function escapeHtml(text) {
 // text and produces no <img> at all, so listing it here would frame the next
 // real image with the wrong width and alignment and shift every image after it.
 //
-// The caption is taken from that list and escaped, NOT copied out of mammoth's
-// HTML: the text is ours either way, and taking it from the model means nothing
-// that came back through the converter is re-inserted as markup. buildDocument
-// emits a caption paragraph only for a picture that has one, so the trailing
-// paragraph is consumed only then and following content is left untouched.
+// The caption and credit are taken from that list and escaped, NOT copied out
+// of mammoth's HTML: the text is ours either way, and taking it from the model
+// means nothing that came back through the converter is re-inserted as markup.
+// buildDocument emits a caption paragraph and a credit paragraph only for a
+// picture that has them, so only that many trailing paragraphs are consumed
+// and following content is left untouched.
 //
-// That optional trailing paragraph must not be an image paragraph. `replace`
+// Those optional trailing paragraphs must not be image paragraphs. `replace`
 // resumes scanning after the whole match, so a swallowed `<p><img></p>` is
 // re-emitted verbatim and never matched again: with two images in a row the
 // second would keep mammoth's natural size, lose its alignment and caption, and
 // throw the block pairing off by one for every image after it. The lookahead
 // leaves an image paragraph for the next iteration to claim.
-function layoutImageFigures(html, embedded) {
+export function layoutImageFigures(html, embedded) {
   let index = 0;
   return html.replace(
-    /<p>\s*(<img\b[^>]*>)\s*<\/p>(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?/g,
-    (match, imgTag, trailingParagraph) => {
+    /<p>\s*(<img\b[^>]*>)\s*<\/p>(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?/g,
+    (match, imgTag, firstTrailing, secondTrailing) => {
       const picture = embedded[index++];
       if (!picture) return match;
 
-      const { width, align, caption: captionText } = picture;
+      const {
+        width,
+        align,
+        caption: captionText,
+        credit: creditText,
+      } = picture;
       const figMargin =
         align === "left"
           ? "16px auto 16px 0"
@@ -93,19 +100,27 @@ function layoutImageFigures(html, embedded) {
       // Strip mammoth's own width/height/style so the figure controls the size.
       const img = imgTag.replace(/\s(?:width|height|style)="[^"]*"/g, "");
 
-      const hasCaption = Boolean(captionText);
-      const caption = hasCaption
-        ? `<figcaption style="text-align:center;font-style:italic;color:#555;font-size:12px;margin-top:6px;">${escapeHtml(
+      const caption = captionText
+        ? `<div style="text-align:center;font-style:italic;color:#555;font-size:12px;margin-top:6px;">${escapeHtml(
             captionText,
-          )}</figcaption>`
+          )}</div>`
         : "";
+      const credit = creditText
+        ? `<div style="text-align:center;color:#777;font-size:9px;margin-top:2px;">${escapeHtml(
+            creditText,
+          )}</div>`
+        : "";
+      const figcaption =
+        caption || credit ? `<figcaption>${caption}${credit}</figcaption>` : "";
       const figure = `<figure style="display:block;width:${Math.round(
         width,
-      )}px;max-width:100%;margin:${figMargin};">${img}${caption}</figure>`;
+      )}px;max-width:100%;margin:${figMargin};">${img}${figcaption}</figure>`;
 
-      // If the block has no caption, the optional trailing paragraph we matched is
-      // real content (the next block) — put it back rather than swallowing it.
-      return hasCaption ? figure : figure + (trailingParagraph || "");
+      // Any trailing paragraph beyond the caption and credit lines is real
+      // content (the next block): put it back rather than swallowing it.
+      const consumed = (captionText ? 1 : 0) + (creditText ? 1 : 0);
+      const trailing = [firstTrailing, secondTrailing].filter(Boolean);
+      return figure + trailing.slice(consumed).join("");
     },
   );
 }

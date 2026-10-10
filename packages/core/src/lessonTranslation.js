@@ -28,6 +28,8 @@
 //
 // - spelling words: they ARE the material. The lesson is "spell these
 //   words", and a translated word list would be a different lesson
+// - image credits: a photographer's name and a license, for the same reason
+//   as source citations below
 // - VAKT link labels: names of external resources, which stay in whatever
 //   language the resource itself is in
 // - source citations: an author, a title and a publisher are names, and a
@@ -37,6 +39,7 @@
 // web app's renderer (LessonView) and its translation runner
 // (LessonTranslation), so the two agree on keys by construction.
 
+import { imageCaptionParts } from "./imageCredit.js";
 import { textBlockFootnotes, textBlockLines } from "./lessonText.js";
 import { questionAnswerItems } from "./questions.js";
 import { vaktText } from "./vakt.js";
@@ -129,11 +132,13 @@ export function lessonTranslationBatches(doc) {
         });
       } else if (block.type === "image") {
         // Mirrors the renderer: an image block without a source draws nothing,
-        // caption included, so there is nothing to translate for one.
-        if ((block.image || block.src) && (block.caption || "").trim()) {
+        // caption included, so there is nothing to translate for one. Only the
+        // author's caption: the credit line is names and a license.
+        const { caption } = imageCaptionParts(block);
+        if ((block.image || block.src) && caption) {
           segments.push({
             key: lessonSegmentKey.caption(si, bi),
-            text: block.caption,
+            text: caption,
           });
         }
       } else if (block.type === "vakt") {

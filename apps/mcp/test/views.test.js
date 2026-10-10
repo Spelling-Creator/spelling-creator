@@ -135,7 +135,7 @@ test("search_images answers in text and in structured content alike", async () =
     image.previewURL,
     COMMONS_RESPONSE.query.pages[101].imageinfo[0].thumburl,
   );
-  assert.match(image.caption, /A\. Photographer/);
+  assert.match(image.credit, /A\. Photographer/);
 
   // Told where the picture is going, the tool passes it through so a click in
   // the view can place the image without asking the model anything.

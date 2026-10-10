@@ -25,6 +25,7 @@
 //
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
+import { imageCaptionParts } from "../imageCredit.js";
 import { textBlockPlain } from "../lessonText.js";
 import { baseLanguageTag } from "../translationLanguages.js";
 import { VAKT_LABEL, vaktText } from "../vakt.js";
@@ -447,7 +448,8 @@ export async function fitToQuota(summarizer, text) {
  * lesson into prose for a meta description. Here the structure is the point: the
  * title and section headings tell the model how the lesson is organised, and
  * labelling the questions and word lists stops a bare list of words reading as
- * body text. Image captions stay out — they're usually attribution boilerplate.
+ * body text. An image's caption goes in, labelled as one, since it says what
+ * the picture shows; its credit line stays out, being a name and a license.
  *
  * @param {object} doc  The lesson body: { title, sections: [{ name, blocks }] }.
  * @returns {string} Markdown-ish plain text in reading order.
@@ -468,6 +470,9 @@ export function lessonSummaryText(doc) {
           .map((word) => (word.text || "").trim())
           .filter(Boolean);
         if (words.length) parts.push(`Spelling words: ${words.join(", ")}`);
+      } else if (block.type === "image") {
+        const { caption } = imageCaptionParts(block);
+        if (caption) parts.push(`Picture: ${caption}`);
       } else if (block.type === "vakt") {
         // The activity, not its links: a summary wants the prose, and a URL
         // read by a language model is bulk with no meaning in it.

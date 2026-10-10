@@ -119,8 +119,8 @@
     "providers": {
       "pixabay": {
         "label": "Pixabay",
-        "captionWithUser": "Image by {{user}} from Pixabay",
-        "captionNoUser": "Image from Pixabay",
+        "creditWithUser": "Image by {{user}} from Pixabay",
+        "creditNoUser": "Image from Pixabay",
         "altFallback": "Pixabay image"
       },
       "wikimedia": {

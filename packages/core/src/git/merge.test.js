@@ -103,3 +103,37 @@ describe("merging a lesson with several sections", () => {
     }
   });
 });
+
+describe("merging a picture from before credits had their own field", () => {
+  const picture = (fields) => ({
+    id: "p",
+    type: "image",
+    src: "x.png",
+    ...fields,
+  });
+
+  it("merges a caption edit with a credit fix on the other side", () => {
+    const base = lesson({
+      s1: [picture({ caption: "A lion. Image by jdoe from Pixabay" })],
+    });
+    const ours = lesson({
+      s1: [
+        picture({
+          caption: "A big lion.",
+          credit: "Image by jdoe from Pixabay",
+        }),
+      ],
+    });
+    const theirs = lesson({
+      s1: [
+        picture({ caption: "A lion.", credit: "Image by jane from Pixabay" }),
+      ],
+    });
+    const { doc, conflicts } = mergeDocs(base, ours, theirs);
+    expect(conflicts).toEqual([]);
+    expect(doc.sections[0].blocks[0]).toMatchObject({
+      caption: "A big lion.",
+      credit: "Image by jane from Pixabay",
+    });
+  });
+});

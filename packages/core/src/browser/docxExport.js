@@ -31,10 +31,13 @@ import {
 import { footnoteParts, textBlockParagraphs } from "../lessonText.js";
 import { lessonSources, sourceEntryParts, sourcesById } from "../sources.js";
 import { fitWithin, imageSizeScale } from "../image.js";
+import { imageCaptionParts } from "../imageCredit.js";
 import { getImageBytes } from "./imageRef.js";
 import {
   CAPTION_STYLE_ID,
   CAPTION_STYLE_NAME,
+  CREDIT_STYLE_ID,
+  CREDIT_STYLE_NAME,
   DOCX_MAX_IMAGE_WIDTH,
   FOOTNOTE_LOCATOR_STYLE_ID,
   FOOTNOTE_LOCATOR_STYLE_NAME,
@@ -43,6 +46,8 @@ import {
   LEGEND_SEPARATOR,
   QUESTION_LINE_STYLE_ID,
   QUESTION_LINE_STYLE_NAME,
+  LESSON_TITLE_STYLE_ID,
+  LESSON_TITLE_STYLE_NAME,
   SOURCE_ENTRY_STYLE_ID,
   SOURCE_ENTRY_STYLE_NAME,
   SOURCES_HEADING_STYLE_ID,
@@ -207,6 +212,7 @@ async function imageBlockParagraphs(block, embedded) {
   const paragraphs = [];
   const alignment = imageAlignment(block);
   const align = block.align || "center";
+  const { caption, credit } = imageCaptionParts(block);
   try {
     const { bytes, ext } = await getImageBytes(block);
     const { width, height } = fitWithin(
@@ -230,7 +236,7 @@ async function imageBlockParagraphs(block, embedded) {
     // The width the docx itself used, rather than the inputs to re-derive it
     // from: the PDF then matches the Word file by construction instead of by
     // two copies of the same arithmetic agreeing.
-    embedded?.push({ width, align, caption: block.caption || "" });
+    embedded?.push({ width, align, caption, credit });
   } catch {
     paragraphs.push(
       new Paragraph({
@@ -240,20 +246,32 @@ async function imageBlockParagraphs(block, embedded) {
       }),
     );
   }
-  if (block.caption) {
+  if (caption) {
     paragraphs.push(
       new Paragraph({
         style: CAPTION_STYLE_ID,
         alignment,
-        spacing: { after: 160 },
+        spacing: { after: credit ? 20 : 160 },
         children: [
           new TextRun({
-            text: block.caption,
+            text: caption,
             italics: true,
             size: 22,
             color: "555555",
           }),
         ],
+      }),
+    );
+  }
+  // The license credit, smaller and quieter than the caption above it: it has
+  // to be there, but it isn't part of the lesson.
+  if (credit) {
+    paragraphs.push(
+      new Paragraph({
+        style: CREDIT_STYLE_ID,
+        alignment,
+        spacing: { after: 160 },
+        children: [new TextRun({ text: credit, size: 16, color: "777777" })],
       }),
     );
   }
@@ -375,10 +393,10 @@ async function vaktBlockParagraphs(block, embedded) {
     }),
   ];
 
-  // A VAKT image prints exactly as an image block's does — the bytes, the
-  // caption, the aspect-ratio fit, the picked size and alignment — hence the
-  // reuse; vaktImageBlock supplies only the VAKT defaults for a block that was
-  // never framed by hand.
+  // A VAKT image prints exactly as an image block's does (the bytes, the
+  // caption and credit, the aspect-ratio fit, the picked size and alignment),
+  // hence the reuse; vaktImageBlock supplies only the VAKT defaults for a block
+  // that was never framed by hand.
   if (block.image || block.src) {
     paragraphs.push(
       ...(await imageBlockParagraphs(vaktImageBlock(block), embedded)),
@@ -441,7 +459,11 @@ function titleParagraphs(doc, meta) {
       alignment: AlignmentType.CENTER,
       spacing: { after: lines.length ? 60 : 240 },
       children: [
-        new TextRun({ text: doc.title || "Untitled Lesson", bold: true }),
+        new TextRun({
+          text: doc.title || "Untitled Lesson",
+          bold: true,
+          style: LESSON_TITLE_STYLE_ID,
+        }),
       ],
     }),
   ];
@@ -536,6 +558,12 @@ function colourCharacterStyles() {
     },
     // Unformatted on purpose: only the importer looks at these.
     {
+      id: LESSON_TITLE_STYLE_ID,
+      name: LESSON_TITLE_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+    },
+    {
       id: FOOTNOTE_LOCATOR_STYLE_ID,
       name: FOOTNOTE_LOCATOR_STYLE_NAME,
       basedOn: "DefaultParagraphFont",
@@ -558,7 +586,7 @@ function colourCharacterStyles() {
  * @param {{author?: string, published?: string|number|Date}} [meta]
  *   who the lesson is by and when it was published — used for the by-line and
  *   the footer's copyright line. Both lines are omitted when not supplied.
- * @param {Array<{width: number, align: string, caption: string}>} [embedded]
+ * @param {Array<{width: number, align: string, caption: string, credit: string}>} [embedded]
  *   an out-parameter the PDF path passes in: each picture this document really
  *   ends up carrying appends its framing, in document order, so the converted
  *   HTML's `<img>` tags can be matched to them one for one. See pdfExport.js.
@@ -600,6 +628,12 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
         {
           id: CAPTION_STYLE_ID,
           name: CAPTION_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: CREDIT_STYLE_ID,
+          name: CREDIT_STYLE_NAME,
           basedOn: "Normal",
           quickFormat: false,
         },

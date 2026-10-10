@@ -81,6 +81,7 @@ import { SpeechVoiceSelect } from "./SpeechVoiceSelect.jsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip.jsx";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.jsx";
 import { fitWithin } from "@spelling-creator/core/image";
+import { imageCaptionParts } from "@spelling-creator/core/imageCredit";
 import {
   MAX_RESPONSE_LENGTH,
   answerKey,
@@ -469,13 +470,14 @@ function ImageBlock({ block }) {
   // The stored intrinsic size only decides the shape of the box here — the width
   // comes from the column, so a picture fills the reading width on a phone.
   const { width, height } = fitWithin(block.width, block.height, 1000);
+  const { caption, credit } = imageCaptionParts(block);
 
   return (
     <figure className="mb-4 last:mb-0">
       {src ? (
         <img
           src={src}
-          alt={block.caption || t("step.imageAlt")}
+          alt={caption || t("step.imageAlt")}
           width={Math.round(width)}
           height={Math.round(height)}
           loading="lazy"
@@ -488,12 +490,22 @@ function ImageBlock({ block }) {
           style={{ aspectRatio: `${width} / ${height}` }}
         />
       )}
-      {block.caption && (
-        <figcaption className="mt-2 text-center text-sm text-muted-foreground">
-          {block.caption}
+      {(caption || credit) && (
+        <figcaption className="mt-2 text-center text-muted-foreground">
+          {caption && <span className="block text-sm">{caption}</span>}
+          <ImageCredit credit={credit} />
         </figcaption>
       )}
     </figure>
+  );
+}
+
+// The license credit under a picture: small and quiet, since it's owed to the
+// photographer rather than part of the lesson.
+function ImageCredit({ credit }) {
+  if (!credit) return null;
+  return (
+    <span className="mt-0.5 block text-xs text-muted-foreground">{credit}</span>
   );
 }
 
@@ -551,6 +563,7 @@ function VaktBlock({ block }) {
   const src = useImageSrc(block);
   const hasImage = Boolean(block.image || block.src);
   const { width, height } = fitWithin(block.width, block.height, 1000);
+  const { caption, credit } = imageCaptionParts(block);
 
   return (
     <div
@@ -566,7 +579,7 @@ function VaktBlock({ block }) {
         (src ? (
           <img
             src={src}
-            alt={block.caption || t("step.imageAlt")}
+            alt={caption || t("step.imageAlt")}
             width={Math.round(width)}
             height={Math.round(height)}
             loading="lazy"
@@ -579,6 +592,10 @@ function VaktBlock({ block }) {
             style={{ aspectRatio: `${width} / ${height}` }}
           />
         ))}
+      {hasImage && caption && (
+        <p className="mt-2 text-sm text-muted-foreground">{caption}</p>
+      )}
+      {hasImage && <ImageCredit credit={credit} />}
 
       {links.length > 0 && (
         <ul className="mt-3 flex list-none flex-col gap-1 p-0 text-sm">

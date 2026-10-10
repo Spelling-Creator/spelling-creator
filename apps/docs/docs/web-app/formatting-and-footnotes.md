@@ -164,7 +164,8 @@ document on each keystroke.
   citation only when it is exactly the citation, or the citation followed by a
   note; anything else is kept as a note. Image captions get a paragraph style
   too, so a text paragraph that happens to start in italics isn't taken for the
-  caption of the picture above it.
+  caption of the picture above it, and so do image
+  [credits](./image-credits.md), so they come back as credits.
 - **JSON import and export.** Lossless. Citations of a source the file doesn't
   list are dropped on import (keeping any note), since they would print as
   "Source no longer listed". A footnote citing a source that is in the list but

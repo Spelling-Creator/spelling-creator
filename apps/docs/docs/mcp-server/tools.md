@@ -436,8 +436,10 @@ A lesson is **sections** of **blocks**. Block types:
   come first, labelled with what they are; see
   [Search images](/web-app/search-images)), then
   `add_image` with its `ref` to download
-  the bytes, store them, and insert the block. The licence attribution is set as the
-  caption automatically.
+  the bytes, store them, and insert the block. The license attribution is set as the
+  block's `credit` automatically, apart from its optional `caption`, which says what
+  the picture shows (see [Image credits](/web-app/image-credits)). Pass `credit`
+  through unchanged when editing a lesson.
 - **`vakt`**: a regulation activity: `{ "type": "vakt", "text": "Bob likes to do jumping
 jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pairs) and an
   `image` from `add_image`, which takes the same optional `size` and `align` an image block

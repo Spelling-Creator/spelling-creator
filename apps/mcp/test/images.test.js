@@ -101,7 +101,7 @@ test("search_images puts Wikidata's pictures first, labelled, without repeats", 
   });
   // The search's own result is an ordinary hit.
   assert.equal(hits[2].wikidata, undefined);
-  assert.match(hits[0].caption, /CC BY-SA 4\.0/);
+  assert.match(hits[0].credit, /CC BY-SA 4\.0/);
 
   // Wikimedia's policy: every request names itself.
   for (const call of seen) assert.match(call.userAgent, /SpellingCreatorMCP/);

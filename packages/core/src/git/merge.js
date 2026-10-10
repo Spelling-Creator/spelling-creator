@@ -33,6 +33,7 @@
 
 import { docBlocks } from "./doc.js";
 import { sameValue } from "./ops.js";
+import { hasPicture, withSeparateCredit } from "../imageCredit.js";
 import {
   isPlainContent,
   textBlockContent,
@@ -50,6 +51,16 @@ const IDENTITY_FIELDS = new Set(["id", "type"]);
  *          fields are left at *our* value so the block is always renderable.
  */
 export function mergeBlockFields(base, ours, theirs) {
+  // A picture from before credits had their own field keeps its credit inside
+  // `caption`. Edited on one side, it comes back as a caption and a credit,
+  // so a caption edit there and a credit fix on the other would both touch
+  // `caption` and both add `credit`: two conflicts over two edits that never
+  // met. Every side is compared with the two fields split (see
+  // ../imageCredit.js), which also leaves the merged block split.
+  if ([base, ours, theirs].some(hasPicture)) {
+    const split = (b) => (b ? withSeparateCredit(b) : b);
+    return mergeFields(split(base), split(ours), split(theirs));
+  }
   // A text block keeps its words in `text` or in `content` depending on whether
   // any of them are formatted (see lessonText.js), so one side formatting a word
   // while the other fixes a typo would otherwise touch two different fields,

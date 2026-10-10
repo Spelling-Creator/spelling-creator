@@ -43,6 +43,7 @@ import {
   useScrollAnchor,
 } from "../lib/useScrollAnchor.js";
 import { newId } from "@spelling-creator/core/id";
+import { withImageCaptionParts } from "@spelling-creator/core/imageCredit";
 import { readImageFile } from "@spelling-creator/core/browser/imageFile";
 import { storeImageBytes } from "@spelling-creator/core/browser/imageRef";
 import {
@@ -233,26 +234,37 @@ function SectionCard({
     e.target.value = ""; // allow re-selecting the same file
   };
 
-  const addSearchedImage = ({ image, width, height, caption = "" }) => {
-    // Replacing an existing block: swap its image bytes (and the searched
-    // image's attribution caption) while keeping the block where it is, along
-    // with its alignment and size.
+  const addSearchedImage = ({ image, width, height, credit = "" }) => {
+    // Replacing an existing block: swap its image bytes and take the searched
+    // image's credit, while keeping the block where it is, along with its
+    // caption, alignment and size.
     if (replaceTarget) {
       const blocks = sectionRef.current.blocks;
       updateBlocks(
         blocks.map((b) =>
-          b.id === replaceTarget ? { ...b, image, width, height, caption } : b,
+          b.id === replaceTarget
+            ? withImageCaptionParts({ ...b, image, width, height }, { credit })
+            : b,
         ),
       );
       return;
     }
     insertBlocks([
-      { id: newId(), type: "image", image, width, height, caption },
+      {
+        id: newId(),
+        type: "image",
+        image,
+        width,
+        height,
+        caption: "",
+        credit,
+      },
     ]);
   };
 
   // Replace an image block's bytes from a freshly picked file, in place: the
-  // block keeps its id, position, alignment, size, and caption.
+  // block keeps its id, position, alignment, size, and caption. Not its
+  // credit, which named whoever took the old picture.
   const replaceImageFile = useCallback(
     async (blockId, file) => {
       if (!file || !file.type.startsWith("image/")) return;
@@ -263,7 +275,10 @@ function SectionCard({
         updateBlocks(
           blocks.map((b) =>
             b.id === blockId
-              ? { ...b, image, width: img.width, height: img.height }
+              ? withImageCaptionParts(
+                  { ...b, image, width: img.width, height: img.height },
+                  { credit: "" },
+                )
               : b,
           ),
         );

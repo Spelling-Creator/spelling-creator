@@ -56,6 +56,33 @@ test("get_lesson's view round-trips through update_lesson unchanged", () => {
   assert.deepEqual(rebuilt.sources, doc.sources);
 });
 
+test("get_lesson shows an older picture's credit apart from its caption", () => {
+  const credit = "Image (by Jane Doe, CC BY-SA 4.0) via Wikimedia Commons";
+  const doc = {
+    title: "t",
+    sections: [
+      {
+        id: "s",
+        name: "One",
+        blocks: [
+          {
+            id: "i",
+            type: "image",
+            image: { hash: "abc", mime: "image/png", ext: "png" },
+            caption: `A lion. ${credit}`,
+          },
+        ],
+      },
+    ],
+  };
+  const [shown] = presentDoc(doc).sections[0].blocks;
+  assert.equal(shown.caption, "A lion.");
+  assert.equal(shown.credit, credit);
+  // Passed back as shown, the attribution survives.
+  const rebuilt = buildDoc({ title: "t", sections: [{ blocks: [shown] }] });
+  assert.equal(rebuilt.sections[0].blocks[0].credit, credit);
+});
+
 test("sources are checked as they come in", () => {
   assert.throws(() => buildSources([{ id: "has space", title: "x" }]), /"id"/);
   assert.throws(() => buildSources([{ id: "a" }]), /title/);

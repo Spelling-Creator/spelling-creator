@@ -5,11 +5,19 @@ import { useLiveField } from "../lib/useLiveField.js";
 // Debounced/committed text fields built on the shared useLiveField buffering
 // (see that file) and shadcn's Input/Textarea. onCommit receives the new
 // string; all other props forward to the underlying input/textarea.
-export function LiveInput({ value, onCommit, commitDelay = 200, ...rest }) {
+// `waitForBlur` is LiveInput-only (see useLiveField).
+export function LiveInput({
+  value,
+  onCommit,
+  commitDelay = 200,
+  waitForBlur,
+  ...rest
+}) {
   const { local, handleChange, handleFocus, handleBlur } = useLiveField(
     value,
     onCommit,
     commitDelay,
+    { waitForBlur },
   );
 
   return (

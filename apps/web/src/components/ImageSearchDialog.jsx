@@ -38,7 +38,7 @@ import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
 //
 //   search(query, token)  -> hits[]            (each hit: { id, previewURL, ... })
 //   resolve(hit, token)   -> { bytes, mime, width, height }
-//   caption(hit)          -> attribution string to pre-fill the caption
+//   credit(hit)           -> the credit line the block keeps under the picture
 //
 // `needsToken` distinguishes Pixabay (proxied through the Worker, which enforces
 // a Turnstile check) from Wikimedia Commons (queried directly from the browser,
@@ -65,13 +65,13 @@ const PROVIDERS = [
         height: hit.webformatHeight,
       };
     },
-    caption(hit, t) {
+    credit(hit, t) {
       // Attribution (appreciated by Pixabay).
       return hit.user
-        ? t("imageSearch.providers.pixabay.captionWithUser", {
+        ? t("imageSearch.providers.pixabay.creditWithUser", {
             user: hit.user,
           })
-        : t("imageSearch.providers.pixabay.captionNoUser");
+        : t("imageSearch.providers.pixabay.creditNoUser");
     },
     alt(hit, t) {
       return hit.tags || t("imageSearch.providers.pixabay.altFallback");
@@ -89,10 +89,10 @@ const PROVIDERS = [
     async resolve(hit) {
       return fetchWikimediaImage(hit);
     },
-    caption(hit) {
+    credit(hit) {
       // Each Commons image is licensed individually; the hit carries a ready-made
-      // attribution string (author + licence + source).
-      return hit.caption;
+      // credit line (author + license + source).
+      return hit.credit;
     },
     alt(hit, t) {
       return hit.tags || t("imageSearch.providers.wikimedia.altFallback");
@@ -229,7 +229,7 @@ export default function ImageSearchDialog({
     try {
       const { bytes, mime, width, height } = await provider.resolve(hit, token);
       const image = await storeImageBytes(bytes, mime);
-      onInsert({ image, width, height, caption: provider.caption(hit, t) });
+      onInsert({ image, width, height, credit: provider.credit(hit, t) });
       onClose();
     } catch (e) {
       setError(e.message || t("imageSearch.errors.insertFailed"));
