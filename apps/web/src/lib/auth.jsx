@@ -154,6 +154,30 @@ export function AuthProvider({ children }) {
         if (error) throw new Error(error.message);
       },
 
+      // Finish a magic-link sign-in by typing the code from the same email
+      // instead of opening the link. The link only signs in the browser that
+      // opens it, and on an installed app that is often the wrong one: iOS
+      // opens every emailed link in Safari, whose storage is separate from the
+      // Home Screen app's, so the app never sees the session (and the PKCE
+      // verifier the link needs is in the app, so Safari can't finish either).
+      // A code has no redirect, so it signs in wherever it's typed. Needs
+      // `{{ .Token }}` in the Magic Link and Confirm signup email templates
+      // (a first sign-in sends the second one).
+      //
+      // The thrown error keeps GoTrue's `code` (e.g. "otp_expired") so the
+      // caller can say something friendlier than the raw message.
+      async verifyEmailCode(email, code) {
+        if (!hasSupabase()) throw new Error("Sign-in is not configured.");
+        const { error } = await getSupabase().auth.verifyOtp({
+          email,
+          token: code,
+          type: "email",
+        });
+        if (error) {
+          throw Object.assign(new Error(error.message), { code: error.code });
+        }
+      },
+
       // Whether this instance offers each way in. Both are read here rather than
       // by the login page so there is one answer to "how does one sign in".
       passwordAuth: hasPasswordAuth(),

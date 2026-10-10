@@ -2,8 +2,9 @@
 // GET /authorize (see apps/api/src/routes/oauth.js) after an MCP client (e.g.
 // claude.ai, Claude Desktop) sends the user's browser here to approve a
 // connection. An ordinary page of this app: if the user isn't signed in yet,
-// it offers the same magic-link sign-in as /login (routed back here via
-// `state`, so the flow resumes exactly where it left off); once signed in, it
+// it offers the same magic-link sign-in as /login: the link is routed back here
+// via `state`, so the flow resumes exactly where it left off, and the code from
+// the same email (EmailCodeForm) signs in without leaving; once signed in, it
 // shows what the connecting client is asking for and lets the user approve or
 // deny — no token is ever shown or copied by hand.
 
@@ -11,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { LockOpenIcon, MailCheckIcon } from "lucide-react";
+import EmailCodeForm from "../components/EmailCodeForm.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
 import { Field, FieldLabel } from "../components/ui/field.jsx";
@@ -135,7 +137,9 @@ export default function OAuthAuthorizePage() {
             <AlertDescription>{reqError}</AlertDescription>
           </Alert>
         ) : !user ? (
-          <form onSubmit={sendMagicLink} className="flex flex-col gap-4">
+          // A div rather than the form itself: once the link is sent, the code
+          // form takes over, and a form can't sit inside another.
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col items-center gap-2 text-center">
               <LockOpenIcon className="size-10 text-primary" />
               <h1 className="text-lg font-semibold">{t("signIn.heading")}</h1>
@@ -147,12 +151,17 @@ export default function OAuthAuthorizePage() {
               </p>
             </div>
             {sent ? (
-              <Alert>
-                <MailCheckIcon />
-                <AlertDescription>{t("signIn.checkEmail")}</AlertDescription>
-              </Alert>
-            ) : (
               <>
+                <Alert>
+                  <MailCheckIcon />
+                  <AlertDescription>{t("signIn.checkEmail")}</AlertDescription>
+                </Alert>
+                {/* Signing in with the code keeps this page, and the pending
+                    request in its URL, exactly where it is. */}
+                <EmailCodeForm email={email.trim()} />
+              </>
+            ) : (
+              <form onSubmit={sendMagicLink} className="flex flex-col gap-4">
                 {signInError && (
                   <Alert variant="destructive">
                     <AlertDescription>{signInError}</AlertDescription>
@@ -175,9 +184,9 @@ export default function OAuthAuthorizePage() {
                   {sending && <Spinner data-icon="inline-start" />}
                   {t("signIn.sendButton")}
                 </Button>
-              </>
+              </form>
             )}
-          </form>
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col items-center gap-2 text-center">

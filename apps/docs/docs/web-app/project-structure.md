@@ -16,7 +16,7 @@ src/
     HubPage.jsx           public gallery of published lessons + client-side search
     ProfilePage.jsx       a user's public profile: bio + their published lessons
     LibraryPage.jsx       the lessons this device holds (/library): open, copy, rename, delete, start another (see local-lessons.md)
-    LoginPage.jsx         magic-link sign-in / account status
+    LoginPage.jsx         magic-link (or emailed code) sign-in / account status
     ModerationPage.jsx    moderator/admin queue for reported content
     SettingsPage.jsx      appearance, language, read-aloud, this device's lessons, account — see pages-and-routing.md
     lesson/               one lesson (/hub/:id) and its tabs — see pages-and-routing.md
@@ -44,6 +44,7 @@ src/
     NotificationBell.jsx  header bell that polls for and shows the user's notifications
     DisplayNameGate.jsx   makes a signed-in user pick a display name before using the app
     DisplayNameDialog.jsx pick / change your public display name
+    EmailCodeForm.jsx     the "code from the email" sign-in, shared by /login and the MCP consent screen (see pwa-and-offline.md)
     BioDialog.jsx         edit your public profile bio (rich text)
     FirstLessonWizard.jsx dismissable step-by-step welcome guide for newcomers
     CommentsSection.jsx   lesson comments list + post/reply/edit boxes, incl. the 1–5 star rating input
@@ -93,7 +94,7 @@ src/
     useImageSrc.js        resolves an image ref to a displayable src
     speechPrefs.js        the read-aloud preferences (on/off, voice, pace) and the voice lists (the browser's, and the natural voices this device can run), shared by interactive mode and the settings page
     useSpeech.js          text-to-speech for interactive mode: the browser's voices over the Web Speech API, or a natural voice (Kokoro) played through Web Audio, with the browser's as the fallback; preferences come from speechPrefs.js
-    auth.jsx              AuthProvider + useAuth (session, magic link, sign out)
+    auth.jsx              AuthProvider + useAuth (session, magic link, emailed code, sign out)
     seo.jsx               <DocumentMeta> / <JsonLd> — React 19 hoists these into <head>, which is what makes them work under SSR
     ssr.jsx               the client/server handoff: SsrProvider, useServerData, useSiteOrigin
     pwa.jsx               registers the service worker; toasts when a new build is waiting

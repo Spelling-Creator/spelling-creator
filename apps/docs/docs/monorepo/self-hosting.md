@@ -279,6 +279,21 @@ people may both be "Miss Kelly". A username is unique, never shown to anybody
 else, and exists only to sign in with. Registration deliberately does not set a
 display name from it, which would route around those checks.
 
+With `magic-link` or `both`, the sign-in email carries a one-time code as well
+as the link. The installed app needs the code, because an emailed link opens
+in the browser instead (see
+[Lesson hub & accounts](../web-app/lesson-hub-and-accounts.md)). Nothing needs
+setting up for that here: the GoTrue version the compose file pins
+(`supabase/gotrue:v2.177.0`) has the code in its built-in magic link and signup
+confirmation emails ("Alternatively, enter the code: …").
+
+**Check this before upgrading GoTrue.** Newer releases rewrote those built-in
+emails without the code. If the new version's don't have it, point
+`GOTRUE_MAILER_TEMPLATES_MAGIC_LINK` and `GOTRUE_MAILER_TEMPLATES_CONFIRMATION`
+at your own templates that include <code v-pre>{{ .Token }}</code>. GoTrue takes
+each one as a URL and fetches it, so the file has to be served from somewhere
+the `auth` container can reach.
+
 The compose file defaults to `password`, because an instance reaching for it is
 more likely to have no mail server than to have one. `AUTH_MODE` is baked into
 the SPA at build time, so changing it means a rebuild.

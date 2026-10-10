@@ -37,6 +37,7 @@ import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
 } from "@spelling-creator/core/username";
+import EmailCodeForm from "../components/EmailCodeForm.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
@@ -77,6 +78,26 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
+
+  // True while the emailed code is being checked. "Use a different email" waits
+  // for it, since a check that lands after the switch still signs in the old
+  // address and can't be called back.
+  const [verifying, setVerifying] = useState(false);
+
+  // Once anyone is signed in, however it happened, the "Check your email" step
+  // is over. Without this, signing out from this page would drop the person
+  // back onto it for an address they've already used. Adjusted during render
+  // rather than in an effect, so the stale screen never paints.
+  const signedIn = !!user;
+  const [wasSignedIn, setWasSignedIn] = useState(signedIn);
+  if (signedIn !== wasSignedIn) {
+    setWasSignedIn(signedIn);
+    if (signedIn) {
+      setSent(false);
+      setConfirm(false);
+      setError("");
+    }
+  }
 
   const registering = mode === "register";
 
@@ -195,9 +216,16 @@ export default function LoginPage() {
                   components={{ strong: <strong /> }}
                 />
               </p>
+              <div className="w-full pt-2">
+                <EmailCodeForm
+                  email={identifier.trim()}
+                  onBusyChange={setVerifying}
+                />
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={verifying}
                 onClick={() => {
                   setSent(false);
                   setError("");

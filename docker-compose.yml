@@ -231,6 +231,9 @@ services:
   # Identity. The API verifies every session token against this and reads display
   # names and bios from its user metadata.
   auth:
+    # This version's built-in sign-in and signup emails include the one-time
+    # code the installed app signs in with. Later releases dropped it, so check
+    # before bumping (see "Sign-in" in docs/monorepo/self-hosting.md).
     image: supabase/gotrue:v2.177.0
     restart: unless-stopped
     environment:

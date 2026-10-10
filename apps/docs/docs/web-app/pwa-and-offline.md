@@ -154,6 +154,25 @@ dialog with the two steps. Chrome, Firefox and Edge on iOS are excluded: they
 are Safari underneath, but their UI has no "Add to Home Screen" item, and
 pointing someone at a menu entry they don't have is worse than saying nothing.
 
+## Signing in from the installed app
+
+A magic link signs in whichever browser opens it, and from an installed app
+that's rarely the app itself:
+
+- **iOS and iPadOS** open every emailed link in Safari, and a Home Screen app's
+  storage is separate from Safari's. The PKCE verifier the link needs was saved
+  in the app, so Safari can't finish the sign-in, and even if it could, the
+  session would land in Safari.
+- **Desktop Chrome and Edge** open the link in a normal browser tab. Storage is
+  shared with the installed app there, so the sign-in works, but the person is
+  left in a browser tab rather than the app window.
+
+So the "Check your email" screen also takes the one-time code from the same
+email (see [Lesson hub & accounts](./lesson-hub-and-accounts.md)). A code has no
+redirect, so it signs in wherever it's typed. The field uses
+`autocomplete="one-time-code"`, so phones can offer the code from the email as
+a keyboard suggestion.
+
 ## The manifest and icons
 
 The manifest is generated from the `manifest` block in `vite.config.js`;
