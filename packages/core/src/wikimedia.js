@@ -20,7 +20,7 @@ export const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 
 /**
  * What an image search asks imageinfo for: a 320px thumbnail for the grid,
- * and the author and licence the credit line needs.
+ * and the author and license the credit line needs.
  */
 export const IMAGEINFO_PARAMS = {
   prop: "imageinfo",
@@ -47,7 +47,7 @@ export function stripCommonsHtml(html) {
 
 /**
  * Build the credit line Commons' licensing norms expect: author (when known) +
- * licence short name + the source. Authors and licences vary widely, so this
+ * license short name + the source. Authors and licenses vary widely, so this
  * degrades gracefully when either is missing. It goes in an image block's
  * `credit`, never its caption (see ./imageCredit.js).
  * @param {string} author
@@ -63,7 +63,7 @@ export function buildCredit(author, license) {
 }
 
 /**
- * Pull author/licence out of an imageinfo `extmetadata` blob and build the
+ * Pull author/license out of an imageinfo `extmetadata` blob and build the
  * credit line from them.
  * @param {object} [meta]  imageinfo.extmetadata
  * @param {(html: unknown) => string} [strip]  HTML-to-text (override in browsers)

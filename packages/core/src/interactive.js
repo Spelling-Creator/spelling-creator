@@ -179,7 +179,7 @@ export function stepSpeechText(step) {
       const text = textBlockPlain(block).trim();
       if (text) lines.push(text);
     } else if (block.type === "image") {
-      // The caption, never the credit: a licence read out mid-lesson is noise.
+      // The caption, never the credit: a license read out mid-lesson is noise.
       const { caption } = imageCaptionParts(block);
       if (caption) lines.push(caption);
     } else if (block.type === "spelling") {

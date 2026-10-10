@@ -177,3 +177,14 @@ export const CAPTION_CLASS = "s2c-caption";
 export const CREDIT_STYLE_ID = "s2cCredit";
 export const CREDIT_STYLE_NAME = "S2C Credit";
 export const CREDIT_CLASS = "s2c-credit";
+
+// An unformatted character style on the lesson title, in every document
+// exported since credits had their own paragraph. Its presence tells the
+// importer that a picture with no credit paragraph has no credit, rather than
+// one still inside its caption as an older export would have it, so a credit
+// someone removed on purpose isn't split back out of the caption. A style
+// rather than a bookmark or a property because it changes nothing anyone sees,
+// in Word or once converted to a Google Doc, and mammoth can still read it.
+export const LESSON_TITLE_STYLE_ID = "s2cLessonTitle";
+export const LESSON_TITLE_STYLE_NAME = "S2C Lesson Title";
+export const LESSON_TITLE_CLASS = "s2c-lesson-title";

@@ -280,10 +280,10 @@ fill-in-the-blank one, whose answer must appear in the passage.
 ## Images
 
 Source only from Wikimedia Commons via search_images (freely licensed: CC / CC0 / public domain).
-add_image puts the licence attribution in the image's "credit", which prints in small type under
+add_image puts the license attribution in the image's "credit", which prints in small type under
 the caption; never remove or rewrite it, and pass it through unchanged when editing a lesson. The
 "caption" is separate and optional: if you write one, say what the picture shows and leave the
-attribution out of it. An image should go FIRST in its section, above both paragraphs — but
+attribution out of it. An image should go FIRST in its section, above both paragraphs. However,
 add_image's default placement is the END of the section's prose (just before any question blocks),
 so to get the image first pass "index": 0 (with "sectionId"/"sectionIndex") explicitly; don't rely
 on the default when the image goes with a section's opening. Prefer images that do double duty

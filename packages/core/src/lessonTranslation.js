@@ -28,7 +28,7 @@
 //
 // - spelling words: they ARE the material. The lesson is "spell these
 //   words", and a translated word list would be a different lesson
-// - image credits: a photographer's name and a licence, for the same reason
+// - image credits: a photographer's name and a license, for the same reason
 //   as source citations below
 // - VAKT link labels: names of external resources, which stay in whatever
 //   language the resource itself is in
@@ -133,7 +133,7 @@ export function lessonTranslationBatches(doc) {
       } else if (block.type === "image") {
         // Mirrors the renderer: an image block without a source draws nothing,
         // caption included, so there is nothing to translate for one. Only the
-        // author's caption: the credit line is names and a licence.
+        // author's caption: the credit line is names and a license.
         const { caption } = imageCaptionParts(block);
         if ((block.image || block.src) && caption) {
           segments.push({

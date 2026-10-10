@@ -29,7 +29,7 @@ two can't drift apart:
 | The document title                  | Spelling words (they are the material)     |
 | Text blocks, paragraph by paragraph | VAKT link labels (names of external sites) |
 | Footnote notes                      | Source citations and the Sources list      |
-| Question prompts, answers and steps | Image credits (names and licences)         |
+| Question prompts, answers and steps | Image credits (names and licenses)         |
 | Image captions                      |                                            |
 | VAKT activity text                  |                                            |
 

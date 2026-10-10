@@ -27,7 +27,7 @@ PDF printing.
   [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
 - **Search images**: find free Pixabay or Wikimedia Commons images from within
   a section and insert one with a click (see [Search images](./search-images.md)).
-- **Image credits**: a picture's licence credit is kept apart from its caption,
+- **Image credits**: a picture's license credit is kept apart from its caption,
   printed in small type under it, and never read aloud, translated or used as
   alt text. Removing one asks first (see [Image credits](./image-credits.md)).
 - **Question blocks** - add structured questions in eight types (see [Question blocks](./question-blocks.md)).

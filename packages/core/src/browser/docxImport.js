@@ -36,6 +36,8 @@ import {
   CAPTION_STYLE_NAME,
   CREDIT_CLASS,
   CREDIT_STYLE_NAME,
+  LESSON_TITLE_CLASS,
+  LESSON_TITLE_STYLE_NAME,
   FOOTNOTE_LOCATOR_CLASS,
   FOOTNOTE_LOCATOR_STYLE_NAME,
   FOOTNOTE_NOTE_CLASS,
@@ -89,6 +91,7 @@ const IMPORT_STYLE_MAP = [
   `p[style-name='${SOURCE_ENTRY_STYLE_NAME}'] => p.${SOURCE_ENTRY_CLASS}:fresh`,
   `p[style-name='${CAPTION_STYLE_NAME}'] => p.${CAPTION_CLASS}:fresh`,
   `p[style-name='${CREDIT_STYLE_NAME}'] => p.${CREDIT_CLASS}:fresh`,
+  `r[style-name='${LESSON_TITLE_STYLE_NAME}'] => span.${LESSON_TITLE_CLASS}`,
   `r[style-name='${FOOTNOTE_LOCATOR_STYLE_NAME}'] => span.${FOOTNOTE_LOCATOR_CLASS}`,
   `r[style-name='${FOOTNOTE_NOTE_STYLE_NAME}'] => span.${FOOTNOTE_NOTE_CLASS}`,
   // mammoth drops underlining unless asked to keep it.
@@ -148,6 +151,12 @@ function parseHtmlToDoc(html, fileName) {
   // which paragraphs are captions; an older one leaves it to the shape.
   const styledCaptions = Boolean(dom.querySelector(`p.${CAPTION_CLASS}`));
   const captionOf = (el) => captionText(el, styledCaptions);
+  // A file exported since credits had their own paragraph says so, and in one
+  // of those a picture with no credit paragraph has no credit.
+  const separateCredits = Boolean(
+    dom.querySelector(`span.${LESSON_TITLE_CLASS}`),
+  );
+  const linesAt = (k) => pictureLines(nodes, k, captionOf, separateCredits);
 
   // Decide which heading levels act as section dividers. Our own exports use
   // `<h2>`; we also accept `<h3>`, and fall back to `<h1>` for documents that
@@ -213,7 +222,7 @@ function parseHtmlToDoc(html, fileName) {
     const img = el.querySelector?.("img");
     if (img?.getAttribute("src")) {
       ensureSection();
-      const { caption, credit, used } = pictureLines(nodes, i + 1, captionOf);
+      const { caption, credit, used } = linesAt(i + 1);
       current.blocks.push(imageBlock(img, caption, credit));
       i += used; // consume the caption and credit paragraphs
       continue;
@@ -245,15 +254,18 @@ function parseHtmlToDoc(html, fileName) {
 
     // A leading bold-only paragraph before any content is the document title
     // (that's how the exporter emits it — Word's Title style, which mammoth
-    // renders as a bold paragraph rather than a heading).
+    // renders as a bold paragraph rather than a heading). A newer export also
+    // marks the title's text with its own style, which says so outright.
+    const markedTitle = Boolean(el.querySelector(`span.${LESSON_TITLE_CLASS}`));
     if (
       !title &&
       current === null &&
       sections.length === 0 &&
-      isBoldOnly(el) &&
-      !matchQuestion(el) &&
-      !isSpellingHeading(text) &&
-      !isVaktHeading(text)
+      (markedTitle ||
+        (isBoldOnly(el) &&
+          !matchQuestion(el) &&
+          !isSpellingHeading(text) &&
+          !isVaktHeading(text)))
     ) {
       title = text;
       continue;
@@ -269,7 +281,7 @@ function parseHtmlToDoc(html, fileName) {
 
     if (isVaktHeading(text)) {
       ensureSection();
-      const { block, next } = readVakt(nodes, i, captionOf);
+      const { block, next } = readVakt(nodes, i, linesAt);
       current.blocks.push(block);
       i = next;
       continue;
@@ -530,17 +542,21 @@ function captionText(el, styledCaptions) {
 
 // The caption and credit lines under a picture, starting at index k, and how
 // many paragraphs they took. Either may be missing. A credit is only ever
-// recognised by its style: a file from before credits had one carries its
-// credit in the caption, which imageCaptionParts splits when it's read.
-function pictureLines(nodes, k, captionOf) {
+// recognized by its style: a file from before credits had one carries its
+// credit in the caption, which imageCaptionParts splits when it's read, and
+// for one of those `credit` is undefined so the block is left to that split.
+// In a newer file (`separateCredits`) a missing credit is an empty one, which
+// imageCaptionParts takes as removed on purpose.
+function pictureLines(nodes, k, captionOf, separateCredits) {
   const caption = captionOf(nodes[k]);
   let used = caption ? 1 : 0;
   const next = nodes[k + used];
-  const credit =
+  const styled =
     next?.tagName === "P" && next.classList.contains(CREDIT_CLASS)
       ? next.textContent.trim()
       : "";
-  if (credit) used += 1;
+  if (styled) used += 1;
+  const credit = styled || (separateCredits ? "" : undefined);
   return { caption, credit, used };
 }
 
@@ -684,10 +700,11 @@ function isVaktHeading(text) {
 }
 
 // Build a VAKT block from its label paragraph, then greedily consume what the
-// exporter writes underneath it: the activity's picture (with the italic caption
-// and the credit that may follow), and one paragraph per link. Returns { block, next } where
+// exporter writes underneath it: the activity's picture (with the italic
+// caption and the credit that may follow, read by `linesAt`, see
+// pictureLines), and one paragraph per link. Returns { block, next } where
 // `next` is the index of the last node consumed.
-function readVakt(nodes, i, captionOf) {
+function readVakt(nodes, i, linesAt) {
   const heading = nodes[i].textContent.trim();
   const text = heading.slice(VAKT_LABEL.length).trim();
   const block = {
@@ -704,7 +721,7 @@ function readVakt(nodes, i, captionOf) {
 
   const img = nodes[k]?.querySelector?.("img");
   if (img?.getAttribute("src")) {
-    const { caption, credit, used } = pictureLines(nodes, k + 1, captionOf);
+    const { caption, credit, used } = linesAt(k + 1);
     block.src = img.getAttribute("src");
     block.width = 0; // filled in by measureImages()
     block.height = 0;
@@ -715,7 +732,7 @@ function readVakt(nodes, i, captionOf) {
     block.size = VAKT_DEFAULT_IMAGE_SIZE;
     block.align = VAKT_DEFAULT_IMAGE_ALIGN;
     if (caption) block.caption = caption;
-    if (credit) block.credit = credit;
+    if (credit !== undefined) block.credit = credit;
     k += used;
     last = k;
     k += 1;
@@ -759,7 +776,7 @@ function imageBlock(img, caption, credit) {
     size: DEFAULT_IMAGE_SIZE,
     align: DEFAULT_IMAGE_ALIGN,
     ...(caption ? { caption } : {}),
-    ...(credit ? { credit } : {}),
+    ...(credit !== undefined ? { credit } : {}),
   };
 }
 

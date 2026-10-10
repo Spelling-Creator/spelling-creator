@@ -56,8 +56,8 @@ no Worker and no Turnstile challenge. The MCP server's `search_images` searches
 Commons too, with the same shared plumbing (`@spelling-creator/core/wikimedia`).
 
 Every Commons file is licensed on its own, so each result carries its author
-and licence, and the credit is built from them:
-`Image (by {author}, {licence}) via Wikimedia Commons`.
+and license, and the credit is built from them:
+`Image (by {author}, {license}) via Wikimedia Commons`.
 
 ### Wikidata's pictures come first
 

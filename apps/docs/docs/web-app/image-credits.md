@@ -9,7 +9,7 @@ A picture in a lesson (an image block, or the picture on a
 
 - the **caption**, which the author writes and which says what the picture
   shows, and
-- the **credit**, the attribution the picture's licence asks for, such as
+- the **credit**, the attribution the picture's license asks for, such as
   `Image (by Jane Doe, CC BY-SA 4.0) via Wikimedia Commons`.
 
 [Search images](./search-images.md) and the MCP server's `add_image` fill in
@@ -20,9 +20,9 @@ starts with no credit, and you can type one in if it needs it.
 
 The credit used to be written into the caption. That meant:
 
-- [read aloud](./interactive-mode.md) spoke the licence to the speller in the
+- [read aloud](./interactive-mode.md) spoke the license to the speller in the
   middle of a lesson,
-- the picture's alt text was its licence rather than a description,
+- the picture's alt text was its license rather than a description,
 - [lesson translation](./lesson-translation.md) machine-translated
   photographers' names,
 - [lesson summaries](./lesson-summaries.md) had to skip captions altogether,
@@ -62,25 +62,44 @@ rewritten in storage: that would show up as an edit to every picture in
 live session. Instead the split happens when a lesson is read
 (`imageCaptionParts` in `packages/core/src/imageCredit.js`).
 
-It only recognises the credit lines this app wrote itself, at the very end of a
+It only recognizes the credit lines this app wrote itself, at the very end of a
 caption:
 
-- `Image (by {author}, {licence}) via Wikimedia Commons`, and the older
+- `Image (by {author}, {license}) via Wikimedia Commons`, and the older
   `Image by {author} via Wikimedia Commons`
 - `Image by {user} from Pixabay` and `Image from Pixabay`
 
 Anything the author wrote in front of it becomes the caption, so
 `A red panda resting. Image (by ...) via Wikimedia Commons` reads as that
-caption plus that credit. A caption that merely starts with "Image of..." is
-left alone.
+caption plus that credit, and so does a credit the author put in brackets
+(`Lions (Image from Pixabay)`). A caption that merely starts with "Image of..."
+or "Image (cute) of..." is left alone.
 
 A block with a `credit` field, even an empty one, is never split again: an
 empty credit means someone removed it on purpose. The first time either field
 of an older picture is edited, both are written back as separate fields.
 
+Most of the app reads a picture through `imageCaptionParts`. Two places hand
+the stored block to something else, and split it first with
+`withSeparateCredit`:
+
+- **The MCP server's view of a lesson** (`presentDoc`, behind `get_lesson` and
+  the live session's reader). An assistant is told to keep the attribution out
+  of the caption and pass `credit` through, so shown a combined caption it
+  would drop the attribution.
+- **Three-way merges** (`git/merge.js`). Without it, a caption edit on one side
+  and a credit fix on the other would both change `caption`, and both add
+  `credit`, and come out as conflicts.
+
 ## In a Word document
 
 The exporter gives the credit its own paragraph style (`S2C Credit`), next to
 the caption's `S2C Caption`, and [DOCX import](./formatting-and-footnotes.md)
-reads both back by style. A document exported before credits existed has the
-credit inside its caption paragraph, which is then split as above.
+reads both back by style.
+
+The lesson title also carries an unformatted character style, `S2C Lesson
+Title`, which nobody sees. It tells the importer the file is from after credits
+had their own paragraph, so a picture with no credit paragraph comes back with
+an empty credit and a credit that was removed on purpose stays removed. A
+document without it was exported before credits existed: its credit is inside
+the caption paragraph and is split as above.

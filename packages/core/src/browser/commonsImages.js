@@ -8,8 +8,8 @@
 // So both the search and the per-image byte download happen client-side, and no
 // Turnstile token is required.
 //
-// Every Commons image carries a licence, and most require attribution, so each
-// hit comes with a ready-made attribution string (author + licence + "via
+// Every Commons image carries a license, and most require attribution, so each
+// hit comes with a ready-made attribution string (author + license + "via
 // Wikimedia Commons") that the dialog sets as the image's credit.
 //
 // The Commons round-trip and the attribution handling are shared with the MCP
@@ -72,7 +72,7 @@ function normaliseHit(page, info) {
  *
  * Uses generator=search (full-text search over file pages) + prop=imageinfo to
  * get, in one request, each match's thumbnail URL, dimensions, MIME type, and
- * the licence/author metadata needed for attribution.
+ * the license/author metadata needed for attribution.
  *
  * On the first page, the pictures Wikidata lists for the topic come first,
  * each with `wikidata: { role, item }` saying what it is and of what, and are

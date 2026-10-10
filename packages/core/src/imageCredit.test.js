@@ -4,6 +4,7 @@ import {
   imageCaptionParts,
   splitLegacyCredit,
   withImageCaptionParts,
+  withSeparateCredit,
 } from "./imageCredit.js";
 
 const COMMONS = "Image (by Jane Doe, CC BY-SA 4.0) via Wikimedia Commons";
@@ -48,6 +49,25 @@ describe("splitLegacyCredit", () => {
     expect(splitLegacyCredit(`Saturn. ${credit}`)).toEqual({
       caption: "Saturn.",
       credit,
+    });
+  });
+
+  it("doesn't swallow a caption that opens with its own parentheses", () => {
+    const credit = "Image (by X, CC BY 4.0) via Wikimedia Commons";
+    expect(splitLegacyCredit(`Image (cute) of a dog. ${credit}`)).toEqual({
+      caption: "Image (cute) of a dog.",
+      credit,
+    });
+  });
+
+  it("splits a credit the author wrapped in brackets", () => {
+    expect(splitLegacyCredit("Lions (Image from Pixabay)")).toEqual({
+      caption: "Lions",
+      credit: "Image from Pixabay",
+    });
+    expect(splitLegacyCredit(`Saturn [${COMMONS}].`)).toEqual({
+      caption: "Saturn",
+      credit: COMMONS,
     });
   });
 
@@ -107,5 +127,23 @@ describe("withImageCaptionParts", () => {
       caption: "A lion.",
       credit: "",
     });
+  });
+});
+
+describe("withSeparateCredit", () => {
+  it("splits pictures and leaves every other block alone", () => {
+    const caption = `A lion. ${COMMONS}`;
+    expect(withSeparateCredit({ type: "image", caption })).toEqual({
+      type: "image",
+      caption: "A lion.",
+      credit: COMMONS,
+    });
+    expect(
+      withSeparateCredit({ type: "vakt", text: "Jump", src: "x", caption }),
+    ).toMatchObject({ caption: "A lion.", credit: COMMONS });
+    const bare = { type: "vakt", text: "Jump", links: [] };
+    expect(withSeparateCredit(bare)).toBe(bare);
+    const text = { type: "text", text: caption };
+    expect(withSeparateCredit(text)).toBe(text);
   });
 });

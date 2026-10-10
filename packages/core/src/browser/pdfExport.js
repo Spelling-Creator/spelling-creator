@@ -45,8 +45,8 @@ function escapeHtml(text) {
 
 // mammoth converts each image to a natural-size <img> in its own <p> and drops the
 // block's picked size + alignment (and the caption's alignment). Re-apply both by
-// wrapping each image — and its caption and credit, if any — in a fixed-width
-// <figure>:
+// wrapping each image, and its caption and credit if it has them, in a
+// fixed-width <figure>:
 //
 //   - The figure's width is the SAME px size the docx used — not recomputed
 //     here, but reported by buildDocument as it embedded each picture — so the

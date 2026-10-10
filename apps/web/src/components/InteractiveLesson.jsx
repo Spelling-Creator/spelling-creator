@@ -500,7 +500,7 @@ function ImageBlock({ block }) {
   );
 }
 
-// The licence credit under a picture: small and quiet, since it's owed to the
+// The license credit under a picture: small and quiet, since it's owed to the
 // photographer rather than part of the lesson.
 function ImageCredit({ credit }) {
   if (!credit) return null;
@@ -592,6 +592,9 @@ function VaktBlock({ block }) {
             style={{ aspectRatio: `${width} / ${height}` }}
           />
         ))}
+      {hasImage && caption && (
+        <p className="mt-2 text-sm text-muted-foreground">{caption}</p>
+      )}
       {hasImage && <ImageCredit credit={credit} />}
 
       {links.length > 0 && (

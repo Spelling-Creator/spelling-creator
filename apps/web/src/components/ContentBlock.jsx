@@ -274,7 +274,7 @@ function previewMargin(align) {
 }
 
 // A picture's caption, which the author writes, and its credit, which the
-// picture's licence asks for, as two fields (see core/imageCredit.js). Editing
+// picture's license asks for, as two fields (see core/imageCredit.js). Editing
 // either writes both back as separate fields, so a block from before credits
 // had their own field stops depending on the split made when it's read.
 //

@@ -46,6 +46,8 @@ import {
   LEGEND_SEPARATOR,
   QUESTION_LINE_STYLE_ID,
   QUESTION_LINE_STYLE_NAME,
+  LESSON_TITLE_STYLE_ID,
+  LESSON_TITLE_STYLE_NAME,
   SOURCE_ENTRY_STYLE_ID,
   SOURCE_ENTRY_STYLE_NAME,
   SOURCES_HEADING_STYLE_ID,
@@ -261,7 +263,7 @@ async function imageBlockParagraphs(block, embedded) {
       }),
     );
   }
-  // The licence credit, smaller and quieter than the caption above it: it has
+  // The license credit, smaller and quieter than the caption above it: it has
   // to be there, but it isn't part of the lesson.
   if (credit) {
     paragraphs.push(
@@ -391,10 +393,10 @@ async function vaktBlockParagraphs(block, embedded) {
     }),
   ];
 
-  // A VAKT image prints exactly as an image block's does — the bytes, the
-  // caption and credit, the aspect-ratio fit, the picked size and alignment — hence the
-  // reuse; vaktImageBlock supplies only the VAKT defaults for a block that was
-  // never framed by hand.
+  // A VAKT image prints exactly as an image block's does (the bytes, the
+  // caption and credit, the aspect-ratio fit, the picked size and alignment),
+  // hence the reuse; vaktImageBlock supplies only the VAKT defaults for a block
+  // that was never framed by hand.
   if (block.image || block.src) {
     paragraphs.push(
       ...(await imageBlockParagraphs(vaktImageBlock(block), embedded)),
@@ -457,7 +459,11 @@ function titleParagraphs(doc, meta) {
       alignment: AlignmentType.CENTER,
       spacing: { after: lines.length ? 60 : 240 },
       children: [
-        new TextRun({ text: doc.title || "Untitled Lesson", bold: true }),
+        new TextRun({
+          text: doc.title || "Untitled Lesson",
+          bold: true,
+          style: LESSON_TITLE_STYLE_ID,
+        }),
       ],
     }),
   ];
@@ -551,6 +557,12 @@ function colourCharacterStyles() {
       run: { color: hex(VAKT_COLOR) },
     },
     // Unformatted on purpose: only the importer looks at these.
+    {
+      id: LESSON_TITLE_STYLE_ID,
+      name: LESSON_TITLE_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+    },
     {
       id: FOOTNOTE_LOCATOR_STYLE_ID,
       name: FOOTNOTE_LOCATOR_STYLE_NAME,

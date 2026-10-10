@@ -203,13 +203,13 @@ const blockSchema = z
       .optional()
       .describe(
         'For type "image" (and a "vakt" block carrying one): the caption shown under it, saying what ' +
-          "the picture shows. Optional. Never put the licence attribution here; that is `credit`.",
+          "the picture shows. Optional. Never put the license attribution here; that is `credit`.",
       ),
     credit: z
       .string()
       .optional()
       .describe(
-        'For type "image" (and a "vakt" block carrying one): the licence attribution add_image sets, ' +
+        'For type "image" (and a "vakt" block carrying one): the license attribution add_image sets, ' +
           "printed in small type under the caption. Pass it through unchanged when editing a lesson.",
       ),
     align: z
@@ -425,7 +425,7 @@ const imageSearchOutputSchema = {
 // should — a list of Commons files is no use to a user who'd have to type a
 // filename back.
 const PICK_ONE_YOURSELF =
-  "Choose the best `ref` and call add_image to insert it. add_image sets the `credit` (the licence " +
+  "Choose the best `ref` and call add_image to insert it. add_image sets the `credit` (the license " +
   "attribution Commons requires) on the image by itself.";
 
 // With one, choosing is the user's, and an assistant that keeps going takes it
@@ -2140,7 +2140,7 @@ export function registerTools(server, ctx) {
       title: "Search images",
       description:
         "Search Wikimedia Commons for freely-licensed images to illustrate a lesson. Returns a list of candidates, " +
-        "each with a `ref` (its File: title), a `credit` carrying the required attribution, the licence/author, " +
+        "each with a `ref` (its File: title), a `credit` carrying the required attribution, the license/author, " +
         "dimensions, a `previewURL`, and a `source` page link.\n\n" +
         "When the query names one particular thing ('lion', 'Paris', 'Great Pyramid of Giza'), the list opens " +
         "with the pictures Wikidata lists for it: its main picture, and where it has them a map, a flag, a view " +
@@ -2233,7 +2233,7 @@ export function registerTools(server, ctx) {
       title: "Add an image to a lesson",
       description:
         "Download a Wikimedia Commons image (from a search_images `ref`), store its bytes, and insert it as an image " +
-        "block in a lesson you authored. The picture's licence attribution is set as its `credit` automatically, " +
+        "block in a lesson you authored. The picture's license attribution is set as its `credit` automatically, " +
         "apart from the caption, so a `caption` you give is only what the picture shows.\n\n" +
         "To place the image right next to a specific block you already know (e.g. the paragraph it illustrates), " +
         "pass `afterBlockId` (a block id from get_lesson) — this picks both the section and position for you and is " +

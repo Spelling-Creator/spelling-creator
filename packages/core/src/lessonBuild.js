@@ -20,6 +20,7 @@
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
 import { IMAGE_ALIGNS, extFromMime } from "./image.js";
+import { withSeparateCredit } from "./imageCredit.js";
 import { isSafeLink } from "./richText.js";
 import {
   markupToContent,
@@ -266,7 +267,7 @@ function buildImageBlock(block, where) {
   if (Number.isFinite(block.width)) out.width = block.width;
   if (Number.isFinite(block.height)) out.height = block.height;
   if (typeof block.caption === "string") out.caption = block.caption;
-  // The licence credit, apart from the caption (see ./imageCredit.js).
+  // The license credit, apart from the caption (see ./imageCredit.js).
   if (typeof block.credit === "string") out.credit = block.credit;
   if (IMAGE_ALIGNS.includes(block.align)) out.align = block.align;
   if (typeof block.size === "string" && block.size) out.size = block.size;
@@ -354,6 +355,12 @@ function sameSource(raw, stored) {
  * with every text block as markup in `text` rather than as a stored `content`
  * tree. Plain blocks come out escaped (a literal asterisk as \*), so any of
  * them can be passed back to replace_block or update_lesson unchanged.
+ *
+ * Every picture comes out with its caption and credit as separate fields, even
+ * one stored from before credits had their own (see ./imageCredit.js). The
+ * tools tell the assistant to keep the attribution out of the caption and pass
+ * `credit` through, which, shown the combined caption, it would do by dropping
+ * the attribution for good.
  * @param {any} doc
  */
 export function presentDoc(doc) {
@@ -367,7 +374,7 @@ export function presentDoc(doc) {
         (block) =>
           block?.type === "text"
             ? { id: block.id, type: "text", text: textBlockMarkup(block) }
-            : block,
+            : withSeparateCredit(block),
       ),
     })),
   };

@@ -7,7 +7,7 @@
 // MCP — it is proxied through the Worker behind a Turnstile challenge the server
 // can't satisfy.
 //
-// Every Commons image carries a licence and most require attribution, so each
+// Every Commons image carries a license and most require attribution, so each
 // hit (and the resolved download) comes with a ready-made credit line the tools
 // set as the image's `credit`, apart from its caption.
 //

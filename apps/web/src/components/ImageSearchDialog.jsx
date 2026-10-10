@@ -91,7 +91,7 @@ const PROVIDERS = [
     },
     credit(hit) {
       // Each Commons image is licensed individually; the hit carries a ready-made
-      // credit line (author + licence + source).
+      // credit line (author + license + source).
       return hit.credit;
     },
     alt(hit, t) {

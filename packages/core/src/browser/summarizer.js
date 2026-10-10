@@ -449,7 +449,7 @@ export async function fitToQuota(summarizer, text) {
  * title and section headings tell the model how the lesson is organised, and
  * labelling the questions and word lists stops a bare list of words reading as
  * body text. An image's caption goes in, labelled as one, since it says what
- * the picture shows; its credit line stays out, being a name and a licence.
+ * the picture shows; its credit line stays out, being a name and a license.
  *
  * @param {object} doc  The lesson body: { title, sections: [{ name, blocks }] }.
  * @returns {string} Markdown-ish plain text in reading order.
