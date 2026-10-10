@@ -311,10 +311,18 @@ How it behaves:
   so choosing one on the settings page, or with speech off, downloads
   nothing. The device check runs again just before, so a connection that has
   turned metered since the page loaded doesn't start one.
-- **Never silent while it loads.** During the download the browser's voice
-  reads, and a line under the step count shows the progress. Screen readers
-  hear that it's downloading once, not every percent. The natural voice takes
-  over from the next thing spoken.
+- **Never silent while it downloads.** During the download the browser's
+  voice reads, and a line under the step count shows the progress. Screen
+  readers hear that it's downloading once, not every percent. The natural
+  voice takes over from the next thing spoken.
+- **Ready from the first step once downloaded.** When the model is already
+  in the cache (`readAloudCached` in `readAloud.js` looks for its weights),
+  it loads as soon as practice mode opens with speech on, which takes a
+  couple of seconds. A step spoken meanwhile waits for it, up to five
+  seconds, instead of being read in the browser's voice, and the line under
+  the step count says "Getting the natural voice ready...". Past the five
+  seconds the browser's voice reads that step and the natural one takes over
+  from the next.
 - **The browser's voice is the fallback**, in three ways, and the same line
   says which:
   - a download that fails is tried again on the next step, up to three times

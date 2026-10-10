@@ -33,12 +33,7 @@ import espeakManifestUrl from "@spelling-creator/spellophone/espeak-ng-data/mani
 import espeakCoreUrl from "@spelling-creator/spellophone/espeak-ng-data/core.bin.gz?url";
 import espeakEnglishUrl from "@spelling-creator/spellophone/espeak-ng-data/en_dict.gz?url";
 import { createDownloadProgress } from "./downloadProgress.js";
-import { DEFAULT_VOICE } from "./readAloudVoices.js";
-
-const MODEL_ID = "onnx-community/Kokoro-82M-v1.0-ONNX";
-// Pinned to a commit, so a later push to the repo can't change what readers
-// download without someone here choosing to move the pin.
-const MODEL_REVISION = "1939ad2a8e416c0acfeecc08a694d14ef25f2231";
+import { DEFAULT_VOICE, MODEL_ID, MODEL_REVISION } from "./readAloudVoices.js";
 
 export const SAMPLE_RATE = 24000;
 

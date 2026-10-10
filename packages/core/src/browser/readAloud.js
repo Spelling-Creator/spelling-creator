@@ -4,12 +4,18 @@
 // summarizer.js.
 
 import { meteredConnection, webGpuAdapter } from "./deviceCheck.js";
+import { MODEL_CACHE_NAME } from "./modelCache.js";
+import { MODEL_ID, MODEL_REVISION } from "./readAloudVoices.js";
 
 export { VOICES, DEFAULT_VOICE } from "./readAloudVoices.js";
 
 // The download, at the fp32 weights the engine loads on WebGPU, rounded the
 // way the UI says it.
 export const DOWNLOAD_MB = 330;
+
+// Where transformers.js keeps those weights once they're downloaded: in the
+// shared model cache (modelCache.js), under the URL it fetched them from.
+const WEIGHTS_URL = `https://huggingface.co/${MODEL_ID}/resolve/${MODEL_REVISION}/onnx/model.onnx`;
 
 // Phones and tablets are turned away by name, because WebGPU alone doesn't
 // tell them apart: an iPad has it, and Kokoro froze and then crashed Safari on
@@ -36,6 +42,26 @@ function phoneOrTablet() {
 export async function readAloudPossible() {
   if (phoneOrTablet() || meteredConnection()) return false;
   return Boolean(await webGpuAdapter());
+}
+
+/**
+ * Whether the model is already downloaded, so loading it costs a couple of
+ * seconds rather than a 330 MB download. The weights are nearly all of it, and
+ * transformers.js stores each file whole, so finding them is the answer; the
+ * small files beside them are quick to fetch again if they've gone. False
+ * wherever Cache Storage can't be read.
+ * @returns {Promise<boolean>}
+ */
+export async function readAloudCached() {
+  try {
+    if (typeof caches === "undefined") return false;
+    // has() first: open() would create an empty bucket just to look in it.
+    if (!(await caches.has(MODEL_CACHE_NAME))) return false;
+    const cache = await caches.open(MODEL_CACHE_NAME);
+    return Boolean(await cache.match(WEIGHTS_URL));
+  } catch {
+    return false;
+  }
 }
 
 /**

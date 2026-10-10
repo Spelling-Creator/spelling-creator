@@ -229,9 +229,9 @@ the MCP server cannot reach it by accident:
   translator            on-device comment translation: browser Translator API with an in-page fallback
   fallbackTranslator    the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
   deviceCheck           the checks the in-page models share: the WebGPU adapter (asked for once a page), the large-model limits, a metered connection
-  readAloud             the natural read-aloud voice (Kokoro): the device check, and the door to its engine
+  readAloud             the natural read-aloud voice (Kokoro): the device check, whether it's already downloaded, and the door to its engine
   readAloudEngine       the engine itself: text clean-up, espeak-ng phonemes (Spellophone), Kokoro via transformers.js on WebGPU, a lazy chunk only speaking ever loads
-  readAloudVoices       the Kokoro voices on offer, listable without the engine
+  readAloudVoices       the Kokoro model (id and pinned revision) and the voices on offer, readable without the engine
   downloadProgress      shared by the transformers.js engines: per-file download events summed into the one 0-1 fraction the UI shows
   git/fs                LightningFS — the IndexedDB filesystem the repos live on
   git/sync              fork (= clone the repo) and merge-with-original flows

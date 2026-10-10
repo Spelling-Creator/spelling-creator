@@ -29,10 +29,13 @@
 //
 // And four facts shape the natural voice:
 //
-//   The first use downloads about 330 MB. So nothing loads until something is
-//   actually spoken with a natural voice chosen and speech on, and the
+//   The first use downloads about 330 MB. So nothing downloads until something
+//   is actually spoken with a natural voice chosen and speech on, and the
 //   browser's voice reads in the meantime rather than leaving a learner in
-//   silence for minutes.
+//   silence for minutes. Once it's downloaded, loading it from the cache takes
+//   a couple of seconds, so that starts as soon as practice mode opens, and a
+//   step spoken meanwhile waits for it (up to CACHED_WAIT_MS) rather than
+//   being read in a voice nobody chose.
 //
 //   Audio is made a chunk at a time, faster than it plays (about 0.6 s to the
 //   first sound, then roughly six seconds of speech per second of work on a
@@ -58,6 +61,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   loadReadAloud,
+  readAloudCached,
   readAloudPossible,
 } from "@spelling-creator/core/browser/readAloud";
 import {
@@ -93,6 +97,11 @@ const MAX_READ_FAILURES = 2;
 // browser is holding it back (no recent click, a strict autoplay rule), and
 // the step is read by the browser's voice instead of being queued in silence.
 const RESUME_TIMEOUT_MS = 500;
+
+// How long a step waits for a downloaded natural voice to load from the cache
+// before the browser's voice reads it instead. Loading takes about two seconds
+// on a Mac, most of it compiling the model for the GPU.
+const CACHED_WAIT_MS = 5000;
 
 /**
  * Split text into utterance-sized chunks: first by line (the caller composes one
@@ -163,12 +172,13 @@ function createProgress() {
  * Speech for the current browser, with the user's remembered preferences.
  *
  * `voiceLoad` describes the natural voice when one is chosen: "idle" before
- * anything has been spoken, "loading" during the download, "ready", or
- * "failed", with a `reason`: "load" for a download that failed (`retry` says
- * whether a later step will try again) or "read" for a model that loaded but
- * kept failing to read. The download's progress is in `voiceProgress`, a
- * store for useSyncExternalStore, so that ticking doesn't re-render whatever
- * holds this object.
+ * anything has been spoken, "loading" during the download (`cached` when it
+ * is only coming out of the cache), "ready", or "failed", with a `reason`:
+ * "load" for a download that failed (`retry` says whether a later step will
+ * try again) or "read" for a model that loaded but kept failing to read. The
+ * download's progress is in `voiceProgress`, a store for
+ * useSyncExternalStore, so that ticking doesn't re-render whatever holds this
+ * object.
  *
  * @returns {{
  *   supported: boolean,
@@ -181,7 +191,7 @@ function createProgress() {
  *   naturalVoices: { voiceURI: string, name: string, lang: string }[],
  *   voiceURI: string, setVoiceURI: (uri: string) => void,
  *   rate: number, setRate: (rate: number) => void,
- *   voiceLoad: { status: "idle"|"loading"|"ready"|"failed", reason?: "load"|"read", retry?: boolean } | null,
+ *   voiceLoad: { status: "idle"|"loading"|"ready"|"failed", cached?: boolean, reason?: "load"|"read", retry?: boolean } | null,
  *   voiceProgress: { get: () => number, subscribe: (listener: () => void) => () => void },
  * }}
  */
@@ -214,7 +224,10 @@ export function useSpeech() {
   const [progress] = useState(createProgress);
   const reader = useRef(null);
   const natural = useRef({
-    loading: false,
+    // The load in progress, resolving to whether it worked, or null.
+    loading: null,
+    // Whether the model is in the cache, asked once a visit (see readyCached).
+    cached: null,
     attempts: 0,
     readFailures: 0,
     brokenForVisit: false,
@@ -268,57 +281,95 @@ export function useSpeech() {
     };
   }, [stopClips]);
 
-  // Start (or retry) the download. Never runs twice at once, gives up after
-  // MAX_LOAD_ATTEMPTS, and asks the device check again first, so a connection
-  // that has turned metered since the page loaded doesn't start one.
-  const startLoad = useCallback(() => {
-    const state = natural.current;
-    if (reader.current || state.loading || state.brokenForVisit) return;
-    if (state.attempts >= MAX_LOAD_ATTEMPTS) return;
-    state.loading = true;
-    state.attempts += 1;
-    progress.set(0);
-    setLoad({ status: "loading" });
-    readAloudPossible()
-      .then((possible) => {
-        if (!possible) {
-          throw new Error("This device can't download the natural voice now.");
-        }
-        return loadReadAloud({
-          // Whole percents only; nobody reads a finer gauge.
-          onDownloadProgress: (fraction) =>
-            progress.set(Math.floor(fraction * 100) / 100),
+  // Start (or retry) the download, resolving to whether the voice is loaded.
+  // Never runs twice at once (a second call gets the load in progress), gives
+  // up after MAX_LOAD_ATTEMPTS, and asks the device check again first, so a
+  // connection that has turned metered since the page loaded doesn't start
+  // one.
+  const startLoad = useCallback(
+    ({ cached = false } = {}) => {
+      const state = natural.current;
+      if (reader.current) return Promise.resolve(true);
+      if (state.loading) return state.loading;
+      if (state.brokenForVisit || state.attempts >= MAX_LOAD_ATTEMPTS) {
+        return Promise.resolve(false);
+      }
+      state.attempts += 1;
+      progress.set(0);
+      setLoad({ status: "loading", cached });
+      state.loading = readAloudPossible()
+        .then((possible) => {
+          if (!possible) {
+            throw new Error(
+              "This device can't download the natural voice now.",
+            );
+          }
+          return loadReadAloud({
+            // Whole percents only; nobody reads a finer gauge.
+            onDownloadProgress: (fraction) =>
+              progress.set(Math.floor(fraction * 100) / 100),
+          });
+        })
+        .then((loaded) => {
+          reader.current = loaded;
+          setLoad({ status: "ready" });
+          return true;
+        })
+        .catch((err) => {
+          console.error("The natural voice couldn't load.", err);
+          setLoad({
+            status: "failed",
+            reason: "load",
+            retry: state.attempts < MAX_LOAD_ATTEMPTS,
+          });
+          return false;
+        })
+        .finally(() => {
+          state.loading = null;
         });
-      })
-      .then((loaded) => {
-        reader.current = loaded;
-        setLoad({ status: "ready" });
-      })
-      .catch((err) => {
-        console.error("The natural voice couldn't load.", err);
-        setLoad({
-          status: "failed",
-          reason: "load",
-          retry: state.attempts < MAX_LOAD_ATTEMPTS,
-        });
-      })
-      .finally(() => {
-        state.loading = false;
-      });
-  }, [progress]);
+      return state.loading;
+    },
+    [progress],
+  );
 
-  // Whether anything has been spoken yet. The device check behind
-  // naturalVoices is async, and interactive mode speaks its first step the
-  // moment it opens, which can be before the check has answered: that step is
-  // read by the browser's voice, and this starts the download as soon as the
-  // answer comes, rather than waiting for the next step to ask. Only while
-  // speech is on: choosing a natural voice with speech off downloads nothing.
+  // Load the natural voice if it's already downloaded, resolving to whether
+  // it's ready within CACHED_WAIT_MS. Resolves false at once when it isn't
+  // downloaded (or this device can't run it), which is the cue to read with
+  // the browser's voice and download the slow way. Whether it's in the cache
+  // is asked once a visit: a download that finishes later sets the reader,
+  // which answers before the question is asked.
+  const readyCached = useCallback(() => {
+    if (reader.current) return Promise.resolve(true);
+    const state = natural.current;
+    state.cached ??= Promise.all([readAloudPossible(), readAloudCached()]).then(
+      ([possible, cached]) => possible && cached,
+    );
+    return state.cached.then((cached) => {
+      if (!cached) return false;
+      return Promise.race([
+        startLoad({ cached: true }),
+        new Promise((resolve) =>
+          setTimeout(() => resolve(false), CACHED_WAIT_MS),
+        ),
+      ]);
+    });
+  }, [startLoad]);
+
+  // Whether anything has been spoken yet. A downloaded voice is loaded
+  // straight away, so the first step can use it. One that isn't downloaded
+  // waits for something to be spoken, and this covers the device check behind
+  // naturalVoices answering late: interactive mode speaks its first step the
+  // moment it opens, which can be before the check has answered, and this
+  // starts the download as soon as the answer comes rather than waiting for
+  // the next step to ask. Only while speech is on: choosing a natural voice
+  // with speech off loads nothing.
   const spoken = useRef(false);
   useEffect(() => {
-    if (naturalId && enabled && spoken.current && load.status === "idle") {
-      startLoad();
-    }
-  }, [naturalId, enabled, load.status, startLoad]);
+    if (!naturalId || !enabled || load.status !== "idle") return;
+    readyCached().then((ready) => {
+      if (!ready && spoken.current) startLoad();
+    });
+  }, [naturalId, enabled, load.status, startLoad, readyCached]);
 
   // A chunk's audio, made once per voice, pace and text. Only ever called with
   // a loaded reader.
@@ -509,11 +560,38 @@ export function useSpeech() {
         speakNatural(chunks, mine, naturalId);
         return;
       }
-      // Not loaded yet, or a download that failed and may be tried again.
-      if (naturalId) startLoad();
-      speakBrowser(chunks, mine);
+      // Not loaded yet. Read from the stored choice rather than naturalId,
+      // since the device check may not have answered yet; readyCached asks it
+      // too. A downloaded voice is waited for. Otherwise, or past the wait,
+      // the browser's voice reads, and a download (or one that failed and
+      // may be tried again) carries on behind it.
+      const chosen = naturalVoiceId(voiceURI);
+      if (!chosen || natural.current.brokenForVisit) {
+        speakBrowser(chunks, mine);
+        return;
+      }
+      setSpeaking(true);
+      readyCached().then((ready) => {
+        if (generation.current !== mine) return;
+        if (ready) {
+          speakNatural(chunks, mine, chosen);
+          return;
+        }
+        // Downloading needs the device check to have passed. If it answers
+        // only now, the effect above starts the download instead.
+        if (naturalId) startLoad();
+        speakBrowser(chunks, mine);
+      });
     },
-    [naturalId, speakNatural, speakBrowser, startLoad, stopClips],
+    [
+      voiceURI,
+      naturalId,
+      readyCached,
+      speakNatural,
+      speakBrowser,
+      startLoad,
+      stopClips,
+    ],
   );
 
   // Make the start of `text` ahead of time, for the natural voice. Only the
