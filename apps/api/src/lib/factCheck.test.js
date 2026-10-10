@@ -49,6 +49,8 @@ describe('the extraction request', () => {
 		// A named fact's name goes in "stated".
 		expect(prompt).toContain('"stated"');
 		for (const key of FACT_PROPERTY_KEYS) expect(prompt).toContain(`- ${key}:`);
+		// Facts about a kind of animal count, for the properties that have them.
+		expect(prompt).toContain('a number stated about a kind of animal');
 	});
 
 	it('has no empty enum value, which not every provider accepts', () => {

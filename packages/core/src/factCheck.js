@@ -1,4 +1,5 @@
-// Checking a lesson's facts against Wikidata.
+// Checking a lesson's facts against Wikidata, the Smithsonian's record of
+// volcanoes, and Wikipedia.
 //
 // A lesson states facts the speller is then asked about: how tall Everest is,
 // when the Eiffel Tower went up, how many people live in Paris. The lesson
@@ -19,31 +20,71 @@
 // thing on Wikidata, read the property, convert units, and compare with the
 // slack the passage's own rounding allows.
 //
+// Three sources, asked in turn:
+//
+//   Wikidata     every property, for every claim.
+//   Smithsonian  a volcano's height and eruptions, from the Global Volcanism
+//                Program (./smithsonian.js), for an item Wikidata gives a GVP
+//                number. Asked alongside Wikidata, not instead of it.
+//   Wikipedia    the subject's article (./factText.js), read only when neither
+//                has a value to compare with. It can confirm a claim, never
+//                contradict one: prose is too loose to prove a figure wrong.
+//
 // Every claim gets one of three verdicts:
 //
-//   agrees     a current Wikidata value is close enough.
-//   disagrees  Wikidata has the property, and no current value is close.
-//   unknown    the thing or the property isn't on Wikidata, its unit is one this
-//              can't convert, or Wikidata couldn't be reached. This says nothing
-//              about whether the passage is right, and callers report it as that.
+//   agrees     a current value from some source is close enough.
+//   disagrees  a source has the property, no source's value is close, and the
+//              subject isn't a kind of living thing (below).
+//   unknown    the thing or the property isn't in any source, its unit is one
+//              this can't convert, a source couldn't be reached, or the subject
+//              is a kind of living thing whose value didn't match. This says
+//              nothing about whether the passage is right, and callers report
+//              it as that.
 //
-// Wikidata is a source, not an oracle. It can be out of date, and a search for
-// "Georgia" can land on the wrong one. So every verdict carries the item it was
-// checked against, with its description and a link, and a person decides.
+// A fact about a kind of animal or plant ("cats weigh about 4 kg") is about
+// something that varies from one animal to the next, and Wikidata's figures for
+// species are patchy besides. So for a kind of living thing (see isKind), and
+// for the properties only one has (a lifespan, a litter), a value that doesn't
+// match leaves the claim unknown, with reason "varies", rather than wrong.
+// Such a claim can be confirmed, never flagged.
+//
+// No source is an oracle. Any can be out of date, and a search for "Georgia"
+// can land on the wrong one. So every verdict carries the Wikidata item it was
+// checked against, with its description and a link, and which source said
+// what, and a person decides.
 //
 // How the lookups are shaped, and why:
 //
-//   - Names become items through wbsearchentities, which is fast and small.
+//   - Names become items through Wikipedia's article search, which ranks by
+//     what a name usually means (see findCandidates).
 //   - Values come from ONE SPARQL query for every candidate item and property at
 //     once. Reading whole items instead would be simpler, but a popular item's
 //     JSON runs to megabytes (the United States is about 1.6 MB), and a check
 //     looks at several candidates for each name.
+//   - The Smithsonian is asked once for every volcano in the check, and an
+//     article is read once however many claims need it.
 //
-// The requests themselves go through ./wikidata.js, shared with the picture
+// The Wikimedia requests go through ./wikidata.js, shared with the picture
 // and sound lookups. It runs in the Worker, in Node and in the MCP server, and
 // server callers must pass a User-Agent (see there).
 
+import {
+  datesIn,
+  mentions,
+  paragraphsOf,
+  quantitiesIn,
+  stemTest,
+} from "./factText.js";
 import { textBlockPlain } from "./lessonText.js";
+import {
+  dateSpan,
+  eruptionOverlaps,
+  latestEruption,
+  nearestEruption,
+  recordedSince,
+  volcanoRecords,
+  volcanoUrl,
+} from "./smithsonian.js";
 import {
   eachLimited,
   exactMatches,
@@ -54,7 +95,7 @@ import {
   squashText,
   wikidataItemUrl,
 } from "./wikidata.js";
-import { articleItems } from "./wikipedia.js";
+import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.js";
 
 // The Worker places a quote in its passage with squashText, and the editor
 // asks whether it is still there with it. Both take it from here, so the two
@@ -104,7 +145,16 @@ const JULIAN = "Q1985786";
  * "height" reads a building's height (P2048) but falls back to a summit's
  * elevation (P2044), which is what people mean by a mountain's height. They are
  * never pooled: an item's elevation above sea level must not be able to agree
- * with a sentence about how tall it is.
+ * with a sentence about how tall it is. A property with no `pids` isn't on
+ * Wikidata, and is read from another source.
+ *
+ * `smithsonian` says what the Global Volcanism Program has to say about it, for
+ * a volcano: its summit's "elevation", its "last" eruption, or any one
+ * "eruption". See judgeVolcano.
+ *
+ * `varies` marks a property only a kind of animal has, so that a claim about
+ * it can be confirmed but never called wrong, whatever the item turns out to
+ * be (see the top of this file).
  *
  * `hint` is the plain description a model is given when choosing.
  */
@@ -113,12 +163,14 @@ export const FACT_PROPERTIES = {
     kind: "quantity",
     dimension: "length",
     pids: ["P2048", "P2044"],
+    smithsonian: "elevation",
     hint: "how tall something is: a building, statue, tree, animal or mountain",
   },
   elevation: {
     kind: "quantity",
     dimension: "length",
     pids: ["P2044"],
+    smithsonian: "elevation",
     hint: "how high a place or summit is above sea level",
   },
   length: {
@@ -211,6 +263,32 @@ export const FACT_PROPERTIES = {
     pids: ["P2047"],
     hint: "how long an event, journey or work lasts",
   },
+
+  // Facts about a kind of animal. Wikidata has some of these for some species;
+  // Wikipedia's article has more. Neither is ever enough to call one wrong
+  // (see the top of this file).
+  lifespan: {
+    kind: "quantity",
+    dimension: "time",
+    pids: ["P2250", "P4214"],
+    pooled: true,
+    varies: true,
+    hint: "how long a kind of animal lives, usually or at most (for 'cats live about 15 years', the subject is Cat)",
+  },
+  gestation: {
+    kind: "quantity",
+    dimension: "time",
+    pids: ["P3063"],
+    varies: true,
+    hint: "how long a kind of animal is pregnant",
+  },
+  litter_size: {
+    kind: "quantity",
+    dimension: "count",
+    pids: ["P7725"],
+    varies: true,
+    hint: "how many young a kind of animal has at once",
+  },
   born: {
     kind: "time",
     pids: ["P569"],
@@ -245,6 +323,20 @@ export const FACT_PROPERTIES = {
     kind: "time",
     pids: ["P577"],
     hint: "when a book, film, song or game came out",
+  },
+  // A volcano's eruptions, from the Smithsonian alone: Wikidata has no
+  // property for them.
+  last_eruption: {
+    kind: "time",
+    pids: [],
+    smithsonian: "last",
+    hint: "when a volcano last erupted",
+  },
+  erupted: {
+    kind: "time",
+    pids: [],
+    smithsonian: "eruption",
+    hint: "a time a volcano erupted (for 'Vesuvius erupted in 79 AD', the subject is Mount Vesuvius)",
   },
 
   // Facts that name a thing rather than give a number: the capital of a
@@ -313,6 +405,26 @@ export const FACT_PROPERTIES = {
 };
 
 export const FACT_PROPERTY_KEYS = Object.keys(FACT_PROPERTIES);
+
+// Read along with the values, for what they say about the item: a scientific
+// name, or being one of KIND_CLASSES, makes it a kind of living thing (see the
+// top of this file), and a GVP number makes it a volcano the Smithsonian has a
+// record of.
+const TAXON_NAME = "P225";
+const INSTANCE_OF = "P31";
+const GVP_NUMBER = "P1886";
+
+// What Wikidata says a kind of living thing is an instance of, when it has no
+// scientific name of its own: the house cat and the dog are "organisms known
+// by a particular common name", not taxa, and a Maine Coon is a cat breed.
+const KIND_CLASSES = new Set([
+  "Q16521", // taxon
+  "Q55983715", // organisms known by a particular common name
+  "Q38829", // breed
+  "Q43577", // cat breed
+  "Q39367", // dog breed
+  "Q1160573", // horse breed
+]);
 
 // Each dimension's base unit is the one with factor 1. Temperatures aren't a
 // scale factor apart, so they carry their own conversion to and from kelvin.
@@ -560,9 +672,10 @@ export function parseSparqlTime(value, precision) {
 /**
  * The query for every statement of every listed property on every listed item,
  * with what a comparison needs: rank, the value node's parts (a quantity or a
- * date), the item a named fact points at with its label, the "point in time"
- * qualifier that dates a population figure, and the "end time" qualifier that
- * retires a former capital or prime minister.
+ * date), the item a named fact points at with its label, a text value (a
+ * scientific name, a GVP number), the "point in time" qualifier that dates a
+ * population figure, and the "end time" qualifier that retires a former
+ * capital or prime minister.
  * @param {string} [language]  For the labels; English stands in for a
  *   language an item has no label in.
  */
@@ -572,7 +685,7 @@ export function statementsQuery(itemIds, pids, language = "en") {
   // "mul" is Wikidata's label for every language at once, where a name that
   // is the same everywhere (Marie Curie) now lives instead of under "en".
   const languages = [...new Set([language, "en", "mul"])].join(",");
-  return `SELECT ?item ?itemLabel ?itemDescription ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit ?value ?valueLabel ?ended WHERE {
+  return `SELECT ?item ?itemLabel ?itemDescription ?pid ?st ?rank ?amount ?unit ?lower ?upper ?time ?precision ?calendar ?pit ?value ?valueLabel ?text ?ended WHERE {
   VALUES ?item { ${items} }
   # The statements are optional so that every candidate comes back at least
   # once, with its label and description, whether or not it has anything to
@@ -589,6 +702,7 @@ export function statementsQuery(itemIds, pids, language = "en") {
       OPTIONAL { ?node wikibase:timeValue ?time ; wikibase:timePrecision ?precision ; wikibase:timeCalendarModel ?calendar . }
     }
     OPTIONAL { ?st ?ps ?value . FILTER(isIRI(?value)) }
+    OPTIONAL { ?st ?ps ?text . FILTER(isLiteral(?text) && datatype(?text) = xsd:string) }
     OPTIONAL { ?st pq:P585 ?pit . }
     OPTIONAL { ?st pq:P582 ?ended . }
   }
@@ -604,8 +718,8 @@ const number = (binding) => (binding ? Number(binding.value) : undefined);
  * time" qualifiers comes back once per qualifier; it is kept once, dated by
  * the latest. Statements with no value ("unknown value", "no value") are left
  * out, since there is nothing to compare with. A statement that points at an
- * item carries it as `value` (its id) and `valueLabel`; one with an end date
- * is marked `ended`.
+ * item carries it as `value` (its id) and `valueLabel`, and one that is a
+ * string as `text`; one with an end date is marked `ended`.
  */
 export function statementsFromBindings(bindings) {
   const byStatement = new Map();
@@ -649,6 +763,8 @@ export function statementsFromBindings(bindings) {
       // not have a discoverer to compare with.
       statement.value = lastSegment(row.value.value);
       statement.valueLabel = row.valueLabel?.value || statement.value;
+    } else if (row.text) {
+      statement.text = row.text.value;
     } else {
       continue;
     }
@@ -719,6 +835,23 @@ function headline(statements) {
   return statements.find((s) => s.rank === "preferred") || statements[0];
 }
 
+// An item's current text value for a property: its scientific name, its GVP
+// number. "" when it has none.
+function textOf(byPid, pid) {
+  return headline(currentStatements(byPid?.get(pid)))?.text || "";
+}
+
+/**
+ * Whether an item is a kind of living thing: it has a scientific name, or is
+ * a taxon, a breed, or an animal known by its common name.
+ */
+export function isKind(byPid) {
+  if (textOf(byPid, TAXON_NAME)) return true;
+  return currentStatements(byPid?.get(INSTANCE_OF)).some((s) =>
+    KIND_CLASSES.has(s.value),
+  );
+}
+
 // --- Comparing -------------------------------------------------------------
 
 /**
@@ -754,19 +887,29 @@ export function quantityAgrees(claim, wd) {
   return claim.value >= lo && claim.value <= hi;
 }
 
-export function timeAgrees(claim, s) {
-  // A date known only to the century can't disagree with a year inside it.
-  let slack = s.precision >= 9 ? 0 : 10 ** (9 - s.precision);
+/**
+ * How many years either way a claim's date allows, from how it was written.
+ * @returns {number}
+ */
+export function yearRoom(claim) {
+  let slack = 0;
   // "4.5 billion years ago" is rounded the way any big number is. A year like
   // 1960 is not: it means 1960, not "the 1960s".
-  if (Math.abs(claim.value) >= 10000) {
-    slack = Math.max(slack, roundingSlack(claim.value));
-  }
+  if (Math.abs(claim.value) >= 10000) slack = roundingSlack(claim.value);
   // "About 2500 BC" for 2560 BC is how people talk. A passage never says "more
   // than" a year in a way worth holding it to, so those get the same room.
   if (claim.qualifier !== "exact") {
     slack = Math.max(slack, 2 * roundingSlack(claim.value), 1);
   }
+  return slack;
+}
+
+export function timeAgrees(claim, s) {
+  // A date known only to the century can't disagree with a year inside it.
+  const slack = Math.max(
+    s.precision >= 9 ? 0 : 10 ** (9 - s.precision),
+    yearRoom(claim),
+  );
   if (Math.abs(claim.value - s.year) > slack) return false;
   if (slack > 0 || s.calendar === JULIAN) return true;
   if (claim.month && s.precision >= 10 && claim.month !== s.month) return false;
@@ -791,13 +934,22 @@ export function itemAgrees(claim, statements, statedIds = []) {
 }
 
 /**
- * Judge one claim against one item's statements.
+ * Judge one claim against one item's statements on Wikidata.
  * @param {object} claim  A normalized claim.
  * @param {Map<string, object[]>} byPid  That item's statements, by property.
  * @param {string[]} [statedIds]  For a named fact, the items its `stated`
  *   name may mean (see itemAgrees).
+ * @returns {object}  `status`, and either `reason` (unknown) or `source:
+ *   "wikidata"` and `found`, what Wikidata says: `{ pid, value, unit, asOf? }`
+ *   for a quantity, `{ pid, year, month, day, precision }` for a date, and
+ *   `{ pid, items }` for a named fact.
  */
 export function judgeClaim(claim, byPid, statedIds = []) {
+  const verdict = judgeStatements(claim, byPid, statedIds);
+  return verdict.found ? { ...verdict, source: "wikidata" } : verdict;
+}
+
+function judgeStatements(claim, byPid, statedIds) {
   const spec = FACT_PROPERTIES[claim.property];
   let pid;
   let statements = [];
@@ -822,7 +974,7 @@ export function judgeClaim(claim, byPid, statedIds = []) {
     ];
     return {
       status: itemAgrees(claim, statements, statedIds) ? "agrees" : "disagrees",
-      wikidata: { pid, items },
+      found: { pid, items },
     };
   }
 
@@ -830,7 +982,7 @@ export function judgeClaim(claim, byPid, statedIds = []) {
     const agrees = statements.some((s) => timeAgrees(claim, s));
     return {
       status: agrees ? "agrees" : "disagrees",
-      wikidata: {
+      found: {
         pid,
         year: shown.year,
         month: shown.precision >= 10 ? shown.month : 0,
@@ -851,13 +1003,302 @@ export function judgeClaim(claim, byPid, statedIds = []) {
   const asOf = display.s.pointInTime?.year;
   return {
     status: agrees ? "agrees" : "disagrees",
-    wikidata: {
+    found: {
       pid,
       value: display.wd.value,
       unit: claim.unit,
       ...(asOf > 0 ? { asOf } : {}),
     },
   };
+}
+
+// --- The Smithsonian -------------------------------------------------------
+
+// A date as a finding shows it, as precisely as it is known.
+const shownDate = ({ year, month, day }) => ({
+  year,
+  month,
+  day: month ? day : 0,
+  precision: day && month ? 11 : month ? 10 : 9,
+});
+
+// An eruption as a finding shows it: when it started, and when it ended if
+// that was another day.
+function shownEruption(e) {
+  const from = shownDate(e.start);
+  if (!e.end) return from;
+  const until = shownDate(e.end);
+  const same =
+    until.year === from.year &&
+    until.month === from.month &&
+    until.day === from.day;
+  return same ? from : { ...from, until };
+}
+
+// Before the Gregorian calendar, a month and day may be in the Julian one, and
+// the date of a famous eruption is often argued over (Vesuvius in 79: August
+// or October?). So a claim's month and day are only held to from 1583.
+const claimDate = (claim) =>
+  claim.value >= 1583
+    ? { year: claim.value, month: claim.month, day: claim.day }
+    : { year: claim.value };
+
+/**
+ * Judge a claim against a volcano's record at the Global Volcanism Program.
+ *
+ *   elevation  the summit's height, in meters, compared like any quantity.
+ *   last       the latest confirmed eruption, from its start to its end, or
+ *              any possible eruption since: "St. Helens last erupted in 2008"
+ *              and "in 2004" are both right about the 2004 to 2008 eruption.
+ *   eruption   any eruption, confirmed or possible. A date that matches none
+ *              is only wrong from the volcano's first eruption dated to the
+ *              month on, since before that the record is what has been dated
+ *              from the rocks, and has gaps. Earlier, it is unknown with reason
+ *              "before-record".
+ *
+ * @param {object} claim  A normalized claim.
+ * @param {object} [record]  From volcanoRecords.
+ * @returns {object}  As judgeClaim's, with `source: "smithsonian"` and
+ *   `sourceUrl`. `found` is `{ value, unit }` for the height, and a date,
+ *   with `until` for an eruption that went on, for an eruption.
+ */
+export function judgeVolcano(claim, record) {
+  const spec = FACT_PROPERTIES[claim.property];
+  if (!record || !spec.smithsonian) {
+    return { status: "unknown", reason: "no-value" };
+  }
+  const source = {
+    source: "smithsonian",
+    sourceUrl: volcanoUrl(record.number),
+  };
+
+  if (spec.smithsonian === "elevation") {
+    if (record.elevation == null) {
+      return { status: "unknown", reason: "no-value" };
+    }
+    const value = convertUnit(record.elevation, "m", claim.unit);
+    if (value == null) return { status: "unknown", reason: "unit" };
+    return {
+      status: quantityAgrees(claim, { value }) ? "agrees" : "disagrees",
+      ...source,
+      found: { value, unit: claim.unit },
+    };
+  }
+
+  const span = dateSpan(claimDate(claim));
+  const years = yearRoom(claim);
+
+  if (spec.smithsonian === "last") {
+    const latest = latestEruption(record);
+    if (!latest) return { status: "unknown", reason: "no-value" };
+    const since = dateSpan(latest.start)[0];
+    const agrees = record.eruptions
+      .filter((e) => dateSpan(e.start)[0] >= since)
+      .some((e) => eruptionOverlaps(e, span, years));
+    return {
+      status: agrees ? "agrees" : "disagrees",
+      ...source,
+      found: shownEruption(latest),
+    };
+  }
+
+  const match = record.eruptions.find((e) => eruptionOverlaps(e, span, years));
+  if (match)
+    return { status: "agrees", ...source, found: shownEruption(match) };
+  const nearest = nearestEruption(record, span);
+  if (!nearest) return { status: "unknown", reason: "no-value" };
+  const since = recordedSince(record);
+  if (since == null || claim.value < since) {
+    return { status: "unknown", reason: "before-record", ...source };
+  }
+  return { status: "disagrees", ...source, found: shownEruption(nearest) };
+}
+
+// --- Wikipedia -------------------------------------------------------------
+
+// The words a sentence about each property uses, as the starts of words
+// ("weigh" for "weighs" and "weight"). A sentence, or the one before it, needs
+// one of them before its figures are compared with a claim, so "8,849 m" in a
+// sentence about how deep a glacier is can't confirm a mountain's height.
+//
+// The places something is in have none: what an article says its subject is
+// in can be said a dozen ways. Those are read from the article's opening
+// paragraphs only, which are about the subject, where a country named
+// anywhere else could be a neighbor.
+const TEXT_WORDS = {
+  height: ["tall", "height", "high", "stand", "rise", "rising"],
+  elevation: ["elevation", "above sea level", "high", "height", "summit"],
+  length: ["long", "length"],
+  width: ["wide", "width", "across", "breadth"],
+  depth: ["deep", "depth"],
+  diameter: ["diameter", "across", "wide"],
+  radius: ["radius"],
+  area: ["area", "cover", "size", "span", "square"],
+  volume: ["volume", "hold", "contain", "capacity"],
+  population: ["population", "inhabit", "people", "resident", "populous"],
+  mass: ["weigh", "mass", "heav"],
+  speed: ["speed", "fast", "run", "fly", "flies", "swim", "travel", "reach"],
+  temperature: ["temperature", "hot", "cold", "warm"],
+  distance_from_earth: ["earth", "away", "distan"],
+  orbit_distance: ["orbit", "sun", "distan", "semi-major"],
+  orbital_period: ["orbit", "year", "revolution", "period"],
+  duration: ["last", "duration", "took", "long"],
+  lifespan: ["live", "lifespan", "life span", "life expectancy", "age", "old"],
+  gestation: ["gestation", "pregnan"],
+  litter_size: ["litter", "young", "offspring", "kitten", "pupp", "cub"],
+  born: ["born", "birth"],
+  died: ["died", "death", "dies", "killed"],
+  began: [
+    "built",
+    "found",
+    "establish",
+    "open",
+    "construct",
+    "complet",
+    "began",
+    "begun",
+    "start",
+    "form",
+    "creat",
+    "inaugurat",
+    "erect",
+    "dedicat",
+  ],
+  ended: [
+    "end",
+    "clos",
+    "demolish",
+    "destroy",
+    "dissolv",
+    "abolish",
+    "collaps",
+  ],
+  happened: [
+    "took place",
+    "occur",
+    "happen",
+    "launch",
+    "held",
+    "fought",
+    "began",
+    "struck",
+    "erupt",
+  ],
+  discovered: ["discover", "invent", "found", "identif"],
+  published: ["publish", "release", "premiere", "came out", "debut"],
+  last_eruption: [
+    "last erupt",
+    "last eruption",
+    "most recent eruption",
+    "latest eruption",
+  ],
+  erupted: ["erupt"],
+  capital: ["capital"],
+  country: [],
+  continent: [],
+  region: [],
+  language: ["language", "spoken"],
+  currency: ["currency", "money"],
+  leader: [
+    "prime minister",
+    "president",
+    "head of state",
+    "head of government",
+    "monarch",
+    "king",
+    "queen",
+    "chancellor",
+    "leader",
+    "emperor",
+  ],
+  discoverer: ["discover", "invent", "found", "identif", "first"],
+  creator: [
+    "writ",
+    "wrote",
+    "author",
+    "creat",
+    "made",
+    "design",
+    "compos",
+    "direct",
+    "paint",
+    "sculpt",
+    "architect",
+    "by",
+  ],
+  named_after: ["named", "name"],
+  flows_into: ["flow", "empt", "drain", "mouth", "join", "tributar"],
+};
+
+export const FACT_TEXT_WORDS = TEXT_WORDS;
+
+// Whether one sentence states what a claim says, by the same rules as a
+// Wikidata value: a quantity converted and given the claim's rounding, a date
+// to the precision both give, a name as words.
+function sentenceStates(claim, spec, sentence) {
+  if (spec.kind === "item") return mentions(sentence, claim.stated);
+  if (spec.kind === "time") {
+    const wanted = claimDate(claim);
+    return datesIn(sentence).some(
+      (d) =>
+        // A claim's month or day must be in the sentence too, not assumed.
+        (!wanted.month || d.month) &&
+        (!wanted.day || d.day) &&
+        timeAgrees(
+          { ...claim, month: wanted.month || 0, day: wanted.day || 0 },
+          { ...d, ...shownDate(d) },
+        ),
+    );
+  }
+  return quantitiesIn(sentence).some((q) => {
+    if (UNIT_DEFS[q.unit]?.dimension !== spec.dimension) return false;
+    const to = (n) =>
+      n == null ? undefined : convertUnit(n, q.unit, claim.unit);
+    const value = to(q.value);
+    return (
+      value != null &&
+      quantityAgrees(claim, { value, lower: to(q.lower), upper: to(q.upper) })
+    );
+  });
+}
+
+// What a finding quotes from an article: the sentence, cut at a word if long.
+function excerpt(text, max = 300) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return `${cut.slice(0, cut.lastIndexOf(" ")) || cut}...`;
+}
+
+/**
+ * Whether an article states what a claim says: a sentence with the claim's
+ * number, date or name in it, that is about the claim's property (it, or the
+ * sentence before it, has one of the property's words). Only English, whose
+ * words those are.
+ *
+ * This can only confirm. Not finding a claim in an article proves nothing,
+ * and finding a sentence that says otherwise doesn't either: an article
+ * mentions a lot of figures, about a lot of things.
+ *
+ * @param {object} claim  A normalized claim.
+ * @param {string} text  The article, from articleText.
+ * @returns {string | null}  The words that confirm it, for the finding to
+ *   quote, or null.
+ */
+export function confirmFromText(claim, text) {
+  const spec = FACT_PROPERTIES[claim.property];
+  const words = TEXT_WORDS[claim.property] || [];
+  const about = stemTest(words);
+  for (const { lead, sentences } of paragraphsOf(text)) {
+    if (!words.length && !lead) continue;
+    for (let i = 0; i < sentences.length; i++) {
+      const sentence = sentences[i];
+      const before = i > 0 && about(sentences[i - 1]) ? sentences[i - 1] : "";
+      if (!about(sentence) && !before) continue;
+      if (!sentenceStates(claim, spec, sentence)) continue;
+      return excerpt(about(sentence) ? sentence : `${before} ${sentence}`);
+    }
+  }
+  return null;
 }
 
 // --- Looking claims up -----------------------------------------------------
@@ -904,9 +1345,13 @@ const hasWord = (text, wanted) => {
  * wins, then one that is the kind, then one that has the property.
  */
 function chooseItem(claim, candidates, statements) {
-  const pids = FACT_PROPERTIES[claim.property].pids;
+  const spec = FACT_PROPERTIES[claim.property];
+  // Having the property, for this, includes having a Smithsonian record
+  // that may hold it.
   const has = (c) =>
-    pids.some((p) => currentStatements(statements.get(c.id)?.get(p)).length);
+    spec.pids.some(
+      (p) => currentStatements(statements.get(c.id)?.get(p)).length,
+    ) || Boolean(spec.smithsonian && textOf(statements.get(c.id), GVP_NUMBER));
   const kind = words(claim.kind);
   const [first] = candidates;
 
@@ -973,7 +1418,26 @@ async function findCandidates(name, kind, settings) {
 }
 
 /**
- * Check claims against Wikidata.
+ * The verdict that stands when several sources were asked about one claim:
+ * any source agreeing, then any disagreeing, then the most telling reason it
+ * is unknown. A source that couldn't be reached comes before "no value", so a
+ * check that may have missed something isn't cached as complete.
+ */
+function strongest(verdicts) {
+  return (
+    verdicts.find((v) => v.status === "agrees") ||
+    verdicts.find((v) => v.status === "disagrees") ||
+    verdicts.find((v) => v.reason === "lookup-failed") ||
+    verdicts.find((v) => v.reason !== "no-value") ||
+    verdicts[0]
+  );
+}
+
+// Unknown verdicts an article may still settle.
+const ARTICLE_REASONS = new Set(["no-value", "varies", "before-record"]);
+
+/**
+ * Check claims against Wikidata, the Smithsonian and Wikipedia.
  *
  * @param {object[]} rawClaims  Claims as described at the top of this file.
  *   Ones prepareClaims drops are left out, not reported; a caller that wants
@@ -981,10 +1445,20 @@ async function findCandidates(name, kind, settings) {
  * @param {object} [opts]
  * @param {string} [opts.userAgent]  Required outside a browser (see the top).
  * @param {typeof fetch} [opts.fetch]  Defaults to the global one.
- * @param {string} [opts.language]  For item names and descriptions.
+ * @param {string} [opts.language]  For item names and descriptions, and which
+ *   Wikipedia to read. Articles are only read for English.
  * @param {number} [opts.maxClaims]  Claims beyond this are dropped.
  * @returns {Promise<object[]>}  One result per kept claim, in order: the claim
- *   plus `status`, and `entity`, `wikidata` and `reason` where they apply.
+ *   plus `status`, `entity` (the Wikidata item) where one was found, and
+ *   either `reason` (unknown) or what was found:
+ *
+ *     source     "wikidata", "smithsonian" or "wikipedia"
+ *     sourceUrl  the page a person can open to see it
+ *     found      what that source says (see judgeClaim and judgeVolcano), or
+ *                for Wikipedia `{ text }`, the words that say it
+ *
+ *   An unknown "varies" or "before-record" carries the source and what it
+ *   found too, since that is still worth showing.
  */
 export async function checkClaims(rawClaims, opts = {}) {
   return checkPreparedClaims(prepareClaims(rawClaims, opts).claims, opts);
@@ -1050,12 +1524,19 @@ export async function checkPreparedClaims(claims, opts = {}) {
   // The two lookups don't depend on each other, so they share the wait.
   await Promise.all([findSubjects, findStated]);
 
-  // One query for every candidate's values.
+  // One query for every candidate's values, with what says which other
+  // records apply to it.
   const itemIds = [
     ...new Set([...candidatesByName.values()].flat().map((c) => c.id)),
   ];
+  const volcanic = claims.some((c) => FACT_PROPERTIES[c.property].smithsonian);
   const pids = [
-    ...new Set(claims.flatMap((c) => FACT_PROPERTIES[c.property].pids)),
+    ...new Set([
+      ...claims.flatMap((c) => FACT_PROPERTIES[c.property].pids),
+      TAXON_NAME,
+      INSTANCE_OF,
+      ...(volcanic ? [GVP_NUMBER] : []),
+    ]),
   ];
   let statements = new Map();
   let items = new Map();
@@ -1068,14 +1549,16 @@ export async function checkPreparedClaims(claims, opts = {}) {
     }
   }
 
-  return claims.map((claim) => {
+  // Which item each claim is about. `done` is a result already, for a claim
+  // that got no further.
+  const picked = claims.map((claim) => {
     const name = searchKey(claim);
     if (failedNames.has(name)) {
-      return { ...claim, status: "unknown", reason: "lookup-failed" };
+      return { done: { ...claim, status: "unknown", reason: "lookup-failed" } };
     }
     const candidates = candidatesByName.get(name) || [];
     if (!candidates.length) {
-      return { ...claim, status: "unknown", reason: "no-item" };
+      return { done: { ...claim, status: "unknown", reason: "no-item" } };
     }
     const item = chooseItem(claim, candidates, statements);
     // Wikidata's own label and description where the query brought them,
@@ -1088,16 +1571,96 @@ export async function checkPreparedClaims(claims, opts = {}) {
       url: wikidataItemUrl(item.id),
     };
     if (valuesFailed) {
-      return { ...claim, entity, status: "unknown", reason: "lookup-failed" };
+      return {
+        done: { ...claim, entity, status: "unknown", reason: "lookup-failed" },
+      };
     }
-    return {
-      ...claim,
-      entity,
-      ...judgeClaim(
+    const byPid = statements.get(item.id);
+    const volcano = FACT_PROPERTIES[claim.property].smithsonian
+      ? textOf(byPid, GVP_NUMBER)
+      : "";
+    return { claim, item, entity, byPid, volcano };
+  });
+
+  // The Smithsonian's records of the volcanoes those are, all at once.
+  const numbers = picked.map((p) => p.volcano).filter(Boolean);
+  let volcanoes = new Map();
+  let volcanoesFailed = false;
+  if (numbers.length) {
+    try {
+      volcanoes = await volcanoRecords(numbers, settings);
+    } catch {
+      volcanoesFailed = true;
+    }
+  }
+
+  const judged = picked.map((p) => {
+    if (p.done) return p.done;
+    const { claim, entity, byPid, volcano } = p;
+    const verdicts = [
+      judgeClaim(
         claim,
-        statements.get(item.id),
+        byPid,
         statedIdsByName.get(claim.stated?.toLowerCase()),
       ),
+    ];
+    if (volcano) {
+      verdicts.push(
+        volcanoesFailed
+          ? { status: "unknown", reason: "lookup-failed" }
+          : judgeVolcano(claim, volcanoes.get(volcano)),
+      );
+    }
+    let verdict = strongest(verdicts);
+    if (verdict.source === "wikidata") {
+      verdict = { ...verdict, sourceUrl: entity.url };
+    }
+    // A kind of living thing varies (see the top of this file).
+    const varies = FACT_PROPERTIES[claim.property].varies || isKind(byPid);
+    if (verdict.status === "disagrees" && varies) {
+      verdict = { ...verdict, status: "unknown", reason: "varies" };
+    }
+    return { ...claim, entity, ...verdict };
+  });
+
+  // Wikipedia, for what none of that could settle: each article once.
+  const articleOf = (result, i) =>
+    settings.language === "en" &&
+    result.status === "unknown" &&
+    ARTICLE_REASONS.has(result.reason)
+      ? picked[i].item?.title || ""
+      : "";
+  const titles = [...new Set(judged.map(articleOf).filter(Boolean))];
+  const texts = new Map();
+  const unread = new Set();
+  await eachLimited(titles, 4, async (title) => {
+    try {
+      texts.set(title, await articleText(title, settings));
+    } catch {
+      unread.add(title);
+    }
+  });
+
+  return judged.map((result, i) => {
+    const title = articleOf(result, i);
+    if (!title) return result;
+    if (unread.has(title)) return { ...result, reason: "lookup-failed" };
+    const words = confirmFromText(result, texts.get(title));
+    if (!words) return result;
+    // What another source said gives way to the article's words.
+    const {
+      reason: _reason,
+      source: _source,
+      sourceUrl: _sourceUrl,
+      found: _found,
+      ...claim
+    } = result;
+    return {
+      ...claim,
+      status: "agrees",
+      source: "wikipedia",
+      sourceUrl: wikipediaArticleUrl(title, settings.language),
+      found: { text: words },
     };
   });
 }

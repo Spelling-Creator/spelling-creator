@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  FACT_PROPERTY_KEYS,
+  FACT_TEXT_WORDS,
   checkClaims,
   claimProblem,
+  confirmFromText,
   convertUnit,
   currentStatements,
+  isKind,
   judgeClaim,
+  judgeVolcano,
   normalizeClaim,
   parseSparqlTime,
   prepareClaims,
@@ -287,15 +292,38 @@ describe("comparing", () => {
   });
 });
 
-// A stand-in for the two Wikimedia endpoints, answering from fixtures.
+// A stand-in for the Wikimedia endpoints and the Smithsonian's, answering
+// from fixtures.
 function fakeWikidata({
   articles = {},
+  texts = {},
   search = {},
   bindings = [],
+  volcanoes = [],
+  eruptions = [],
   fail = {},
 }) {
   return vi.fn(async (url) => {
     const u = new URL(url);
+    if (u.hostname === "webservices.volcano.si.edu") {
+      if (fail.smithsonian) return new Response("", { status: 503 });
+      const rows = u.searchParams.get("typeNames").endsWith("Eruptions")
+        ? eruptions
+        : volcanoes;
+      return Response.json({
+        features: rows.map((properties) => ({ properties })),
+      });
+    }
+    // An article's text, keyed by its title.
+    if (u.searchParams.get("prop") === "extracts") {
+      if (fail.text || fail.wikipedia) {
+        return new Response("", { status: 429 });
+      }
+      const title = u.searchParams.get("titles");
+      return Response.json({
+        query: { pages: [{ title, extract: texts[title] || "" }] },
+      });
+    }
     // Wikipedia's article search, keyed by what was searched. Nothing by
     // default, so a test that gives only `search` exercises the Wikidata
     // fallback.
@@ -331,6 +359,15 @@ const statement = (item, pid, value, extra = {}) => ({
   amount: { value: String(value) },
   unit: { value: "http://www.wikidata.org/entity/Q11573" },
   ...extra,
+});
+
+// A statement whose value is a string: a scientific name, a GVP number.
+const textStatement = (item, pid, text) => ({
+  item: { value: `http://www.wikidata.org/entity/${item}` },
+  pid: { value: pid },
+  st: { value: `${item}-${pid}-${text}` },
+  rank: { value: "http://wikiba.se/ontology#NormalRank" },
+  text: { value: text },
 });
 
 // A statement that points at another item, as the query service gives it.
@@ -381,14 +418,16 @@ describe("checking a named fact", () => {
     );
     expect(byId).toMatchObject({
       status: "agrees",
-      wikidata: { pid: "P36", items: [{ id: "Q3114", label: "Canberra" }] },
+      source: "wikidata",
+      sourceUrl: "https://www.wikidata.org/wiki/Q408",
+      found: { pid: "P36", items: [{ id: "Q3114", label: "Canberra" }] },
     });
     expect(byLabel.status).toBe("agrees");
     // Melbourne's statement has an end date, so it is not current.
     expect(former.status).toBe("disagrees");
     expect(wrong.status).toBe("disagrees");
     // Melbourne isn't offered as what Wikidata says, either.
-    expect(wrong.wikidata.items.map((i) => i.label)).toEqual(["Canberra"]);
+    expect(wrong.found.items.map((i) => i.label)).toEqual(["Canberra"]);
   });
 
   it("finds the subject through Wikipedia, searched with its kind", async () => {
@@ -735,9 +774,10 @@ describe("checking a named fact", () => {
     };
     expect(judgeClaim(king, byPid)).toMatchObject({
       status: "agrees",
-      wikidata: { pid: "P6" },
+      source: "wikidata",
+      found: { pid: "P6" },
     });
-    expect(judgeClaim(king, byPid).wikidata.items).toHaveLength(2);
+    expect(judgeClaim(king, byPid).found.items).toHaveLength(2);
   });
 });
 
@@ -773,11 +813,11 @@ describe("checking claims", () => {
       status: "agrees",
       quote: "29,032 FEET",
       entity: { id: "Q513", url: "https://www.wikidata.org/wiki/Q513" },
-      wikidata: { pid: "P2044", unit: "ft" },
+      found: { pid: "P2044", unit: "ft" },
     });
     expect(wrong).toMatchObject({
       status: "disagrees",
-      wikidata: { value: 8848.86, unit: "m" },
+      found: { value: 8848.86, unit: "m" },
     });
     // Wikipedia for the one name (nothing, so Wikidata's search next), then
     // one query for the values.
@@ -868,5 +908,410 @@ describe("checking claims", () => {
       }),
     ).toEqual([]);
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+// Mount St. Helens as the Smithsonian has it, cut down.
+const ST_HELENS = {
+  number: "321050",
+  name: "St. Helens",
+  elevation: 2549,
+  eruptions: [
+    {
+      confirmed: true,
+      start: { year: -1860, month: 0, day: 0 },
+      end: null,
+      uncertainty: 40,
+    },
+    {
+      confirmed: true,
+      start: { year: 1980, month: 3, day: 27 },
+      end: { year: 1986, month: 10, day: 28 },
+      uncertainty: 0,
+    },
+    {
+      confirmed: true,
+      start: { year: 2004, month: 10, day: 1 },
+      end: { year: 2008, month: 1, day: 27 },
+      uncertainty: 0,
+    },
+  ],
+};
+
+describe("judging a claim against the Smithsonian", () => {
+  const claim = (property, value, extra = {}) =>
+    normalizeClaim({ subject: "Mount St. Helens", property, value, ...extra });
+
+  it("compares the summit's height in the claim's unit", () => {
+    expect(
+      judgeVolcano(claim("height", 8363, { unit: "ft" }), ST_HELENS),
+    ).toMatchObject({
+      status: "agrees",
+      source: "smithsonian",
+      sourceUrl: "https://volcano.si.edu/volcano.cfm?vn=321050",
+    });
+    const wrong = judgeVolcano(
+      claim("elevation", 3100, { unit: "m" }),
+      ST_HELENS,
+    );
+    expect(wrong).toMatchObject({
+      status: "disagrees",
+      found: { value: 2549, unit: "m" },
+    });
+  });
+
+  it("takes either end of the latest eruption as when it last erupted", () => {
+    expect(judgeVolcano(claim("last_eruption", 2004), ST_HELENS).status).toBe(
+      "agrees",
+    );
+    expect(judgeVolcano(claim("last_eruption", 2008), ST_HELENS).status).toBe(
+      "agrees",
+    );
+    // Out of date: it has erupted since.
+    expect(judgeVolcano(claim("last_eruption", 1980), ST_HELENS)).toMatchObject(
+      {
+        status: "disagrees",
+        found: {
+          year: 2004,
+          month: 10,
+          day: 1,
+          precision: 11,
+          until: { year: 2008, month: 1, day: 27 },
+        },
+      },
+    );
+  });
+
+  it("finds any eruption a date falls in, to the day", () => {
+    const may18 = claim("erupted", 1980, { month: 5, day: 18 });
+    expect(judgeVolcano(may18, ST_HELENS).status).toBe("agrees");
+    // A year with no eruption, after the record starts: wrong, with the
+    // nearest one.
+    expect(judgeVolcano(claim("erupted", 1995), ST_HELENS)).toMatchObject({
+      status: "disagrees",
+      found: { year: 1980, month: 3 },
+    });
+    // A date dated from the rocks allows its uncertainty.
+    expect(judgeVolcano(claim("erupted", -1830), ST_HELENS).status).toBe(
+      "agrees",
+    );
+    // Before the first eruption anyone saw, a missing one may just be undated.
+    expect(judgeVolcano(claim("erupted", -1500), ST_HELENS)).toMatchObject({
+      status: "unknown",
+      reason: "before-record",
+      source: "smithsonian",
+    });
+  });
+
+  it("holds a date before 1583 to its year only", () => {
+    const vesuvius = {
+      number: "211020",
+      elevation: 1281,
+      eruptions: [
+        {
+          confirmed: true,
+          start: { year: 79, month: 10, day: 24 },
+          end: { year: 79, month: 10, day: 28 },
+          uncertainty: 0,
+        },
+      ],
+    };
+    // The traditional date, which GVP has since revised.
+    const august = normalizeClaim({
+      subject: "Mount Vesuvius",
+      property: "erupted",
+      value: 79,
+      month: 8,
+      day: 24,
+    });
+    expect(judgeVolcano(august, vesuvius).status).toBe("agrees");
+  });
+
+  it("knows nothing of a volcano with no record", () => {
+    expect(judgeVolcano(claim("erupted", 1980), undefined)).toEqual({
+      status: "unknown",
+      reason: "no-value",
+    });
+  });
+});
+
+describe("confirming a claim from an article's words", () => {
+  const CAT = [
+    "The cat is a small domesticated carnivorous mammal.",
+    "== Characteristics ==",
+    "Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb). Males are larger.",
+    "The average lifespan of pet cats has risen in recent decades. In the early 1980s, it was about 7 years, rising to an average of about 13 years as of 2014.",
+    "The gestation of queens lasts between 64 and 67 days.",
+  ].join("\n");
+  const claim = (raw) => normalizeClaim({ subject: "Cat", ...raw });
+
+  it("finds a figure in a sentence about the property, in any unit", () => {
+    expect(
+      confirmFromText(
+        claim({ property: "mass", value: 10, unit: "lb", qualifier: "about" }),
+        CAT,
+      ),
+    ).toBe("Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb).");
+    expect(
+      confirmFromText(
+        claim({
+          property: "gestation",
+          value: 9,
+          unit: "week",
+          qualifier: "about",
+        }),
+        CAT,
+      ),
+    ).toMatch(/^The gestation of queens/);
+  });
+
+  it("takes the property's word from the sentence before", () => {
+    const found = confirmFromText(
+      claim({
+        property: "lifespan",
+        value: 13,
+        unit: "year",
+        qualifier: "about",
+      }),
+      CAT,
+    );
+    expect(found).toMatch(
+      /^The average lifespan .* about 13 years as of 2014\.$/,
+    );
+  });
+
+  it("confirms nothing it can't find, or finds without the property's words", () => {
+    expect(
+      confirmFromText(claim({ property: "mass", value: 40, unit: "kg" }), CAT),
+    ).toBeNull();
+    // 7 years is in the text, but as a lifespan, not a gestation.
+    expect(
+      confirmFromText(
+        claim({ property: "gestation", value: 7, unit: "year" }),
+        CAT,
+      ),
+    ).toBeNull();
+  });
+
+  it("wants a claim's month in the sentence, not just its year", () => {
+    const text = "The volcano erupted in 1980, after weeks of earthquakes.";
+    const erupted = (month) =>
+      normalizeClaim({
+        subject: "Mount St. Helens",
+        property: "erupted",
+        value: 1980,
+        month,
+      });
+    expect(confirmFromText(erupted(0), text)).toBe(text);
+    expect(confirmFromText(erupted(5), text)).toBeNull();
+    expect(confirmFromText(erupted(5), "It erupted on May 18, 1980.")).toBe(
+      "It erupted on May 18, 1980.",
+    );
+  });
+
+  it("reads where something is from the opening paragraphs only", () => {
+    const text = [
+      "The Nile is a river in northeastern Africa, flowing through Egypt and Sudan.",
+      "== History ==",
+      "Explorers had searched for its source since the time of the pharaohs, as far away as India.",
+    ].join("\n");
+    const country = (stated) =>
+      normalizeClaim({ subject: "Nile", property: "country", stated });
+    expect(confirmFromText(country("Egypt"), text)).toMatch(/^The Nile/);
+    expect(confirmFromText(country("India"), text)).toBeNull();
+  });
+
+  it("has words for every property", () => {
+    expect(Object.keys(FACT_TEXT_WORDS).sort()).toEqual(
+      [...FACT_PROPERTY_KEYS].sort(),
+    );
+  });
+});
+
+describe("kinds of living things", () => {
+  it("are taxa, breeds, and animals known by their common name", () => {
+    const of = (pid, statement) => new Map([[pid, [statement]]]);
+    expect(isKind(of("P225", { text: "Panthera onca", rank: "normal" }))).toBe(
+      true,
+    );
+    expect(isKind(of("P31", { value: "Q55983715", rank: "normal" }))).toBe(
+      true,
+    );
+    expect(isKind(of("P31", { value: "Q6256", rank: "normal" }))).toBe(false);
+    expect(isKind(undefined)).toBe(false);
+  });
+
+  it("reads a string value from the query", () => {
+    const byItem = statementsFromBindings([
+      textStatement("Q35694", "P225", "Panthera onca"),
+    ]);
+    expect(byItem.get("Q35694").get("P225")[0].text).toBe("Panthera onca");
+  });
+});
+
+describe("checking claims against every source", () => {
+  it("asks the Smithsonian about a volcano, once for all of them", async () => {
+    const fetch = fakeWikidata({
+      articles: {
+        "Mount St. Helens": [{ id: "Q4675", title: "Mount St. Helens" }],
+        "Mount St. Helens volcano": [
+          { id: "Q4675", title: "Mount St. Helens" },
+        ],
+      },
+      bindings: [
+        textStatement("Q4675", "P1886", "321050"),
+        statement("Q4675", "P2044", 2549),
+      ],
+      volcanoes: [
+        { Volcano_Number: 321050, Volcano_Name: "St. Helens", Elevation: 2549 },
+      ],
+      eruptions: [
+        {
+          Volcano_Number: 321050,
+          Activity_Type: "Confirmed Eruption",
+          StartDateYear: 2004,
+          StartDateMonth: 10,
+          StartDateDay: 1,
+          EndDateYear: 2008,
+          EndDateMonth: 1,
+          EndDateDay: 27,
+        },
+      ],
+    });
+    const helens = (property, value, unit) => ({
+      subject: "Mount St. Helens",
+      kind: "volcano",
+      property,
+      value,
+      ...(unit ? { unit } : {}),
+    });
+    const [last, wrong, height] = await checkClaims(
+      [
+        helens("last_eruption", 2008),
+        helens("last_eruption", 1980),
+        helens("height", 2549, "m"),
+      ],
+      { fetch },
+    );
+    expect(last).toMatchObject({
+      status: "agrees",
+      source: "smithsonian",
+      entity: { id: "Q4675" },
+    });
+    expect(wrong).toMatchObject({ status: "disagrees", source: "smithsonian" });
+    // Both agree; Wikidata, asked first, is the one shown.
+    expect(height).toMatchObject({ status: "agrees", source: "wikidata" });
+    const smithsonian = fetch.mock.calls.filter(([url]) =>
+      url.startsWith("https://webservices.volcano.si.edu/"),
+    );
+    expect(smithsonian).toHaveLength(2);
+    expect(new URL(smithsonian[0][0]).searchParams.get("CQL_FILTER")).toBe(
+      "Volcano_Number IN (321050)",
+    );
+  });
+
+  it("leaves a volcano claim unknown when the Smithsonian can't be reached", async () => {
+    const fetch = fakeWikidata({
+      articles: { "Mount Fuji": [{ id: "Q39231", title: "Mount Fuji" }] },
+      bindings: [textStatement("Q39231", "P1886", "283030")],
+      fail: { smithsonian: true },
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Mount Fuji", property: "last_eruption", value: 1707 }],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "lookup-failed",
+    });
+  });
+
+  it("reads the article when no source has a value, once for every claim", async () => {
+    const fetch = fakeWikidata({
+      articles: { Cat: [{ id: "Q146", title: "Cat" }] },
+      bindings: [itemStatement("Q146", "P31", "Q55983715", "organisms")],
+      texts: {
+        Cat: "Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb).",
+      },
+    });
+    const cat = (value) => ({
+      subject: "Cat",
+      property: "mass",
+      value,
+      unit: "kg",
+    });
+    const [right, wrong] = await checkClaims([cat(4), cat(40)], { fetch });
+    expect(right).toEqual(
+      expect.objectContaining({
+        status: "agrees",
+        source: "wikipedia",
+        sourceUrl: "https://en.wikipedia.org/wiki/Cat",
+        found: {
+          text: "Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb).",
+        },
+      }),
+    );
+    expect(right.reason).toBeUndefined();
+    // Not in the article: still unknown, never wrong.
+    expect(wrong).toMatchObject({ status: "unknown", reason: "no-value" });
+    const reads = fetch.mock.calls.filter(
+      ([url]) => new URL(url).searchParams.get("prop") === "extracts",
+    );
+    expect(reads).toHaveLength(1);
+  });
+
+  it("never calls a fact about a kind of animal wrong", async () => {
+    const fetch = fakeWikidata({
+      articles: { Jaguar: [{ id: "Q35694", title: "Jaguar" }] },
+      bindings: [
+        textStatement("Q35694", "P225", "Panthera onca"),
+        statement("Q35694", "P2067", 100, {
+          unit: { value: "http://www.wikidata.org/entity/Q11570" },
+        }),
+      ],
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Jaguar", property: "mass", value: 300, unit: "kg" }],
+      { fetch },
+    );
+    // What Wikidata said is kept, to show.
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "varies",
+      source: "wikidata",
+      found: { value: 100, unit: "kg" },
+    });
+  });
+
+  it("reads no article for a language other than English", async () => {
+    const fetch = fakeWikidata({
+      articles: { Katze: [{ id: "Q146", title: "Katze" }] },
+      texts: { Katze: "Eine Katze wiegt 4 kg." },
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Katze", property: "mass", value: 4, unit: "kg" }],
+      { fetch, language: "de" },
+    );
+    expect(result).toMatchObject({ status: "unknown", reason: "no-value" });
+    expect(
+      fetch.mock.calls.some(
+        ([url]) => new URL(url).searchParams.get("prop") === "extracts",
+      ),
+    ).toBe(false);
+  });
+
+  it("says a source couldn't be reached when the article can't be read", async () => {
+    const fetch = fakeWikidata({
+      articles: { Cat: [{ id: "Q146", title: "Cat" }] },
+      fail: { text: true },
+    });
+    const [result] = await checkClaims(
+      [{ subject: "Cat", property: "mass", value: 4, unit: "kg" }],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "unknown",
+      reason: "lookup-failed",
+    });
   });
 });

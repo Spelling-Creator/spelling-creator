@@ -1,6 +1,7 @@
 // The Worker's half of fact checking: turning a lesson's passages into claims.
 //
-// Checking a claim against Wikidata is deterministic and lives in
+// Checking a claim against its sources (Wikidata, the Smithsonian's record of
+// volcanoes, Wikipedia) is deterministic and lives in
 // @spelling-creator/core/factCheck, shared with the MCP server. Finding the
 // claims in prose is not, so this asks the configured AI provider to list them,
 // constrained by a schema to the properties and units the checker understands.
@@ -20,11 +21,12 @@ import {
 import { generateWithFallback } from './ai/index.js';
 
 // Wikimedia's User-Agent policy wants a name and a way to reach the operator;
-// requests without one are throttled or refused.
+// requests without one are throttled to 10 a minute, or refused. With it, the
+// Worker gets 200 a minute. The Smithsonian is sent the same.
 const USER_AGENT = 'SpellingCreator/1.0 (https://spellingcreator.org; lesson fact checking)';
 
 // Bounds on one request, so a huge lesson can't turn into a huge prompt or a
-// flood of Wikidata lookups.
+// flood of lookups.
 export const MAX_PASSAGES = 60;
 const MAX_PASSAGE_CHARS = 4000;
 const MAX_TOTAL_CHARS = 40000;
@@ -90,22 +92,24 @@ export function factCheckPrompt(passages, documentName) {
 	const units = CLAIM_UNITS.join(', ');
 	const numbered = passages.map((p, i) => `[${i + 1}]\n${p.text}`).join('\n\n');
 	const title = documentName ? ` The lesson is titled "${documentName}".` : '';
-	return `The passages below come from a lesson for students.${title} List the facts in them that can be checked against Wikidata: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing.
+	return `The passages below come from a lesson for students.${title} List the facts in them that can be checked against an encyclopedia: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing, or a number stated about a kind of animal.
 
 Only these kinds of fact count. Use the matching "property":
 ${properties}
 
-Leave out everything else: opinions, comparisons ("bigger than a bus"), facts about a whole kind of thing ("cats sleep 16 hours a day"), numbers in a made-up story or a word problem, and anything that states neither a number, a date nor a named thing. If a passage has none, list nothing for it.
+A fact about a kind of animal counts only for how big, heavy, long, tall or fast it is, how long it lives, how long it is pregnant, and how many young it has ("cats weigh about 4 kg", "jaguars have up to 4 cubs").
+
+Leave out everything else: opinions, comparisons ("bigger than a bus"), any other fact about a whole kind of thing ("cats sleep 16 hours a day"), numbers in a made-up story or a word problem, and anything that states neither a number, a date nor a named thing. If a passage has none, list nothing for it.
 
 For each fact give:
 - "passage": the number of the passage it is in.
 - "quote": the shortest words from the passage that state the number, date or name, copied exactly, keeping its capital letters ("8,849 METRES", "CANBERRA").
-- "subject": the English name of the thing, the way an encyclopedia titles it, with no "the" and nothing in brackets ("Mount Everest", "Nile", "Marie Curie").
-- "kind": one or two words for what sort of thing it is ("mountain", "river", "scientist", "country").
+- "subject": the English name of the thing, the way an encyclopedia titles it, with no "the" and nothing in brackets ("Mount Everest", "Nile", "Marie Curie"). For a kind of animal, its name in the singular ("Cat", "African elephant").
+- "kind": one or two words for what sort of thing it is ("mountain", "river", "scientist", "country", "volcano", "animal").
 - "property": one of the keys above.
 - "stated": for a fact that names a thing rather than giving a number, the English name of what the passage says it is, as an encyclopedia titles it ("Canberra", "Alexander Fleming", "Pacific Ocean"). Otherwise "". A fact with a "stated" name has "value" 0 and "unit" "${NO_UNIT}".
 - "value": the number as a plain number ("4.5 million" is 4500000). For a date, the year, negative for BC ("2560 BC" is -2560; "4.5 billion years ago" is -4500000000).
-- "unit": the unit the passage uses, one of: ${units}. Use "${NO_UNIT}" for a population and for dates.
+- "unit": the unit the passage uses, one of: ${units}. Use "${NO_UNIT}" for a population, a number of young, and dates.
 - "month" and "day": for a date given to the month or the day, the month (1 to 12) and the day. Otherwise 0.
 - "qualifier": "about" when the passage hedges ("about", "around", "almost", "nearly"), "more_than" for "more than" or "over", "less_than" for "less than", "under" or "up to", and "exact" otherwise.
 
@@ -136,9 +140,11 @@ export function placeClaims(claims, passages) {
 	return out;
 }
 
-// Wikidata's answers change slowly; hold them at the edge for a day so a lesson
-// checked twice, or two lessons about Everest, don't ask twice. The option is
-// Cloudflare's and other runtimes ignore it.
+// The sources' answers change slowly; hold them at the edge for a day so a
+// lesson checked twice, or two lessons about Everest, don't ask twice. That
+// matters most for Wikipedia, whose 200 requests a minute are the whole
+// Worker's, not each author's. The option is Cloudflare's and other runtimes
+// ignore it.
 const cachedFetch = (url, init) => fetch(url, { ...init, cf: { cacheTtl: 86400, cacheEverything: true } });
 
 /**

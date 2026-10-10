@@ -43,7 +43,8 @@ export const lastSegment = (iri) => String(iri || "").replace(/^.*[/#]/, "");
 /**
  * A JSON request to a Wikimedia API, on the terms above: the caller's fetch
  * and User-Agent, 15 s per request inside any budget the caller set. Shared
- * with ./wikipedia.js.
+ * with ./wikipedia.js, and with ./smithsonian.js, whose service has no such
+ * policy but is asked on the same terms.
  * @param {string} url
  * @param {WikidataOptions} [opts]
  * @param {RequestInit} [init]
@@ -58,7 +59,11 @@ export async function fetchJson(url, opts = {}, init = {}) {
     headers,
     signal: opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout,
   });
-  if (!res.ok) throw new Error(`Wikimedia request failed (${res.status}).`);
+  if (!res.ok) {
+    throw new Error(
+      `Request to ${new URL(url).hostname} failed (${res.status}).`,
+    );
+  }
   return res.json();
 }
 

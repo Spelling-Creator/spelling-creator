@@ -1,6 +1,7 @@
 // The Turnstile-gated AI / image flow — the Worker's POST entrypoint (`POST /`).
 // `mode` selects the suggester: "text"/"question"/"lessonIdea" drive Gemini;
-// "factCheck" checks a lesson's numbers and dates against Wikidata; "fix" asks
+// "factCheck" checks a lesson's numbers and dates against Wikidata, the
+// Smithsonian's record of volcanoes and Wikipedia; "fix" asks
 // for a fix to one lesson check finding (see lib/lessonFix.js);
 // "imageSearch"/"imageFetch" proxy Pixabay. All share the Turnstile check and the
 // per-IP token-bucket rate limiter below; text suggestions and fact checks are
@@ -18,12 +19,15 @@ import { textResponse } from '../lib/http.js';
 const CACHE_TTL = 60 * 60 * 24 * 30; // 30 days
 
 // How long a fact check's result lives in KV. Shorter than a text suggestion:
-// the answer is Wikidata's, which changes (a new census, a corrected height).
+// the answer is its sources', which change (a new census, a corrected height,
+// an eruption).
 const FACT_CHECK_TTL = 60 * 60 * 24 * 7; // 7 days
 
 // Part of a fact check's cache key. Bump it when the prompt or the checker
 // changes what a check would find, so old results aren't served for new rules.
-const FACT_CHECK_VERSION = 'v3';
+// v4: the Smithsonian and Wikipedia as sources, and `found` with `source` in
+// place of `wikidata` in each fact.
+const FACT_CHECK_VERSION = 'v4';
 
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any
@@ -302,7 +306,7 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	}
 
 	// Fact check: the model lists the passages' checkable numbers and dates, and
-	// core compares each with Wikidata (see lib/factCheck.js). Wikidata being
+	// core compares each with its sources (see lib/factCheck.js). A source being
 	// unreachable is not an error here; those facts come back as "unknown".
 	if (mode === 'factCheck') {
 		let facts;
@@ -311,8 +315,8 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 		} catch (err) {
 			return new Response('Upstream AI error', { status: 502, headers: cors });
 		}
-		// Only cache a check that reached Wikidata, so a blip isn't remembered for
-		// a week.
+		// Only cache a check that reached every source it asked, so a blip isn't
+		// remembered for a week.
 		if (!facts.some((f) => f.reason === 'lookup-failed')) {
 			await kv.put(fKey, JSON.stringify(facts), { expirationTtl: FACT_CHECK_TTL });
 		}

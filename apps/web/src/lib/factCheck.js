@@ -2,8 +2,9 @@
 //
 // The lesson checks in ./lessonChecks.js are free and rerun on every pause in
 // typing. This is the opposite: one request that asks a model to find the
-// passages' numbers and dates and then looks each up on Wikidata, behind a
-// Turnstile challenge like every other AI helper. So it runs only when asked,
+// passages' numbers and dates and then looks each up in its sources (Wikidata,
+// the Smithsonian's record of volcanoes, Wikipedia), behind a Turnstile
+// challenge like every other AI helper. So it runs only when asked,
 // and its result is a snapshot. The panel hides any finding whose words have
 // since changed in the lesson (core's quoteStillThere), which is how fixing a
 // number makes its finding go away without checking again.
@@ -107,14 +108,14 @@ function numberText(language, value, unit) {
   return new Intl.NumberFormat(language, options).format(value);
 }
 
-/** A quantity as Wikidata gives it, in the passage's unit. */
+/** A quantity as a source gives it, in the passage's unit. */
 export function quantityText(t, language, value, unit) {
   const number = numberText(language, value, unit);
   if (!unit || INTL_UNITS[unit]) return number;
   return t(`facts.units.${unit}`, { value: number });
 }
 
-/** A date as precisely as Wikidata knows it. */
+/** A date as precisely as its source knows it. */
 export function dateText(t, language, { year, month, day, precision }) {
   if (year > 0 && precision >= 10) {
     const date = new Date(Date.UTC(2000, month - 1, day || 1));
@@ -143,19 +144,42 @@ export function dateText(t, language, { year, month, day, precision }) {
   return precision < 9 ? t("facts.around", { date: text }) : text;
 }
 
-/** What Wikidata says, in words: "8,848.86 meters", "28 January 1887". */
-export function wikidataText(t, language, fact) {
-  const wd = fact.wikidata;
-  if (!wd) return "";
-  if (wd.year != null) return dateText(t, language, wd);
-  if (wd.items) {
+/**
+ * What a source says, in words: "8,848.86 meters", "28 January 1887",
+ * "1 October 2004 to 27 January 2008", or an article's own sentence.
+ */
+export function foundText(t, language, fact) {
+  const found = fact.found;
+  if (!found) return "";
+  if (found.text) return found.text;
+  if (found.year != null) {
+    const from = dateText(t, language, found);
+    if (!found.until) return from;
+    return t("facts.span", {
+      from,
+      until: dateText(t, language, found.until),
+    });
+  }
+  if (found.items) {
     return formatList(
       language,
-      wd.items.map((item) => item.label),
+      found.items.map((item) => item.label),
     );
   }
-  const value = quantityText(t, language, wd.value, wd.unit);
-  return wd.asOf ? t("facts.asOf", { value, year: wd.asOf }) : value;
+  const value = quantityText(t, language, found.value, found.unit);
+  return found.asOf ? t("facts.asOf", { value, year: found.asOf }) : value;
+}
+
+// The wording a verdict needs beyond the plain one: an article quoted rather
+// than a value, or an eruption that matches none.
+function wordingFor(fact) {
+  if (fact.status === "agrees" && fact.source === "wikipedia") {
+    return "wikipedia";
+  }
+  if (fact.status === "disagrees" && fact.property === "erupted") {
+    return "erupted";
+  }
+  return undefined;
 }
 
 /**
@@ -167,10 +191,11 @@ export function describeFact(t, fact, language) {
     quote: fact.quote,
     subject: fact.entity?.label || fact.subject,
     property: t(`facts.properties.${fact.property}`),
-    value: wikidataText(t, language, fact),
+    value: foundText(t, language, fact),
+    source: t(`facts.sources.${fact.source || "wikidata"}`),
   };
   if (fact.status === "unknown") {
     return t(`facts.unknown.${fact.reason || "no-value"}`, values);
   }
-  return t(`facts.${fact.status}`, values);
+  return t(`facts.${fact.status}`, { ...values, context: wordingFor(fact) });
 }

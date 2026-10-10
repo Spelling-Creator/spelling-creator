@@ -34,6 +34,16 @@ describe("wording", () => {
     );
   });
 
+  it("can name every source, and every source but Wikidata has a link", () => {
+    for (const source of ["wikidata", "smithsonian", "wikipedia"]) {
+      expect(checks.facts.sources[source], source).toBeTruthy();
+    }
+    expect(Object.keys(checks.facts.openSource).sort()).toEqual([
+      "smithsonian",
+      "wikipedia",
+    ]);
+  });
+
   it("can write every unit, through Intl or checks.json", () => {
     for (const unit of FACT_UNIT_KEYS) {
       const written = quantityText(t, "en", 2, unit);
@@ -58,12 +68,92 @@ describe("describing a fact", () => {
         {
           ...everest,
           status: "disagrees",
-          wikidata: { value: 8848.86, unit: "m" },
+          source: "wikidata",
+          found: { value: 8848.86, unit: "m" },
         },
         "en",
       ),
     ).toBe(
       '"8,000 METRES": Wikidata gives the height of Mount Everest as 8,848.86 meters.',
+    );
+  });
+
+  it("names the Smithsonian, and an eruption from start to end", () => {
+    const helens = {
+      subject: "Mount St. Helens",
+      entity: { label: "Mount St. Helens" },
+      source: "smithsonian",
+      found: {
+        year: 2004,
+        month: 10,
+        day: 1,
+        precision: 11,
+        until: { year: 2008, month: 1, day: 27, precision: 11 },
+      },
+    };
+    expect(
+      describeFact(
+        t,
+        {
+          ...helens,
+          quote: "1980",
+          property: "last_eruption",
+          status: "disagrees",
+        },
+        "en-GB",
+      ),
+    ).toBe(
+      '"1980": the Smithsonian\'s Global Volcanism Program gives the last eruption of Mount St. Helens as 1 October 2004 to 27 January 2008.',
+    );
+    expect(
+      describeFact(
+        t,
+        { ...helens, quote: "1995", property: "erupted", status: "disagrees" },
+        "en-GB",
+      ),
+    ).toBe(
+      '"1995": the Smithsonian\'s Global Volcanism Program has no eruption of Mount St. Helens then. The nearest is 1 October 2004 to 27 January 2008.',
+    );
+  });
+
+  it("quotes the article for a match on Wikipedia", () => {
+    expect(
+      describeFact(
+        t,
+        {
+          quote: "4 KG",
+          property: "mass",
+          entity: { label: "cat" },
+          status: "agrees",
+          source: "wikipedia",
+          found: {
+            text: "Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb).",
+          },
+        },
+        "en",
+      ),
+    ).toBe(
+      '"4 KG" matches Wikipedia, which says: Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb).',
+    );
+  });
+
+  it("doesn't call a fact about a kind of animal wrong", () => {
+    expect(
+      describeFact(
+        t,
+        {
+          quote: "20 YEARS",
+          property: "lifespan",
+          entity: { label: "cat" },
+          status: "unknown",
+          reason: "varies",
+          source: "wikidata",
+          found: { value: 15, unit: "year" },
+        },
+        "en",
+      ),
+    ).toBe(
+      '"20 YEARS": Wikidata gives the lifespan of cat as 15 years. Animals vary, so this isn\'t counted as wrong.',
     );
   });
 
@@ -76,7 +166,8 @@ describe("describing a fact", () => {
           property: "population",
           entity: { label: "Paris" },
           status: "disagrees",
-          wikidata: { value: 2103778, unit: "", asOf: 2023 },
+          source: "wikidata",
+          found: { value: 2103778, unit: "", asOf: 2023 },
         },
         "en",
       ),
@@ -94,7 +185,8 @@ describe("describing a fact", () => {
           property: "capital",
           entity: { label: "Australia" },
           status: "disagrees",
-          wikidata: { pid: "P36", items: [{ id: "Q3114", label: "Canberra" }] },
+          source: "wikidata",
+          found: { pid: "P36", items: [{ id: "Q3114", label: "Canberra" }] },
         },
         "en",
       ),
@@ -107,7 +199,8 @@ describe("describing a fact", () => {
           property: "country",
           entity: { label: "Nile" },
           status: "agrees",
-          wikidata: {
+          source: "wikidata",
+          found: {
             pid: "P17",
             items: [
               { id: "Q79", label: "Egypt" },
@@ -135,7 +228,7 @@ describe("describing a fact", () => {
         { ...everest, status: "unknown", reason: "no-value" },
         "en",
       ),
-    ).toBe('"8,000 METRES": Wikidata has no height for Mount Everest.');
+    ).toBe('"8,000 METRES": no source gives the height of Mount Everest.');
   });
 });
 
