@@ -199,4 +199,7 @@ the translation model arriving, once per device (an Opus-MT pair model when
 the app language is English and the pair has one, NLLB otherwise; switching
 the app language to something other than English forces the NLLB path).
 transformers.js caches them in the browser's Cache Storage (look for
-`transformers-cache` under the Application panel in devtools).
+`transformers-cache` under the Application panel in devtools). To test the
+first-run download again, **Delete models** on the settings page empties that
+cache without touching the lessons on the device (see
+[Downloaded AI models](./pwa-and-offline.md#downloaded-ai-models)).

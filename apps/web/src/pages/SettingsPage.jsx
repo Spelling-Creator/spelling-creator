@@ -27,18 +27,34 @@
 // user_metadata, and BioDialog refreshes the session on save — so nothing here
 // fetches.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import {
   ExternalLinkIcon,
   LibraryIcon,
   LogOutIcon,
+  Trash2Icon,
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react";
+import {
+  clearModelCache,
+  modelCacheBytes,
+} from "@spelling-creator/core/browser/modelCache";
 import PageBody from "../components/layout/PageBody.jsx";
+import { Alert, AlertDescription } from "../components/ui/alert.jsx";
 import { Button, buttonVariants } from "../components/ui/button.jsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog.jsx";
+import { Skeleton } from "../components/ui/skeleton.jsx";
+import { Spinner } from "../components/ui/spinner.jsx";
 import {
   Field,
   FieldContent,
@@ -274,9 +290,138 @@ function SpeechSection() {
   );
 }
 
+// "760 MB", "2.4 GB": the same rounding the download notices use, in the
+// reader's own number format.
+function formatSize(bytes, locale) {
+  const gigabytes = bytes >= 1e9;
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit: gigabytes ? "gigabyte" : "megabyte",
+    unitDisplay: "short",
+    maximumFractionDigits: gigabytes ? 1 : 0,
+  }).format(gigabytes ? bytes / 1e9 : Math.max(1, Math.round(bytes / 1e6)));
+}
+
+// The models the on-device features have downloaded (natural voices,
+// summaries, translation, reading imported text), and a way to delete them
+// without clearing the site's data, which would take the lessons too.
+// core/browser/modelCache.js has why deleting is safe even mid-download.
+//
+// `bytes` is undefined while it's being measured, which takes a moment on a
+// big cache, and null on a browser that can't have saved any, where the row is
+// left out like the install row is.
+function DownloadedModelsField() {
+  const { t, i18n } = useTranslation("settings");
+  const [bytes, setBytes] = useState(undefined);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    modelCacheBytes().then((measured) => {
+      if (!cancelled) setBytes(measured);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (bytes === null) return null;
+
+  const size = bytes ? formatSize(bytes, i18n.resolvedLanguage) : null;
+
+  const closeConfirm = () => {
+    setConfirmOpen(false);
+    setFailed(false);
+  };
+
+  const deleteModels = async () => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await clearModelCache();
+      // Measured again rather than assumed 0: a download still running, in
+      // this page or another tab, can have saved a file since.
+      setBytes(await modelCacheBytes());
+      setConfirmOpen(false);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Field orientation="responsive">
+      <FieldContent>
+        <FieldTitle>{t("device.modelsLabel")}</FieldTitle>
+        <FieldDescription>{t("device.modelsDescription")}</FieldDescription>
+        {bytes === undefined ? (
+          <Skeleton className="h-4 w-40" />
+        ) : (
+          <FieldDescription>
+            {size ? t("device.modelsSize", { size }) : t("device.modelsNone")}
+          </FieldDescription>
+        )}
+      </FieldContent>
+      <Button
+        variant="outline"
+        disabled={!bytes}
+        onClick={() => setConfirmOpen(true)}
+      >
+        <Trash2Icon data-icon="inline-start" />
+        {t("device.deleteModels")}
+      </Button>
+
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(next) => !next && !busy && closeConfirm()}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("device.deleteModelsDialog.title")}</DialogTitle>
+            <DialogDescription>
+              {t("device.deleteModelsDialog.description", { size })}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("device.deleteModelsDialog.builtIn")}
+          </p>
+          {failed && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {t("device.deleteModelsDialog.failed")}
+              </AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeConfirm} disabled={busy}>
+              {t("device.deleteModelsDialog.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteModels}
+              disabled={busy}
+            >
+              {busy ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <Trash2Icon data-icon="inline-start" />
+              )}
+              {t("device.deleteModelsDialog.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Field>
+  );
+}
+
 // What this browser holds, and what it could hold. The install row is absent
 // unless the app is actually installable — InstallAppButton returns null
-// otherwise — so the section can end up as just the lessons row.
+// otherwise — and so is the models row on a browser that can't save any, so
+// the section can end up as just the lessons row.
 function DeviceSection() {
   const { t } = useTranslation("settings");
   const { canInstall } = useInstallPrompt();
@@ -316,6 +461,8 @@ function DeviceSection() {
             </RouterLink>
           </Button>
         </Field>
+
+        <DownloadedModelsField />
       </FieldGroup>
     </Section>
   );

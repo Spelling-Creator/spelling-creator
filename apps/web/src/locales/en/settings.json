@@ -33,7 +33,20 @@
     "install": "Install app",
     "lessonsLabel": "Lessons on this device",
     "lessonsDescription": "Lessons are drafted in this browser and stay here until you publish them. This is where you switch between them, rename one, or delete one.",
-    "manageLessons": "Manage lessons"
+    "manageLessons": "Manage lessons",
+    "modelsLabel": "Downloaded AI models",
+    "modelsDescription": "Natural voices, summaries, translation, and reading imported text can each download a model so they run on this device. They stay saved here so they only download once.",
+    "modelsSize": "Using {{size}} right now.",
+    "modelsNone": "None downloaded yet.",
+    "deleteModels": "Delete models",
+    "deleteModelsDialog": {
+      "title": "Delete downloaded models?",
+      "description": "This frees up {{size}}. Your lessons aren't affected. Each feature downloads its model again the next time you use it, which can take a while.",
+      "builtIn": "Models that come with your browser, like Chrome's built-in AI, belong to the browser and stay where they are.",
+      "failed": "The models couldn't be deleted. Try again.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
   },
   "account": {
     "title": "Account",

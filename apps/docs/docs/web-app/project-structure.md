@@ -18,7 +18,7 @@ src/
     LibraryPage.jsx       the lessons this device holds (/library): open, copy, rename, delete, start another (see local-lessons.md)
     LoginPage.jsx         magic-link (or emailed code) sign-in / account status
     ModerationPage.jsx    moderator/admin queue for reported content
-    SettingsPage.jsx      appearance, language, read-aloud, this device's lessons, account — see pages-and-routing.md
+    SettingsPage.jsx      appearance, language, read-aloud, this device's lessons and downloaded AI models, account (see pages-and-routing.md)
     lesson/               one lesson (/hub/:id) and its tabs — see pages-and-routing.md
       LessonLayout.jsx    owns the fetch, the identity header and every whole-lesson action; tabs read it via useLesson()
       LessonTabs.jsx      the tab bar — NavLinks to real routes, not a Tabs widget
@@ -212,6 +212,7 @@ the MCP server cannot reach it by accident:
   imageFile             read a File to bytes, measure it, opportunistically re-encode to WEBP
   storage               the lesson library: every lesson this device holds, which one is open, and the two migrations into it
   interactiveProgress   the unfinished interactive run-through this device is holding (localStorage): resume, expiry, pruning
+  modelCache            the on-device models transformers.js has downloaded (Cache Storage): their size, and deleting them
   docxExport            build the .docx (text, images, questions)
   docxImport            best-effort import of a .docx back into the lesson model
   pdfExport             docx -> html (mammoth) -> pdf (html2pdf.js) — the only non-Word use of the Word pipeline

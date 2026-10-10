@@ -23,6 +23,7 @@
     "./browser/imageStore": "./src/browser/imageStore.js",
     "./browser/interactiveProgress": "./src/browser/interactiveProgress.js",
     "./browser/jsonExport": "./src/browser/jsonExport.js",
+    "./browser/modelCache": "./src/browser/modelCache.js",
     "./browser/pdfExport": "./src/browser/pdfExport.js",
     "./browser/presence": "./src/browser/presence.js",
     "./browser/readAloud": "./src/browser/readAloud.js",
