@@ -55,6 +55,7 @@ src/
     LessonView.jsx        read-only renderer for the lesson page and the editor's preview mode (blocks straight to React, lazy images, drawn in the app's theme)
     LessonSummary.jsx     on-device AI summary card on the lesson page (hidden unless the device can run an engine)
     InteractiveLesson.jsx full-screen step-by-step walkthrough of a lesson, with a field per question, autosaved progress you can come back to, and optional read-aloud (see interactive-mode.md)
+    SpeechVoiceSelect.jsx the read-aloud voice picker (natural voices, then the browser's), shared by the walkthrough's popover and the settings page
     MyLessonAnswers.jsx   the reader's own saved answers on the lesson page — private to them, rendered for nobody else
     SectionCard.jsx       a named section with its content blocks + add buttons; measures the pointer against its own rows during a block drag, but the drag itself is owned by EditorPage (blocks can move between sections)
     ContentBlock.jsx      a single text, spelling, image, VAKT or question block; owns BLOCK_LAYOUT, the responsive content/controls split (see mobile-layout.md)
@@ -90,8 +91,8 @@ src/
       engine.js, load.js  the docx/PDF/import pipeline, behind one dynamic import (keeps ~390 KB gzipped off every page that never exports; preview doesn't need it)
       useLessonGit.js     the editor's controller: setup, periodic commits, history, restore
     useImageSrc.js        resolves an image ref to a displayable src
-    speechPrefs.js        the read-aloud preferences (on/off, voice, pace) and the browser's voice list, shared by interactive mode and the settings page
-    useSpeech.js          Web Speech API text-to-speech for interactive mode (speaking, queueing and Chromium's utterance-length and cancel quirks; preferences come from speechPrefs.js)
+    speechPrefs.js        the read-aloud preferences (on/off, voice, pace) and the voice lists (the browser's, and the natural voices this device can run), shared by interactive mode and the settings page
+    useSpeech.js          text-to-speech for interactive mode: the browser's voices over the Web Speech API, or a natural voice (Kokoro) played through Web Audio, with the browser's as the fallback; preferences come from speechPrefs.js
     auth.jsx              AuthProvider + useAuth (session, magic link, sign out)
     seo.jsx               <DocumentMeta> / <JsonLd> — React 19 hoists these into <head>, which is what makes them work under SSR
     ssr.jsx               the client/server handoff: SsrProvider, useServerData, useSiteOrigin
@@ -225,7 +226,11 @@ the MCP server cannot reach it by accident:
   fallbackSummarizer    the fallback itself: LFM2.5 via transformers.js on WebGPU, a lazy chunk only a click ever loads
   translator            on-device comment translation: browser Translator API with an in-page fallback
   fallbackTranslator    the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
-  downloadProgress      shared by both fallbacks: transformers.js's per-file download events summed into the one 0-1 fraction the UI shows
+  deviceCheck           the checks the in-page models share: the WebGPU adapter (asked for once a page), the large-model limits, a metered connection
+  readAloud             the natural read-aloud voice (Kokoro): the device check, and the door to its engine
+  readAloudEngine       the engine itself: text clean-up, espeak-ng phonemes (Spellophone), Kokoro via transformers.js on WebGPU, a lazy chunk only speaking ever loads
+  readAloudVoices       the Kokoro voices on offer, listable without the engine
+  downloadProgress      shared by the transformers.js engines: per-file download events summed into the one 0-1 fraction the UI shows
   git/fs                LightningFS — the IndexedDB filesystem the repos live on
   git/sync              fork (= clone the repo) and merge-with-original flows
 ```

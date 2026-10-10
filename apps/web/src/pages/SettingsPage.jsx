@@ -66,8 +66,10 @@ import RichText from "../components/RichText.jsx";
 import { useAuth } from "../lib/auth.jsx";
 import { useColorScheme } from "../lib/colorScheme.jsx";
 import { LANGUAGES, DEFAULT_LANGUAGE } from "../lib/languages.js";
+import { SpeechVoiceSelect } from "../components/SpeechVoiceSelect.jsx";
 import {
   SPEECH_RATES,
+  useNaturalVoices,
   useSpeechPrefs,
   useSpeechVoices,
 } from "../lib/speechPrefs.js";
@@ -172,7 +174,9 @@ function LanguageSection() {
 }
 
 // Read-aloud, the same three preferences the popover in practice mode sets — see
-// lib/speechPrefs.js, which both share. The section is absent entirely on a
+// lib/speechPrefs.js, which both share, and SpeechVoiceSelect, the voice
+// picker both use. Choosing a natural voice here downloads nothing; the model
+// loads the first time practice mode speaks with it. The section is absent entirely on a
 // browser with no speech synthesis, for the reason SpeechControls gives: a
 // reader who can't have the feature is better off never learning it exists than
 // finding a dead control.
@@ -183,6 +187,7 @@ function LanguageSection() {
 function SpeechSection() {
   const { t } = useTranslation("settings");
   const { supported, voices } = useSpeechVoices();
+  const naturalVoices = useNaturalVoices();
   const { enabled, setEnabled, voiceURI, setVoiceURI, rate, setRate } =
     useSpeechPrefs();
 
@@ -223,26 +228,16 @@ function SpeechSection() {
               <FieldContent>
                 <FieldLabel htmlFor="tts-voice">{t("speech.voice")}</FieldLabel>
               </FieldContent>
-              <Select
-                value={voiceURI || "default"}
-                onValueChange={(next) =>
-                  setVoiceURI(next === "default" ? "" : next)
-                }
-              >
-                <SelectTrigger id="tts-voice" className="w-full sm:w-72">
-                  <SelectValue placeholder={t("speech.defaultVoice")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">
-                    {t("speech.defaultVoice")}
-                  </SelectItem>
-                  {voices.map((voice) => (
-                    <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
-                      {voice.name} ({voice.lang})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex w-full flex-col gap-2 sm:w-72">
+                <SpeechVoiceSelect
+                  id="tts-voice"
+                  voiceURI={voiceURI}
+                  onVoiceURIChange={setVoiceURI}
+                  voices={voices}
+                  naturalVoices={naturalVoices}
+                  className="w-full"
+                />
+              </div>
             </Field>
 
             <Field orientation="responsive">

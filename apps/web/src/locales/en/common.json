@@ -7,6 +7,12 @@
   "status": {
     "loading": "Loading"
   },
+  "speechVoice": {
+    "defaultVoice": "Browser default",
+    "naturalVoices": "Natural voices",
+    "browserVoices": "This browser's voices",
+    "naturalNote": "Natural voices read English only. The first one you use downloads about {{mb}} MB, once, and runs on this computer."
+  },
   "nav": {
     "lessonHub": "Lesson hub",
     "switchToLightMode": "Switch to light mode",

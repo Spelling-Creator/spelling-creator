@@ -57,7 +57,8 @@ PDF printing.
   published already works; the walkthrough is derived from the document itself.
   What you type is saved **privately to your account** when you finish, readable
   by you and nobody else (not even the lesson's author), and any step can be read
-  aloud by the browser's own speech synthesis. You needn't finish in one sitting:
+  aloud, by the browser's own voices or, on a computer that can run it, a
+  natural voice made on the device. You needn't finish in one sitting:
   an unfinished run-through is kept in the browser and the lesson reopens where
   you left it. Whoever is presenting can toggle the author's answers on screen
   (see [Interactive lesson mode](./interactive-mode.md)).

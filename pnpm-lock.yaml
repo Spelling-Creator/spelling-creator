@@ -414,6 +414,9 @@ importers:
       '@isomorphic-git/lightning-fs':
         specifier: ^4.7.0
         version: 4.7.0
+      '@spelling-creator/spellophone':
+        specifier: https://github.com/Spelling-Creator/spellophone/releases/download/v0.1.0/spellophone-v0.1.0.tgz
+        version: https://github.com/Spelling-Creator/spellophone/releases/download/v0.1.0/spellophone-v0.1.0.tgz
       '@supabase/supabase-js':
         specifier: ^2.112.3
         version: 2.112.3
@@ -3169,6 +3172,11 @@ packages:
 
   '@speed-highlight/core@1.2.15':
     resolution: {integrity: sha512-BMq1K3DsElxDWawkX6eLg9+CKJrTVGCBAWVuHXVUV2u0s2711qiChLSId6ikYPfxhdYocLNt3wWwSvDiTvFabw==}
+
+  '@spelling-creator/spellophone@https://github.com/Spelling-Creator/spellophone/releases/download/v0.1.0/spellophone-v0.1.0.tgz':
+    resolution: {integrity: sha512-Z7eePKUTbNfvr4mAUpPp7mhKwYrGRrJkAZTVmgzkANg9s8DusdMltsq/T1ongLgyccomjjJJEKqqNCQCawh2Rw==, tarball: https://github.com/Spelling-Creator/spellophone/releases/download/v0.1.0/spellophone-v0.1.0.tgz}
+    version: 0.1.0
+    engines: {node: '>=24'}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -9680,6 +9688,8 @@ snapshots:
   '@sindresorhus/is@7.2.0': {}
 
   '@speed-highlight/core@1.2.15': {}
+
+  '@spelling-creator/spellophone@https://github.com/Spelling-Creator/spellophone/releases/download/v0.1.0/spellophone-v0.1.0.tgz': {}
 
   '@standard-schema/spec@1.1.0': {}
 

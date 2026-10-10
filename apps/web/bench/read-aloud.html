@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Read-aloud bench</title>
+    <!-- A development page, served only by `vite dev`: the production build's
+         only entry is index.html. It times Kokoro on whatever device opens it,
+         for docs/web-app/interactive-mode.md. -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fbfaf7;
+        --fg: #1d1b18;
+        --muted: #6b665e;
+        --line: #e2ddd4;
+        --accent: #2f5d50;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #171614;
+          --fg: #ece8e1;
+          --muted: #a29c92;
+          --line: #34312c;
+          --accent: #7fb8a6;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0 0 4px;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 16px;
+      }
+      fieldset {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px;
+        margin: 0 0 16px;
+      }
+      label {
+        display: grid;
+        gap: 4px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      select,
+      button {
+        font: inherit;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--fg);
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+      }
+      button:disabled {
+        opacity: 0.5;
+      }
+      .actions {
+        align-self: end;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      progress {
+        width: 100%;
+        height: 8px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        font-variant-numeric: tabular-nums;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+        white-space: nowrap;
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 16px;
+        font-size: 0.85rem;
+        margin: 0 0 16px;
+      }
+      dt {
+        color: var(--muted);
+      }
+      dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      pre {
+        font-size: 0.75rem;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        max-height: 320px;
+        overflow: auto;
+      }
+      #status {
+        min-height: 1.5em;
+      }
+      .error {
+        color: #b3261e;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Read-aloud bench</h1>
+      <p>
+        Times Kokoro reading the first steps of The History of Domestic Cats,
+        chunked the way interactive mode chunks speech. The first run on a
+        device downloads the model; reload and run again for the cached load
+        time.
+      </p>
+
+      <h2>This device</h2>
+      <dl id="env"></dl>
+
+      <fieldset id="controls">
+        <label>
+          Device
+          <select id="device">
+            <option value="webgpu">WebGPU</option>
+            <option value="wasm">WASM</option>
+          </select>
+        </label>
+        <label>
+          Weights
+          <select id="dtype">
+            <option value="fp32">fp32 (326 MB)</option>
+            <option value="fp16">fp16 (163 MB)</option>
+            <option value="q8">q8 (92 MB)</option>
+            <option value="q4f16">q4f16 (155 MB)</option>
+          </select>
+        </label>
+        <label>
+          Voice
+          <select id="voice"></select>
+        </label>
+        <div class="actions">
+          <button id="run" class="primary">Run</button>
+          <button id="play" disabled>Play all</button>
+          <button id="copy" disabled>Copy results</button>
+        </div>
+      </fieldset>
+
+      <progress id="progress" max="1" value="0" hidden></progress>
+      <div id="status"></div>
+
+      <h2>Summary</h2>
+      <dl id="summary"></dl>
+
+      <h2>Chunks</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Text</th>
+              <th class="num">Tokens</th>
+              <th class="num">Phonemes ms</th>
+              <th class="num">Audio ms</th>
+              <th class="num">Speech s</th>
+              <th class="num">RTF</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <h2>Results</h2>
+      <pre id="json">Nothing yet.</pre>
+    </main>
+    <script type="module" src="./read-aloud.js"></script>
+  </body>
+</html>

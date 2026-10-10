@@ -28,6 +28,11 @@
 import { textBlockPlain } from "../lessonText.js";
 import { baseLanguageTag } from "../translationLanguages.js";
 import { VAKT_LABEL, vaktText } from "../vakt.js";
+import {
+  holdsLargeModel,
+  meteredConnection,
+  webGpuAdapter,
+} from "./deviceCheck.js";
 
 /**
  * The summary shapes the spec defines, in the order the UI offers them.
@@ -93,60 +98,18 @@ function loadFallback() {
   return fallbackPromise;
 }
 
-// The hardware bar for the LFM fallback's GPU adapter, there to turn away
-// phone-class adapters that would download all 760 MB only to fail, or crash
-// the tab, loading the weights. Checked on the adapter's limits, which
-// report what the hardware CAN raise them to, not the small WebGPU defaults.
-//
-// 1 GiB, and not more: desktop browsers cap both limits a few bytes short
-// of 2 GiB however capable the hardware (Firefox and Safari both report
-// 2147483644 on machines that run the model fine), so any higher bar would
-// shut out the browsers this fallback exists for. A naive 2 GiB reading of
-// the model size did exactly that, by 4 bytes. Phone-class adapters sit far
-// below this line (storage bindings of 128 or 256 MiB are typical), which
-// is the distinction the bar is drawing.
-const FALLBACK_MIN_BUFFER_BYTES = 1024 ** 3;
-const FALLBACK_MIN_STORAGE_BINDING_BYTES = 1024 ** 3;
-
-// Chromium's Network Information API, absent elsewhere; where it's missing we
-// assume the connection is fine rather than hiding the feature from every
-// non-Chromium browser. The built-in API refuses its (much smaller) download
-// on a metered connection, so a 760 MB one should show at least the same
-// manners rather than burning through someone's cellular data.
-function meteredConnection() {
-  const connection = globalThis.navigator?.connection;
-  if (!connection) return false;
-  return Boolean(connection.saveData) || connection.type === "cellular";
-}
-
 // Can this machine run the LFM fallback? The built-in engine's hardware bar
 // (disk, VRAM, an unmetered connection) is applied by the browser; this probe
 // is the fallback's equivalent, so a device is never offered a 760 MB model it
 // can't run or shouldn't fetch. It needs WebGPU with f16 shader support (the
 // quantisation fallbackSummarizer.js loads is q4f16) on an adapter whose
-// limits can hold the weights. The probe is cheap and answerable without
-// loading the heavy chunk, and the adapter part is memoised because
-// requestAdapter() is async and that answer never changes within a page; the
-// connection check stays outside the memo because tethering can start
-// mid-visit. Fails closed, like the built-in probe above.
-let webGpuProbe = null;
-
-function fallbackPossible() {
-  if (!globalThis.navigator?.gpu) return Promise.resolve(false);
-  if (meteredConnection()) return Promise.resolve(false);
-  if (!webGpuProbe) {
-    webGpuProbe = navigator.gpu
-      .requestAdapter()
-      .then(
-        (adapter) =>
-          Boolean(adapter?.features?.has("shader-f16")) &&
-          adapter.limits.maxBufferSize >= FALLBACK_MIN_BUFFER_BYTES &&
-          adapter.limits.maxStorageBufferBindingSize >=
-            FALLBACK_MIN_STORAGE_BINDING_BYTES,
-      )
-      .catch(() => false);
-  }
-  return webGpuProbe;
+// limits can hold the weights, and an unmetered connection; deviceCheck.js
+// has both, shared with the other in-page models. Cheap, and answerable
+// without loading the heavy chunk. Fails closed, like the built-in probe
+// above.
+async function fallbackPossible() {
+  if (meteredConnection()) return false;
+  return holdsLargeModel(await webGpuAdapter());
 }
 
 // Chrome warns on every request that leaves outputLanguage unset, so one is

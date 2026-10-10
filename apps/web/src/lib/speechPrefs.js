@@ -1,5 +1,6 @@
-// The read-aloud preferences — on/off, voice and pace — and the browser's voice
-// list. Nothing here speaks.
+// The read-aloud preferences (on/off, voice and pace) and the voice lists:
+// the browser's own, and the natural (Kokoro) voices this device can run.
+// Nothing here speaks.
 //
 // They live in their own module rather than inside useSpeech.js because two very
 // different places need them: interactive mode, which is also doing the
@@ -12,7 +13,7 @@
 //
 //   The server has neither localStorage nor `speechSynthesis`, and a hydrating
 //   client has to render exactly what the server sent. So both hooks start at
-//   their defaults and adopt the real values in an effect, after mount — the
+//   their defaults and adopt the real values in an effect, after mount: the
 //   same dance as lib/colorScheme.jsx.
 //
 //   Voices load late. `getVoices()` returns [] on the first call in most
@@ -26,6 +27,10 @@
 // nobody changes mid-sentence.
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  readAloudPossible,
+  VOICES as NATURAL_VOICES,
+} from "@spelling-creator/core/browser/readAloud";
 
 const ENABLED_KEY = "spelling-creator:tts-enabled";
 const VOICE_KEY = "spelling-creator:tts-voice";
@@ -40,7 +45,7 @@ function readStored(key, fallback) {
     const stored = localStorage.getItem(key);
     return stored === null ? fallback : stored;
   } catch {
-    // localStorage unavailable (private browsing, etc.) — use the default.
+    // localStorage unavailable (private browsing, etc.), so use the default.
     return fallback;
   }
 }
@@ -55,7 +60,7 @@ function writeStored(key, value) {
 
 /**
  * Whether this browser can speak at all. Probe it from an effect, never at
- * render — see the note above about hydration.
+ * render; see the note above about hydration.
  * @returns {boolean}
  */
 export function speechSupported() {
@@ -85,10 +90,58 @@ export function useSpeechVoices() {
   return { supported, voices };
 }
 
+// A natural (Kokoro) voice is stored in the same preference as a browser voice,
+// as this prefix plus the voice's id, so choosing one is just choosing a voice.
+// No browser voiceURI starts with it.
+const NATURAL_PREFIX = "kokoro:";
+
 /**
- * The user's remembered read-aloud preferences. Each setter persists as it sets
- * — persisting belongs to the act of choosing, not to observing the state, so
- * an effect can never write a default over a stored value during the render
+ * The Kokoro voice id a stored voice preference names, or null for a browser
+ * voice (or the browser default).
+ * @param {string} voiceURI
+ * @returns {string|null}
+ */
+export function naturalVoiceId(voiceURI) {
+  if (!voiceURI?.startsWith(NATURAL_PREFIX)) return null;
+  const id = voiceURI.slice(NATURAL_PREFIX.length);
+  return Object.hasOwn(NATURAL_VOICES, id) ? id : null;
+}
+
+/**
+ * The natural voices this device can use, shaped like browser voices so the
+ * picker lists both the same way: empty until the device check has run, and
+ * empty for good where it fails (no WebGPU, a phone or tablet, a metered
+ * connection). See core/browser/readAloud.js.
+ *
+ * @returns {{ voiceURI: string, name: string, lang: string }[]}
+ */
+export function useNaturalVoices() {
+  const [voices, setVoices] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    readAloudPossible().then((possible) => {
+      if (cancelled || !possible) return;
+      setVoices(
+        Object.entries(NATURAL_VOICES).map(([id, { name, lang }]) => ({
+          voiceURI: `${NATURAL_PREFIX}${id}`,
+          name,
+          lang,
+        })),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return voices;
+}
+
+/**
+ * The user's remembered read-aloud preferences. Each setter persists as it
+ * sets. Persisting belongs to the act of choosing, not to observing the state,
+ * so an effect can never write a default over a stored value during the render
  * before adoption.
  *
  * @returns {{
