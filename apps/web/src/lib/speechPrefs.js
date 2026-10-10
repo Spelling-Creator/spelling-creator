@@ -1,4 +1,4 @@
-// The read-aloud preferences — on/off, voice and pace — and the voice lists:
+// The read-aloud preferences (on/off, voice and pace) and the voice lists:
 // the browser's own, and the natural (Kokoro) voices this device can run.
 // Nothing here speaks.
 //
@@ -13,7 +13,7 @@
 //
 //   The server has neither localStorage nor `speechSynthesis`, and a hydrating
 //   client has to render exactly what the server sent. So both hooks start at
-//   their defaults and adopt the real values in an effect, after mount — the
+//   their defaults and adopt the real values in an effect, after mount: the
 //   same dance as lib/colorScheme.jsx.
 //
 //   Voices load late. `getVoices()` returns [] on the first call in most
@@ -45,7 +45,7 @@ function readStored(key, fallback) {
     const stored = localStorage.getItem(key);
     return stored === null ? fallback : stored;
   } catch {
-    // localStorage unavailable (private browsing, etc.) — use the default.
+    // localStorage unavailable (private browsing, etc.), so use the default.
     return fallback;
   }
 }
@@ -60,7 +60,7 @@ function writeStored(key, value) {
 
 /**
  * Whether this browser can speak at all. Probe it from an effect, never at
- * render — see the note above about hydration.
+ * render; see the note above about hydration.
  * @returns {boolean}
  */
 export function speechSupported() {
@@ -139,9 +139,9 @@ export function useNaturalVoices() {
 }
 
 /**
- * The user's remembered read-aloud preferences. Each setter persists as it sets
- * — persisting belongs to the act of choosing, not to observing the state, so
- * an effect can never write a default over a stored value during the render
+ * The user's remembered read-aloud preferences. Each setter persists as it
+ * sets. Persisting belongs to the act of choosing, not to observing the state,
+ * so an effect can never write a default over a stored value during the render
  * before adoption.
  *
  * @returns {{

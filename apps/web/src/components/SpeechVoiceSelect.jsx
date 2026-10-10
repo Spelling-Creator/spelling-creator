@@ -39,11 +39,19 @@ export function SpeechVoiceSelect({
 }) {
   const { t } = useTranslation("common");
   const natural = naturalVoices.length > 0 && naturalVoiceId(voiceURI) !== null;
+  // A stored voice that isn't on offer here shows as the browser default,
+  // since that's what reads: a natural voice before the device check answers
+  // or after it fails (a metered connection, say), or a browser voice this
+  // browser doesn't have. Left as is, it would match no item and the trigger
+  // would show nothing at all. The stored choice is kept either way.
+  const offered =
+    naturalVoices.some((voice) => voice.voiceURI === voiceURI) ||
+    voices.some((voice) => voice.voiceURI === voiceURI);
 
   return (
     <>
       <Select
-        value={voiceURI || "default"}
+        value={voiceURI && offered ? voiceURI : "default"}
         onValueChange={(next) =>
           onVoiceURIChange(next === "default" ? "" : next)
         }

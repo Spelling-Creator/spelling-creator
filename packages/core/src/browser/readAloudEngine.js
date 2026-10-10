@@ -196,8 +196,15 @@ function pointNumber(match) {
 
 // espeak-ng drops punctuation, but Kokoro uses it for pauses and intonation,
 // so the text is cut at punctuation, only the words between go to espeak-ng,
-// and the punctuation is put back between them unchanged.
-const PUNCTUATION_RUN = /(\s*[;:,.!?¡¿—…"«»“”(){}[\]]+\s*)+/g;
+// and the punctuation is put back between them unchanged. The long dash (code
+// point 2014) is built from its number so the source doesn't carry one.
+const PUNCTUATION_MARKS = `;:,.!?¡¿${String.fromCharCode(0x2014)}…"«»“”`;
+const PUNCTUATION_RUN = new RegExp(
+  String.raw`(\s*[${PUNCTUATION_MARKS}(){}[\]]+\s*)+`,
+  "g",
+);
+// A lone "z" left before punctuation or a space belongs to the word before.
+const STRAY_Z = new RegExp(` z(?=[${PUNCTUATION_MARKS} ]|$)`, "g");
 
 /**
  * Text to the IPA string Kokoro takes.
@@ -235,7 +242,7 @@ function phonemize(espeak, text, accent) {
     .replace(/x/g, "k")
     .replace(/ɬ/g, "l")
     .replace(/(?<=[a-zɹː])(?=hˈʌndɹɪd)/g, " ")
-    .replace(/ z(?=[;:,.!?¡¿—…"«»“” ]|$)/g, "z");
+    .replace(STRAY_Z, "z");
   if (accent === "a") {
     ipa = ipa.replace(/(?<=nˈaɪn)ti(?!ː)/g, "di");
   }

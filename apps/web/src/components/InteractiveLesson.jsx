@@ -44,7 +44,13 @@
 //
 // Speech is optional and off until asked for; see lib/useSpeech.js.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeftIcon,
@@ -217,31 +223,56 @@ function SpeechControls({ speech, onReplay }) {
   );
 }
 
-// The natural voice's one-time download, and what happens if it can't load,
-// under the step count. The browser's voice reads meanwhile, so this is news,
-// not a wait: it's a line of text, not a second progress bar to be mistaken
-// for the lesson's.
+// The natural voice's one-time download, and what happens if it can't load
+// or stops working, under the step count. The browser's voice reads
+// meanwhile, so this is news, not a wait: it's a line of text, not a second
+// progress bar to be mistaken for the lesson's.
+//
+// The live region says each thing once. The percentage beside it is hidden
+// from screen readers, which would otherwise announce every one of the
+// hundred steps of the download over the voice reading the lesson. The
+// percentage is read from its own store, so its ticking re-renders only this.
 function VoiceLoadStatus({ speech }) {
   const { t } = useTranslation("interactive");
-  const status = speech.enabled ? speech.voiceLoad?.status : null;
-  if (status === "loading") {
-    return (
-      <p className="mt-1 text-xs text-muted-foreground" role="status">
-        {t("speech.downloadingVoice", {
-          mb: DOWNLOAD_MB,
-          percent: Math.round(speech.voiceLoad.progress * 100),
-        })}
-      </p>
-    );
+  const progress = useSyncExternalStore(
+    speech.voiceProgress.subscribe,
+    speech.voiceProgress.get,
+    () => 0,
+  );
+  const load = speech.enabled ? speech.voiceLoad : null;
+
+  let announcement = "";
+  if (load?.status === "loading") {
+    announcement = t("speech.downloadingVoiceAnnouncement");
+  } else if (load?.status === "failed") {
+    announcement =
+      load.reason === "read"
+        ? t("speech.voiceStopped")
+        : load.retry
+          ? t("speech.voiceFailedRetry")
+          : t("speech.voiceFailed");
   }
-  if (status === "failed") {
-    return (
-      <p className="mt-1 text-xs text-muted-foreground" role="status">
-        {t("speech.voiceFailed")}
-      </p>
-    );
-  }
-  return null;
+
+  return (
+    <p className="text-xs text-muted-foreground">
+      {load?.status === "loading" && (
+        <span className="mt-1 block" aria-hidden="true">
+          {t("speech.downloadingVoice", {
+            mb: DOWNLOAD_MB,
+            percent: Math.round(progress * 100),
+          })}
+        </span>
+      )}
+      {/* Present while empty, so the first message is announced too: a live
+          region added along with its text often isn't. */}
+      <span
+        role="status"
+        className={load?.status === "failed" ? "mt-1 block" : "sr-only"}
+      >
+        {announcement}
+      </span>
+    </p>
+  );
 }
 
 // The presenter's reveal, sat beside the speech controls in the top bar. Only
@@ -946,18 +977,19 @@ export default function InteractiveLesson({
   // runs again once the voice has loaded, which may be mid-step. Without a
   // natural voice ready, prepare does nothing.
   const nextStep = steps[index + 1] || null;
-  const { prepare } = speech;
+  const { prepare, stop: stopSpeech } = speech;
+  const voiceStatus = speech.voiceLoad?.status;
   useEffect(() => {
     if (!open || !speech.enabled || phase !== "running" || !nextStep) return;
     prepare(stepSpeechText(nextStep));
-  }, [open, speech.enabled, phase, nextStep, prepare]);
+  }, [open, speech.enabled, phase, nextStep, prepare, voiceStatus]);
 
   // Nothing should still be talking once it's closed.
   useEffect(() => {
     if (open) return;
     setSpokenKey(null);
-    speech.stop();
-  }, [open, speech]);
+    stopSpeech();
+  }, [open, stopSpeech]);
 
   const responses = useMemo(
     () => collectResponses(steps, answers),

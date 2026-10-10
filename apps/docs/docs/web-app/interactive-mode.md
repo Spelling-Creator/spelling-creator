@@ -302,16 +302,31 @@ How it behaves:
   and tablets are excluded by name, because WebGPU alone doesn't rule them
   out: an iPad has it, and Kokoro froze and then crashed Safari on one.
   iPadOS calls itself a Mac, so it's recognised by having a touch screen.
+  A stored natural voice the device can't use right now (on a metered
+  connection, say) shows as the browser default in the picker, since that is
+  what reads; the choice itself is kept.
 - **Opt-in, because of the download.** The browser default stays the
   default. Choosing a natural voice says that the first use downloads about
-  330 MB, once. Choosing one on the settings page downloads nothing; the model
-  loads the first time practice mode speaks with it.
+  330 MB, once. Nothing downloads until practice mode speaks with speech on,
+  so choosing one on the settings page, or with speech off, downloads
+  nothing. The device check runs again just before, so a connection that has
+  turned metered since the page loaded doesn't start one.
 - **Never silent while it loads.** During the download the browser's voice
-  reads, and a line under the step count shows the progress. The natural
-  voice takes over from the next thing spoken.
-- **The browser's voice is the fallback.** If the model can't load, or can't
-  read a chunk, the browser's voice reads instead for the rest of the visit,
-  and the same line says so.
+  reads, and a line under the step count shows the progress. Screen readers
+  hear that it's downloading once, not every percent. The natural voice takes
+  over from the next thing spoken.
+- **The browser's voice is the fallback**, in three ways, and the same line
+  says which:
+  - a download that fails is tried again on the next step, up to three times
+    in a visit (files that finished are cached, so a retry picks up where a
+    dropped connection left off);
+  - a chunk the model fails to make costs only that step: what was already
+    queued plays out, then the browser's voice reads from the failed chunk.
+    Two steps in a row like that and the natural voice is dropped for the
+    visit;
+  - if the browser won't start Web Audio (no recent click, a strict autoplay
+    rule), that step is read by the browser's voice rather than queued in
+    silence.
 - **Steps play as one stream.** Each chunk is made, then queued on a Web Audio
   timeline straight after the one before, so playback runs on while the next
   chunk is made.
