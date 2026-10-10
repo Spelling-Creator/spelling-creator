@@ -120,6 +120,55 @@ right way round from a cache that can poison itself.
 Hub listings, profiles and comments are **not** cached. They're user-specific
 and change often, and a stale hub is more confusing than an unavailable one.
 
+### Downloaded AI models
+
+The features that run a model in the page with transformers.js save what they
+download in a Cache Storage bucket of their own, `transformers-cache`, which
+the service worker never touches: natural voices
+([interactive mode](./interactive-mode.md)), the summary fallback
+([lesson summaries](./lesson-summaries.md)), the translation fallback
+([lesson](./lesson-translation.md) and [comment](./comment-translation.md)
+translation) and the model behind [Import from text](./document-import.md).
+The ONNX runtime's own `.wasm` files go in the same bucket. Between them that
+can come to a few gigabytes, and the browser keeps it until something deletes
+it.
+
+The **This device** card on the settings page shows the total and has a
+**Delete models** button, so that space can be had back without clearing the
+site's data, which would take every lesson on the device with it.
+`packages/core/src/browser/modelCache.js` does the work:
+
+- `modelCacheBytes()` adds up each entry's `Content-Length`, without reading
+  the bodies, for entries that arrived uncompressed. That covers the model
+  weights, which Hugging Face sends as they are. An entry with a
+  `Content-Encoding` is read for its real size instead: jsDelivr sends the
+  ONNX runtime's `.wasm` as brotli, so its `Content-Length` (about 5.5 MB) is
+  the compressed size, while the cache holds it decoded. It returns `null`
+  when the page can't use Cache Storage at all, and the row is left out then.
+- `clearModelCache()` deletes the whole bucket. Nothing else writes to it, so
+  there's nothing to pick through.
+
+The row measures again every few seconds while the page is in view, when the
+tab comes back into view, and when the dialog opens, because a download keeps
+going after you leave the page that started it and another tab can finish
+one. Only the first measurement can hide the row; a later read that fails
+keeps the last size.
+
+Deleting is safe at any time, even mid-download. transformers.js stores each
+file whole and opens the bucket by name for every file it loads, so the next
+download just starts a new one. A model already loaded in an open page keeps
+working from memory; the next page load downloads it again.
+
+Chrome's built-in models (the Translator, LanguageDetector and Summarizer APIs)
+belong to the browser, not the site, so they aren't counted or deleted here.
+The confirmation dialog says so.
+
+The module hard-codes the bucket name instead of importing transformers.js,
+which would pull the library into the settings page's bundle. Its test checks
+the name against transformers.js's own `env.cacheKey`, so an upgrade that
+renames the bucket fails the test instead of leaving the button deleting
+nothing.
+
 ## Updates
 
 `registerType` is `"prompt"`, not `"autoUpdate"`. Activating a new service
