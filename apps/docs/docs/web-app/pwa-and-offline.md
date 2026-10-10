@@ -138,12 +138,21 @@ The **This device** card on the settings page shows the total and has a
 site's data, which would take every lesson on the device with it.
 `packages/core/src/browser/modelCache.js` does the work:
 
-- `modelCacheBytes()` adds up each entry's `Content-Length` (transformers.js
-  sets it on everything it stores) without reading the bodies. It returns
-  `null` when the page can't use Cache Storage at all, and the row is left out
-  then.
+- `modelCacheBytes()` adds up each entry's `Content-Length`, without reading
+  the bodies, for entries that arrived uncompressed. That covers the model
+  weights, which Hugging Face sends as they are. An entry with a
+  `Content-Encoding` is read for its real size instead: jsDelivr sends the
+  ONNX runtime's `.wasm` as brotli, so its `Content-Length` (about 5.5 MB) is
+  the compressed size, while the cache holds it decoded. It returns `null`
+  when the page can't use Cache Storage at all, and the row is left out then.
 - `clearModelCache()` deletes the whole bucket. Nothing else writes to it, so
   there's nothing to pick through.
+
+The row measures again every few seconds while the page is in view, when the
+tab comes back into view, and when the dialog opens, because a download keeps
+going after you leave the page that started it and another tab can finish
+one. Only the first measurement can hide the row; a later read that fails
+keeps the last size.
 
 Deleting is safe at any time, even mid-download. transformers.js stores each
 file whole and opens the bucket by name for every file it loads, so the next

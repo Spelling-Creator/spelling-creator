@@ -27,7 +27,7 @@
 // user_metadata, and BioDialog refreshes the session on save — so nothing here
 // fetches.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import {
@@ -292,24 +292,34 @@ function SpeechSection() {
 
 // "760 MB", "2.4 GB": the same rounding the download notices use, in the
 // reader's own number format.
+// The unit is picked after rounding, so 999.7 MB reads "1 GB", not "1,000 MB".
 function formatSize(bytes, locale) {
-  const gigabytes = bytes >= 1e9;
+  const megabytes = Math.max(1, Math.round(bytes / 1e6));
+  const gigabytes = megabytes >= 1000;
   return new Intl.NumberFormat(locale, {
     style: "unit",
     unit: gigabytes ? "gigabyte" : "megabyte",
     unitDisplay: "short",
     maximumFractionDigits: gigabytes ? 1 : 0,
-  }).format(gigabytes ? bytes / 1e9 : Math.max(1, Math.round(bytes / 1e6)));
+  }).format(gigabytes ? bytes / 1e9 : megabytes);
 }
+
+// How often the size is measured again while the page is in view. A download
+// keeps going when you leave the page that started it, and another tab can
+// finish one, so a size read once on arrival goes stale. Reading it is one
+// Cache Storage call, so every few seconds costs next to nothing.
+const MODEL_SIZE_POLL_MS = 5000;
 
 // The models the on-device features have downloaded (natural voices,
 // summaries, translation, reading imported text), and a way to delete them
 // without clearing the site's data, which would take the lessons too.
 // core/browser/modelCache.js has why deleting is safe even mid-download.
 //
-// `bytes` is undefined while it's being measured, which takes a moment on a
-// big cache, and null on a browser that can't have saved any, where the row is
-// left out like the install row is.
+// `bytes` is undefined until the first measurement, and null on a browser that
+// can't have saved any, where the row is left out like the install row is.
+// Only that first measurement can hide the row: a later read that fails keeps
+// the last size, rather than the row vanishing from under the reader (or from
+// under the open dialog).
 function DownloadedModelsField() {
   const { t, i18n } = useTranslation("settings");
   const [bytes, setBytes] = useState(undefined);
@@ -317,15 +327,46 @@ function DownloadedModelsField() {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    modelCacheBytes().then((measured) => {
-      if (!cancelled) setBytes(measured);
+  // Each measurement takes a ticket, and only the newest one to start is
+  // kept, so a poll that began before a delete can't put the old size back
+  // after it. Polls also wait out a delete in progress.
+  const ticket = useRef(0);
+  const deleting = useRef(false);
+
+  const measure = useCallback(async ({ afterDelete = false } = {}) => {
+    const mine = ++ticket.current;
+    const measured = await modelCacheBytes();
+    if (mine !== ticket.current) return;
+    setBytes((previous) => {
+      if (measured !== null) return measured;
+      // The delete itself worked, so there's nothing left to count.
+      if (afterDelete) return 0;
+      return previous === undefined ? null : previous;
     });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    measure();
+    const refresh = () => {
+      if (document.visibilityState === "visible" && !deleting.current) {
+        measure();
+      }
+    };
+    const timer = setInterval(refresh, MODEL_SIZE_POLL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [measure]);
+
+  // Emptied while the dialog was open (another tab deleted them, say): there's
+  // nothing left to confirm, and no size to put in "This frees up".
+  useEffect(() => {
+    if (bytes === 0) setConfirmOpen(false);
+  }, [bytes]);
 
   if (bytes === null) return null;
 
@@ -336,20 +377,29 @@ function DownloadedModelsField() {
     setFailed(false);
   };
 
+  const openConfirm = () => {
+    setConfirmOpen(true);
+    // So "This frees up" names what's there now.
+    measure();
+  };
+
   const deleteModels = async () => {
+    deleting.current = true;
     setBusy(true);
     setFailed(false);
     try {
       await clearModelCache();
-      // Measured again rather than assumed 0: a download still running, in
-      // this page or another tab, can have saved a file since.
-      setBytes(await modelCacheBytes());
-      setConfirmOpen(false);
     } catch {
       setFailed(true);
+      return;
     } finally {
+      deleting.current = false;
       setBusy(false);
     }
+    setConfirmOpen(false);
+    // Measured again rather than assumed 0: a download still running, in
+    // this page or another tab, can have saved a file since.
+    await measure({ afterDelete: true });
   };
 
   return (
@@ -365,11 +415,7 @@ function DownloadedModelsField() {
           </FieldDescription>
         )}
       </FieldContent>
-      <Button
-        variant="outline"
-        disabled={!bytes}
-        onClick={() => setConfirmOpen(true)}
-      >
+      <Button variant="outline" disabled={!bytes} onClick={openConfirm}>
         <Trash2Icon data-icon="inline-start" />
         {t("device.deleteModels")}
       </Button>
@@ -419,8 +465,8 @@ function DownloadedModelsField() {
 }
 
 // What this browser holds, and what it could hold. The install row is absent
-// unless the app is actually installable — InstallAppButton returns null
-// otherwise — and so is the models row on a browser that can't save any, so
+// unless the app is actually installable (InstallAppButton returns null
+// otherwise), and so is the models row on a browser that can't save any, so
 // the section can end up as just the lessons row.
 function DeviceSection() {
   const { t } = useTranslation("settings");

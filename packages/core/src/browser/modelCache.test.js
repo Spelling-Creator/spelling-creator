@@ -20,11 +20,8 @@ function fakeCaches(buckets = {}) {
       if (!store.has(name)) store.set(name, new Map());
       const entries = store.get(name);
       return {
-        async keys() {
-          return [...entries.keys()];
-        },
-        async match(key) {
-          return entries.get(key);
+        async matchAll() {
+          return [...entries.values()];
         },
       };
     },
@@ -69,6 +66,23 @@ describe("modelCacheBytes", () => {
       ],
     });
     expect(await modelCacheBytes()).toBe(5);
+  });
+
+  // The ONNX runtime's .wasm, as jsDelivr sends it: brotli, with the
+  // compressed size in Content-Length, while the cache holds it decoded.
+  it("reads the body of an entry that arrived compressed", async () => {
+    globalThis.caches = fakeCaches({
+      [MODEL_CACHE_NAME]: [
+        [
+          "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.wasm",
+          new Response("1234567890", {
+            headers: { "content-encoding": "br", "content-length": "4" },
+          }),
+        ],
+        ["https://huggingface.co/a/model.onnx_data", sized(760_000_000)],
+      ],
+    });
+    expect(await modelCacheBytes()).toBe(760_000_010);
   });
 
   it("is 0 without creating the bucket when nothing was downloaded", async () => {

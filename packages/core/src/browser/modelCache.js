@@ -22,6 +22,20 @@
 
 export const MODEL_CACHE_NAME = "transformers-cache";
 
+// How much one cached response takes. Its Content-Length is only the size on
+// disk when the body arrived uncompressed. The ONNX runtime's .wasm and .mjs
+// are saved with the CDN's own headers (transformers.js's cacheWasm.js), and
+// when the CDN sent them gzip or brotli, Content-Length is the compressed size
+// while the cache holds the decoded bytes. Those are read for their real size
+// instead. They're tens of MB at most; the model weights, the big entries,
+// come from Hugging Face uncompressed, so their header can be trusted.
+async function storedBytes(response) {
+  const encoding = response.headers.get("content-encoding");
+  const length = Number(response.headers.get("content-length"));
+  if ((!encoding || encoding === "identity") && length > 0) return length;
+  return (await response.blob()).size;
+}
+
 /**
  * How many bytes the downloaded models take up. 0 when nothing has been
  * downloaded, and null when this browser won't let the page use Cache Storage
@@ -36,13 +50,8 @@ export async function modelCacheBytes() {
     if (!(await caches.has(MODEL_CACHE_NAME))) return 0;
     const cache = await caches.open(MODEL_CACHE_NAME);
     let total = 0;
-    for (const request of await cache.keys()) {
-      const response = await cache.match(request);
-      if (!response) continue;
-      // transformers.js sets Content-Length on everything it stores, so the
-      // body is only read for an entry that somehow lacks one.
-      const length = Number(response.headers.get("content-length"));
-      total += length > 0 ? length : (await response.blob()).size;
+    for (const response of await cache.matchAll()) {
+      total += await storedBytes(response);
     }
     return total;
   } catch {
