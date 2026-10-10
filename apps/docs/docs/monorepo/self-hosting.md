@@ -279,6 +279,10 @@ people may both be "Miss Kelly". A username is unique, never shown to anybody
 else, and exists only to sign in with. Registration deliberately does not set a
 display name from it, which would route around those checks.
 
+With `magic-link` or `both`, make sure the Magic Link email template includes
+`{{ .Token }}` so the email carries a code as well as a link. The installed app
+needs it (see [Lesson hub & accounts](../web-app/lesson-hub-and-accounts.md)).
+
 The compose file defaults to `password`, because an instance reaching for it is
 more likely to have no mail server than to have one. `AUTH_MODE` is baked into
 the SPA at build time, so changing it means a rebuild.

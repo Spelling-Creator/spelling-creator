@@ -16,7 +16,9 @@
   },
   "sent": {
     "heading": "Check your email",
-    "description": "We sent a sign-in link to <strong>{{email}}</strong>. Open it on this device to finish signing in.",
+    "description": "We sent a sign-in link to <strong>{{email}}</strong>. Open it on this device, or type the code from the email below.",
+    "codeLabel": "Code from the email",
+    "submitCode": "Sign in",
     "useDifferentEmail": "Use a different email"
   },
   "confirm": {
@@ -49,6 +51,7 @@
     "sendFailed": "Could not send the sign-in link.",
     "magic-linkFailed": "Could not send the sign-in link.",
     "passwordFailed": "Could not sign you in.",
+    "codeFailed": "That code didn't work. Check it, or send a new one.",
     "registerFailed": "Could not create your account."
   }
 }

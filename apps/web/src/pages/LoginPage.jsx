@@ -59,6 +59,7 @@ export default function LoginPage() {
     passwordAuth,
     magicLinkAuth,
     signInWithMagicLink,
+    verifyEmailCode,
     signInWithPassword,
     signUpWithUsername,
     signOut,
@@ -77,6 +78,9 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
+
+  // The code from the magic-link email, typed in instead of opening the link.
+  const [code, setCode] = useState("");
 
   const registering = mode === "register";
 
@@ -151,6 +155,21 @@ export default function LoginPage() {
     }
   };
 
+  // On success there is nothing to do here: the auth listener picks up the new
+  // session and the page swaps to its signed-in view.
+  const submitCode = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await verifyEmailCode(identifier.trim(), code);
+    } catch (err) {
+      setError(err.message || t("errors.codeFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <DocumentMeta title={t("meta.title")} />
@@ -195,11 +214,46 @@ export default function LoginPage() {
                   components={{ strong: <strong /> }}
                 />
               </p>
+              {/* The same email carries a code, for when the link would open
+                  somewhere other than here: most often an installed app, where
+                  the link lands in the browser instead. See verifyEmailCode. */}
+              <form
+                onSubmit={submitCode}
+                className="flex w-full flex-col gap-3 pt-2 text-left"
+              >
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <Field>
+                  <FieldLabel htmlFor="login-code">
+                    {t("sent.codeLabel")}
+                  </FieldLabel>
+                  <Input
+                    id="login-code"
+                    // Lets iOS and Android offer the code straight from the
+                    // email as a keyboard suggestion.
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    // Supabase lets a project pick a length from 6 to 10.
+                    maxLength={10}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                    disabled={busy}
+                  />
+                </Field>
+                <Button type="submit" disabled={busy || code.length < 6}>
+                  {busy && <Spinner data-icon="inline-start" />}
+                  {t("sent.submitCode")}
+                </Button>
+              </form>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSent(false);
+                  setCode("");
                   setError("");
                 }}
               >

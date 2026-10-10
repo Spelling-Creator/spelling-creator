@@ -88,7 +88,24 @@ email, receive a one-time link, and the Supabase JS client (in
 `@spelling-creator/core/browser/supabase`)
 exchanges the callback for a session. We use the **PKCE** flow so the callback
 returns a `?code=` in the query string rather than access tokens in the URL
-fragment (hash). The session JWT is what authorises a
+fragment (hash).
+
+The same email also carries a one-time **code**, and the "Check your email"
+screen has a field for it. Typing the code calls `verifyOtp`, which signs in
+right where it's typed with no redirect. That is what makes sign-in work in the
+[installed app](./pwa-and-offline.md#signing-in-from-the-installed-app), where the
+link usually opens in a browser instead. The code only appears if the Supabase
+**Magic Link** email template includes `{{ .Token }}` (Supabase's default
+template doesn't), so add a line like this to it under
+**Authentication > Email Templates**:
+
+```html
+<p>Or enter this code in the app: <strong>{{ .Token }}</strong></p>
+```
+
+The MCP server's `login` helper uses the same code.
+
+The session JWT is what authorises a
 publish: the app sends it to the Worker as a `Bearer` token, and the Worker
 verifies it (and derives the author) before inserting the row.
 
