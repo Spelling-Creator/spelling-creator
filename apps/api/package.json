@@ -20,17 +20,17 @@
 	"dependencies": {
 		"@cloudflare/puppeteer": "^1.4.0",
 		"@cloudflare/workers-oauth-provider": "^0.10.3",
-		"@hono/node-server": "^2.1.1",
+		"@hono/node-server": "^2.1.3",
 		"@jsquash/jpeg": "^1.6.0",
 		"@jsquash/png": "^3.1.1",
 		"@jsquash/webp": "^1.5.0",
 		"@spelling-creator/core": "workspace:*",
 		"@spelling-creator/mcp": "workspace:*",
-		"agents": "^0.20.1",
+		"agents": "^0.26.0",
 		"glin-profanity": "^3.3.0",
-		"hono": "^4.13.2",
+		"hono": "^4.13.13",
 		"parse5": "^8.0.1",
-		"yjs": "^13.6.32"
+		"yjs": "^13.6.33"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.12.4",
