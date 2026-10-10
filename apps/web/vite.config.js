@@ -89,6 +89,10 @@ const SSR_UNREACHABLE = [
   // core/browser/documentModel.js, from a click in the import dialog, and its
   // model download is ~640 MB on WebGPU.
   "../../packages/core/src/browser/documentModelEngine.js",
+  // Kokoro read-aloud (transformers.js plus Spellophone's espeak-ng wasm),
+  // same story: reached only through the dynamic import() in
+  // core/browser/readAloud.js, and its model download is 92 MB or more.
+  "../../packages/core/src/browser/readAloudEngine.js",
 ];
 
 function stubUnreachableOnServer() {
