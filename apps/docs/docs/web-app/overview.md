@@ -25,8 +25,11 @@ PDF printing.
   numbered across the whole lesson, become real Word footnotes in the export,
   and the lesson closes with its Notes and Sources (see
   [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
-- **Search images** - find free Pixabay images from within a section and insert
-  one with a click (see [Search images](./search-images.md)).
+- **Search images**: find free Pixabay or Wikimedia Commons images from within
+  a section and insert one with a click (see [Search images](./search-images.md)).
+- **Image credits**: a picture's licence credit is kept apart from its caption,
+  printed in small type under it, and never read aloud, translated or used as
+  alt text. Removing one asks first (see [Image credits](./image-credits.md)).
 - **Question blocks** - add structured questions in eight types (see [Question blocks](./question-blocks.md)).
 - **VAKT activities** - drop a regulation break into a section: a red, labelled
   "VAKT: ..." activity a speller does rather than answers, optionally with a

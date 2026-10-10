@@ -81,6 +81,16 @@
       },
       "captionLabel": "Caption (optional)"
     },
+    "credit": {
+      "label": "Credit",
+      "help": "Shown in small print under the picture. Free images usually require it.",
+      "confirmRemove": {
+        "title": "Remove the image credit?",
+        "description": "Most free images, including those from Wikimedia Commons, may only be used if the person who made them is credited. Only remove it if you took the picture yourself or know it isn't needed.",
+        "cancel": "Keep the credit",
+        "confirm": "Remove it"
+      }
+    },
     "spelling": {
       "badge": "Spelling words",
       "wordPlaceholder": "Word {{number}}",

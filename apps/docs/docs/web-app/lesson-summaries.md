@@ -189,8 +189,10 @@ into the text handed to the model. It deliberately **isn't** `lessonPlainText()`
 (the flattened prose used for the page's [SEO description](./pages-and-routing.md)):
 here the structure is the point, so it keeps the title and section headings as
 markdown headings, and labels question prompts and spelling word lists so a bare
-list of words doesn't read as body text. Image captions are left out; they're
-usually attribution boilerplate.
+list of words doesn't read as body text. An image's caption goes in, labelled
+`Picture:`, since it says what the picture shows. Its
+[credit](./image-credits.md) is left out: a name and a licence tell the model
+nothing about the lesson.
 
 A `sharedContext` string tells the model it's looking at a spelling lesson written
 for a class, and that it's summarising for another teacher deciding whether to use

@@ -38,7 +38,7 @@ async function embeddedFor(blocks) {
 }
 
 describe("the embedded-picture list", () => {
-  it("records an image block's own width, alignment and caption", async () => {
+  it("records an image block's own width, alignment, caption and credit", async () => {
     const embedded = await embeddedFor([
       {
         id: "b1",
@@ -49,10 +49,38 @@ describe("the embedded-picture list", () => {
         size: "full",
         align: "right",
         caption: "A caption",
+        credit: "Image from Pixabay",
       },
     ]);
     expect(embedded).toEqual([
-      { width: 200, align: "right", caption: "A caption" },
+      {
+        width: 200,
+        align: "right",
+        caption: "A caption",
+        credit: "Image from Pixabay",
+      },
+    ]);
+  });
+
+  it("splits a credit out of an older block's caption", async () => {
+    const embedded = await embeddedFor([
+      {
+        id: "b1",
+        type: "image",
+        src: PNG,
+        width: 200,
+        height: 100,
+        size: "full",
+        caption: "A lion. Image by jdoe from Pixabay",
+      },
+    ]);
+    expect(embedded).toEqual([
+      {
+        width: 200,
+        align: "center",
+        caption: "A lion.",
+        credit: "Image by jdoe from Pixabay",
+      },
     ]);
   });
 
@@ -78,6 +106,7 @@ describe("the embedded-picture list", () => {
         ),
         align: "center",
         caption: "Wall push",
+        credit: "",
       },
     ]);
   });
@@ -101,6 +130,7 @@ describe("the embedded-picture list", () => {
         width: Math.round(DOCX_MAX_IMAGE_WIDTH * imageSizeScale("small")),
         align: "left",
         caption: "",
+        credit: "",
       },
     ]);
   });
@@ -140,7 +170,7 @@ describe("the embedded-picture list", () => {
       },
     ]);
     expect(embedded).toEqual([
-      { width: 300, align: "left", caption: "Real caption" },
+      { width: 300, align: "left", caption: "Real caption", credit: "" },
     ]);
   });
 
@@ -202,6 +232,26 @@ describe("formatted text, footnotes and sources", () => {
     expect(out).toMatch(/<li id="footnote-1"><p>First note\./);
     expect(out).toMatch(
       /<li id="footnote-2"><p>Jane Smith, <em>Cats of Egypt<\/em>, p\. 12\./,
+    );
+  });
+
+  it("prints a picture's caption and credit as two paragraphs", async () => {
+    const out = await html(
+      lesson([
+        {
+          id: "b1",
+          type: "image",
+          src: PNG,
+          width: 20,
+          height: 10,
+          caption: "A lion",
+          credit: "Image from Pixabay",
+        },
+        { id: "b2", type: "text", text: "Next" },
+      ]),
+    );
+    expect(out).toMatch(
+      /<img[^>]*\/?><\/p><p><em>A lion<\/em><\/p><p>Image from Pixabay<\/p><p>Next<\/p>/,
     );
   });
 

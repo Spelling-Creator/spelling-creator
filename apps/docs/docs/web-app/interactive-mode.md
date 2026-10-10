@@ -248,7 +248,7 @@ aren't rendered at all.
 With it on:
 
 - each step is read as it appears: the section name, then the prose, image
-  captions, or the question prompt;
+  captions (never their [credits](./image-credits.md)), or the question prompt;
 - a **replay** button re-reads the current step (and turns into a stop button
   while it's speaking);
 - every **spelling word gets its own speaker button**, because hearing one word

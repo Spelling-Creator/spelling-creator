@@ -149,6 +149,23 @@ describe("stepSpeechText", () => {
     );
   });
 
+  it("never reads an image's credit aloud", () => {
+    const step = {
+      kind: "content",
+      sectionName: "Lions",
+      blocks: [
+        {
+          type: "image",
+          caption: "A lion",
+          credit: "Image (by Jane Doe, CC BY 4.0) via Wikimedia Commons",
+        },
+        // From before credits had their own field.
+        { type: "image", caption: "Image by jdoe from Pixabay" },
+      ],
+    };
+    expect(stepSpeechText(step)).toBe("Lions\nA lion");
+  });
+
   it("reads spelling words as a list", () => {
     const steps = buildInteractiveSteps(doc);
     expect(stepSpeechText(steps[3])).toBe("Spelling\nLAVA, MAGMA");

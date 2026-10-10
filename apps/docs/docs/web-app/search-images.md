@@ -8,12 +8,16 @@ Press **Search images** on any section to open a dialog that searches for free
 images and inserts the one you pick as an image block. It has two sources,
 switched with the toggle at the top: [Pixabay](https://pixabay.com) and
 [Wikimedia Commons](https://commons.wikimedia.org). Both work the same way from
-there: search, click a result, and it is inserted with its caption pre-filled
-with the attribution the source asks for, editable like any other caption.
+there: search, click a result, and it is inserted with its
+[credit](./image-credits.md) set to the attribution the source asks for. The
+caption is left empty for you to write.
 
 Each source sits behind the same small interface in `ImageSearchDialog.jsx`
-(`search`, `resolve`, `caption`), so the dialog's flow doesn't care which one is
+(`search`, `resolve`, `credit`), so the dialog's flow doesn't care which one is
 selected.
+
+Replacing a picture through **Replace > Search online** keeps its caption and
+swaps in the new picture's credit.
 
 ## Pixabay
 
@@ -36,7 +40,7 @@ The flow:
    Pixabay's caching requirement and keeps request counts well under the limit.
 3. Click a result; the app calls the Worker again with `mode: "imageFetch"`,
    which downloads that image and returns it as a data URL.
-4. The image is inserted with the caption `Image by {photographer} from Pixabay`.
+4. The image is inserted with the credit `Image by {photographer} from Pixabay`.
 
 Each Worker call consumes its single-use Turnstile token, so the widget is reset
 to mint a fresh one between searching and inserting. This source needs the same
@@ -52,7 +56,7 @@ no Worker and no Turnstile challenge. The MCP server's `search_images` searches
 Commons too, with the same shared plumbing (`@spelling-creator/core/wikimedia`).
 
 Every Commons file is licensed on its own, so each result carries its author
-and licence, and the caption is built from them:
+and licence, and the credit is built from them:
 `Image (by {author}, {licence}) via Wikimedia Commons`.
 
 ### Wikidata's pictures come first
@@ -67,7 +71,7 @@ that landed on the wrong "Mercury" says so before anyone picks from it.
 Those pictures were chosen by the people describing that thing on Wikidata, so
 they are usually a better first offer than whatever a full-text search of
 Commons ranks highest. They are ordinary Commons files, so everything after the
-search (the download, the caption) is the same code. A picture that is also in
+search (the download, the credit) is the same code. A picture that is also in
 the search's own results isn't shown twice.
 
 How the item is found (`packages/core/src/wikidataMedia.js`):

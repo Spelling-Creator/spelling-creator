@@ -155,6 +155,7 @@ function buildVaktBlock(block, where) {
     if (image.width != null) out.width = image.width;
     if (image.height != null) out.height = image.height;
     if (image.caption != null) out.caption = image.caption;
+    if (image.credit != null) out.credit = image.credit;
     if (image.align != null) out.align = image.align;
     if (image.size != null) out.size = image.size;
   }
@@ -265,6 +266,8 @@ function buildImageBlock(block, where) {
   if (Number.isFinite(block.width)) out.width = block.width;
   if (Number.isFinite(block.height)) out.height = block.height;
   if (typeof block.caption === "string") out.caption = block.caption;
+  // The licence credit, apart from the caption (see ./imageCredit.js).
+  if (typeof block.credit === "string") out.credit = block.credit;
   if (IMAGE_ALIGNS.includes(block.align)) out.align = block.align;
   if (typeof block.size === "string" && block.size) out.size = block.size;
   return out;

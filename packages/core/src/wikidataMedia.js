@@ -8,7 +8,7 @@
 // first, ahead of the search results, each labelled with what it is.
 //
 // This only finds the files. Turning a "File:" title into a thumbnail, a
-// download and an attribution caption is the Commons code each app already
+// download and a credit line is the Commons code each app already
 // has (./browser/commonsImages.js, apps/mcp/src/wikimedia.js), because every
 // one of these is an ordinary Commons file with its own licence.
 

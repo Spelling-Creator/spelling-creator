@@ -1,4 +1,4 @@
-import { memo, useRef } from "react";
+import { memo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Trash2Icon,
@@ -15,7 +15,15 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button.jsx";
 import { Badge } from "./ui/badge.jsx";
-import { Field, FieldLabel } from "./ui/field.jsx";
+import { Field, FieldDescription, FieldLabel } from "./ui/field.jsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog.jsx";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.jsx";
 import {
   DropdownMenu,
@@ -35,6 +43,10 @@ import {
   DEFAULT_IMAGE_ALIGN,
 } from "@spelling-creator/core/image";
 import { newId } from "@spelling-creator/core/id";
+import {
+  imageCaptionParts,
+  withImageCaptionParts,
+} from "@spelling-creator/core/imageCredit";
 import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import { isOrangeType, questionMeta } from "@spelling-creator/core/questions";
@@ -261,6 +273,97 @@ function previewMargin(align) {
   return "0 auto";
 }
 
+// A picture's caption, which the author writes, and its credit, which the
+// picture's licence asks for, as two fields (see core/imageCredit.js). Editing
+// either writes both back as separate fields, so a block from before credits
+// had their own field stops depending on the split made when it's read.
+//
+// Emptying the credit asks first, because most free images may only be used
+// with it. The question waits until the field is left: clearing it to retype
+// a correction isn't a deletion. Keeping the credit remounts the input, which
+// puts the stored credit back in it.
+function ImageCaptionFields({ block, onChange, idPrefix, captionLabel }) {
+  const { t } = useTranslation("editorSections");
+  const { caption, credit } = imageCaptionParts(block);
+  const [confirming, setConfirming] = useState(false);
+  const [creditKey, setCreditKey] = useState(0);
+
+  const commitCredit = (next) => {
+    if (!next.trim() && credit) {
+      setConfirming(true);
+      return;
+    }
+    onChange(withImageCaptionParts(block, { credit: next }));
+  };
+
+  const keepCredit = () => {
+    setConfirming(false);
+    setCreditKey((key) => key + 1);
+  };
+
+  const removeCredit = () => {
+    setConfirming(false);
+    onChange(withImageCaptionParts(block, { credit: "" }));
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-caption`}>{captionLabel}</FieldLabel>
+        <LiveInput
+          id={`${idPrefix}-caption`}
+          value={caption}
+          onCommit={(next) =>
+            onChange(withImageCaptionParts(block, { caption: next }))
+          }
+          data-collab-field={`block:${block.id}:caption`}
+        />
+      </Field>
+      <Field className="gap-1.5">
+        <FieldLabel
+          htmlFor={`${idPrefix}-credit`}
+          className="text-xs text-muted-foreground"
+        >
+          {t("contentBlock.credit.label")}
+        </FieldLabel>
+        <LiveInput
+          key={creditKey}
+          id={`${idPrefix}-credit`}
+          value={credit}
+          onCommit={commitCredit}
+          waitForBlur={(next) => !next.trim()}
+          data-collab-field={`block:${block.id}:credit`}
+          className="h-8 text-xs text-muted-foreground"
+        />
+        <FieldDescription className="text-xs">
+          {t("contentBlock.credit.help")}
+        </FieldDescription>
+      </Field>
+
+      <Dialog open={confirming} onOpenChange={(open) => !open && keepCredit()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t("contentBlock.credit.confirmRemove.title")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("contentBlock.credit.confirmRemove.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={keepCredit}>
+              {t("contentBlock.credit.confirmRemove.cancel")}
+            </Button>
+            <Button type="button" variant="destructive" onClick={removeCredit}>
+              {t("contentBlock.credit.confirmRemove.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // Image blocks reference their bytes by content hash; useImageSrc resolves that
 // to a usable URL (a local blob URL, or the public R2 URL once uploaded). It's
 // its own component so the hook is always called for an image block, never
@@ -298,7 +401,10 @@ function ImageBlock({
           {src ? (
             <img
               src={src}
-              alt={block.caption || t("contentBlock.image.altFallback")}
+              alt={
+                imageCaptionParts(block).caption ||
+                t("contentBlock.image.altFallback")
+              }
               className="mb-3 block max-w-full rounded-md border border-border"
               style={{
                 width: preview.width,
@@ -376,17 +482,12 @@ function ImageBlock({
               </>
             )}
           </div>
-          <Field>
-            <FieldLabel htmlFor={`${block.id}-caption`}>
-              {t("contentBlock.image.captionLabel")}
-            </FieldLabel>
-            <LiveInput
-              id={`${block.id}-caption`}
-              value={block.caption || ""}
-              onCommit={(caption) => onChange({ ...block, caption })}
-              data-collab-field={`block:${block.id}:caption`}
-            />
-          </Field>
+          <ImageCaptionFields
+            block={block}
+            onChange={onChange}
+            idPrefix={block.id}
+            captionLabel={t("contentBlock.image.captionLabel")}
+          />
         </div>
         {controls}
       </div>
@@ -424,7 +525,8 @@ function VaktBlock({
   };
 
   // Drop the picture and everything that described it, so a block that no longer
-  // has an image doesn't keep a stale caption, aspect ratio or framing around.
+  // has an image doesn't keep a stale caption, credit, aspect ratio or framing
+  // around.
   const removeImage = () => {
     const {
       image,
@@ -432,6 +534,7 @@ function VaktBlock({
       width,
       height,
       caption,
+      credit,
       size,
       align,
       ...rest
@@ -441,6 +544,7 @@ function VaktBlock({
     void width;
     void height;
     void caption;
+    void credit;
     void size;
     void align;
     onChange(rest);
@@ -514,7 +618,10 @@ function VaktBlock({
               {src ? (
                 <img
                   src={src}
-                  alt={block.caption || t("contentBlock.vakt.imageAlt")}
+                  alt={
+                    imageCaptionParts(block).caption ||
+                    t("contentBlock.vakt.imageAlt")
+                  }
                   className="block max-w-full rounded-md border border-border"
                   style={{
                     width: preview.width,
@@ -540,17 +647,14 @@ function VaktBlock({
                   onChange={(patch) => onChange({ ...block, ...patch })}
                 />
               </div>
-              <Field className="mt-2">
-                <FieldLabel htmlFor={`${block.id}-vakt-caption`}>
-                  {t("contentBlock.vakt.captionLabel")}
-                </FieldLabel>
-                <LiveInput
-                  id={`${block.id}-vakt-caption`}
-                  value={block.caption || ""}
-                  onCommit={(caption) => onChange({ ...block, caption })}
-                  data-collab-field={`block:${block.id}:caption`}
+              <div className="mt-2">
+                <ImageCaptionFields
+                  block={block}
+                  onChange={onChange}
+                  idPrefix={`${block.id}-vakt`}
+                  captionLabel={t("contentBlock.vakt.captionLabel")}
                 />
-              </Field>
+              </div>
             </div>
           )}
 

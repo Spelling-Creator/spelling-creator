@@ -160,11 +160,11 @@ export const SOURCE_ENTRY_CLASS = "s2c-source-entry";
 export const SOURCES_HEADING_TEXT = "Sources";
 
 // Inside a footnote, the locator ("p. 12") and the note each get a character
-// style, and an image's caption a paragraph style. Word and the PDF ignore them;
-// they are there for the importer, which otherwise has to guess. A locator
-// usually has a full stop in it ("p. 12"), so "where does the locator end and
-// the note begin" can't be read off the text, and a caption is just an italic
-// paragraph, as an ordinary italic sentence can be too.
+// style, and an image's caption and credit a paragraph style each. Word and the
+// PDF ignore them; they are there for the importer, which otherwise has to
+// guess. A locator usually has a full stop in it ("p. 12"), so "where does the
+// locator end and the note begin" can't be read off the text, and a caption is
+// just an italic paragraph, as an ordinary italic sentence can be too.
 export const FOOTNOTE_LOCATOR_STYLE_ID = "s2cFootnoteLocator";
 export const FOOTNOTE_LOCATOR_STYLE_NAME = "S2C Footnote Locator";
 export const FOOTNOTE_LOCATOR_CLASS = "s2c-fn-locator";
@@ -174,3 +174,6 @@ export const FOOTNOTE_NOTE_CLASS = "s2c-fn-note";
 export const CAPTION_STYLE_ID = "s2cCaption";
 export const CAPTION_STYLE_NAME = "S2C Caption";
 export const CAPTION_CLASS = "s2c-caption";
+export const CREDIT_STYLE_ID = "s2cCredit";
+export const CREDIT_STYLE_NAME = "S2C Credit";
+export const CREDIT_CLASS = "s2c-credit";

@@ -10,7 +10,7 @@
 //
 // Every Commons image carries a licence, and most require attribution, so each
 // hit comes with a ready-made attribution string (author + licence + "via
-// Wikimedia Commons") that the dialog pre-fills as the image caption.
+// Wikimedia Commons") that the dialog sets as the image's credit.
 //
 // The Commons round-trip and the attribution handling are shared with the MCP
 // server — see ../wikimedia.js. Only the pieces that differ
@@ -21,7 +21,7 @@ import {
   IMAGEINFO_PARAMS,
   cleanFileTitle,
   commonsQuery,
-  extmetaCaption,
+  extmetaCredit,
   isUsableImage,
   rankPages,
   wikidataPickPages,
@@ -49,7 +49,7 @@ function stripHtml(html) {
 // with the same shape the dialog uses for Pixabay, plus the attribution fields.
 function normaliseHit(page, info) {
   const meta = info.extmetadata || {};
-  const { author, license, caption } = extmetaCaption(meta, stripHtml);
+  const { author, license, credit } = extmetaCredit(meta, stripHtml);
   return {
     id: page.pageid,
     title: page.title, // full "File:…" title — used by fetchWikimediaImage
@@ -63,7 +63,7 @@ function normaliseHit(page, info) {
     author,
     license,
     tags: cleanFileTitle(page.title),
-    caption,
+    credit,
   };
 }
 
@@ -87,7 +87,7 @@ function normaliseHit(page, info) {
  * @param {number} [opts.perPage]  Results per page (default 20, max 50).
  * @returns {Promise<{hits: object[], total: number, totalHits: number}>}
  *   Normalised hits: { id, title, previewURL, width, height, mime,
- *   descriptionURL, licenseURL, author, license, tags, caption, wikidata? }.
+ *   descriptionURL, licenseURL, author, license, tags, credit, wikidata? }.
  */
 export async function searchWikimediaImages(query, opts = {}) {
   const q = (query || "").trim();

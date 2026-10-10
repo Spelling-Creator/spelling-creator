@@ -24,6 +24,14 @@ const doc = {
           id: "i1",
           type: "image",
           src: "x.png",
+          caption: "Lava cooling on a beach",
+          credit: "Image (by Someone, CC BY 4.0) via Wikimedia Commons",
+        },
+        {
+          id: "i2",
+          type: "image",
+          src: "y.png",
+          // From before credits had their own field.
           caption: "Image by Someone via Wikimedia Commons",
         },
         {
@@ -71,14 +79,11 @@ describe("lessonTranslationBatches", () => {
       [
         { key: "s0.b0.line0", text: "Magma rises." },
         { key: "s0.b0.line2", text: "It cools into rock." },
-        {
-          key: "s0.b1.caption",
-          text: "Image by Someone via Wikimedia Commons",
-        },
-        { key: "s0.b2.prompt", text: "How hot is lava?" },
-        { key: "s0.b2.answer0", text: "700-1200 C" },
-        { key: "s0.b2.step0", text: "Find the number in the text." },
-        { key: "s0.b2.step1", text: "Say it in degrees." },
+        { key: "s0.b1.caption", text: "Lava cooling on a beach" },
+        { key: "s0.b3.prompt", text: "How hot is lava?" },
+        { key: "s0.b3.answer0", text: "700-1200 C" },
+        { key: "s0.b3.step0", text: "Find the number in the text." },
+        { key: "s0.b3.step1", text: "Say it in degrees." },
       ],
       [
         {
@@ -89,11 +94,11 @@ describe("lessonTranslationBatches", () => {
     ]);
   });
 
-  it("never emits spelling words or link labels", () => {
+  it("never emits spelling words, link labels or image credits", () => {
     const texts = lessonTranslationBatches(doc)
       .flat()
       .map((s) => s.text);
-    for (const kept of ["pumice", "basalt", "Video"]) {
+    for (const kept of ["pumice", "basalt", "Video", "Someone"]) {
       expect(texts.join("\n")).not.toContain(kept);
     }
   });
@@ -150,7 +155,7 @@ describe("lessonTranslationBatches", () => {
 
 describe("questionStepsWithText", () => {
   it("keeps only steps with text, in order, matching the renderer's filter", () => {
-    const block = doc.sections[0].blocks[2];
+    const block = doc.sections[0].blocks[3];
     expect(questionStepsWithText(block).map((s) => s.id)).toEqual(["s1", "s3"]);
     expect(questionStepsWithText({})).toEqual([]);
   });

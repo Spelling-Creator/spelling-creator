@@ -161,6 +161,7 @@ export default defineConfig({
             link: "/web-app/interactive-mode",
           },
           { text: "Search images", link: "/web-app/search-images" },
+          { text: "Image credits", link: "/web-app/image-credits" },
           { text: "Save to Google Docs", link: "/web-app/save-to-google-docs" },
           { text: "Live collaboration", link: "/web-app/live-collaboration" },
           {

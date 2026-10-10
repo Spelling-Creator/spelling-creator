@@ -202,8 +202,15 @@ const blockSchema = z
       .string()
       .optional()
       .describe(
-        'For type "image" (and a "vakt" block carrying one): the caption shown under it. Keep ' +
-          "the attribution add_image supplies.",
+        'For type "image" (and a "vakt" block carrying one): the caption shown under it, saying what ' +
+          "the picture shows. Optional. Never put the licence attribution here; that is `credit`.",
+      ),
+    credit: z
+      .string()
+      .optional()
+      .describe(
+        'For type "image" (and a "vakt" block carrying one): the licence attribution add_image sets, ' +
+          "printed in small type under the caption. Pass it through unchanged when editing a lesson.",
       ),
     align: z
       .enum(["left", "center", "right"])
@@ -379,7 +386,7 @@ const imageSearchOutputSchema = {
       .object({
         ref: z.string(),
         description: z.string().optional(),
-        caption: z.string().optional(),
+        credit: z.string().optional(),
         author: z.string().optional(),
         license: z.string().optional(),
         width: z.number().optional(),
@@ -418,8 +425,8 @@ const imageSearchOutputSchema = {
 // should — a list of Commons files is no use to a user who'd have to type a
 // filename back.
 const PICK_ONE_YOURSELF =
-  "Choose the best `ref` and call add_image to insert it. The `caption` carries the licence attribution " +
-  "Commons requires — keep it on the image.";
+  "Choose the best `ref` and call add_image to insert it. add_image sets the `credit` (the licence " +
+  "attribution Commons requires) on the image by itself.";
 
 // With one, choosing is the user's, and an assistant that keeps going takes it
 // away from them: it picks from descriptions, adds an image nobody asked for,
@@ -2133,7 +2140,7 @@ export function registerTools(server, ctx) {
       title: "Search images",
       description:
         "Search Wikimedia Commons for freely-licensed images to illustrate a lesson. Returns a list of candidates, " +
-        "each with a `ref` (its File: title), a `caption` carrying the required attribution, the licence/author, " +
+        "each with a `ref` (its File: title), a `credit` carrying the required attribution, the licence/author, " +
         "dimensions, a `previewURL`, and a `source` page link.\n\n" +
         "When the query names one particular thing ('lion', 'Paris', 'Great Pyramid of Giza'), the list opens " +
         "with the pictures Wikidata lists for it: its main picture, and where it has them a map, a flag, a view " +
@@ -2226,7 +2233,8 @@ export function registerTools(server, ctx) {
       title: "Add an image to a lesson",
       description:
         "Download a Wikimedia Commons image (from a search_images `ref`), store its bytes, and insert it as an image " +
-        "block in a lesson you authored. The picture's attribution is set as the caption automatically.\n\n" +
+        "block in a lesson you authored. The picture's licence attribution is set as its `credit` automatically, " +
+        "apart from the caption, so a `caption` you give is only what the picture shows.\n\n" +
         "To place the image right next to a specific block you already know (e.g. the paragraph it illustrates), " +
         "pass `afterBlockId` (a block id from get_lesson) — this picks both the section and position for you and is " +
         "the most reliable way to choose placement. Otherwise choose the target section with `sectionId` (from " +
@@ -2286,7 +2294,8 @@ export function registerTools(server, ctx) {
           .string()
           .optional()
           .describe(
-            "Override the auto attribution caption. Leave unset to keep the Commons attribution.",
+            "Optional caption saying what the picture shows. Leave out the attribution: it goes in the image's " +
+              "`credit` automatically and is printed under the caption.",
           ),
         align: z
           .enum(["left", "center", "right"])
@@ -2315,10 +2324,7 @@ export function registerTools(server, ctx) {
         // Download the chosen image (+ its attribution) and store the bytes in R2.
         const resolved = await resolveWikimediaImage(ref);
         const imageRef = await api.uploadImage(resolved.bytes, resolved.mime);
-        const finalCaption =
-          typeof caption === "string" && caption.trim()
-            ? caption
-            : resolved.caption;
+        const finalCaption = typeof caption === "string" ? caption.trim() : "";
 
         const current = await api.getLesson(lessonId);
         const sections = current.doc?.sections || [];
@@ -2374,6 +2380,7 @@ export function registerTools(server, ctx) {
           width: resolved.width,
           height: resolved.height,
           caption: finalCaption,
+          credit: resolved.credit,
         };
         if (align) block.align = align;
         if (size) block.size = size;
@@ -2399,6 +2406,7 @@ export function registerTools(server, ctx) {
             previousDoc: current.doc,
           }),
           caption: finalCaption,
+          credit: resolved.credit,
           source: resolved.source,
           note:
             "Image added to the lesson. If it's not a good fit, remove_block it and add_image another, or replace " +

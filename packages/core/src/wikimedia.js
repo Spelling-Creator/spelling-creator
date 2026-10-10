@@ -20,7 +20,7 @@ export const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 
 /**
  * What an image search asks imageinfo for: a 320px thumbnail for the grid,
- * and the author and licence the attribution caption needs.
+ * and the author and licence the credit line needs.
  */
 export const IMAGEINFO_PARAMS = {
   prop: "imageinfo",
@@ -46,32 +46,33 @@ export function stripCommonsHtml(html) {
 }
 
 /**
- * Build the attribution caption Commons' licensing norms expect: author (when
- * known) + licence short name + the source. Authors and licences vary widely, so
- * this degrades gracefully when either is missing.
+ * Build the credit line Commons' licensing norms expect: author (when known) +
+ * licence short name + the source. Authors and licences vary widely, so this
+ * degrades gracefully when either is missing. It goes in an image block's
+ * `credit`, never its caption (see ./imageCredit.js).
  * @param {string} author
  * @param {string} license
  * @returns {string}
  */
-export function buildCaption(author, license) {
-  const credit = [];
-  if (author) credit.push(`by ${author}`);
-  if (license) credit.push(license);
-  const tail = credit.length ? ` (${credit.join(", ")})` : "";
+export function buildCredit(author, license) {
+  const parts = [];
+  if (author) parts.push(`by ${author}`);
+  if (license) parts.push(license);
+  const tail = parts.length ? ` (${parts.join(", ")})` : "";
   return `Image${tail} via Wikimedia Commons`;
 }
 
 /**
  * Pull author/licence out of an imageinfo `extmetadata` blob and build the
- * caption from them.
+ * credit line from them.
  * @param {object} [meta]  imageinfo.extmetadata
  * @param {(html: unknown) => string} [strip]  HTML-to-text (override in browsers)
- * @returns {{author: string, license: string, caption: string}}
+ * @returns {{author: string, license: string, credit: string}}
  */
-export function extmetaCaption(meta = {}, strip = stripCommonsHtml) {
+export function extmetaCredit(meta = {}, strip = stripCommonsHtml) {
   const author = strip(meta.Artist && meta.Artist.value);
   const license = strip(meta.LicenseShortName && meta.LicenseShortName.value);
-  return { author, license, caption: buildCaption(author, license) };
+  return { author, license, credit: buildCredit(author, license) };
 }
 
 /**

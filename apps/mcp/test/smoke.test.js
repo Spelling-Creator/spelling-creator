@@ -244,7 +244,8 @@ test("buildDoc accepts an image block carrying a stored bytes reference", () => 
             image: { hash: "abc123", mime: "image/jpeg" },
             width: 800,
             height: 600,
-            caption: "Saturn via Wikimedia Commons",
+            caption: "Saturn and its rings",
+            credit: "Image (by NASA, Public domain) via Wikimedia Commons",
             align: "center",
           },
           {
@@ -266,7 +267,11 @@ test("buildDoc accepts an image block carrying a stored bytes reference", () => 
     ext: "jpg",
   });
   assert.equal(img.width, 800);
-  assert.equal(img.caption, "Saturn via Wikimedia Commons");
+  assert.equal(img.caption, "Saturn and its rings");
+  assert.equal(
+    img.credit,
+    "Image (by NASA, Public domain) via Wikimedia Commons",
+  );
   assert.equal(img.align, "center");
 });
 
@@ -964,12 +969,14 @@ test("add_image resolves a Commons ref, uploads it, and inserts an image block",
     assert.equal(img.type, "image");
     assert.equal(img.image.hash, "deadbeef");
     assert.equal(img.width, 1600);
-    assert.match(img.caption, /NASA/);
-    assert.match(img.caption, /Wikimedia Commons/);
+    // The attribution is the credit, and the caption is left to the author.
+    assert.match(img.credit, /NASA/);
+    assert.match(img.credit, /Wikimedia Commons/);
+    assert.equal(img.caption, "");
     assert.equal(blocks[2].type, "question");
-    // The result echoes the attribution caption.
+    // The result echoes the credit.
     const payload = JSON.parse(res.content[0].text);
-    assert.match(payload.caption, /NASA/);
+    assert.match(payload.credit, /NASA/);
 
     await client.close();
     await server.close();
@@ -1323,6 +1330,8 @@ test("buildDoc builds a VAKT activity, its links and its picture", () => {
             width: 100,
             height: 50,
             caption: "Jumping jacks",
+            credit:
+              "Image (by A. Photographer, CC BY 4.0) via Wikimedia Commons",
           },
         ],
       },
@@ -1349,6 +1358,10 @@ test("buildDoc builds a VAKT activity, its links and its picture", () => {
     ext: "png",
   });
   assert.equal(block.caption, "Jumping jacks");
+  assert.equal(
+    block.credit,
+    "Image (by A. Photographer, CC BY 4.0) via Wikimedia Commons",
+  );
   // Unframed input leaves the framing to the renderers, which default a VAKT
   // picture to medium and centred (core/vakt.js).
   assert.equal(block.size, undefined);
