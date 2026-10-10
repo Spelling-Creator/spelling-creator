@@ -10,7 +10,7 @@
   "signIn": {
     "heading": "Sign in to connect",
     "description": "wants to publish and manage spelling lessons on your behalf. Sign in to continue.",
-    "checkEmail": "Check your email for a sign-in link. Opening it on this device brings you right back here.",
+    "checkEmail": "Check your email for a sign-in link. Opening it on this device brings you right back here, or you can type the code from the email below.",
     "emailLabel": "Email address",
     "sendButton": "Send magic link"
   },

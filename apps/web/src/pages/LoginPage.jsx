@@ -37,6 +37,7 @@ import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
 } from "@spelling-creator/core/username";
+import EmailCodeForm from "../components/EmailCodeForm.jsx";
 import PageBody from "../components/layout/PageBody.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
@@ -59,7 +60,6 @@ export default function LoginPage() {
     passwordAuth,
     magicLinkAuth,
     signInWithMagicLink,
-    verifyEmailCode,
     signInWithPassword,
     signUpWithUsername,
     signOut,
@@ -79,8 +79,25 @@ export default function LoginPage() {
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
 
-  // The code from the magic-link email, typed in instead of opening the link.
-  const [code, setCode] = useState("");
+  // True while the emailed code is being checked. "Use a different email" waits
+  // for it, since a check that lands after the switch still signs in the old
+  // address and can't be called back.
+  const [verifying, setVerifying] = useState(false);
+
+  // Once anyone is signed in, however it happened, the "Check your email" step
+  // is over. Without this, signing out from this page would drop the person
+  // back onto it for an address they've already used. Adjusted during render
+  // rather than in an effect, so the stale screen never paints.
+  const signedIn = !!user;
+  const [wasSignedIn, setWasSignedIn] = useState(signedIn);
+  if (signedIn !== wasSignedIn) {
+    setWasSignedIn(signedIn);
+    if (signedIn) {
+      setSent(false);
+      setConfirm(false);
+      setError("");
+    }
+  }
 
   const registering = mode === "register";
 
@@ -155,21 +172,6 @@ export default function LoginPage() {
     }
   };
 
-  // On success there is nothing to do here: the auth listener picks up the new
-  // session and the page swaps to its signed-in view.
-  const submitCode = async (e) => {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      await verifyEmailCode(identifier.trim(), code);
-    } catch (err) {
-      setError(err.message || t("errors.codeFailed"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <>
       <DocumentMeta title={t("meta.title")} />
@@ -214,46 +216,18 @@ export default function LoginPage() {
                   components={{ strong: <strong /> }}
                 />
               </p>
-              {/* The same email carries a code, for when the link would open
-                  somewhere other than here: most often an installed app, where
-                  the link lands in the browser instead. See verifyEmailCode. */}
-              <form
-                onSubmit={submitCode}
-                className="flex w-full flex-col gap-3 pt-2 text-left"
-              >
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <Field>
-                  <FieldLabel htmlFor="login-code">
-                    {t("sent.codeLabel")}
-                  </FieldLabel>
-                  <Input
-                    id="login-code"
-                    // Lets iOS and Android offer the code straight from the
-                    // email as a keyboard suggestion.
-                    autoComplete="one-time-code"
-                    inputMode="numeric"
-                    // Supabase lets a project pick a length from 6 to 10.
-                    maxLength={10}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                    disabled={busy}
-                  />
-                </Field>
-                <Button type="submit" disabled={busy || code.length < 6}>
-                  {busy && <Spinner data-icon="inline-start" />}
-                  {t("sent.submitCode")}
-                </Button>
-              </form>
+              <div className="w-full pt-2">
+                <EmailCodeForm
+                  email={identifier.trim()}
+                  onBusyChange={setVerifying}
+                />
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={verifying}
                 onClick={() => {
                   setSent(false);
-                  setCode("");
                   setError("");
                 }}
               >

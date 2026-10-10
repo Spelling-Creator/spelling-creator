@@ -91,19 +91,31 @@ returns a `?code=` in the query string rather than access tokens in the URL
 fragment (hash).
 
 The same email also carries a one-time **code**, and the "Check your email"
-screen has a field for it. Typing the code calls `verifyOtp`, which signs in
-right where it's typed with no redirect. That is what makes sign-in work in the
+screen (on `/login` and on the [MCP consent screen](../mcp-server/remote-mode.md))
+has a field for it, from the shared `EmailCodeForm` component. Typing the code
+calls `verifyOtp`, which signs in right where it's typed with no redirect. That
+is what makes sign-in work in the
 [installed app](./pwa-and-offline.md#signing-in-from-the-installed-app), where the
-link usually opens in a browser instead. The code only appears if the Supabase
-**Magic Link** email template includes `{{ .Token }}` (Supabase's default
-template doesn't), so add a line like this to it under
-**Authentication > Email Templates**:
+link usually opens in a browser instead. The MCP server's `login` helper uses
+the same code.
+
+**On hosted Supabase, the email templates need the code added**, since
+Supabase's default templates leave it out. Go to
+**Authentication > Email Templates** and add this line to **both** of these
+templates:
+
+- **Magic Link**, which a returning user gets.
+- **Confirm signup**, which a first-time address gets instead, because
+  `signInWithOtp` creates the account and sends that email the first time.
 
 ```html
 <p>Or enter this code in the app: <strong>{{ .Token }}</strong></p>
 ```
 
-The MCP server's `login` helper uses the same code.
+Until both have it, the code field has nothing to accept and the installed app
+can't sign in. The link keeps working either way. The
+[self-hosted stack](../monorepo/self-hosting.md#sign-in) needs nothing: the
+GoTrue version it pins already puts the code in both emails.
 
 The session JWT is what authorises a
 publish: the app sends it to the Worker as a `Bearer` token, and the Worker

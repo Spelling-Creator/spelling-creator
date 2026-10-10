@@ -161,7 +161,11 @@ export function AuthProvider({ children }) {
       // Home Screen app's, so the app never sees the session (and the PKCE
       // verifier the link needs is in the app, so Safari can't finish either).
       // A code has no redirect, so it signs in wherever it's typed. Needs
-      // `{{ .Token }}` in the Supabase Magic Link email template.
+      // `{{ .Token }}` in the Magic Link and Confirm signup email templates
+      // (a first sign-in sends the second one).
+      //
+      // The thrown error keeps GoTrue's `code` (e.g. "otp_expired") so the
+      // caller can say something friendlier than the raw message.
       async verifyEmailCode(email, code) {
         if (!hasSupabase()) throw new Error("Sign-in is not configured.");
         const { error } = await getSupabase().auth.verifyOtp({
@@ -169,7 +173,9 @@ export function AuthProvider({ children }) {
           token: code,
           type: "email",
         });
-        if (error) throw new Error(error.message);
+        if (error) {
+          throw Object.assign(new Error(error.message), { code: error.code });
+        }
       },
 
       // Whether this instance offers each way in. Both are read here rather than
