@@ -297,14 +297,15 @@ same voice preference as `kokoro:<voice id>`.
 How it behaves:
 
 - **Only where it can run.** The list is shown only on a device with WebGPU
-  that isn't a phone or tablet and isn't on a metered connection
+  that isn't a phone or tablet, and isn't on a metered connection unless the
+  model is already downloaded, since loading it from the cache uses no data
   (`readAloudPossible` in `packages/core/src/browser/readAloud.js`). Phones
   and tablets are excluded by name, because WebGPU alone doesn't rule them
   out: an iPad has it, and Kokoro froze and then crashed Safari on one.
   iPadOS calls itself a Mac, so it's recognised by having a touch screen.
   A stored natural voice the device can't use right now (on a metered
-  connection, say) shows as the browser default in the picker, since that is
-  what reads; the choice itself is kept.
+  connection before it's downloaded, say) shows as the browser default in
+  the picker, since that is what reads; the choice itself is kept.
 - **Opt-in, because of the download.** The browser default stays the
   default. Choosing a natural voice says that the first use downloads about
   330 MB, once. Nothing downloads until practice mode speaks with speech on,
@@ -319,10 +320,15 @@ How it behaves:
   in the cache (`readAloudCached` in `readAloud.js` looks for its weights),
   it loads as soon as practice mode opens with speech on, which takes a
   couple of seconds. A step spoken meanwhile waits for it, up to five
-  seconds, instead of being read in the browser's voice, and the line under
-  the step count says "Getting the natural voice ready...". Past the five
-  seconds the browser's voice reads that step and the natural one takes over
-  from the next.
+  seconds from when it was asked for, instead of being read in the
+  browser's voice, and the line under the step count says "Getting the
+  natural voice ready...". If the load runs past that or fails, the
+  browser's voice reads that step and later steps don't wait again: the
+  natural voice takes over once it's loaded, and a failed load is tried
+  again once a step, like a failed download. Web Audio is started as the
+  step is asked for, while the click behind it still counts, so the wait
+  doesn't cost the browser's permission to play. A voice changed during the
+  wait is the one that reads.
 - **The browser's voice is the fallback**, in three ways, and the same line
   says which:
   - a download that fails is tried again on the next step, up to three times

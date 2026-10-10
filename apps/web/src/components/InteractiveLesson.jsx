@@ -244,7 +244,8 @@ function VoiceLoadStatus({ speech }) {
 
   // A voice coming out of the cache is ready in a couple of seconds, so it gets
   // a quiet line and no announcement, rather than talk of a download.
-  const downloading = load?.status === "loading" && !load.cached;
+  const loading = load?.status === "loading";
+  const downloading = loading && !load.cached;
   let announcement = "";
   if (downloading) {
     announcement = t("speech.downloadingVoiceAnnouncement");
@@ -267,7 +268,7 @@ function VoiceLoadStatus({ speech }) {
           })}
         </span>
       )}
-      {load?.status === "loading" && load.cached && (
+      {loading && load.cached && (
         <span className="mt-1 block" aria-hidden="true">
           {t("speech.loadingVoice")}
         </span>

@@ -26,10 +26,24 @@ const { useSpeech } = await import("./useSpeech.js");
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
+// The preferences live in localStorage, which some Node versions define as a
+// global of their own that is unusable without a file to keep it in, hiding
+// happy-dom's. A Map does all the hook needs.
+const stored = new Map();
+vi.stubGlobal("localStorage", {
+  getItem: (key) => stored.get(key) ?? null,
+  setItem: (key, value) => stored.set(key, String(value)),
+  removeItem: (key) => stored.delete(key),
+});
+
 function deferred() {
   let resolve;
-  const promise = new Promise((done) => (resolve = done));
-  return { promise, resolve };
+  let reject;
+  const promise = new Promise((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
 }
 
 // Just enough Web Audio to queue a clip and say it was played.
@@ -85,6 +99,8 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 describe("useSpeech with a stored natural voice", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    stored.clear();
     played.length = 0;
     possible = deferred();
     load = deferred();
@@ -123,6 +139,62 @@ describe("useSpeech with a stored natural voice", () => {
     await act(async () => load.resolve(reader));
     await act(tick);
     expect(played).toEqual(["natural"]);
+  });
+
+  it("reads with the browser's voice when a downloaded voice is slow to load, then the natural one", async () => {
+    vi.useFakeTimers();
+    cached = true;
+    const speech = mount();
+    await act(async () => possible.resolve(true));
+    await act(async () => speech.current.speak("Hello there."));
+    await act(() => vi.advanceTimersByTimeAsync(4900));
+    expect(played).toEqual([]);
+
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    expect(played).toEqual(["browser"]);
+
+    await act(async () => load.resolve(reader));
+    await act(async () => speech.current.speak("And now."));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(played).toEqual(["browser", "natural"]);
+    expect(loadReadAloud).toHaveBeenCalledTimes(1);
+  });
+
+  it("tries a downloaded voice that failed to load once a step, without waiting again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    cached = true;
+    const speech = mount();
+    await act(async () => possible.resolve(true));
+    await act(async () => speech.current.speak("Hello there."));
+    await act(async () => load.reject(new Error("no GPU")));
+    await act(tick);
+    expect(played).toEqual(["browser"]);
+    expect(loadReadAloud).toHaveBeenCalledTimes(1);
+    expect(speech.current.voiceLoad).toMatchObject({
+      status: "failed",
+      retry: true,
+    });
+
+    load = deferred();
+    await act(async () => speech.current.speak("And now."));
+    await act(tick);
+    expect(played).toEqual(["browser", "browser"]);
+    expect(loadReadAloud).toHaveBeenCalledTimes(2);
+    expect(speech.current.voiceLoad).toMatchObject({
+      status: "loading",
+      cached: true,
+    });
+  });
+
+  it("reads a waiting step in the voice chosen while it waited", async () => {
+    cached = true;
+    const speech = mount();
+    await act(async () => possible.resolve(true));
+    await act(async () => speech.current.speak("Hello there."));
+    await act(async () => speech.current.setVoiceURI(""));
+    await act(async () => load.resolve(reader));
+    await act(tick);
+    expect(played).toEqual(["browser"]);
   });
 
   it("reads with the browser's voice while a voice that isn't downloaded yet downloads", async () => {

@@ -33,7 +33,12 @@ import espeakManifestUrl from "@spelling-creator/spellophone/espeak-ng-data/mani
 import espeakCoreUrl from "@spelling-creator/spellophone/espeak-ng-data/core.bin.gz?url";
 import espeakEnglishUrl from "@spelling-creator/spellophone/espeak-ng-data/en_dict.gz?url";
 import { createDownloadProgress } from "./downloadProgress.js";
-import { DEFAULT_VOICE, MODEL_ID, MODEL_REVISION } from "./readAloudVoices.js";
+import {
+  DEFAULT_VOICE,
+  MODEL_ID,
+  MODEL_REVISION,
+  WEBGPU_DTYPE,
+} from "./readAloudVoices.js";
 
 export const SAMPLE_RATE = 24000;
 
@@ -326,7 +331,7 @@ let turn = Promise.resolve();
  */
 export async function loadReadAloud({
   device = "webgpu",
-  dtype = device === "webgpu" ? "fp32" : "q8",
+  dtype = device === "webgpu" ? WEBGPU_DTYPE : "q8",
   onDownloadProgress,
 } = {}) {
   const [espeak, { tokenizer, model }] = await Promise.all([
