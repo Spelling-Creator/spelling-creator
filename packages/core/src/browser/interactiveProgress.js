@@ -19,9 +19,10 @@
 // the server, which is a far bigger promise than "your tab remembers".
 //
 // Records are keyed by *owner and lesson*: a computer shared by several
-// spellers (at a clinic, or at home) is a normal case for this app, and resuming into the answers of whoever used the
-// browser before you is worse than not resuming at all. Signing in mid-lesson
-// therefore starts a fresh record; the signed-out one is left to expire.
+// spellers (at a clinic, or at home) is a normal case for this app, and
+// resuming into the answers of whoever used the browser before you is worse
+// than not resuming at all. Signing in mid-lesson therefore starts a fresh
+// record; the signed-out one is left to expire.
 //
 // localStorage rather than the IndexedDB the editor uses (see storage.js): this
 // is a few kilobytes of text that must be readable and writable synchronously as

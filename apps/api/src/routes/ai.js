@@ -371,11 +371,11 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	if (mode === 'question') {
 		// Ground the question in the section's existing text when we have it, so
 		// the suggested question is actually answerable from the lesson. For
-		// background-knowledge questions the text is the opposite — it marks
+		// background-knowledge questions the text is the opposite: it marks
 		// what the speller should already know, so the question must avoid it.
 		const sourceBlock = sectionText
 			? questionType === 'background'
-				? `\n\nThe following is the lesson text. Do NOT base the question on it — the question must test prior knowledge the speller needs but that this text does not explain:\n"""\n${sectionText}\n"""`
+				? `\n\nThe following is the lesson text. Do NOT base the question on it. The question must test prior knowledge the speller needs but that this text does not explain:\n"""\n${sectionText}\n"""`
 				: `\n\nBase the question on the following lesson text. DO NOT say "according to the text, ...", as that is already displayed in the UI. :\n"""\n${sectionText}\n"""`
 			: '';
 		// List the questions already in the section so the model asks something

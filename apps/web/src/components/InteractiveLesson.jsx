@@ -429,9 +429,9 @@ function AnswerReveal({ block, className, onUse }) {
 // Shown on the step a resumed run-through picks up at, and only until the
 // learner moves on: it answers "why am I in the middle of this lesson?" once,
 // and the answer stops being interesting the moment they carry on. It carries
-// the way back out too — a shared computer will hand someone a
-// half-finished lesson they don't want now and then, and starting over shouldn't
-// mean finishing first.
+// the way back out too: a shared computer will hand someone a half-finished
+// lesson they don't want now and then, and starting over shouldn't mean
+// finishing first.
 function ResumeNotice({ onRestart }) {
   const { t } = useTranslation("interactive");
 
@@ -877,8 +877,8 @@ export default function InteractiveLesson({
   const [savedFingerprint, setSavedFingerprint] = useState(null);
 
   // Progress is kept per learner as well as per lesson: a computer shared by
-  // several spellers is a normal case here, and resuming into the answers of whoever
-  // used the browser before you is worse than not resuming at all.
+  // several spellers is a normal case here, and resuming into the answers of
+  // whoever used the browser before you is worse than not resuming at all.
   //
   // `owner` is who is signed in *now*; `runOwner` is who this run-through
   // started as, pinned when it began and used for everything it writes. The two
