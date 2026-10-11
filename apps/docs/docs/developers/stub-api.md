@@ -123,7 +123,11 @@ STUB_AI=claude STUB_AI_MODEL=haiku pnpm dev:stub   # a faster model (default son
 ```
 
 That needs [Claude Code](https://claude.com/claude-code) installed and signed
-in. Each answer is saved as it arrives, so asking the same thing again replays
+in. Each `claude -p` runs in a fresh temporary directory, outside the repo, with
+no tools, settings or MCP servers, and is given up on after three minutes. Since
+it runs on your own Claude account, the AI routes only answer requests from
+your own machine, even if the stub can be reached from your network. Each
+answer is saved as it arrives, so asking the same thing again replays
 it, with or without `STUB_AI`. That makes a run repeatable: the first one fills
 the saved answers, and every later one gets the same lesson ideas, text, fixes
 and facts. Lesson, section and block ids are swapped for placeholders before a

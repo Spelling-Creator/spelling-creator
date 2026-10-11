@@ -19,8 +19,14 @@
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { textCacheKey } from "@spelling-creator/api/src/lib/cache.js";
+import { noopCache } from "@spelling-creator/api/src/platform/cache.js";
+import {
+  expiryFrom,
+  isExpired,
+} from "@spelling-creator/api/src/platform/kv.js";
 import { handleAi } from "@spelling-creator/api/src/routes/ai.js";
 
 // Lesson, block and section ids are random per lesson, and the fix prompt names
@@ -57,12 +63,22 @@ function placeholderIds(text, ids) {
 const SYSTEM_PROMPT =
   "You are the language model behind a web app for writing Spelling lessons. Do exactly what the prompt asks, and answer with only what it asks for.";
 
+// How long one `claude -p` answer may take before it's given up on.
+const CLAUDE_TIMEOUT_MS = 3 * 60 * 1000;
+
 /**
  * Ask `claude -p` for one answer: plain text, or JSON matching `schema`. Runs in
- * an empty directory with no tools, settings or MCP servers, so nothing from
- * the repo or the person's setup reaches the answer.
+ * `cwd`, a fresh temporary directory outside any project, with no tools,
+ * settings or MCP servers and its own system prompt, so nothing from the repo
+ * or the person's setup reaches the answer. Gives up after `timeoutMs`.
  */
-function askClaude({ prompt, schema, model, cwd }) {
+export function askClaude({
+  prompt,
+  schema,
+  model,
+  cwd,
+  timeoutMs = CLAUDE_TIMEOUT_MS,
+}) {
   const args = [
     "-p",
     "--output-format",
@@ -90,10 +106,18 @@ function askClaude({ prompt, schema, model, cwd }) {
     });
     let out = "";
     let err = "";
+    const timer = setTimeout(() => {
+      proc.kill("SIGKILL");
+      reject(new Error(`claude gave no answer in ${timeoutMs / 1000} seconds`));
+    }, timeoutMs);
     proc.stdout.on("data", (d) => (out += d));
     proc.stderr.on("data", (d) => (err += d));
-    proc.on("error", reject);
+    proc.on("error", (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
     proc.on("close", (code) => {
+      clearTimeout(timer);
       let data;
       try {
         data = JSON.parse(out);
@@ -134,6 +158,7 @@ export function answerKey(normalPrompt, schema) {
 export function createModel({ dataDir, ai, model, replayDelayMs, log }) {
   const dir = path.join(dataDir, "ai");
   const inFlight = new Map();
+  let claudeDir = "";
 
   return async function answer({ prompt, schema }) {
     const { normal, ids } = normalizeIds(prompt);
@@ -152,16 +177,21 @@ export function createModel({ dataDir, ai, model, replayDelayMs, log }) {
     if (!inFlight.has(key)) {
       const started = Date.now();
       fs.mkdirSync(dir, { recursive: true });
-      const job = askClaude({ prompt, schema, model, cwd: dir })
+      claudeDir ||= fs.mkdtempSync(path.join(os.tmpdir(), "stub-api-claude-"));
+      const job = askClaude({ prompt, schema, model, cwd: claudeDir })
         .then((text) => {
+          // Written whole, then moved into place, so a half-written answer is
+          // never read.
+          const partial = `${file}.${process.pid}.partial`;
           fs.writeFileSync(
-            file,
+            partial,
             JSON.stringify(
               { prompt: normal, schema, text: placeholderIds(text, ids) },
               null,
               2,
             ),
           );
+          fs.renameSync(partial, file);
           log(
             `ai: answered in ${Date.now() - started} ms (${key.slice(0, 8)})`,
           );
@@ -175,30 +205,42 @@ export function createModel({ dataDir, ai, model, replayDelayMs, log }) {
 }
 
 // An in-memory KvStore (see apps/api/src/platform/kv.js) for the rate limiter
-// and the Worker's own answer cache.
+// and the Worker's own answer cache, with the API's own expiry rules.
 function memoryKv() {
   const map = new Map();
   return {
     async get(key) {
       const e = map.get(key);
       if (!e) return null;
-      if (e.expiresAt && e.expiresAt < Date.now()) {
+      if (isExpired(e.expiresAt)) {
         map.delete(key);
         return null;
       }
       return e.value;
     },
-    async put(key, value, opts = {}) {
-      const ttl = opts.expirationTtl;
-      map.set(key, {
-        value,
-        expiresAt: ttl ? Date.now() + ttl * 1000 : 0,
-      });
+    async put(key, value, opts) {
+      map.set(key, { value, expiresAt: expiryFrom(opts) });
     },
     async delete(key) {
       map.delete(key);
     },
   };
+}
+
+/**
+ * Whether a saved prompt is the text suggestion for this section and lesson,
+ * by the opening the Worker's text prompt has (apps/api/src/routes/ai.js):
+ * the subject, then the lesson's title when it has one, and nothing about a
+ * lesson when it hasn't.
+ */
+export function isTextPromptFor(prompt, subject, documentName) {
+  const opening = `Suggest a block of text about the following subject: "${subject}".`;
+  if (!prompt.startsWith(opening)) return false;
+  const rest = prompt.slice(opening.length);
+  const titled = "\n\nThis text is a section of a lesson titled ";
+  return documentName
+    ? rest.startsWith(`${titled}"${documentName}".`)
+    : !rest.startsWith(titled);
 }
 
 /**
@@ -228,7 +270,7 @@ export function createAi({
       lessonGit: null,
       oauthState: null,
       rateLimit: memoryKv(),
-      cache: { match: async () => undefined, put: async () => {} },
+      cache: noopCache,
       clientIp: () => "127.0.0.1",
     },
     AI_PROVIDER_ORDER: "openai-compatible",
@@ -282,14 +324,21 @@ export function createAi({
       await env.PLATFORM.rateLimit.delete(
         await textCacheKey(String(subject).trim(), String(documentName)),
       );
+      // The prompt has the subject and title exactly as the app sent them.
       const dir = path.join(dataDir, "ai");
       for (const name of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+        if (!name.endsWith(".json")) continue;
         const file = path.join(dir, name);
-        const saved = JSON.parse(fs.readFileSync(file, "utf8"));
+        let saved;
+        try {
+          saved = JSON.parse(fs.readFileSync(file, "utf8"));
+        } catch {
+          continue;
+        }
         if (
           saved.schema == null &&
-          saved.prompt?.includes(`"${String(subject).trim()}"`) &&
-          saved.prompt.includes(`"${documentName}"`)
+          typeof saved.prompt === "string" &&
+          isTextPromptFor(saved.prompt, String(subject), String(documentName))
         ) {
           fs.rmSync(file);
           log(`ai: removed a disliked answer (${name.slice(0, 8)})`);

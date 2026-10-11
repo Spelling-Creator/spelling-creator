@@ -177,8 +177,12 @@ deliberately generous and "disagrees" means something.
   the item's own values, it is checked against every place above the item as well,
   following "located in" (P131) upward. Wikidata puts Disneyland in Anaheim, which is in
   Orange County, which is in California, so "Disneyland is in California" agrees, and so
-  does "Alton Towers is in England". That second lookup only runs for claims that would
-  otherwise disagree.
+  does "Alton Towers is in England". Only current links are followed, by the same rule as
+  an item's own values, so a county a town was moved out of doesn't count. A place above
+  has to be the stated one by item or by its exact name, or its formal name ("Canton of
+  Geneva" for Geneva): the "ends with" rule named facts use for people would let "Mexico"
+  match New Mexico. That second lookup only runs for claims that would otherwise
+  disagree, and alongside the Smithsonian's.
 - **A population of 0 is no figure.** Wikidata gives a ruined or abandoned town (Pompeii)
   a population of 0, which says nothing about how many people lived there, so it is
   treated as missing and Wikipedia is read instead.
@@ -334,8 +338,9 @@ above penicillin.
 
 The one used is the first candidate whose article _title_ is the name with the kind added
 and nothing else ("Mercury (planet)", "Amazon River", "Georgia (U.S. state)"); failing
-that, the first. The name has to be in the title: "F (programming language)" is the kind
-with nothing else, but it isn't Fortran. A title that merely has the kind in it is something else: "Australian
+that, the first. The name part of the title is compared with every word kept, however
+short: "F (programming language)" is the kind with a name added, but the name isn't
+Fortran, or C. A title that merely has the kind in it is something else: "Australian
 country music" is not Australia. The title and not Wikidata's description, because a
 description is prose that says "tragedy" for a play and "liner" for a ship, and matching a
 word of it picked Ur-Hamlet over Hamlet. Having the property never

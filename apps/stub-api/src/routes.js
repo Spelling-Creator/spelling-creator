@@ -474,6 +474,18 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
           url.pathname.slice(1),
         ));
     if (!isPublic && !ctx.user) return ctx.send(401, "Sign in first.");
+    // The AI routes can run `claude -p` on the developer's own account, so only
+    // this machine may call them, however the stub is reached.
+    if (
+      req.method === "POST" &&
+      (url.pathname === "/" || url.pathname.startsWith("/stub-model/")) &&
+      !LOOPBACK.has(req.socket.remoteAddress)
+    ) {
+      return ctx.send(
+        403,
+        "The AI routes only answer requests from this machine.",
+      );
+    }
     for (const r of routes) {
       if (r.method !== req.method) continue;
       const m = url.pathname.match(r.re);
@@ -490,6 +502,8 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
     ctx.send(404, "Not stubbed");
   };
 }
+
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
 // The app runs on another origin (Vite's port), so every response carries CORS
 // headers, including PATCH (comment edits) and the git headers the history

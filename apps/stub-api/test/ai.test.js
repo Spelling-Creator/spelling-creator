@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStub } from "../src/server.js";
 import { tokenFor } from "../src/sessions.js";
-import { answerKey, createModel, normalizeIds, restoreIds } from "../src/ai.js";
+import {
+  answerKey,
+  askClaude,
+  createModel,
+  normalizeIds,
+  restoreIds,
+} from "../src/ai.js";
 
 const fixtures = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -50,6 +56,30 @@ describe("ids in prompts", () => {
   });
 });
 
+describe("asking Claude", () => {
+  it("gives up on a claude that never answers", async () => {
+    // A stand-in `claude` on the PATH that hangs.
+    const bin = fs.mkdtempSync(path.join(os.tmpdir(), "stub-ai-bin-"));
+    fs.writeFileSync(path.join(bin, "claude"), "#!/bin/sh\nsleep 30\n", {
+      mode: 0o755,
+    });
+    const savedPath = process.env.PATH;
+    process.env.PATH = `${bin}${path.delimiter}${savedPath}`;
+    try {
+      await expect(
+        askClaude({
+          prompt: "Hello",
+          model: "sonnet",
+          cwd: bin,
+          timeoutMs: 300,
+        }),
+      ).rejects.toThrow(/no answer/);
+    } finally {
+      process.env.PATH = savedPath;
+    }
+  });
+});
+
 describe("AI routes", () => {
   let stub;
   let dataDir;
@@ -60,6 +90,23 @@ describe("AI routes", () => {
     stub = await startStub({ port: 0, dataDir, aiReplayDelayMs: 0 });
   });
   afterAll(() => stub.close());
+
+  // Reached through the machine's network address rather than localhost, the
+  // way another computer on the network would reach it.
+  const lan = Object.values(os.networkInterfaces())
+    .flat()
+    .find((i) => i && i.family === "IPv4" && !i.internal)?.address;
+  it.skipIf(!lan)("answers the AI routes only from this machine", async () => {
+    const res = await fetch(
+      `http://${lan}:${stub.port}/stub-model/v1/chat/completions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ content: "Hello" }] }),
+      },
+    );
+    expect(res.status).toBe(403);
+  });
 
   it("serves a stand-in Turnstile script", async () => {
     const res = await fetch(`${stub.url}/turnstile/v0/api.js`);
@@ -127,26 +174,57 @@ describe("AI routes", () => {
   });
 
   it("forgets a disliked text suggestion, for someone signed in", async () => {
-    const file = path.join(dataDir, "ai", "disliked.json");
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(
-      file,
-      JSON.stringify({
-        prompt: 'About "Huddles". A lesson titled "Penguins".',
-        schema: null,
-        text: "Penguins huddle.",
-      }),
-    );
-    const dislike = (headers) =>
+    const dir = path.join(dataDir, "ai");
+    fs.mkdirSync(dir, { recursive: true });
+    // Prompts shaped like the Worker's text prompt.
+    const prompt = (subject, title) =>
+      `Suggest a block of text about the following subject: "${subject}".${
+        title
+          ? `\n\nThis text is a section of a lesson titled "${title}". More.`
+          : ""
+      }\n\nWrite any unusual words in capitals.`;
+    const save = (name, p) => {
+      const file = path.join(dir, `${name}.json`);
+      fs.writeFileSync(
+        file,
+        JSON.stringify({ prompt: p, schema: null, text: "Some text." }),
+      );
+      return file;
+    };
+    const huddles = save("huddles", prompt("Huddles", "Penguins"));
+    const untitled = save("untitled", prompt("Huddles", ""));
+    const other = save("other", prompt("Feathers", "Penguins"));
+    const otherLesson = save("other-lesson", prompt("Huddles", "Emperors"));
+    // A stray file that isn't an answer is left alone, and doesn't break it.
+    fs.writeFileSync(path.join(dir, ".DS_Store"), "not json");
+    fs.writeFileSync(path.join(dir, "broken.json"), "{ half");
+
+    const dislike = (body, headers = {}) =>
       fetch(`${stub.url}/ai-text/dislike`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({ subject: "Huddles", documentName: "Penguins" }),
+        body: JSON.stringify(body),
       });
-    expect((await dislike({})).status).toBe(401);
-    expect(fs.existsSync(file)).toBe(true);
-    const res = await dislike({ Authorization: `Bearer ${tokenFor("maya")}` });
+    const maya = { Authorization: `Bearer ${tokenFor("maya")}` };
+
+    expect(
+      (await dislike({ subject: "Huddles", documentName: "Penguins" })).status,
+    ).toBe(401);
+    expect(fs.existsSync(huddles)).toBe(true);
+
+    const res = await dislike(
+      { subject: "Huddles", documentName: "Penguins" },
+      maya,
+    );
     expect(await res.json()).toEqual({ ok: true });
-    expect(fs.existsSync(file)).toBe(false);
+    expect(fs.existsSync(huddles)).toBe(false);
+    expect(fs.existsSync(untitled)).toBe(true);
+    expect(fs.existsSync(other)).toBe(true);
+    expect(fs.existsSync(otherLesson)).toBe(true);
+
+    // A lesson with no title yet.
+    await dislike({ subject: "Huddles", documentName: "" }, maya);
+    expect(fs.existsSync(untitled)).toBe(false);
+    expect(fs.existsSync(otherLesson)).toBe(true);
   });
 });
