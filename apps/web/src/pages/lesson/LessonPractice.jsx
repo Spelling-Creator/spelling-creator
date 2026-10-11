@@ -5,7 +5,7 @@
 // viewport, and turning 750 lines of that inside out to become a page would
 // have changed how it behaves, not just where it lives. What the route adds is
 // the thing it was missing — a URL. "Start lesson" is now a link someone can
-// send to a class, and closing it goes back rather than dropping a modal.
+// send to a speller, and closing it goes back rather than dropping a modal.
 //
 // Closing navigates to the overview rather than calling history.back(), because
 // a deep link straight to /practice has no history to go back to.

@@ -378,7 +378,7 @@ token.
 - **Limits.** At most 60 passages, 4,000 characters each and 40,000 in all
   (`cleanPassages` in `apps/api/src/lib/factCheck.js`), and 40 claims.
 - **Results** are cached in KV for 7 days (`FACT_CHECK_TTL` in `routes/ai.js`), keyed on the lesson title and the passages' text
-  in order (plus `FACT_CHECK_VERSION`, currently `v4`, to bump when the rules change). A cache hit is served
+  in order (plus `FACT_CHECK_VERSION`, currently `v5`, to bump when the prompt or the rules change). A cache hit is served
   before the rate limiter and costs nothing. Block ids are not part of the key: they are
   attached to the cached facts per request, so two lessons with the same text both get
   their own ids back.

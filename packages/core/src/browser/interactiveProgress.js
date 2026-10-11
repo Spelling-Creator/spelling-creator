@@ -14,12 +14,12 @@
 // So this never travels: no Worker call, no endpoint, nothing to scope by user
 // id server-side, and no new way for a lesson's author to learn anything about
 // who worked through it. The one consequence is that progress does not follow a
-// learner between devices — starting on a school desktop and finishing on a
-// phone still starts over. Syncing it would mean storing half-written answers on
+// learner between devices: starting on one computer and finishing on another
+// still starts over. Syncing it would mean storing half-written answers on
 // the server, which is a far bigger promise than "your tab remembers".
 //
-// Records are keyed by *owner and lesson*: a shared classroom machine is the
-// normal case for this app, and resuming into the answers of whoever used the
+// Records are keyed by *owner and lesson*: a computer shared by several
+// spellers (at a clinic, or at home) is a normal case for this app, and resuming into the answers of whoever used the
 // browser before you is worse than not resuming at all. Signing in mid-lesson
 // therefore starts a fresh record; the signed-out one is left to expire.
 //
@@ -41,7 +41,7 @@ const STORAGE_KEY = "spelling-creator:interactive-progress";
 export const MAX_PROGRESS_RECORDS = 20;
 
 /** How long an untouched run-through stays resumable. Long enough to cover a
- * school holiday, short enough that a lesson abandoned last year doesn't reopen
+ * long break, short enough that a lesson abandoned last year doesn't reopen
  * half-answered. */
 export const PROGRESS_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 

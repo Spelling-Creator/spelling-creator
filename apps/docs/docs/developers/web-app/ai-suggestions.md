@@ -54,6 +54,15 @@ token }`. The age range is the lesson's `doc.ageRange`, one of `AGE_RANGES` in
 for any age), stored verbatim so the prompt can use it directly. The Worker
 caps it at 60 characters.
 
+The prompt says who the lessons are for: spellers (of the chosen age, when
+there is one), described as nonspeaking people who answer on a letterboard and
+understand far more than they can say. It tells the model to pick topics that
+interest and respect that age, and never to simplify a topic or pitch it below
+their age. The age range steers interest, not difficulty. The same framing runs
+through the other prompts: question suggestions are "for a Spelling lesson"
+answered on a letterboard, and the per-type instructions in
+`QUESTION_INSTRUCTIONS` talk about "the speller", not a student.
+
 The prompt asks for six varied topics, each a `title` and a one-sentence
 `description`, constrained by `LESSON_IDEA_SCHEMA`
 (`apps/api/src/lib/ai/schemas.js`). The response is `{ "ideas": [{ "title",

@@ -37,8 +37,8 @@ import {
 
 /**
  * The summary shapes the spec defines, in the order the UI offers them.
- * "key-points" (a bulleted list) is the default: it's the most useful read for a
- * teacher scanning a lesson, and it's what the API itself defaults to.
+ * "key-points" (a bulleted list) is the default: it's the most useful read for
+ * someone scanning a lesson, and it's what the API itself defaults to.
  */
 export const SUMMARY_TYPES = [
   { value: "key-points", label: "Key points" },
@@ -62,9 +62,10 @@ export const DEFAULT_SUMMARY_LENGTH = "short";
 // fallback engine bakes the same instruction into its prompt
 // (fallbackSummarizer.js), so both engines summarise for the same reader.
 const SHARED_CONTEXT =
-  "A spelling and literacy lesson written by a teacher, containing lesson text, " +
-  "practice questions and spelling word lists. Summarise it for another teacher " +
-  "deciding whether the lesson suits their class.";
+  "A Spelling lesson for nonspeaking spellers, who answer by pointing to " +
+  "letters on a letterboard. It contains lesson text, questions and spelling " +
+  "word lists. Summarize it for a practitioner or communication partner " +
+  "deciding whether the lesson suits the speller they work with.";
 
 // Below this, a lesson has less text than the summary would, so we don't offer
 // one — the feature is hidden rather than producing a summary longer than the
@@ -369,7 +370,7 @@ export async function createSummarizer(options = {}, hooks = {}) {
   }
 
   if (!(await fallbackPossible())) {
-    throw new Error("This browser can't summarise on-device.");
+    throw new Error("This browser can't summarize on-device.");
   }
   // The engine is decided now: say so before any heavy work, so the caller
   // can re-warn (or abort, which the next check honours) ahead of the

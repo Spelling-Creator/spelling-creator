@@ -16,7 +16,7 @@
 // model download above. transformers.js caches the model in the browser's
 // Cache Storage, so later runs load from disk. Nothing may static-import this
 // file: it is reached only through the dynamic import() in summarizer.js,
-// which keeps it in its own chunk that only a click on Summarise ever fetches.
+// which keeps it in its own chunk that only a click on Summarize ever fetches.
 // vite.config.js additionally stubs it out of the Worker's SSR build, where it
 // could never run anyway.
 //
@@ -62,10 +62,10 @@ const SUMMARY_SHAPES = {
     long: "five sentences in one paragraph",
   },
   teaser: {
-    short: "one sentence that makes a teacher curious about the lesson",
+    short: "one sentence that makes a reader curious about the lesson",
     medium:
-      "three sentences in one paragraph that make a teacher curious about the lesson",
-    long: "five sentences in one paragraph that make a teacher curious about the lesson",
+      "three sentences in one paragraph that make a reader curious about the lesson",
+    long: "five sentences in one paragraph that make a reader curious about the lesson",
   },
   headline: {
     short: "one headline of at most 12 words",
@@ -106,11 +106,12 @@ function summaryMessages({ type, length }, languageInstruction, text) {
     {
       role: "system",
       content:
-        "You summarise spelling and literacy lessons for teachers who are " +
-        "deciding whether a lesson suits their class. A lesson has reading " +
-        "passages, practice questions and spelling word lists. Describe what " +
-        "the lesson covers. Never answer its questions, never do its " +
-        "exercises, and never write as a student. " +
+        "You summarize Spelling lessons for nonspeaking spellers, for the " +
+        "practitioners and communication partners deciding whether a lesson " +
+        "suits the speller they work with. A lesson has reading passages, " +
+        "questions and spelling word lists. Describe what the lesson covers. " +
+        "Never answer its questions, never do its activities, and never " +
+        "write as the speller. " +
         languageInstruction +
         " Reply with the summary only.",
     },
@@ -118,7 +119,7 @@ function summaryMessages({ type, length }, languageInstruction, text) {
       role: "user",
       content:
         `<lesson>\n${text}\n</lesson>\n\n` +
-        `Summarise the lesson above for a teacher, as ${shape}.`,
+        `Summarize the lesson above for a practitioner, as ${shape}.`,
     },
   ];
 }

@@ -15,7 +15,7 @@
 //
 // collab.js holds the document arithmetic; this file is the MCP surface over
 // it: schemas, the authoring standard, and results written for a model that
-// cannot see the teacher's screen.
+// cannot see the host's screen.
 
 import { z } from "zod";
 
@@ -132,7 +132,7 @@ export function registerCollabTools(server, ctx) {
 
   // Reading the state drains the room's chat inbox for us, so anything said
   // since the last look is in `state` and nowhere else now. An error raised
-  // after that point must carry it, or the teacher's reply to the assistant's
+  // after that point must carry it, or the host's reply to the assistant's
   // last question is lost in the very call that fetched it.
   const withChat = (err, state) => {
     const chat = chatOf(state);
@@ -185,7 +185,7 @@ export function registerCollabTools(server, ctx) {
       title: "Join a live collaboration session",
       description:
         "Join a lesson the user is editing live in the web app, as a participant in the session — the same way " +
-        "another teacher would. Ask them to click Collaborate in the editor and read you the share code.\n\n" +
+        "another person would. Ask them to click Collaborate in the editor and read you the share code.\n\n" +
         "WHY THIS AND NOT get_lesson: a live session's document exists only in the session until somebody saves " +
         "it, so the copy on the hub is whatever it was before they started. While a session is running this is the " +
         "real lesson, and patch_lesson would be editing a stale copy that their next save overwrites.\n\n" +
@@ -211,7 +211,7 @@ export function registerCollabTools(server, ctx) {
       // its own rather than as a second cursor wearing the account holder's
       // name (see handleCollabAgent in apps/api/src/routes/collab.js). The label
       // is the connecting MCP client's own account of itself ("Claude Desktop"),
-      // which is the most useful thing the teacher could be told about who is
+      // which is the most useful thing the host could be told about who is
       // typing.
       const assistant = clientName() || "AI assistant";
 

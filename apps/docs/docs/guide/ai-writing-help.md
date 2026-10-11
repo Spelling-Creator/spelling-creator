@@ -29,6 +29,10 @@ one) and a **Suggest ideas** button beside it.
 3. Choose one to use its title as your lesson's title. **Generate more** asks
    for a fresh batch instead.
 
+The age range picks topics that people of that age tend to find interesting.
+It isn't a reading level: the AI is told that spellers understand far more
+than they can say, and never to simplify a topic or pitch it below their age.
+
 The ideas don't write the lesson for you. They give you a title to start from,
 and the rest is up to you and the other helpers.
 

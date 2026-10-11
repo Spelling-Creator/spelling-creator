@@ -202,10 +202,11 @@ labeled `Picture:`, since it says what the picture shows. Its
 about the lesson. A VAKT activity's text goes in under its label; its links
 don't, since a URL is bulk with no meaning to a model.
 
-A shared context string (`SHARED_CONTEXT`) frames the request. As written in
-the code, it describes the input as "a spelling and literacy lesson written by
-a teacher" and asks for a summary "for another teacher deciding whether the
-lesson suits their class". Without some framing, a lesson full of question
+A shared context string (`SHARED_CONTEXT`) frames the request. It describes
+the input as a Spelling lesson for nonspeaking spellers who answer on a
+letterboard, and asks for a summary for a practitioner or communication
+partner deciding whether the lesson suits the speller they work with. Without
+some framing, a lesson full of question
 prompts and word lists reads to the model like a worksheet to fill in rather
 than a lesson to describe. The LFM engine puts the same framing in a system
 message, and spells it out more firmly: a small model left to itself answers
