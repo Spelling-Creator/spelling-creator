@@ -92,8 +92,9 @@ export function registerCollabTools(server, ctx) {
     "still hosting; otherwise edit the saved lesson with patch_lesson.";
 
   const stillWaitingMessage = (code) =>
-    `The request to join session "${code}" is still waiting for the host to admit it. Ask them to click Add to lesson in ` +
-    "the Collaborate dialog, then call join_collab_session again with the same code to keep waiting; it picks " +
+    `The request to join session "${code}" is still waiting for the host to admit it. Ask them to open the ` +
+    "Collaborate dialog and, under Waiting to join, press the add button (a person with a plus sign) on the request " +
+    "marked AI. Then call join_collab_session again with the same code to keep waiting; it picks " +
     "this request back up rather than sending a new one.";
 
   // Run one ask of the room on the session's behalf. A 410 means the room has
@@ -297,8 +298,9 @@ export function registerCollabTools(server, ctx) {
         return text({
           waiting: code,
           note:
-            "The host hasn't admitted you yet. The request is still showing in their Collaborate dialog: ask " +
-            "them to click Add to lesson, then call join_collab_session again with the same code to keep waiting (it " +
+            "The host hasn't admitted you yet. The request is still showing in their Collaborate dialog under " +
+            "Waiting to join, marked AI: ask them to press its add button (a person with a plus sign), then call " +
+            "join_collab_session again with the same code to keep waiting (it " +
             "resumes this request rather than sending a new one). A request nobody answers is withdrawn on its " +
             "own after five minutes.",
         });

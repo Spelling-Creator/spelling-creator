@@ -149,8 +149,9 @@ function AppearanceSection() {
 
 // The UI language, from the registry in lib/languages.js. Today that registry
 // holds one entry, so the select is disabled and says so rather than pretending
-// to be a choice — adding a locale (see docs/developers/web-app/internationalization.md)
-// turns it into one with no change here.
+// to be a choice. Adding a locale (see
+// docs/developers/web-app/internationalization.md) turns it into one with no
+// change here.
 function LanguageSection() {
   const { t, i18n } = useTranslation("settings");
   const onlyOne = LANGUAGES.length < 2;

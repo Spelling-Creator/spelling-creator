@@ -79,5 +79,7 @@ most.
 
 `apps/mcp/package.json` and `apps/mcp/manifest.json` carry the same version,
 and both are bumped whenever the MCP server changes (not for web-only or
-core-only work). `SERVER_INFO.version` in `src/tools.js` is what the server
-reports to clients during the MCP handshake.
+core-only work). `SERVER_INFO.version` in `src/tools.js`, what the server
+reports to clients during the MCP handshake, is read from `package.json` (a
+JSON import), so there is nothing to bump there. `test/version.test.js` fails
+if `manifest.json` falls out of step.

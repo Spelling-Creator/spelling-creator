@@ -297,8 +297,13 @@ else; only the body differs:
   `marketing.spelling` in `locales/en/home.json`). It says that Spelling is an
   umbrella over practices that aren't standardized (S2C, RPM, Spellers Method,
   and practitioners with no label), so the editor's defaults are a starting
-  point, and links to `/docs/intro` with a plain `<a>` rather than a router
-  link, since the docs are a separate site on the same origin.
+  point. Its link (`SPELLING_DOCS_URL`) is a plain `<a>` styled with
+  `Button variant="link"` rather than a router link, since the docs are a
+  separate static site. In production it's `/docs/intro` on the same origin, so
+  a self-hosted copy links to its own docs; the Vite dev server serves no
+  `/docs`, so in dev it points at the published site. It opens in a new tab,
+  because the service worker leaves `/docs` alone: offline, the failure lands
+  in that tab instead of replacing the installed app.
 - **Signed in**: a dashboard showing the user's own lessons (drafts included,
   from `GET /lessons/mine`; this list used to be a sidebar group, and a panel of
   your work is a better home for it than global chrome), the hub's

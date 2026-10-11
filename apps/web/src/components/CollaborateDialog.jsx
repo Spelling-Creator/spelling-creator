@@ -430,6 +430,18 @@ export default function CollaborateDialog({
                   r.email || t("collaborateDialog.host.wantsToCollaborate")
                 }
               >
+                {/* The same badge as the roster's, here so the host knows a
+                    request is an assistant before letting it in, not after.
+                    Otherwise it looks exactly like the account owner. */}
+                {r.bot ? (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 border-muted-foreground/40 text-muted-foreground"
+                    title={t("collaborateDialog.roster.assistantTooltip")}
+                  >
+                    {t("collaborateDialog.roster.assistant")}
+                  </Badge>
+                ) : null}
                 <div className="flex shrink-0 gap-0.5">
                   <IconActionButton
                     tooltip={t("collaborateDialog.host.addToLesson")}

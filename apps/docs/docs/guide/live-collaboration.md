@@ -29,8 +29,10 @@ Whoever starts a session is its **host**. Everyone else is a guest.
    invite to someone by their email address, with an optional message. It
    appears in their [notifications](./notifications.md) the next time they're
    signed in.
-3. When someone joins, they appear under **Waiting to join**. Press **Add to
-   lesson** to let them in, or **Decline**. Nobody sees the lesson, or anyone's
+3. When someone joins, they appear under **Waiting to join**. Press the add
+   button beside them (a person with a plus sign; its tooltip says **Add to
+   lesson**) to let them in, or the X (**Decline**) to turn them away. An AI
+   assistant's request is marked **AI**. Nobody sees the lesson, or anyone's
    edits, until you add them.
 4. Everyone you've added is listed under **In this lesson**. You can **Remove
    from lesson** at any time.

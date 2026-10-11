@@ -47,6 +47,7 @@ import {
   rendersViews,
 } from "./views.js";
 import { registerCollabTools } from "./collabTools.js";
+import pkg from "../package.json" with { type: "json" };
 import {
   formatFindings,
   isFormattingFinding,
@@ -2448,10 +2449,11 @@ export function registerTools(server, ctx) {
 
 // The server's identifying metadata, shared by both transports.
 //
-// Keep `version` in step with apps/mcp/package.json and apps/mcp/manifest.json:
-// this is the one clients actually see, so a stale value misnames the server in
-// every client UI and bug report.
+// `version` is what every client UI and bug report shows, so it is read from
+// package.json rather than copied: a hand-kept copy here once sat at 0.26.0
+// while the package was at 0.28.0. manifest.json (the .mcpb bundle's) has to
+// carry its own copy, and test/version.test.js fails if the two disagree.
 export const SERVER_INFO = {
   name: "spelling-creator-hub",
-  version: "0.28.1",
+  version: pkg.version,
 };

@@ -86,6 +86,14 @@ const FEATURES = [
 // and points at the hub.
 const MY_LESSON_LIMIT = 6;
 
+// The docs page on what "Spelling" means. The docs are a separate static site
+// that the production hosts (the Worker and the Node server) serve at /docs,
+// so a self-hosted copy links to its own. The Vite dev server has no /docs,
+// so dev links to the published site instead.
+const SPELLING_DOCS_URL = import.meta.env.DEV
+  ? "https://spellingcreator.org/docs/intro"
+  : "/docs/intro";
+
 function formatDateTime(value) {
   if (!value) return "";
   const d = new Date(value);
@@ -258,8 +266,10 @@ function LandingView() {
         {/* What "Spelling" means here. It is an umbrella over several
             unstandardized practices (S2C is one), and visitors arriving from
             any of them should know the app's defaults are not a rulebook.
-            The docs are a separate static site, so a plain link rather than
-            a router one. */}
+            A plain link rather than a router one, since the docs aren't part
+            of the SPA, and in a new tab: the service worker leaves /docs
+            alone, so offline the error lands in that tab instead of
+            replacing the installed app. */}
         <div className="mx-auto mt-16 max-w-2xl text-center md:mt-24">
           <h2 className="mb-3 font-serif text-2xl font-semibold md:text-3xl">
             {t("marketing.spelling.title")}
@@ -267,12 +277,11 @@ function LandingView() {
           <p className="mb-4 text-base text-muted-foreground">
             {t("marketing.spelling.body")}
           </p>
-          <a
-            href="/docs/intro"
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            {t("marketing.spelling.learnMore")}
-          </a>
+          <Button variant="link" asChild>
+            <a href={SPELLING_DOCS_URL} target="_blank" rel="noopener">
+              {t("marketing.spelling.learnMore")}
+            </a>
+          </Button>
         </div>
 
         <div className="mt-16 rounded-panel border border-border bg-card p-8 text-center text-card-foreground md:mt-24 md:p-12">

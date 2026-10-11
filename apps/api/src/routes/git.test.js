@@ -33,37 +33,46 @@ describe('applyRefs', () => {
 	});
 
 	it('accepts a branch the client correctly believes is new', () => {
-		const result = push({ main: A }, { refs: { main: A, 'Year-3': B }, expected: { main: A, 'Year-3': '' } });
-		expect(result.refs).toEqual({ main: A, 'Year-3': B });
+		const result = push({ main: A }, { refs: { main: A, 'Fewer-pictures': B }, expected: { main: A, 'Fewer-pictures': '' } });
+		expect(result.refs).toEqual({ main: A, 'Fewer-pictures': B });
 	});
 
 	it('refuses a new branch whose name somebody else has already used', () => {
-		const result = push({ main: A, 'Year-3': B }, { refs: { main: A, 'Year-3': C }, expected: { main: A, 'Year-3': '' } });
+		const result = push(
+			{ main: A, 'Fewer-pictures': B },
+			{ refs: { main: A, 'Fewer-pictures': C }, expected: { main: A, 'Fewer-pictures': '' } },
+		);
 		expect(result.status).toBe(409);
 	});
 
 	it('leaves branches the push never mentions exactly as they were', () => {
 		// The case this exists for: one device saves without ever having heard of a
 		// variation another device made. It must not disappear.
-		const result = push({ main: A, 'Year-3': B }, { refs: { main: C }, expected: { main: A } });
-		expect(result.refs).toEqual({ main: C, 'Year-3': B });
+		const result = push({ main: A, 'Fewer-pictures': B }, { refs: { main: C }, expected: { main: A } });
+		expect(result.refs).toEqual({ main: C, 'Fewer-pictures': B });
 	});
 
 	it('removes a branch when asked by name, and only at the tip it was asked for', () => {
-		expect(push({ main: A, 'Year-3': B }, { refs: { main: A }, deletes: ['Year-3'], expected: { main: A, 'Year-3': B } }).refs).toEqual({
+		expect(
+			push({ main: A, 'Fewer-pictures': B }, { refs: { main: A }, deletes: ['Fewer-pictures'], expected: { main: A, 'Fewer-pictures': B } })
+				.refs,
+		).toEqual({
 			main: A,
 		});
 
 		// Somebody added to the variation after we decided to delete it.
-		expect(push({ main: A, 'Year-3': C }, { refs: { main: A }, deletes: ['Year-3'], expected: { main: A, 'Year-3': B } }).status).toBe(409);
+		expect(
+			push({ main: A, 'Fewer-pictures': C }, { refs: { main: A }, deletes: ['Fewer-pictures'], expected: { main: A, 'Fewer-pictures': B } })
+				.status,
+		).toBe(409);
 	});
 
 	it('refuses a push that both sets and deletes one branch', () => {
 		// Reachable from a delete-then-recreate on the client: the request
 		// contradicts itself, and applying it in order would let the delete win.
 		const result = push(
-			{ main: A, 'Year-3': B },
-			{ refs: { main: A, 'Year-3': C }, deletes: ['Year-3'], expected: { main: A, 'Year-3': B } },
+			{ main: A, 'Fewer-pictures': B },
+			{ refs: { main: A, 'Fewer-pictures': C }, deletes: ['Fewer-pictures'], expected: { main: A, 'Fewer-pictures': B } },
 		);
 		expect(result.status).toBe(400);
 	});

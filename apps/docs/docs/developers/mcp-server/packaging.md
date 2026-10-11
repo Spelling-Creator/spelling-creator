@@ -85,8 +85,9 @@ trigger some older notes describe does nothing. No bundle has been published as
 a GitHub Release yet.
 
 1. Bump the version in **both** `apps/mcp/manifest.json` and
-   `apps/mcp/package.json`. They must match; the release tag and asset name are
-   derived from the manifest.
+   `apps/mcp/package.json`. They must match (`test/version.test.js` checks);
+   the release tag and asset name are derived from the manifest, and the
+   version the server reports comes from `package.json`.
 
 2. Validate and build:
 

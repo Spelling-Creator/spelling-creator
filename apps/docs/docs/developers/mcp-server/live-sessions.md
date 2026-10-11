@@ -106,8 +106,8 @@ session without asking the host anything.
 ## Admission
 
 The host has to admit an assistant, as they would anyone: it shows under **Waiting to
-join** in their Collaborate dialog with an **AI** badge, and they click **Add to lesson**
-or **Decline**. The join returns at once with the request pending, and
+join** in their Collaborate dialog with an **AI** badge (the request row reads `bot` the
+way the roster does), and they press its add button or **Decline**. The join returns at once with the request pending, and
 `join_collab_session` then waits inside the call for 50 seconds (`JOIN_WAIT_MS` in
 `collab.js`), as a few long asks the room holds open rather than a tight loop. It stops
 well short of a minute so it never collides with an MCP client's own request timeout. If
@@ -123,9 +123,11 @@ agent's roster entry carries its account's email like anyone else's. So an assis
 connected through a trusted collaborator's account is let in straight away, as that person
 would be.
 
-The tool results tell the model to ask the host to click **Add to lesson**, the
-button's label (`collaborateDialog.host.addToLesson` in
-`apps/web/src/locales/en/collab.json`). Keep the two in step if the label changes.
+The add button is icon-only (a person with a plus sign); **Add to lesson** is just its
+tooltip and accessible name (`collaborateDialog.host.addToLesson` in
+`apps/web/src/locales/en/collab.json`). So the tool results describe the icon and the
+**AI** marking rather than quoting the label, which a host looking for a text button
+wouldn't find. Keep them in step if the request row changes.
 
 A decline is final. If the room says the host declined (or removed the assistant), the
 tool reports that and clears the handle; it does not quietly ask again, and the tool

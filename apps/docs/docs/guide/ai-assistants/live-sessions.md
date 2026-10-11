@@ -23,10 +23,11 @@ can watch every change land and answer its questions as it goes.
 2. Click **Copy code** next to the **Session code**, paste the code to your assistant, and
    ask it to join.
 3. The assistant's request appears in the Collaborate dialog under **Waiting to join**,
-   marked with an **AI** badge. Click **Add to lesson** to let it in, or **Decline**.
+   marked with an **AI** badge. Press the add button (a person with a plus sign; its
+   tooltip says **Add to lesson**) to let it in, or the X (**Decline**) to turn it away.
 
 The assistant waits about 50 seconds for you to let it in. If you miss that, its request
-stays in the dialog: click **Add to lesson** and tell the assistant to keep waiting, and it
+stays in the dialog: press the add button and tell the assistant to keep waiting, and it
 picks up the same request rather than sending a new one. A request nobody answers is
 withdrawn after five minutes.
 

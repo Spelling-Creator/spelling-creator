@@ -24,8 +24,9 @@ guest the moment they're added.
    recipient straight to the join screen with the code filled in).
 2. A guest pastes the code (or opens the invite link) and connects. Connecting
    does **not** yet make them a collaborator.
-3. The guest appears in the host's **Waiting to join** list. The host clicks
-   **Add to lesson**; this is the gate the feature is built around: only after a
+3. The guest appears in the host's **Waiting to join** list (with an **AI**
+   badge when the request comes from an assistant). The host presses the add
+   button (tooltip **Add to lesson**); this is the gate the feature is built around: only after a
    guest is _added_ does the room send them the lesson and start syncing edits.
    The host can decline a request or remove a collaborator at any time. **Trusted
    collaborators** (an email list saved on the lesson as
