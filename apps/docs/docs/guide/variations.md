@@ -13,6 +13,14 @@ Use one when you want to try something bigger, like rewriting a section or
 reordering the questions, and decide afterwards whether it's better. You don't
 have to make a whole second lesson to do it.
 
+## See it in action
+
+<DemoVideo name="editor-variations" title="Trying changes in a variation">
+A variation made from the Variations chip, a question deleted and another
+shortened in it, a look at the main lesson (still unchanged), and the
+variation brought back in with nothing in conflict.
+</DemoVideo>
+
 ## Where to find them
 
 In the editor, next to the "Version saved" chip, there's a second chip that

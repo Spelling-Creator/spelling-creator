@@ -17,6 +17,16 @@ read aloud, and the speller's answers can be saved privately to their account.
 Practice has its own address, so you can send someone a link that opens the
 lesson straight into it. Closing it takes you back to the lesson.
 
+## See it in action
+
+<DemoVideo name="hub-practice-a-lesson" title="Working through a lesson">
+A lesson from the hub started in interactive mode: the first section's
+material, a few questions answered, the author's answers shown and one put in
+the answer box with a click, a number question's working, and the lesson left
+partway through. Opening it again with Continue lesson picks up on the same
+step. The lesson is a real one from the hub, credited to a made-up author.
+</DemoVideo>
+
 ## Every lesson works
 
 There's nothing to switch on when you write a lesson. Every lesson on the hub

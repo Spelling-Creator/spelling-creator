@@ -30,11 +30,19 @@ A lesson forked from the hub, folded down to its outline, a section moved, a
 look at it as a reader sees it, and an export for Word.
 </DemoVideo>
 
-There are more on the pages for the
+There are more on the pages for
+[import from text](./import-from-text.md),
+[AI writing help](./ai-writing-help.md),
+[lesson checks](./lesson-checks.md),
+[fact checking](./fact-checking.md),
+[VAKT activities](./vakt-activities.md),
+[variations](./variations.md),
+[interactive mode](./interactive-mode.md), the
 [lesson hub](./hub-and-accounts.md),
 [pull requests](./pull-requests.md) and
 [live collaboration](./live-collaboration.md). The people in
-those are made up for the demos; the lessons are real ones from the hub.
+those are made up for the demos. The lessons from the hub are real ones, and
+the one about monarch butterflies was written for the videos.
 
 ## Building a lesson
 

@@ -18,6 +18,15 @@ with three sources:
 Sources can be out of date or wrong too, so treat what it finds as things to
 look into, not verdicts.
 
+## See it in action
+
+<DemoVideo name="editor-fact-check" title="Checking a lesson's facts">
+A copy of a lesson from the hub, its facts checked from the Check panel. One
+date is worth a look (Wikidata gives a different start date for ENIAC), and
+eight others match Wikidata and Wikipedia. The lesson is a real one from the
+hub.
+</DemoVideo>
+
 ## Running a check
 
 Open **Check lesson** (the **Check** button in the editor's top bar) and scroll
@@ -96,10 +105,15 @@ A passage rounds, and a source often holds several honest answers at once, so
 - **A name agrees when it's one of the current answers.** The Nile flows
   through several countries, and a passage naming any one of them is right.
   Short names work too: "USA" finds the United States.
+- **A place can be named at any level.** Wikidata puts Disneyland in Anaheim,
+  and a passage that says it's in California, or in the United States, is
+  right too.
 - **For dated figures, only the latest counts.** A population is compared with
   the most recent count, and the finding says which year it is from
   ("2,103,778 as of 2023"). A passage that agrees with a 1910 census is out of
-  date, not right.
+  date, not right. A population of 0, which Wikidata gives ruined towns like
+  Pompeii, isn't compared at all, since it says nothing about how many people
+  lived there.
 - **A figure gets the rounding it was written with**, plus a little more. "9,000
   meters" allows 500 either way; "8,849" allows half a meter. On top of that, 2%
   of the source's value, or 10% when the passage hedges ("about", "nearly").

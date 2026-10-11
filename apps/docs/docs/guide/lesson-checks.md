@@ -13,6 +13,15 @@ fix without asking one.
 Nothing here ever stops you. A lesson with problems still saves, exports,
 publishes and prints exactly as before.
 
+## See it in action
+
+<DemoVideo name="editor-check-and-fix-with-ai" title="Checking a lesson and fixing problems with AI">
+The Check panel's problems for a lesson, two of them fixed with
+[Fix with AI](./ai-lesson-fixes.md) (each change shown before it's applied),
+and the suggestions. The fixes were written by an AI model, so yours may
+differ.
+</DemoVideo>
+
 ## Opening the checks
 
 - **Check**, in the editor's top bar, opens the **Check lesson** panel. A red

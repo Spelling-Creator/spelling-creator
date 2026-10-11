@@ -13,6 +13,12 @@ speller does partway through a lesson. VAKT stands for **v**isual,
 To add one, press **VAKT activity** in a section's toolbar and type the
 activity into the **Activity** field.
 
+<DemoVideo name="editor-vakt-activity" title="Adding a VAKT activity">
+A VAKT activity added at the end of a section, with a link and a picture from
+Wikimedia Commons, then the lesson in Preview with the activity in red under
+its VAKT label.
+</DemoVideo>
+
 ## Not a question
 
 A VAKT activity is its own kind of block, not a question:
