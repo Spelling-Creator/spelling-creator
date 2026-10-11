@@ -10,6 +10,7 @@ import { seed } from "./seed.js";
 import { buildGit } from "./git.js";
 import { createHandler } from "./routes.js";
 import { attachCollab } from "./collab.js";
+import { createAi } from "./ai.js";
 
 export const DEFAULT_DATA_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -27,6 +28,10 @@ export const DEFAULT_DATA_DIR = path.join(
  * @param {string} [opts.dataDir]     The hub snapshot and image cache. Default apps/stub-api/.cache.
  * @param {string} [opts.hubUrl]      Where to snapshot published lessons from. Default the live hub.
  * @param {number} [opts.now]         "Now", for the seeded dates. Default the real time.
+ * @param {"claude" | ""} [opts.ai]   "claude" answers AI requests with `claude -p` when no saved
+ *                                    answer matches. Default "": saved answers only (see ai.js).
+ * @param {string} [opts.aiModel]     The Claude model for those answers. Default "sonnet".
+ * @param {number} [opts.aiReplayDelayMs] How long a saved answer takes to arrive. Default 1200.
  * @param {Function} [opts.log]       Called with one line per notable event.
  * @returns {Promise<{ url: string, port: number, state: object, close: () => Promise<void> }>}
  */
@@ -36,6 +41,9 @@ export async function startStub({
   dataDir = DEFAULT_DATA_DIR,
   hubUrl = DEFAULT_HUB_URL,
   now = Date.now(),
+  ai = "",
+  aiModel = "sonnet",
+  aiReplayDelayMs = 1200,
   log = () => {},
 } = {}) {
   const hub = await loadHub({ dataDir, hubUrl, log });
@@ -45,8 +53,17 @@ export async function startStub({
     `${state.lessons.size} lessons, ${state.pulls.length} open proposal${state.pulls.length === 1 ? "" : "s"}`,
   );
 
+  let url = "";
+  const aiRoutes = createAi({
+    selfUrl: () => url,
+    dataDir,
+    ai,
+    model: aiModel,
+    replayDelayMs: aiReplayDelayMs,
+    log,
+  });
   const server = http.createServer(
-    createHandler(state, { appOrigin, dataDir, hubUrl, log }),
+    createHandler(state, { appOrigin, dataDir, hubUrl, ai: aiRoutes, log }),
   );
   const collab = attachCollab(server, { log });
   await new Promise((resolve, reject) => {
@@ -54,8 +71,9 @@ export async function startStub({
     server.listen(port, resolve);
   });
   const actual = server.address().port;
+  url = `http://localhost:${actual}`;
   return {
-    url: `http://localhost:${actual}`,
+    url,
     port: actual,
     state,
     async close() {

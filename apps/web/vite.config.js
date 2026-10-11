@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -144,12 +144,36 @@ function dropOnnxWasmAssets() {
   };
 }
 
+const TURNSTILE_SCRIPT =
+  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+// Load Turnstile from somewhere other than Cloudflare when
+// VITE_TURNSTILE_SCRIPT_URL is set. Only `pnpm dev:web:stub` sets it (in
+// .env.stub), to load the stub API's stand-in widget, so the AI features work
+// locally with no Cloudflare account. Unset, index.html is left as it is.
+function turnstileScriptOverride(mode) {
+  const url = loadEnv(mode, __dirname, "VITE_").VITE_TURNSTILE_SCRIPT_URL;
+  return {
+    name: "turnstile-script-override",
+    transformIndexHtml(html) {
+      if (!url) return html;
+      if (!html.includes(TURNSTILE_SCRIPT)) {
+        throw new Error(
+          "VITE_TURNSTILE_SCRIPT_URL is set, but index.html no longer loads Turnstile from the expected address.",
+        );
+      }
+      return html.replace(TURNSTILE_SCRIPT, url);
+    },
+  };
+}
+
 // `VITE_`-prefixed env vars from apps/web/.env are exposed to client code as
 // `import.meta.env.VITE_*` natively — no config needed. src/main.jsx is the
 // only place in the app that reads them (see packages/core/src/config.js).
-export default defineConfig(({ isSsrBuild }) => ({
+export default defineConfig(({ isSsrBuild, mode }) => ({
   plugins: [
     isSsrBuild && stubUnreachableOnServer(),
+    turnstileScriptOverride(mode),
     dropOnnxWasmAssets(),
     react(),
     // The React Compiler runs as a Babel pass. This used to pass

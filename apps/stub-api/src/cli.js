@@ -2,7 +2,8 @@
 // pnpm dev:stub                                       start the stub API on :8787
 // pnpm --filter @spelling-creator/stub-api snapshot   re-read the live hub's lessons
 //
-// Environment: PORT, APP_ORIGIN, STUB_DATA_DIR, HUB_URL (see server.js).
+// Environment: PORT, APP_ORIGIN, STUB_DATA_DIR, HUB_URL, STUB_AI, STUB_AI_MODEL
+// (see server.js), and PIXABAY_API_KEY for Pixabay image search (see ai.js).
 
 import { startStub, DEFAULT_DATA_DIR } from "./server.js";
 import { loadHub, DEFAULT_HUB_URL } from "./snapshot.js";
@@ -21,9 +22,16 @@ if (process.argv[2] === "snapshot") {
     appOrigin: process.env.APP_ORIGIN,
     dataDir,
     hubUrl,
+    ai: process.env.STUB_AI || "",
+    aiModel: process.env.STUB_AI_MODEL || undefined,
     log,
   });
   log(`stub API on ${stub.url}`);
+  log(
+    process.env.STUB_AI === "claude"
+      ? "AI: saved answers, then claude -p"
+      : "AI: saved answers only (STUB_AI=claude to ask Claude)",
+  );
   log(`sign in as ${Object.keys(PEOPLE).join(", ")} (any password)`);
   const stop = async () => {
     await stub.close();

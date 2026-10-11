@@ -166,6 +166,15 @@ const JULIAN = "Q1985786";
  * animal to the next (how big, heavy or fast it is), so that it varies when
  * the item is a kind of living thing, and only then.
  *
+ * `emptyAtZero` marks a figure that, at zero, means there is none to compare
+ * with: Wikidata gives a ruined or abandoned town (Pompeii) a population of 0,
+ * which says nothing about how many people lived there.
+ *
+ * `placesAbove` marks a place that may be named at any level: Disneyland is in
+ * Anaheim on Wikidata, and a passage that puts it in California is right too.
+ * A claim that would otherwise disagree is checked against every place above
+ * the item as well (see placesAboveQuery).
+ *
  * `hint` is the plain description a model is given when choosing.
  */
 export const FACT_PROPERTIES = {
@@ -232,6 +241,7 @@ export const FACT_PROPERTIES = {
     kind: "quantity",
     dimension: "count",
     pids: ["P1082"],
+    emptyAtZero: true,
     hint: "how many people live in a place",
   },
   mass: {
@@ -367,6 +377,7 @@ export const FACT_PROPERTIES = {
   country: {
     kind: "item",
     pids: ["P17"],
+    placesAbove: true,
     hint: "the country something is in",
   },
   continent: {
@@ -378,6 +389,7 @@ export const FACT_PROPERTIES = {
     kind: "item",
     pids: ["P131", "P276"],
     pooled: true,
+    placesAbove: true,
     hint: "the state, province, county or city something is in",
   },
   language: {
@@ -820,6 +832,42 @@ export function itemsFromBindings(bindings) {
   return out;
 }
 
+/**
+ * A SPARQL query for every place each item is in, however far up: "located in
+ * the administrative territorial entity" (P131), followed from the item to
+ * the place that holds it, then the place that holds that, and so on.
+ * Disneyland's run Anaheim, Orange County, California, the United States.
+ * @param {string[]} itemIds
+ * @param {string} [language]  For the places' labels.
+ */
+export function placesAboveQuery(itemIds, language = "en") {
+  const items = itemIds.map((id) => `wd:${id}`).join(" ");
+  const languages = [...new Set([language, "en", "mul"])].join(",");
+  return `SELECT ?item ?place ?placeLabel WHERE {
+  VALUES ?item { ${items} }
+  ?item wdt:P131+ ?place .
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "${languages}". }
+}`;
+}
+
+/**
+ * placesAboveQuery's rows, as statements itemAgrees can read:
+ * `Map<itemId, { value, valueLabel }[]>`.
+ */
+export function placesFromBindings(bindings) {
+  const out = new Map();
+  for (const row of bindings || []) {
+    const item = lastSegment(row.item?.value);
+    const place = lastSegment(row.place?.value);
+    if (!item || !/^Q\d+$/.test(place || "")) continue;
+    if (!out.has(item)) out.set(item, []);
+    const places = out.get(item);
+    if (places.some((p) => p.value === place)) continue;
+    places.push({ value: place, valueLabel: row.placeLabel?.value || place });
+  }
+  return out;
+}
+
 function timeKey(t) {
   return t ? t.year * 10000 + (t.month || 0) * 100 + (t.day || 0) : -Infinity;
 }
@@ -969,7 +1017,9 @@ function judgeStatements(claim, byPid, statedIds) {
   let pid;
   let statements = [];
   for (const candidate of spec.pids) {
-    const current = currentStatements(byPid?.get(candidate));
+    const current = currentStatements(byPid?.get(candidate)).filter(
+      (s) => !(spec.emptyAtZero && s.amount === 0),
+    );
     if (!current.length) continue;
     pid ??= candidate;
     statements = statements.concat(current);
@@ -1420,11 +1470,14 @@ function chooseItem(claim, candidates, statements) {
     // The name with the kind added, and nothing else: "Mercury (planet)",
     // "Amazon River", "Georgia (U.S. state)". A title that merely has the
     // kind in it is something else: "Australian country music" is not
-    // Australia, and "Sleep Country Canada" is not Canada.
+    // Australia, and "Sleep Country Canada" is not Canada. And the name has to
+    // be there: words() drops short ones, so "F (programming language)" would
+    // otherwise pass for Fortran.
     const subject = new Set(words(claim.subject));
     const nameAndKind = (c) => {
       const title = words(c.title);
       return (
+        (!subject.size || title.some((w) => subject.has(w))) &&
         title.some((w) => kind.includes(w)) &&
         title.every((w) => subject.has(w) || kind.includes(w))
       );
@@ -1661,16 +1714,56 @@ export async function checkPreparedClaims(claims, opts = {}) {
     }
   };
 
+  // The places above the items of place claims Wikidata's own values don't
+  // bear out, all at once: "Disneyland is in California" when Wikidata says
+  // Anaheim. A failed lookup leaves the claim disagreeing, as it would have.
+  const statedIdsOf = (claim) =>
+    statedIdsByName.get(claim.stated?.toLowerCase());
+  const placeItems = [
+    ...new Set(
+      picked
+        .filter(
+          (p) =>
+            !p.done &&
+            FACT_PROPERTIES[p.claim.property].placesAbove &&
+            judgeClaim(p.claim, p.byPid, statedIdsOf(p.claim)).status ===
+              "disagrees",
+        )
+        .map((p) => p.item.id),
+    ),
+  ];
+  let placesAbove = new Map();
+  const askPlacesAbove = async () => {
+    if (!placeItems.length) return;
+    try {
+      placesAbove = placesFromBindings(
+        await sparql(placesAboveQuery(placeItems, settings.language), settings),
+      );
+    } catch {
+      // Judged on the item's own values alone.
+    }
+  };
+
   const judge = (p) => {
     if (p.done) return p.done;
     const { claim, entity, byPid, volcano } = p;
-    const verdicts = [
-      judgeClaim(
-        claim,
-        byPid,
-        statedIdsByName.get(claim.stated?.toLowerCase()),
-      ),
-    ];
+    const verdicts = [judgeClaim(claim, byPid, statedIdsOf(claim))];
+    const above = placesAbove.get(p.item.id) || [];
+    if (verdicts[0].status === "disagrees" && above.length) {
+      const match = above.find((place) =>
+        itemAgrees(claim, [place], statedIdsOf(claim)),
+      );
+      if (match) {
+        verdicts[0] = {
+          status: "agrees",
+          source: "wikidata",
+          found: {
+            pid: "P131",
+            items: [{ id: match.value, label: match.valueLabel }],
+          },
+        };
+      }
+    }
     if (volcano) {
       verdicts.push(
         volcanoesFailed
@@ -1717,6 +1810,7 @@ export async function checkPreparedClaims(claims, opts = {}) {
   // A claim with no volcano to ask about is settled by Wikidata alone, so its
   // article is read while the Smithsonian answers. The volcanoes' own claims
   // are judged after, and read what they still need.
+  await askPlacesAbove();
   const judged = picked.map((p) => (p.volcano ? null : judge(p)));
   await Promise.all([askSmithsonian(), readArticles(judged)]);
   picked.forEach((p, i) => {

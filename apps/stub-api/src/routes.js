@@ -17,6 +17,7 @@ import {
 } from "./seed.js";
 import { loadImage } from "./snapshot.js";
 import { splitPage } from "./split.js";
+import { turnstileScript } from "./turnstile.js";
 
 const esc = (s) =>
   String(s)
@@ -28,10 +29,11 @@ const stripTags = (html) => html.replace(/<[^>]+>/g, "").trim();
 
 /**
  * @param {object} state  From seed(), with `packs` and `pullPacks` from buildGit().
- * @param {{ appOrigin: string, dataDir: string, hubUrl: string, log: Function }} opts
+ * @param {{ appOrigin: string, dataDir: string, hubUrl: string, ai: object, log: Function }} opts
+ *   `ai` is createAi() from ./ai.js.
  * @returns {(req, res) => Promise<void>}
  */
-export function createHandler(state, { appOrigin, dataDir, hubUrl, log }) {
+export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
   const routes = [];
   const on = (method, pattern, fn) =>
     routes.push({ method, re: new RegExp(`^${pattern}$`), fn });
@@ -419,6 +421,20 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, log }) {
     ctx.json(200, { bio: b.bio });
   });
 
+  // ---------------------------------------------------------------- AI and Turnstile
+  // The stand-in widget script, the Worker's own AI handler, and the model
+  // endpoint that handler is pointed at (see ./ai.js and ./turnstile.js).
+  on("GET", "/turnstile/v0/api.js", (ctx) =>
+    ctx.send(200, turnstileScript(), "text/javascript; charset=utf-8"),
+  );
+  on("POST", "/", async (ctx) => ai.handle(ctx, await ctx.body()));
+  on("POST", "/ai-text/dislike", async (ctx) =>
+    ai.dislike(ctx, await ctx.body()),
+  );
+  on("POST", "/stub-model/v1/chat/completions", async (ctx) =>
+    ai.model(ctx, await ctx.body()),
+  );
+
   // ---------------------------------------------------------------- dispatch
   return async function handle(req, res) {
     cors(req, res);
@@ -447,8 +463,12 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, log }) {
     };
     // Reading the hub is public; writing, and anything that is yours, needs a
     // session, as on the real API.
+    // The AI routes are open to anyone, as on the real API, where Turnstile
+    // rather than a session is the gate.
     const isPublic =
       url.pathname.startsWith("/auth/") ||
+      (req.method === "POST" &&
+        (url.pathname === "/" || url.pathname.startsWith("/stub-model/"))) ||
       (req.method === "GET" &&
         !/^(lessons\/mine|notifications|following\/)/.test(
           url.pathname.slice(1),

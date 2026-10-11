@@ -379,6 +379,29 @@ Answers: the wildcats; the boldest cats`);
     ]);
   });
 
+  it("reads a number with a thousands comma as one answer", () => {
+    const doc = importLessonText(`Monarchs
+
+Every autumn, millions of MONARCH butterflies fly south. Some travel almost 3,000 miles to the mountain FORESTS of central Mexico, where they spend the winter on the trees.
+
+1. About how many miles do some monarchs travel? (Answer: 3,000)
+2. Name a place they rest. (Answer: forests, trees)
+3. How many in a year? (Answer: 1,5)`);
+    const questions = doc.sections[0].blocks.filter(
+      (b) => b.type === "question",
+    );
+    expect(questions[0]).toMatchObject({
+      questionType: "number",
+      answer: "3000",
+    });
+    expect(questions[1].answers.map((a) => a.text)).toEqual([
+      "forests",
+      "trees",
+    ]);
+    // Not a thousands separator, so still two answers.
+    expect(questions[2].answers.map((a) => a.text)).toEqual(["1", "5"]);
+  });
+
   it("keeps the opening paragraph of a lesson pasted without a title", () => {
     const { title, sections } = splitSections(
       `${PASSAGE_1}\n\n${PASSAGE_2}\n\n1. What drew the wildcats? (Answer: PREY)`,

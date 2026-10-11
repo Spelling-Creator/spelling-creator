@@ -4,7 +4,7 @@
 // touches the AI rate limiter.
 
 import { verifySupabaseUser } from '../lib/supabase.js';
-import { cacheKey } from '../lib/cache.js';
+import { textCacheKey } from '../lib/cache.js';
 import { rateLimitStore } from '../platform/index.js';
 import { textResponse, jsonResponse } from '../lib/http.js';
 
@@ -50,7 +50,7 @@ export async function handleTextFeedback(request, env, cors) {
 	// Rebuild the exact key the text suggester writes (see the text-mode cache
 	// put in the AI route) and drop it. Deleting a missing key is a no-op, so a
 	// stale or already-expired entry still reports success.
-	const cKey = await cacheKey(['text', subject, documentName]);
+	const cKey = await textCacheKey(subject, documentName);
 	await kv.delete(cKey);
 
 	return jsonResponse({ ok: true }, 200, cors);

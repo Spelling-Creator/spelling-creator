@@ -38,6 +38,7 @@ place that reads them, and hands them to `configureCore` in
 ```bash
 VITE_API_URL=https://your-worker.example.workers.dev   # apps/api Worker endpoint (AI, Pixabay, lesson hub)
 VITE_TURNSTILE_SITE_KEY=0x...                           # Cloudflare Turnstile site key
+VITE_TURNSTILE_SCRIPT_URL=http://localhost:8787/turnstile/v0/api.js  # load Turnstile from here instead of Cloudflare (stub mode only)
 VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com     # OAuth client for Save to Google Docs
 VITE_SUPABASE_URL=https://xxxx.supabase.co              # Supabase project URL (sign-in)
 VITE_SUPABASE_ANON_KEY=eyJ...                           # Supabase anon (public) key
@@ -51,6 +52,12 @@ username, for instances with no mail server, and signing in takes a username
 or an address; the username is turned into a synthetic email address under
 `VITE_USERNAME_DOMAIN`, which defaults to a reserved `.invalid` domain that can
 never receive mail (see `packages/core/src/username.js`).
+
+`VITE_TURNSTILE_SCRIPT_URL` is the one setting `main.jsx` doesn't read. When
+it's set, `vite.config.js` swaps it in for Cloudflare's Turnstile script in
+`index.html`. Only `apps/web/.env.stub` sets it, to load the stub API's
+stand-in widget (see [Stub API](../stub-api.md#ai-and-turnstile)); a real
+instance leaves it unset.
 
 There is no `apps/web/.env.example`; the list above is the full set. The root
 `.env.example` is for the Docker Compose setup (see
