@@ -12,24 +12,30 @@ here bypasses the normal API.
 
 ## Documentation
 
-Full documentation lives on the docs site under **MCP Server**:
-**https://spellingcreator.org/docs/mcp-server/overview**
+For people using it, the user guide covers
+[what it is for](https://spellingcreator.org/docs/guide/ai-assistants/overview),
+[how to connect](https://spellingcreator.org/docs/guide/ai-assistants/connect)
+and [what it can do](https://spellingcreator.org/docs/guide/ai-assistants/what-it-can-do).
 
-- [Overview](https://spellingcreator.org/docs/mcp-server/overview)
-- [Tools](https://spellingcreator.org/docs/mcp-server/tools) — including patch vs. replace and the lesson shape
-- [Interactive views (MCP Apps)](https://spellingcreator.org/docs/mcp-server/interactive-views) — the picker `search_images` renders in Claude
-- [Install as a one-click bundle (.mcpb)](https://spellingcreator.org/docs/mcp-server/install-bundle)
-- [Setup (manual / for development)](https://spellingcreator.org/docs/mcp-server/setup)
-- [Configuration](https://spellingcreator.org/docs/mcp-server/configuration)
-- [Development](https://spellingcreator.org/docs/mcp-server/development)
-- [Packaging the bundle](https://spellingcreator.org/docs/mcp-server/packaging)
-- [Remote (hosted) mode](https://spellingcreator.org/docs/mcp-server/remote-mode)
+For working on it, the developers section has:
 
-The docs source is in `apps/docs/docs/mcp-server`.
+- [Overview](https://spellingcreator.org/docs/developers/mcp-server/overview)
+- [Tools](https://spellingcreator.org/docs/developers/mcp-server/tools), including patch vs. replace and the lesson shape
+- [Lesson validation](https://spellingcreator.org/docs/developers/mcp-server/lesson-validation)
+- [Interactive views (MCP Apps)](https://spellingcreator.org/docs/developers/mcp-server/interactive-views), such as the picker `search_images` renders in Claude
+- [Live sessions](https://spellingcreator.org/docs/developers/mcp-server/live-sessions)
+- [Setup (manual / for development)](https://spellingcreator.org/docs/developers/mcp-server/setup)
+- [Configuration](https://spellingcreator.org/docs/developers/mcp-server/configuration)
+- [Development](https://spellingcreator.org/docs/developers/mcp-server/development)
+- [Packaging the bundle](https://spellingcreator.org/docs/developers/mcp-server/packaging)
+- [Remote (hosted) mode](https://spellingcreator.org/docs/developers/mcp-server/remote-mode)
+
+The docs source is in `apps/docs/docs/guide/ai-assistants` and
+`apps/docs/docs/developers/mcp-server`.
 
 If your client supports remote MCP servers, connecting to
-`https://spellingcreator.org/mcp` is simpler — no token to manage, just a
-browser "Connect" flow. See [Remote mode](https://spellingcreator.org/docs/mcp-server/remote-mode).
+`https://spellingcreator.org/mcp` is simpler: no token to manage, just a
+browser "Connect" flow. See [Connecting](https://spellingcreator.org/docs/guide/ai-assistants/connect).
 The quick start below is for the local stdio server.
 
 ## Quick start
@@ -40,6 +46,6 @@ pnpm --filter @spelling-creator/mcp login   # get a Supabase session
 pnpm --filter @spelling-creator/mcp start   # run the stdio server
 ```
 
-See **[Setup](https://spellingcreator.org/docs/mcp-server/setup)** for connecting
-your assistant and **[Configuration](https://spellingcreator.org/docs/mcp-server/configuration)**
+See **[Setup](https://spellingcreator.org/docs/developers/mcp-server/setup)** for connecting
+your assistant and **[Configuration](https://spellingcreator.org/docs/developers/mcp-server/configuration)**
 for the available environment variables.

@@ -1,6 +1,6 @@
 // The server half of the MCP Apps views — the `ui://` resources a host fetches
 // and renders in a sandboxed iframe beside a tool's result. See
-// apps/docs/docs/mcp-server/interactive-views.md for the design, and views/ for
+// apps/docs/docs/developers/mcp-server/interactive-views.md for the design, and views/ for
 // the source the built HTML comes from.
 //
 // Views are a progressive enhancement, and deliberately the only optional part

@@ -34,8 +34,9 @@ every question with its printed answers, type and working-out. It is a
 fine-tune of
 [LiquidAI/LFM2-1.2B-Extract](https://huggingface.co/LiquidAI/LFM2-1.2B-Extract)
 for [Spelling Creator](https://github.com/Spelling-Creator/spelling-creator), a
-lesson builder for Spelling to Communicate (S2C), where lessons are read aloud
-to nonspeaking spellers.
+lesson builder for Spelling (an umbrella term covering S2C, RPM, Spellers
+Method and other practices), where lessons are read aloud to nonspeaking
+spellers.
 
 Spelling Creator reads typed lessons with rules first, and only hands this
 model the sections the rules cannot read: questions typed with no question
@@ -83,7 +84,7 @@ where a question belonged, a reply that repeated itself), which the app shows
 as unread. On the sections that parse, every layout is 96 to 100 percent. The
 model's own question types are right 87 to 97 percent of the time, above the
 app's rule for deriving them, so the app keeps them. The full write-up is at
-[spellingcreator.org/docs/monorepo/document-import-experiment](https://spellingcreator.org/docs/monorepo/document-import-experiment).
+[spellingcreator.org/docs/developers/document-import-experiment](https://spellingcreator.org/docs/developers/document-import-experiment).
 
 ## Prompt
 

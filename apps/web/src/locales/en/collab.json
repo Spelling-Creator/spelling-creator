@@ -16,7 +16,7 @@
       "joinCodeLabel": "Session code",
       "joinCodePlaceholder": "Paste the code you were given",
       "join": "Join",
-      "joinHint": "Joining replaces your current draft with the host's lesson."
+      "joinHint": "Joining opens the host's lesson as a new lesson on this device. Your current lesson stays as it is."
     },
     "connecting": {
       "host": "Starting session...",

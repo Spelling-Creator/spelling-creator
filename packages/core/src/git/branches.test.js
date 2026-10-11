@@ -49,14 +49,14 @@ async function seeded() {
 
 describe("branch names", () => {
   it("turns what someone typed into something git will store", () => {
-    expect(toBranchName("Simpler for Year 3")).toBe("Simpler-for-Year-3");
+    expect(toBranchName("Shorter sections 2")).toBe("Shorter-sections-2");
     expect(toBranchName("  spaced   out  ")).toBe("spaced-out");
     expect(toBranchName("emoji ✨ and ?marks")).toBe("emoji-and-marks");
   });
 
   it("reads a stored name back as the words it came from", () => {
-    expect(branchLabel(toBranchName("Simpler for Year 3"))).toBe(
-      "Simpler for Year 3",
+    expect(branchLabel(toBranchName("Shorter sections 2"))).toBe(
+      "Shorter sections 2",
     );
   });
 
@@ -69,8 +69,8 @@ describe("branch names", () => {
     expect(isBranchName("with space")).toBe(false);
     expect(isBranchName("x".repeat(33))).toBe(false);
     // git refuses a ref that ends in a dot, so we must too.
-    expect(isBranchName("Year-3.")).toBe(false);
-    expect(toBranchName("Year 3.")).toBe("Year-3");
+    expect(isBranchName("Fewer-pictures.")).toBe(false);
+    expect(toBranchName("Fewer pictures.")).toBe("Fewer-pictures");
   });
 
   it("keeps a long name inside the limit, cut on a separator", () => {
@@ -97,19 +97,21 @@ describe("committing on a branch", () => {
     const ctx = await seeded();
     const start = await headOid(ctx);
 
-    await createBranch({ ...ctx, name: "Year-3" });
-    expect(await currentBranch(ctx)).toBe("Year-3");
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
+    expect(await currentBranch(ctx)).toBe("Fewer-pictures");
 
     await commitDoc({ ...ctx, doc: doc("Lesson", "on the variation"), author });
 
     // The variation moved; the lesson did not.
     expect(await headOid({ ...ctx, ref: `refs/heads/${BRANCH}` })).toBe(start);
-    expect(await headOid({ ...ctx, ref: "refs/heads/Year-3" })).not.toBe(start);
+    expect(
+      await headOid({ ...ctx, ref: "refs/heads/Fewer-pictures" }),
+    ).not.toBe(start);
   });
 
   it("gives each branch its own history", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "second"), author });
 
     expect(await history(ctx)).toHaveLength(2);
@@ -120,7 +122,7 @@ describe("committing on a branch", () => {
 
   it("hands back the document at the branch being switched to", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "changed here"), author });
 
     const back = await checkoutBranch({ ...ctx, name: BRANCH });
@@ -130,27 +132,27 @@ describe("committing on a branch", () => {
 
   it("counts how far a variation has run ahead of the lesson", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "a"), author });
     await commitDoc({ ...ctx, doc: doc("Lesson", "b"), author });
 
     const branches = await listBranches(ctx);
-    expect(branches.map((b) => b.name)).toEqual([BRANCH, "Year-3"]);
+    expect(branches.map((b) => b.name)).toEqual([BRANCH, "Fewer-pictures"]);
     expect(branches.find((b) => b.name === BRANCH).ahead).toBe(0);
-    expect(branches.find((b) => b.name === "Year-3").ahead).toBe(2);
+    expect(branches.find((b) => b.name === "Fewer-pictures").ahead).toBe(2);
   });
 });
 
 describe("travelling", () => {
   it("packs every branch, and a clone gets them all back", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
     await checkoutBranch({ ...ctx, name: BRANCH });
 
     const packed = await packRepo(ctx);
     expect(new Set(Object.keys(packed.refs))).toEqual(
-      new Set([BRANCH, "Year-3"]),
+      new Set([BRANCH, "Fewer-pictures"]),
     );
     // `head` is the lesson, not whichever branch happens to be furthest along.
     expect(packed.head).toBe(
@@ -162,18 +164,18 @@ describe("travelling", () => {
 
     expect((await listBranches(clone)).map((b) => b.name)).toEqual([
       BRANCH,
-      "Year-3",
+      "Fewer-pictures",
     ]);
     // A clone arrives at the lesson, whatever the author was last editing.
     expect(await currentBranch(clone)).toBe(BRANCH);
-    expect(await headOid({ ...clone, ref: "refs/heads/Year-3" })).toBe(
-      packed.refs["Year-3"],
+    expect(await headOid({ ...clone, ref: "refs/heads/Fewer-pictures" })).toBe(
+      packed.refs["Fewer-pictures"],
     );
   });
 
   it("packs only what was asked for, so a proposal carries the lesson alone", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
 
     const packed = await packRepo({ ...ctx, only: [BRANCH] });
@@ -193,73 +195,81 @@ describe("travelling", () => {
 describe("removing a variation", () => {
   it("leaves a marker, so the deletion can reach the hub", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
     const tip = await headOid(ctx);
     await checkoutBranch({ ...ctx, name: BRANCH });
 
-    expect(await deleteBranch({ ...ctx, name: "Year-3" })).toBe(true);
+    expect(await deleteBranch({ ...ctx, name: "Fewer-pictures" })).toBe(true);
     expect((await listBranches(ctx)).map((b) => b.name)).toEqual([BRANCH]);
-    expect(await deletedBranches(ctx)).toEqual({ "Year-3": tip });
+    expect(await deletedBranches(ctx)).toEqual({ "Fewer-pictures": tip });
   });
 
   it("forgets the deletion when the same name is used again", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
     await checkoutBranch({ ...ctx, name: BRANCH });
-    await deleteBranch({ ...ctx, name: "Year-3" });
+    await deleteBranch({ ...ctx, name: "Fewer-pictures" });
 
     // Reusing the name is not the deleted variation coming back. Left behind, the
     // marker would make the next push ask to create and delete one name at once.
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     expect(await deletedBranches(ctx)).toEqual({});
   });
 
   it("forgets it when a rename takes the name instead", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await checkoutBranch({ ...ctx, name: BRANCH });
-    await createBranch({ ...ctx, name: "Year-5" });
+    await createBranch({ ...ctx, name: "Longer-passages" });
     await checkoutBranch({ ...ctx, name: BRANCH });
-    await deleteBranch({ ...ctx, name: "Year-3" });
+    await deleteBranch({ ...ctx, name: "Fewer-pictures" });
 
-    await renameBranch({ ...ctx, from: "Year-5", to: "Year-3" });
-    // "Year-5" is gone and marked; "Year-3" exists again and must not be.
-    expect(Object.keys(await deletedBranches(ctx))).toEqual(["Year-5"]);
+    await renameBranch({
+      ...ctx,
+      from: "Longer-passages",
+      to: "Fewer-pictures",
+    });
+    // "Longer-passages" is gone and marked; "Fewer-pictures" exists again and must not be.
+    expect(Object.keys(await deletedBranches(ctx))).toEqual([
+      "Longer-passages",
+    ]);
   });
 
   it("refuses to remove the lesson, or the branch being edited", async () => {
     const ctx = await seeded();
     await expect(deleteBranch({ ...ctx, name: BRANCH })).rejects.toThrow();
 
-    await createBranch({ ...ctx, name: "Year-3" });
-    await expect(deleteBranch({ ...ctx, name: "Year-3" })).rejects.toThrow();
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
+    await expect(
+      deleteBranch({ ...ctx, name: "Fewer-pictures" }),
+    ).rejects.toThrow();
   });
 });
 
 describe("renaming", () => {
   it("carries HEAD across, and records the old name as gone", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
     const tip = await headOid(ctx);
 
-    await renameBranch({ ...ctx, from: "Year-3", to: "Year-4" });
+    await renameBranch({ ...ctx, from: "Fewer-pictures", to: "More-pictures" });
 
-    expect(await currentBranch(ctx)).toBe("Year-4");
+    expect(await currentBranch(ctx)).toBe("More-pictures");
     expect(await headOid(ctx)).toBe(tip);
-    expect(await deletedBranches(ctx)).toEqual({ "Year-3": tip });
+    expect(await deletedBranches(ctx)).toEqual({ "Fewer-pictures": tip });
   });
 
   it("won't take a name already in use", async () => {
     const ctx = await seeded();
-    await createBranch({ ...ctx, name: "Year-3" });
+    await createBranch({ ...ctx, name: "Fewer-pictures" });
     await checkoutBranch({ ...ctx, name: BRANCH });
-    await createBranch({ ...ctx, name: "Year-4" });
+    await createBranch({ ...ctx, name: "More-pictures" });
 
     await expect(
-      renameBranch({ ...ctx, from: "Year-3", to: "Year-4" }),
+      renameBranch({ ...ctx, from: "Fewer-pictures", to: "More-pictures" }),
     ).rejects.toThrow();
   });
 });

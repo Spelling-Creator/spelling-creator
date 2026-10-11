@@ -10,10 +10,10 @@ const FALLBACK_WORDS = [
   "spelling",
   "practice",
   "lesson",
-  "teacher",
-  "student",
+  "speller",
+  "letterboard",
   "letters",
-  "phonics",
+  "curious",
   "reading",
   "writing",
   "vocabulary",
@@ -25,7 +25,7 @@ const FALLBACK_WORDS = [
 ];
 
 /**
- * A spelling row can hold anything a teacher typed, including phrases ("ice
+ * A spelling row can hold anything an author typed, including phrases ("ice
  * cream"). The animation renders each entry as one drifting particle, and a
  * multi-word phrase makes for an ugly one — it is scaled by character count, so
  * it comes out tiny and stretched, and can break across the hero's edges. Only

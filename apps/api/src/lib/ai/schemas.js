@@ -83,19 +83,19 @@ export const QUESTION_LABELS = {
 
 export const QUESTION_INSTRUCTIONS = {
 	number:
-		'The question must have a single numeric answer. Put that number in the "answer" field. Break the working-out into short steps a student could follow and put them, in order, in the "steps" array (use an empty array if the problem is too simple to need steps).',
+		'The question must have a single numeric answer. Put that number in the "answer" field. Break the working-out into short steps a speller could follow and put them, in order, in the "steps" array (use an empty array if the problem is too simple to need steps).',
 	single:
 		'The question must have a single short typed answer (a word or brief phrase). Do not make the answer a number under any circumstances. Do not provide answer options. Put the correct answer in "answer".',
 	multiple:
-		'The question must have several distinct correct answers, any one of which a student could type to be marked correct (the student only needs to give one). If you generate a single answer, consider that a failure. Do not provide answer options. Put each accepted answer as a separate string in "answers".',
+		'The question must have several distinct correct answers, any one of which a speller could spell to be marked correct (the speller only needs to give one). If you generate a single answer, consider that a failure. Do not provide answer options. Put each accepted answer as a separate string in "answers".',
 	multiple_open:
-		'The question must be bounded by the lesson\'s topic or theme but leave room for the student to improvise — a synonym, a definition in their own words, or an example from the subject. Unlike a multiple-answer question, the answers you give are SUGGESTIONS for whoever is marking, not the only correct responses: a student who answers something else that fits the topic is also right. Do not require the answer to appear in the lesson text. Put two or three short suggested answers, each ideally a single word, as separate strings in "answers".',
+		'The question must be bounded by the lesson\'s topic or theme but leave room for the speller to improvise: a synonym, a definition in their own words, or an example from the subject. Unlike a multiple-answer question, the answers you give are SUGGESTIONS for whoever is marking, not the only correct responses: a speller who answers something else that fits the topic is also right. Do not require the answer to appear in the lesson text. Put two or three short suggested answers, each ideally a single word, as separate strings in "answers".',
 	paraphrase:
-		'Write a question that asks the student to restate part of the lesson text in their own words ("In your own words, explain…" / "In your own words, describe…"). It tests whether they understood the passage, not what they think of it. Do not provide answer options or a model answer. Put the question in "prompt".',
-	open: 'Write a question that invites a free, written response. Do not provide answer options or a model answer. Put the question in "prompt".',
+		'Write a question that asks the speller to restate part of the lesson text in their own words ("In your own words, explain..." or "In your own words, describe..."). It tests whether they understood the passage, not what they think of it. Do not provide answer options or a model answer. Put the question in "prompt".',
+	open: 'Write a question that invites a free response in the speller\'s own words. Do not provide answer options or a model answer. Put the question in "prompt".',
 	wyr: 'Write a "Would you rather" question: a choice between exactly two options, each drawn from or inspired by the lesson\'s topic ("Would you rather watch an opera or a movie?"). Start the prompt with "Would you rather" and join the two options with "or". It asks for an opinion, so there is no right answer. Do not provide answer options or a model answer. Make both options concrete and comparably attractive, so the choice is a real one. Put the question in "prompt".',
 	background:
-		'The question must test prior knowledge that is NOT explained anywhere in the lesson text — the student is expected to already know it. Do not ask about anything the lesson text covers. Put the question in "prompt" and the correct answer (a word or brief phrase) in "answer".',
+		'The question must test prior knowledge that is NOT explained anywhere in the lesson text, because the speller is expected to already know it. Do not ask about anything the lesson text covers. Put the question in "prompt" and the correct answer (a word or brief phrase) in "answer".',
 };
 
 // Structured-output schema for the lesson-idea suggester: a short list of lesson

@@ -1,6 +1,13 @@
 # Lesson authoring standards
 
-Defaults — honour the user if they ask for something different.
+Defaults: honor the user if they ask for something different.
+
+"Spelling" is an umbrella term, not one method. It covers Spelling to Communicate (S2C), the Rapid
+Prompting Method (RPM), Spellers Method and many practitioners who use no label at all, and their
+practices are not standardized. Never describe these lessons as S2C lessons or tell the user what
+"the" method requires. The standards below are this app's defaults (the semi-open question family
+comes from the S2C guidebook; the rest is this app's own house style); when a user works
+differently, follow them.
 
 ## Shape
 

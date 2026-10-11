@@ -93,7 +93,7 @@ export function factCheckPrompt(passages, documentName) {
 	const units = CLAIM_UNITS.join(', ');
 	const numbered = passages.map((p, i) => `[${i + 1}]\n${p.text}`).join('\n\n');
 	const title = documentName ? ` The lesson is titled "${documentName}".` : '';
-	return `The passages below come from a lesson for students.${title} List the facts in them that can be checked against an encyclopedia: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing, or a number stated about a kind of animal.
+	return `The passages below come from a Spelling lesson for nonspeaking spellers.${title} List the facts in them that can be checked against an encyclopedia: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing, or a number stated about a kind of animal.
 
 Only these kinds of fact count. Use the matching "property":
 ${properties}

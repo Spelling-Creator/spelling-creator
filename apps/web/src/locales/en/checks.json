@@ -218,13 +218,13 @@
     "W_SPELLING_COUNT_one": "This section has {{count}} spelling word. The usual number is {{expected}}.",
     "W_SPELLING_COUNT_other": "This section has {{count}} spelling words. The usual number is {{expected}}.",
     "W_NUMBER_NO_STEPS": "Neither number answer question has worked steps. The second one is usually the word problem, so add its steps.",
-    "W_SPELLING_IN_CAPS": "\"{{word}}\" is also capitalised vocabulary in the passage. Pick a different spelling word on the same theme.",
+    "W_SPELLING_IN_CAPS": "\"{{word}}\" is also capitalized vocabulary in the passage. Pick a different spelling word on the same theme.",
     "W_ANSWER_REVEALED_OPEN": "Question {{question}} names {{leaks}}. That's fine if the question is about that word. Otherwise, reword it.",
     "W_WYR_SHAPE": "Question {{question}} doesn't read as a choice. Start with \"Would you rather\" and join two options with \"or\".",
     "W_WYR_SHAPE_many": "Question {{question}} strings together {{ors}} uses of \"or\". Offer two options, or a short list joined by one \"or\".",
     "W_FORMAT_BOLD": "This section uses bold ({{spans}}). Capitals already mark the vocabulary, so bold is rarely needed.",
     "W_FORMAT_UNDERLINE": "This section uses underlining ({{spans}}). On screen it looks like a link that goes nowhere.",
-    "W_FORMAT_CAPS": "This section formats capitalised vocabulary ({{spans}}). The capitals already mark it.",
+    "W_FORMAT_CAPS": "This section formats capitalized vocabulary ({{spans}}). The capitals already mark it.",
     "W_VAKT_NOT_LAST": "The VAKT activity isn't at the end of the section. It usually goes after the questions."
   }
 }

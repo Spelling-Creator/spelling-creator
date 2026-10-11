@@ -7,7 +7,7 @@
 // PostgREST and an S3-compatible object store. What it does not serve is the
 // three things that need Cloudflare specifically: live collaboration and the
 // remote MCP endpoint (Durable Objects), and crawler prerendering plus og-image
-// screenshots (Browser Rendering). See /monorepo/self-hosting for what that
+// screenshots (Browser Rendering). See /docs/developers/self-hosting for what that
 // costs in practice — briefly, the MCP server still works over stdio, and SSR
 // already covers the pages a crawler cares about.
 //

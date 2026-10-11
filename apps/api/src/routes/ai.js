@@ -26,8 +26,9 @@ const FACT_CHECK_TTL = 60 * 60 * 24 * 7; // 7 days
 // Part of a fact check's cache key. Bump it when the prompt or the checker
 // changes what a check would find, so old results aren't served for new rules.
 // v4: the Smithsonian and Wikipedia as sources, and `found` with `source` in
-// place of `wikidata` in each fact.
-const FACT_CHECK_VERSION = 'v4';
+// place of `wikidata` in each fact. v5: the prompt describes the lesson as a
+// Spelling lesson for nonspeaking spellers rather than "a lesson for students".
+const FACT_CHECK_VERSION = 'v5';
 
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any
@@ -64,7 +65,7 @@ async function handleImageSearch(query, page, perPage, env, okHeaders, cors) {
 	url.searchParams.set('key', env.PIXABAY_API_KEY);
 	url.searchParams.set('q', q);
 	url.searchParams.set('image_type', 'photo');
-	url.searchParams.set('safesearch', 'true'); // school-friendly
+	url.searchParams.set('safesearch', 'true'); // nothing unsuitable in a lesson
 	url.searchParams.set('per_page', String(pp));
 	url.searchParams.set('page', String(p));
 
@@ -345,10 +346,12 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	// given age range. Not cached — like questions, users expect a fresh batch
 	// of ideas each time they ask.
 	if (mode === 'lessonIdea') {
+		// Spellers are nonspeaking, not less able: an age range picks topics that
+		// interest people of that age, never a reason to water the content down.
 		const audienceBlock = ageRange
-			? ` for students aged ${ageRange}. Pitch the topics, language, and complexity so they are appropriate and engaging for that age group.`
-			: ' for school students.';
-		const prompt = `Suggest 6 varied, engaging lesson topic ideas${audienceBlock} Each lesson will become a spelling/vocabulary lesson, so favour topics rich in interesting words. For each idea, give a short, catchy "title" suitable to use directly as the lesson title, and a one-sentence "description" of what the lesson would cover. Make the ideas span a range of subjects (science, history, nature, everyday life, etc.) rather than clustering around one theme.`;
+			? ` for spellers aged ${ageRange}. Pick topics that people of that age find interesting and that respect their age.`
+			: ' for spellers of any age.';
+		const prompt = `Suggest 6 varied, engaging lesson topic ideas${audienceBlock} Spellers are nonspeaking people who communicate by pointing to letters on a letterboard. They understand far more than they can say, so never simplify a topic or pitch it below their age. Each lesson will become a Spelling lesson: a passage read aloud, with vocabulary words and questions the speller answers by spelling, so favor topics rich in interesting words. For each idea, give a short, catchy "title" suitable to use directly as the lesson title, and a one-sentence "description" of what the lesson would cover. Make the ideas span a range of subjects (science, history, nature, everyday life, etc.) rather than clustering around one theme.`;
 
 		try {
 			const aiResponse = await generateWithFallback({ prompt, schema: LESSON_IDEA_SCHEMA, env });
@@ -368,11 +371,11 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	if (mode === 'question') {
 		// Ground the question in the section's existing text when we have it, so
 		// the suggested question is actually answerable from the lesson. For
-		// background-knowledge questions the text is the opposite — it marks
-		// what the student should already know, so the question must avoid it.
+		// background-knowledge questions the text is the opposite: it marks
+		// what the speller should already know, so the question must avoid it.
 		const sourceBlock = sectionText
 			? questionType === 'background'
-				? `\n\nThe following is the lesson text. Do NOT base the question on it — the question must test prior knowledge the student needs but that this text does not explain:\n"""\n${sectionText}\n"""`
+				? `\n\nThe following is the lesson text. Do NOT base the question on it. The question must test prior knowledge the speller needs but that this text does not explain:\n"""\n${sectionText}\n"""`
 				: `\n\nBase the question on the following lesson text. DO NOT say "according to the text, ...", as that is already displayed in the UI. :\n"""\n${sectionText}\n"""`
 			: '';
 		// List the questions already in the section so the model asks something
@@ -382,7 +385,7 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 					.map((q) => `- ${q}`)
 					.join('\n')}`
 			: '';
-		const prompt = `Suggest one ${QUESTION_LABELS[questionType]} quiz question for a school lesson about the subject "${subject}".${contextBlock}${sourceBlock}${previousBlock}\n\n${QUESTION_INSTRUCTIONS[questionType]}`;
+		const prompt = `Suggest one ${QUESTION_LABELS[questionType]} question for a Spelling lesson about the subject "${subject}". A nonspeaking speller hears the lesson read aloud and answers by pointing to letters on a letterboard.${contextBlock}${sourceBlock}${previousBlock}\n\n${QUESTION_INSTRUCTIONS[questionType]}`;
 
 		try {
 			const aiResponse = await generateWithFallback({ prompt, schema: QUESTION_SCHEMAS[questionType], env });

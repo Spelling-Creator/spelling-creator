@@ -19,22 +19,22 @@
 // the API: because a live session is where the *unsaved* lesson is. The document
 // in a room exists only in the room until somebody saves it, so the hub's copy is
 // whatever it was before the session started. Editing through the API while a
-// teacher has the lesson open in a session writes to the wrong document, and
+// host has the lesson open in a session writes to the wrong document, and
 // their next save overwrites it.
 //
 // The other half is that a room is bidirectional. An API write is a statement; a
 // room is a conversation: the assistant's edits appear under a participant of
-// its own, the teacher watches them land, and chat is a channel for asking
+// its own, the host watches them land, and chat is a channel for asking
 // rather than guessing.
 //
 // Three properties of the room the design leans on, none changed by asking
 // instead of listening:
 //
-//   • Admission is the host's. A joining participant waits until the teacher
+//   • Admission is the host's. A joining participant waits until the host
 //     admits them, so nothing here can put an assistant into a session
 //     uninvited. That is the consent gate, and it already existed.
 //   • Edits merge. The room is a CRDT, so an assistant writing section 3 while
-//     the teacher writes section 5 costs neither of them their work. What does
+//     the host writes section 5 costs neither of them their work. What does
 //     NOT merge is the same *field* — reconcile stores text as a plain string
 //     (see core/ydoc.js), so two writers in one paragraph is still
 //     last-write-wins. Hence edit_collab_doc refuses a block someone else's
@@ -47,7 +47,7 @@ import * as Y from "yjs";
 import { docFromY, reconcile } from "@spelling-creator/core/ydoc";
 
 // How long join_collab_session waits, within one call, for the host to admit
-// us. Generous, because the teacher has to notice the request and click: this
+// us. Generous, because the host has to notice the request and click: this
 // is a person's reaction time, not a network round trip. But kept under a
 // minute so it never collides with an MCP client's own request timeout; a call
 // that runs out says so and the next one picks the same request back up.
@@ -85,7 +85,7 @@ export function docOf(state) {
  * nothing would change. The replica is left holding `next`.
  *
  * Reconciled the way the browser reconciles, so the update carries exactly the
- * fields that differ and merges with whatever the teacher typed in the meantime
+ * fields that differ and merges with whatever the host typed in the meantime
  * the same way an edit made in the editor would. Encoding against the state
  * vector from before the edit keeps the update to the edit itself rather than
  * the whole document.
@@ -106,7 +106,7 @@ export function updateFor(ydoc, next) {
  * Which blocks another participant's caret is in right now, block id -> name.
  *
  * The CRDT merges edits to different fields but not to the same one, so this
- * is what stops an assistant overwriting the sentence a teacher is midway
+ * is what stops an assistant overwriting the sentence a person is midway
  * through typing. Cursors are advisory and go stale, which is why the tools
  * read a fresh envelope at the moment of the edit rather than caching one.
  */

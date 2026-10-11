@@ -108,11 +108,11 @@
       "stepPlaceholder": "Step {{number}}",
       "removeStep": "Remove step",
       "addStep": "Add step",
-      "stepsHelp": "Optional: break the solution into steps students can work through.",
+      "stepsHelp": "Optional: break the solution into steps the speller can work through.",
       "answerPlaceholderMultiple": "Answer {{number}}",
       "removeAnswer": "Remove answer",
       "addAnswer": "Add answer",
-      "answersHelp": "Type every accepted answer. The student only needs to give one of them to be correct.",
+      "answersHelp": "Type every accepted answer. The speller only needs to give one of them to be correct.",
       "suggestedAnswersHelp": "Type a few answers that would count. These are suggestions, not the only right answers. Anything that fits the topic is correct."
     },
     "vakt": {

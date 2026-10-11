@@ -163,7 +163,7 @@ export default defineConfig(({ isSsrBuild }) => ({
     // worker that precaches the built shell. The editor already keeps lessons
     // in IndexedDB (LightningFS + the image store), so precaching the shell is
     // what makes it genuinely usable with no network — see the docs at
-    // apps/docs/docs/web-app/pwa-and-offline.md.
+    // apps/docs/docs/developers/web-app/pwa-and-offline.md.
     VitePWA({
       // "prompt", not "autoUpdate": this app is an editor, and swapping the
       // running build out from under someone mid-lesson is not something to do

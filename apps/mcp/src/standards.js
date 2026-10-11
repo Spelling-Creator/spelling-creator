@@ -1,9 +1,12 @@
 // Lesson authoring standards, fed to the connecting AI assistant so it produces
 // well-shaped lessons by default without the user re-explaining the rules every
-// session. Developed iteratively while authoring S2C (Spelling to Communicate)
-// lessons for a non-speaking or minimally-speaking speller who answers by
-// pointing to letters on a letterboard — which is why answers must be short,
-// unambiguous, and findable in the text.
+// session. Developed iteratively while authoring Spelling lessons for a
+// non-speaking or minimally-speaking speller who answers by pointing to letters
+// on a letterboard, which is why answers must be short, unambiguous, and
+// findable in the text. Spelling covers S2C, RPM, Spellers Method and plenty of
+// unlabeled practice, and none of them is standardized, so this is one set of
+// defaults (the semi-open question family comes from the S2C guidebook) rather
+// than "the" method.
 //
 // The standard itself is prose, so it lives as prose: standards.md, edited as a
 // document rather than as an escaped JavaScript string. This module is only the
@@ -20,7 +23,7 @@
 // standard (e.g. create_lesson_file) point to create_lesson's description rather
 // than repeating this text. standards.md is the canonical copy of the standard —
 // when it changes, update the question counts echoed in tools.js's descriptions
-// and in apps/docs/docs/mcp-server/tools.md to match.
+// and in apps/docs/docs/developers/mcp-server/tools.md to match.
 //
 // That text carries the half of the standard that needs judgement. The half a
 // script can decide is enforced on write by the checks in

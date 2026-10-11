@@ -1,4 +1,4 @@
-// Build the MCP Apps views (see apps/docs/docs/mcp-server/interactive-views.md).
+// Build the MCP Apps views (see apps/docs/docs/developers/mcp-server/interactive-views.md).
 //
 // A view is one self-contained HTML document: the host fetches it as a `ui://`
 // resource and renders it in a sandboxed iframe with a restrictive CSP, so

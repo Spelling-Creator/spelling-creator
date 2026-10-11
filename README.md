@@ -17,30 +17,32 @@ Worker API.
 Short screen recordings of the app, embedded in the docs and kept in
 [`apps/docs/docs/public/videos`](apps/docs/docs/public/videos):
 
-| Video                                                                                                                            | File                                                           |
-| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [Building a lesson](https://spellingcreator.org/docs/web-app/overview#see-it-in-action)                                          | [MP4](apps/docs/docs/public/videos/editor-build-a-lesson.mp4)  |
-| [Working in a finished lesson](https://spellingcreator.org/docs/web-app/overview#see-it-in-action)                               | [MP4](apps/docs/docs/public/videos/editor-fork-and-export.mp4) |
-| [Finding a lesson and joining the discussion](https://spellingcreator.org/docs/web-app/lesson-hub-and-accounts#see-it-in-action) | [MP4](apps/docs/docs/public/videos/hub-browse-and-discuss.mp4) |
-| [Publishing a draft](https://spellingcreator.org/docs/web-app/lesson-hub-and-accounts#see-it-in-action)                          | [MP4](apps/docs/docs/public/videos/hub-publish-a-draft.mp4)    |
-| [Following someone, then merging a proposal](https://spellingcreator.org/docs/web-app/pull-requests#see-it-in-action)            | [MP4](apps/docs/docs/public/videos/hub-follow-and-merge.mp4)   |
-| [Two practitioners editing one lesson](https://spellingcreator.org/docs/web-app/live-collaboration#see-it-in-action)             | [MP4](apps/docs/docs/public/videos/live-collaboration.mp4)     |
+| Video                                                                                                                   | File                                                           |
+| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Building a lesson](https://spellingcreator.org/docs/guide/overview#see-it-in-action)                                   | [MP4](apps/docs/docs/public/videos/editor-build-a-lesson.mp4)  |
+| [Working in a finished lesson](https://spellingcreator.org/docs/guide/overview#see-it-in-action)                        | [MP4](apps/docs/docs/public/videos/editor-fork-and-export.mp4) |
+| [Finding a lesson and joining the discussion](https://spellingcreator.org/docs/guide/hub-and-accounts#see-it-in-action) | [MP4](apps/docs/docs/public/videos/hub-browse-and-discuss.mp4) |
+| [Publishing a draft](https://spellingcreator.org/docs/guide/hub-and-accounts#see-it-in-action)                          | [MP4](apps/docs/docs/public/videos/hub-publish-a-draft.mp4)    |
+| [Following someone, then merging a proposal](https://spellingcreator.org/docs/guide/pull-requests#see-it-in-action)     | [MP4](apps/docs/docs/public/videos/hub-follow-and-merge.mp4)   |
+| [Two practitioners editing one lesson](https://spellingcreator.org/docs/guide/live-collaboration#see-it-in-action)      | [MP4](apps/docs/docs/public/videos/live-collaboration.mp4)     |
 
 ## Documentation
 
 Full documentation lives on the docs site: **https://spellingcreator.org/docs/**
 
-- **[Monorepo](https://spellingcreator.org/docs/monorepo/overview)**: workspace
-  layout, getting started, the stub API, and lesson image storage (R2 +
-  IndexedDB).
-- **[Web App](https://spellingcreator.org/docs/web-app/overview)**: the Spelling
-  Lesson Maker, with its features, routing, AI helpers, image search, Google
-  Docs export, live collaboration, the lesson hub, the export pipeline, and
-  [installing it as an offline-capable app](https://spellingcreator.org/docs/web-app/pwa-and-offline).
-- **[MCP Server](https://spellingcreator.org/docs/mcp-server/overview)**: connect
-  an AI assistant to author and publish lessons to the hub.
+- **[What is Spelling Creator?](https://spellingcreator.org/docs/intro)**: who
+  it is for, and why "Spelling" covers several different, unstandardized
+  practices (S2C is one of them, not a synonym).
+- **[User guide](https://spellingcreator.org/docs/guide/overview)**: writing,
+  checking, running and sharing lessons, and
+  [connecting an AI assistant](https://spellingcreator.org/docs/guide/ai-assistants/overview).
+- **[Developers](https://spellingcreator.org/docs/developers/overview)**:
+  workspace layout, getting started, the stub API, self-hosting, storage and
+  version history, the web app's internals, and the
+  [MCP server](https://spellingcreator.org/docs/developers/mcp-server/overview).
 
-The docs source is in `apps/docs/docs`.
+The docs source is in `apps/docs/docs` (`guide/` for users, `developers/` for
+everyone working on the code).
 
 ## Quick start
 
@@ -56,5 +58,5 @@ pnpm dev:stub           # or: run a stub backend with a populated hub...
 pnpm dev:web:stub       # ...and the frontend against it (sign in as "maya")
 ```
 
-See **[Getting started](https://spellingcreator.org/docs/monorepo/getting-started)**
+See **[Getting started](https://spellingcreator.org/docs/developers/getting-started)**
 for the full set of commands and per-app environment files.

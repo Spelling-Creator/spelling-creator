@@ -31,8 +31,9 @@ JSON: the passage paragraphs copied word for word, the spelling words, and
 every question with its printed answers and working-out. It is a fine-tune of
 [LiquidAI/LFM2-1.2B-Extract](https://huggingface.co/LiquidAI/LFM2-1.2B-Extract)
 for [Spelling Creator](https://github.com/Spelling-Creator/spelling-creator), a
-lesson builder for Spelling to Communicate (S2C), where lessons are read aloud
-to nonspeaking spellers. The training and the results are on the merged
+lesson builder for Spelling (an umbrella term covering S2C, RPM, Spellers
+Method and other practices), where lessons are read aloud to nonspeaking
+spellers. The training and the results are on the merged
 model's card.
 
 ## Files
@@ -107,7 +108,7 @@ repo, which renames the convolution caches to `past_conv.N`, makes the KV
 cache's head dimension concrete, moves the chat template into
 `tokenizer_config.json`, adds the `transformers.js_config` block, and puts the
 graphs under `onnx/`. The route is written up at
-[spellingcreator.org/docs/monorepo/document-import-experiment](https://spellingcreator.org/docs/monorepo/document-import-experiment).
+[spellingcreator.org/docs/developers/document-import-experiment](https://spellingcreator.org/docs/developers/document-import-experiment).
 
 ## Licence
 

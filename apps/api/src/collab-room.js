@@ -16,7 +16,7 @@
 // merged state, and relays the update to the other admitted peers. Two people
 // editing different blocks therefore both keep their work, where the old
 // whole-document last-write-wins model silently dropped one of them. See
-// apps/web/src/lib/ydoc.js for the document model and the plain-JSON bridge.
+// packages/core/src/ydoc.js for the document model and the plain-JSON bridge.
 //
 // Every relayed update is preceded by an EDITED frame naming its sender's slot,
 // which is how version history knows whom to credit for a session's edits.
@@ -65,7 +65,7 @@ const MAX_VIOLATIONS = 100;
 
 // Agent lifetimes. An agent has no socket to close, so these are how the room
 // learns it has gone. A request nobody has answered is withdrawn after the
-// PENDING ttl (a teacher who hasn't clicked in five minutes isn't going to); an
+// PENDING ttl (a host who hasn't clicked in five minutes isn't going to); an
 // admitted agent that has stopped asking is let go after the IDLE ttl, which is
 // long because a conversation pauses while the user thinks and types. A GONE
 // record is a tombstone: it stays so the agent's next ask can be told *why* it
@@ -309,7 +309,7 @@ export class CollabRoom extends DurableObject {
 	// any record exists at all (the sweep keeps running while one does), and
 	// whether an admitted agent exists to read cursors back. The moment the
 	// first reader appears, the cursors already in memory are written down, so
-	// a caret the teacher parked before the assistant arrived survives an
+	// a caret the host parked before the assistant arrived survives an
 	// eviction too; the moment the last one goes, the row is dropped.
 	refreshAgentFlags() {
 		const all = this.agents();

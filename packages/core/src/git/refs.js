@@ -9,8 +9,8 @@
 // ---- Two names for one thing ------------------------------------------------
 //
 // A branch has a *ref name*, which git stores and which git's own rules bound
-// ("Simpler-for-Year-3"), and a *label*, which is what the person sees ("Simpler
-// for Year 3"). We don't store the label anywhere: it is the ref name with its
+// ("Shorter-sections-2"), and a *label*, which is what the person sees ("Shorter
+// sections 2"). We don't store the label anywhere: it is the ref name with its
 // hyphens read back as spaces, which round-trips the case that matters — someone
 // typing a short phrase — without inventing a second place for a name to live and
 // go stale.
@@ -62,8 +62,8 @@ export function isBranchName(name) {
  *
  * Spaces become hyphens (so branchLabel can turn them back), anything git would
  * refuse is dropped, and the result is trimmed to the length limit on a
- * separator where there is one nearby — cutting "Year-3" to "Year-" reads worse
- * than cutting it to "Year".
+ * separator where there is one nearby: cutting "Shorter-sections" to
+ * "Shorter-sec" reads worse than cutting it to "Shorter".
  *
  * @returns {string} A valid branch name, or "" when nothing usable was left.
  */

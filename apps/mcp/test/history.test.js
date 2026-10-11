@@ -255,10 +255,10 @@ test("a lesson's variations survive an edit made over MCP", async () => {
 
   const ctx = memRepo("seed");
   const first = await commitDoc({ ...ctx, doc, author: AUTHOR });
-  await createBranch({ ...ctx, name: "Year-3", from: first.oid });
+  await createBranch({ ...ctx, name: "Fewer-pictures", from: first.oid });
   const variation = await commitDoc({
     ...ctx,
-    doc: lessonDoc("Volcanoes", "A volcano ERUPTS. (Year 3)"),
+    doc: lessonDoc("Volcanoes", "A volcano ERUPTS. (fewer pictures)"),
     author: AUTHOR,
   });
   const packed = await packRepo(ctx);
@@ -276,7 +276,11 @@ test("a lesson's variations survive an edit made over MCP", async () => {
 
   assert.equal(result.recorded, true);
   const stored = hub.packs.get("multi");
-  assert.equal(stored.refs["Year-3"], variation.oid, "the variation is intact");
+  assert.equal(
+    stored.refs["Fewer-pictures"],
+    variation.oid,
+    "the variation is intact",
+  );
   assert.equal(stored.head, result.commit, "and the lesson moved forward");
 
   // Intact means clonable, not merely advertised: the pack has to carry the
@@ -284,7 +288,7 @@ test("a lesson's variations survive an edit made over MCP", async () => {
   const check = memRepo("check");
   await cloneFromPack({ ...check, ...stored });
   assert.equal(
-    await headOid({ ...check, ref: "refs/heads/Year-3" }),
+    await headOid({ ...check, ref: "refs/heads/Fewer-pictures" }),
     variation.oid,
   );
 });

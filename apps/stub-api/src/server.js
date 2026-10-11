@@ -1,6 +1,6 @@
 // A stand-in for the Worker API (apps/api) that runs on a laptop with no
 // Supabase, no Cloudflare and no network beyond one read of the public hub. See
-// apps/docs/docs/monorepo/stub-api.md for what it covers and how to use it.
+// apps/docs/docs/developers/stub-api.md for what it covers and how to use it.
 
 import http from "node:http";
 import path from "node:path";

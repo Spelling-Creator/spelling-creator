@@ -22,7 +22,7 @@ configs:
 
 # Spelling Creator document import
 
-One section of a lesson as someone might have typed it up, paired with that section as lesson JSON. [Spelling Creator](https://spellingcreator.org) is a lesson builder for Spelling to Communicate (S2C), used with nonspeaking spellers. Its **Import from text** reads a typed lesson with rules, and hands the sections the rules cannot read to a small on-device model; this dataset trains that model.
+One section of a lesson as someone might have typed it up, paired with that section as lesson JSON. [Spelling Creator](https://spellingcreator.org) is a lesson builder for Spelling, the umbrella term for ways nonspeaking people communicate by pointing to letters (Spelling to Communicate, RPM, Spellers Method and many unlabeled practices). Its **Import from text** reads a typed lesson with rules, and hands the sections the rules cannot read to a small on-device model; this dataset trains that model.
 
 ## What is in it
 

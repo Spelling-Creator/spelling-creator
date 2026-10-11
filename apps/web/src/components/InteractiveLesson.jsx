@@ -316,7 +316,7 @@ function AnswerToggle({ shown, onToggle }) {
 // A multiple-answer question used to reveal as a bulleted list under a single
 // heading, which is the one place the reveal read as prose rather than as
 // answers: three accepted answers are three separate things, and a `<li>` is a
-// poor thing to point at across a classroom and a worse one to click.
+// poor thing to point at across a table and a worse one to click.
 //
 // Which is the other half of it. Given somewhere to put it — a question step has
 // a field, the end-of-lesson summary doesn't — the box becomes a button that
@@ -429,9 +429,9 @@ function AnswerReveal({ block, className, onUse }) {
 // Shown on the step a resumed run-through picks up at, and only until the
 // learner moves on: it answers "why am I in the middle of this lesson?" once,
 // and the answer stops being interesting the moment they carry on. It carries
-// the way back out too — a shared classroom machine will hand someone a
-// half-finished lesson they don't want now and then, and starting over shouldn't
-// mean finishing first.
+// the way back out too: a shared computer will hand someone a half-finished
+// lesson they don't want now and then, and starting over shouldn't mean
+// finishing first.
 function ResumeNotice({ onRestart }) {
   const { t } = useTranslation("interactive");
 
@@ -876,9 +876,9 @@ export default function InteractiveLesson({
   // to try again.
   const [savedFingerprint, setSavedFingerprint] = useState(null);
 
-  // Progress is kept per learner as well as per lesson: a shared classroom
-  // machine is the normal case here, and resuming into the answers of whoever
-  // used the browser before you is worse than not resuming at all.
+  // Progress is kept per learner as well as per lesson: a computer shared by
+  // several spellers is a normal case here, and resuming into the answers of
+  // whoever used the browser before you is worse than not resuming at all.
   //
   // `owner` is who is signed in *now*; `runOwner` is who this run-through
   // started as, pinned when it began and used for everything it writes. The two

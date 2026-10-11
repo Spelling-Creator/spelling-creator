@@ -12,7 +12,7 @@
 // in globals.css, which remain the single source of truth — the editor's
 // sticky section headers and the lesson's tab bar pin to --header-h (header +
 // this bar) and anything scrolled to programmatically offsets by it. See
-// docs/web-app/navigating-large-lessons.md.
+// docs/developers/web-app/navigating-large-lessons.md.
 
 import { Fragment } from "react";
 import { Link as RouterLink } from "react-router-dom";
