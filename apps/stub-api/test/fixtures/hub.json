@@ -1,0 +1,87 @@
+{
+  "hubUrl": "fixture",
+  "fetchedAt": "2026-10-10T00:00:00.000Z",
+  "lessons": [
+    {
+      "id": "0b5e2b8e-1c1a-4f7e-9d4a-000000000001",
+      "title": "Penguins",
+      "createdAt": "2026-06-17T01:00:00.000Z",
+      "doc": {
+        "title": "Penguins",
+        "sections": [
+          {
+            "id": "s1",
+            "name": "The Emperor Penguin",
+            "blocks": [
+              {
+                "id": "b1",
+                "type": "text",
+                "text": "Emperor penguins huddle together through the Antarctic winter."
+              },
+              {
+                "id": "b2",
+                "type": "spelling",
+                "words": [{ "id": "w1", "text": "HUDDLE" }]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "0b5e2b8e-1c1a-4f7e-9d4a-000000000002",
+      "title": "The History of Domestic Cats",
+      "createdAt": "2026-08-24T17:30:00.000Z",
+      "doc": {
+        "title": "The History of Domestic Cats",
+        "sections": [
+          {
+            "id": "s1",
+            "name": "The Wildcat Ancestor",
+            "blocks": [
+              {
+                "id": "b1",
+                "type": "text",
+                "text": "Every pet cat descends from the African wildcat."
+              }
+            ]
+          },
+          {
+            "id": "s2",
+            "name": "Worshipped in Egypt",
+            "blocks": [
+              {
+                "id": "b2",
+                "type": "question",
+                "questionType": "single",
+                "prompt": "Where were cats worshipped?",
+                "answer": "Egypt"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "0b5e2b8e-1c1a-4f7e-9d4a-000000000003",
+      "title": "The Life of Albert Einstein",
+      "createdAt": "2026-05-29T10:00:00.000Z",
+      "doc": {
+        "title": "The Life of Albert Einstein",
+        "sections": [
+          {
+            "id": "s1",
+            "name": "A Curious Child",
+            "blocks": [
+              {
+                "id": "b1",
+                "type": "text",
+                "text": "Einstein was given a compass at five."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

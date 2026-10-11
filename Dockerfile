@@ -46,11 +46,22 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY apps/mcp/package.json ./apps/mcp/
 COPY apps/docs/package.json ./apps/docs/
+COPY apps/stub-api/package.json ./apps/stub-api/
 COPY packages/core/package.json ./packages/core/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 COPY . .
+
+# Images and videos are stored in Git LFS. A checkout made without Git LFS has
+# small text pointers where they should be, and the build would happily ship
+# those as broken images. Stop here instead, with the fix.
+RUN if find apps/web/public apps/docs/docs/public -type f -size -1k \
+      \( -name '*.jpg' -o -name '*.png' -o -name '*.mp4' \) \
+      -exec grep -l '^version https://git-lfs' {} + | grep -q .; then \
+      echo "Images are Git LFS pointers. Install Git LFS, run 'git lfs pull', and build again." >&2; \
+      exit 1; \
+    fi
 
 # Read by Vite at build time and substituted into the bundle. Vite exposes any
 # environment variable with the VITE_ prefix, so these need no .env file.

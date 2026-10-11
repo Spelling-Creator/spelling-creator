@@ -132,6 +132,20 @@ verifies it (and derives the author) before inserting the row.
  Browser ──PATCH /lessons/:id/comments/:cid ────▶ Worker ──verify JWT + author, same checks──▶ Postgres (edit own)
 ```
 
+## See it in action
+
+<DemoVideo name="hub-browse-and-discuss" title="Finding a lesson and joining the discussion">
+From the signed-in home page into the hub, a search, a lesson's discussion
+with a comment and a 5-star rating, and the lesson's version history.
+</DemoVideo>
+
+<DemoVideo name="hub-publish-a-draft" title="Publishing a draft">
+A draft saved to the cloud, opened in the editor from "Your drafts" and
+published to the hub.
+</DemoVideo>
+
+The people in these videos are made up; the lessons are real ones from the hub.
+
 ## Worker endpoints (contract)
 
 These live in the Worker (`apps/api`). The frontend

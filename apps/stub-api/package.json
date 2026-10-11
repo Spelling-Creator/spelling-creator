@@ -1,0 +1,24 @@
+{
+  "name": "@spelling-creator/stub-api",
+  "private": true,
+  "description": "A local stand-in for the Worker API, with a populated hub and made-up people, for demos, screenshots and UI work.",
+  "type": "module",
+  "exports": {
+    ".": "./src/server.js",
+    "./sessions": "./src/sessions.js",
+    "./people": "./src/people.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "snapshot": "node src/cli.js snapshot",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@spelling-creator/core": "workspace:*",
+    "ws": "^8.21.3",
+    "yjs": "^13.6.32"
+  },
+  "devDependencies": {
+    "vitest": "~3.2.7"
+  }
+}

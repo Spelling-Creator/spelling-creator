@@ -14,6 +14,25 @@ export and [`html2pdf.js`](https://github.com/eKoopmans/html2pdf.js) (via
 [`mammoth`](https://github.com/mwilliamson/mammoth.js) docx to HTML conversion) for
 PDF printing.
 
+## See it in action
+
+<DemoVideo name="editor-build-a-lesson" title="Building a lesson">
+A title, a section, text with ALL-CAPS spelling words, a picture from
+Wikimedia Commons, the spelling list filled in from those words with one click,
+a question, and the lesson in Preview.
+</DemoVideo>
+
+<DemoVideo name="editor-fork-and-export" title="Working in a finished lesson">
+A lesson forked from the hub, folded down to its outline, a section moved, a
+look at it as a reader sees it, and an export for Word.
+</DemoVideo>
+
+There are more on the pages for the
+[lesson hub](./lesson-hub-and-accounts.md#see-it-in-action),
+[pull requests](./pull-requests.md#see-it-in-action) and
+[live collaboration](./live-collaboration.md#see-it-in-action). The people in
+those are made up for the demos; the lessons are real ones from the hub.
+
 ## Features
 
 - **Document title** - name the whole lesson.

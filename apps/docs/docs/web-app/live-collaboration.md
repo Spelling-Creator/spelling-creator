@@ -12,6 +12,17 @@ Worker verifies your **Supabase sign-in** before the connection reaches the room
 so **only logged-in users can host or join**, and your identity is established
 server-side (it can't be spoofed by the client).
 
+## See it in action
+
+<DemoVideo name="live-collaboration" title="Two practitioners editing one lesson">
+Maya, on the left, starts a session and sends Daniel the invite link. It
+arrives in his notifications, he asks to join, and she adds him. Then each
+sees the other's edits as they type, and they talk in the session chat. Both
+people are made up; the lesson is a real one from the hub.
+</DemoVideo>
+
+## How a session works
+
 **Host vs. guest.** Whoever opens the session is the _host_; everyone else is a
 _guest_. The room caches the current document so it can hand the latest copy to a
 guest the moment they're added.

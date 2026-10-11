@@ -18,6 +18,7 @@ on:
       - "apps/docs/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".gitattributes"
       - ".github/workflows/deploy.yml"
     branches:
       - main
@@ -35,6 +36,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      # Images and videos live in Git LFS (see .gitattributes), and this is the
+      # one job that ships them: the web app's public/ files and the docs videos
+      # end up in apps/web/dist. Checking out leaves them as pointers, so they are
+      # pulled here, through a cache keyed on the exact set of LFS files, so a
+      # deploy that changes none of them downloads nothing from LFS.
+      - name: List LFS files
+        run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+
+      - name: Pull LFS files
+        run: git lfs pull
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6

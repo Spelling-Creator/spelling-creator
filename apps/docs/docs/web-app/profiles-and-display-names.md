@@ -94,7 +94,8 @@ Any signed-in user can **follow** another user from their profile page. A follow
 is one row in the `follows` table (`follower_id → following_id`, defined in
 `apps/api/schema.sql`), keyed by Supabase user id on both sides so it survives a
 display-name change. The profile header shows the Follow / Following button (never
-for your own profile) plus the follower and following counts.
+for your own profile) plus the follower and following counts. The
+[pull requests video](./pull-requests.md#see-it-in-action) starts with a follow.
 
 - **`POST /profiles/:id/follow`** (Bearer): follow the user. Idempotent
   (`ON CONFLICT DO NOTHING`): re-following is a no-op, so it doesn't create a

@@ -15,6 +15,15 @@ document and its history in one action. That's gone. A lesson now only ever
 changes because someone with authority over it chose to change it, and every
 change from outside arrives as something they can read first.
 
+## See it in action
+
+<DemoVideo name="hub-follow-and-merge" title="Following someone, then merging a proposal">
+A practitioner followed from one of her lessons, then a notification about a
+proposed change to one of your own lessons: the proposal read, reviewed in the
+editor, and merged. The people are made up; the lessons are real ones from the
+hub.
+</DemoVideo>
+
 ## The shape of it
 
 ```

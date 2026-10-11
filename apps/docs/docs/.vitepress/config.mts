@@ -100,6 +100,7 @@ export default defineConfig({
         items: [
           { text: "Overview", link: "/monorepo/overview" },
           { text: "Getting started", link: "/monorepo/getting-started" },
+          { text: "Stub API (local backend)", link: "/monorepo/stub-api" },
           {
             text: "Lesson images (binary, R2 + IndexedDB)",
             link: "/monorepo/lesson-images",

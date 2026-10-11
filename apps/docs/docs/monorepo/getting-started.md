@@ -11,6 +11,9 @@ pnpm dev:web            # run the frontend (Vite)
 pnpm dev:api            # run the Worker locally (wrangler dev)
 pnpm dev:docs           # run this documentation site (VitePress)
 
+pnpm dev:stub           # run the stub API instead of a real backend
+pnpm dev:web:stub       # run the frontend against it, on port 5180
+
 pnpm build              # build the frontend
 pnpm build:docs         # build the docs into apps/web/dist/docs
 pnpm deploy             # build both, then deploy the Worker (wrangler deploy)
@@ -18,6 +21,27 @@ pnpm deploy             # build both, then deploy the Worker (wrangler deploy)
 pnpm fmt                # format everything (oxfmt)
 pnpm lint               # check formatting, then lint (oxfmt --check + oxlint)
 ```
+
+The two stub commands give you a working hub with no Supabase or Cloudflare
+account; see [Stub API](./stub-api.md).
+
+### Git LFS
+
+Images and videos (PNG, JPEG, GIF, WebP, AVIF, ICO, MP4, MOV, WebM) are stored
+in [Git LFS](https://git-lfs.com), as set out in `.gitattributes`. Install it
+before cloning, once per machine:
+
+```bash
+brew install git-lfs    # or your platform's package
+git lfs install
+```
+
+A clone made without it has small text pointers where the images should be.
+`git lfs pull` fetches the real files afterwards. The Docker build refuses to
+run on pointers rather than ship broken images, and in CI only the deploy
+workflow pulls the files, through a cache, since nothing else needs them.
+
+### Environment files
 
 Each app keeps its own environment file:
 
@@ -172,8 +196,8 @@ self-hosting bug, and the cheapest moment to find one is when it is introduced.
 `pnpm test` is `pnpm -r test`, which runs each workspace's own suite:
 `packages/core` and `apps/api` under vitest (the Worker's through
 `@cloudflare/vitest-pool-workers`, so its platform-adapter tests run against real
-R2 and KV), `apps/web` under vitest too, and `apps/mcp` under `node --test`.
-`apps/docs` has no test script and is skipped.
+R2 and KV), `apps/web` and `apps/stub-api` under vitest too, and `apps/mcp`
+under `node --test`. `apps/docs` has no test script and is skipped.
 
 `apps/web`'s tests run in Node by default. One that needs a DOM (to mount a hook
 in a real React root, say) opts in with a `// @vitest-environment happy-dom`

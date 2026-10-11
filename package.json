@@ -10,6 +10,8 @@
     "dev:api": "pnpm --filter @spelling-creator/api dev",
     "dev:mcp": "pnpm --filter @spelling-creator/mcp start",
     "dev:docs": "pnpm --filter @spelling-creator/docs dev",
+    "dev:stub": "pnpm --filter @spelling-creator/stub-api start",
+    "dev:web:stub": "pnpm --filter @spelling-creator/web dev:stub",
     "mcp:login": "pnpm --filter @spelling-creator/mcp login",
     "build": "pnpm --filter @spelling-creator/web build",
     "build:docs": "pnpm --filter @spelling-creator/docs build",

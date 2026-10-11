@@ -74,6 +74,20 @@
       "env": { "node": true }
     },
 
+    // Stub API: a local stand-in for the Worker, run under Node.
+    {
+      "files": ["apps/stub-api/**/*.js"],
+      "env": { "node": true }
+    },
+
+    // Docs theme components. `defineProps` is a compiler macro in <script setup>,
+    // not an import, so it has to be declared for no-undef.
+    {
+      "files": ["apps/docs/**/*.vue"],
+      "env": { "browser": true },
+      "globals": { "defineProps": "readonly" }
+    },
+
     // Repo tooling — plain Node scripts run by hand, never bundled or shipped.
     {
       "files": [

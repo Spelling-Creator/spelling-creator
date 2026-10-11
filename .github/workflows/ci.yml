@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Images and videos stay as Git LFS pointers here (no `lfs: true`): no
+      # test reads them, and the builds below only copy them, so pulling them
+      # would spend LFS bandwidth on every push for nothing. deploy.yml pulls them.
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -47,9 +50,9 @@ jobs:
       - name: Lint and format check
         run: pnpm lint
 
-      # Runs every workspace's `test` script: core (vitest), api (vitest under
-      # @cloudflare/vitest-pool-workers) and mcp (node --test). apps/docs has no
-      # test script and is skipped.
+      # Runs every workspace's `test` script: core, web and stub-api (vitest), api
+      # (vitest under @cloudflare/vitest-pool-workers) and mcp (node --test).
+      # apps/docs has no test script and is skipped.
       - name: Test
         run: pnpm -r test
 

@@ -313,7 +313,9 @@ To retake them:
    to look signed in: remove the notice and the `disabled` attribute from the
    Start button, the join-code input and the Join button. Those are the only
    differences signing in makes (see `renderLanding` in
-   `CollaborateDialog.jsx`).
+   `CollaborateDialog.jsx`). Or take that one against the
+   [stub API](../monorepo/stub-api.md) instead, signed in as `maya`, where the
+   dialog is the real signed-in one and needs no editing.
 4. Crop the dialogs to 672x420 CSS pixels around the dialog, the editor to
    1120x700 from the top of the page, and the docs shot to about 870x625 around
    the main column.
