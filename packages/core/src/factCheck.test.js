@@ -299,6 +299,7 @@ function fakeWikidata({
   texts = {},
   search = {},
   bindings = [],
+  places = [],
   volcanoes = [],
   eruptions = [],
   fail = {},
@@ -347,6 +348,10 @@ function fakeWikidata({
       return Response.json({ search: hits });
     }
     if (fail.sparql) return new Response("", { status: 503 });
+    // The places above an item (placesAboveQuery) are their own query.
+    if ((u.searchParams.get("query") || "").includes("wdt:P131*")) {
+      return Response.json({ results: { bindings: places } });
+    }
     return Response.json({ results: { bindings } });
   });
 }
@@ -379,6 +384,177 @@ const itemStatement = (item, pid, value, label, extra = {}) => ({
   value: { value: `http://www.wikidata.org/entity/${value}` },
   valueLabel: { value: label },
   ...extra,
+});
+
+// A row of placesAboveQuery: a "located in" (P131) statement putting `from`
+// in `place`.
+const placeRow = (from, place, label, extra = {}) => ({
+  from: { value: `http://www.wikidata.org/entity/${from}` },
+  st: { value: `${from}-P131-${place}` },
+  rank: { value: "http://wikiba.se/ontology#NormalRank" },
+  place: { value: `http://www.wikidata.org/entity/${place}` },
+  placeLabel: { value: label },
+  ...extra,
+});
+
+describe("checking where a place is", () => {
+  it("agrees with a place above the one Wikidata names", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Disneyland: [
+          { id: "Q181185", label: "Disneyland", description: "park" },
+        ],
+        California: [
+          {
+            id: "Q99",
+            label: "California",
+            match: { type: "label", text: "California" },
+          },
+        ],
+        Texas: [
+          {
+            id: "Q1439",
+            label: "Texas",
+            match: { type: "label", text: "Texas" },
+          },
+        ],
+      },
+      bindings: [itemStatement("Q181185", "P131", "Q49247", "Anaheim")],
+      places: [
+        placeRow("Q181185", "Q49247", "Anaheim"),
+        placeRow("Q49247", "Q5925", "Orange County"),
+        placeRow("Q5925", "Q99", "California"),
+      ],
+    });
+    const claim = (stated) => ({
+      subject: "Disneyland",
+      property: "region",
+      stated,
+    });
+    const [anaheim, california, texas] = await checkClaims(
+      [claim("Anaheim"), claim("California"), claim("Texas")],
+      { fetch },
+    );
+    expect(anaheim).toMatchObject({
+      status: "agrees",
+      found: { pid: "P131", items: [{ id: "Q49247", label: "Anaheim" }] },
+    });
+    expect(california).toMatchObject({
+      status: "agrees",
+      source: "wikidata",
+      found: { pid: "P131", items: [{ id: "Q99", label: "California" }] },
+    });
+    expect(texas).toMatchObject({
+      status: "disagrees",
+      found: { pid: "P131", items: [{ id: "Q49247", label: "Anaheim" }] },
+    });
+  });
+
+  it("takes a place's name exactly, or its formal name, not a longer one", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        "Santa Fe": [{ id: "Q38555", label: "Santa Fe", description: "city" }],
+        CERN: [{ id: "Q42944", label: "CERN", description: "laboratory" }],
+      },
+      bindings: [
+        itemStatement("Q38555", "P17", "Q30", "United States"),
+        itemStatement("Q42944", "P131", "Q68230", "Meyrin"),
+      ],
+      places: [
+        placeRow("Q38555", "Q112953", "Santa Fe County"),
+        placeRow("Q112953", "Q1522", "New Mexico"),
+        placeRow("Q1522", "Q30", "United States"),
+        placeRow("Q42944", "Q68230", "Meyrin"),
+        placeRow("Q68230", "Q11917", "Canton of Geneva"),
+      ],
+    });
+    const [mexico, geneva] = await checkClaims(
+      [
+        { subject: "Santa Fe", property: "country", stated: "Mexico" },
+        { subject: "CERN", property: "region", stated: "Geneva" },
+      ],
+      { fetch },
+    );
+    expect(mexico).toMatchObject({ status: "disagrees" });
+    expect(geneva).toMatchObject({
+      status: "agrees",
+      found: { items: [{ id: "Q11917", label: "Canton of Geneva" }] },
+    });
+  });
+
+  it("follows only current links up, not ones that have ended", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Townsville: [{ id: "Q1", label: "Townsville", description: "town" }],
+      },
+      bindings: [itemStatement("Q1", "P131", "Q2", "New County")],
+      places: [
+        placeRow("Q1", "Q2", "New County"),
+        // The county the town was in until it was moved.
+        placeRow("Q1", "Q3", "Old County", {
+          ended: { value: "2001-01-01T00:00:00Z" },
+        }),
+        placeRow("Q2", "Q4", "Midshire"),
+      ],
+    });
+    const [old, shire] = await checkClaims(
+      [
+        { subject: "Townsville", property: "region", stated: "Old County" },
+        { subject: "Townsville", property: "region", stated: "Midshire" },
+      ],
+      { fetch },
+    );
+    expect(old).toMatchObject({ status: "disagrees" });
+    expect(shire).toMatchObject({ status: "agrees" });
+  });
+
+  it("asks about the places above only when the item's own values disagree", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Disneyland: [
+          { id: "Q181185", label: "Disneyland", description: "park" },
+        ],
+      },
+      bindings: [itemStatement("Q181185", "P131", "Q49247", "Anaheim")],
+    });
+    await checkClaims(
+      [{ subject: "Disneyland", property: "region", stated: "Anaheim" }],
+      { fetch },
+    );
+    const asked = fetch.mock.calls.map(([url]) =>
+      new URL(url).searchParams.get("query"),
+    );
+    expect(asked.some((q) => q?.includes("wdt:P131*"))).toBe(false);
+  });
+});
+
+describe("checking a population", () => {
+  it("takes a population of 0 as no figure, not as wrong", async () => {
+    const fetch = fakeWikidata({
+      search: {
+        Pompeii: [
+          { id: "Q43332", label: "Pompeii", description: "ancient city" },
+        ],
+      },
+      bindings: [
+        statement("Q43332", "P1082", 0, {
+          unit: { value: "http://www.wikidata.org/entity/Q199" },
+        }),
+      ],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Pompeii",
+          property: "population",
+          value: 20000,
+          qualifier: "about",
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({ status: "unknown", reason: "no-value" });
+  });
 });
 
 describe("checking a named fact", () => {
@@ -1338,6 +1514,84 @@ describe("checking claims against every source", () => {
       reason: "varies",
       source: "wikidata",
       found: { value: 100, unit: "kg" },
+    });
+  });
+
+  it("keeps short names apart when picking a title for the kind", async () => {
+    const began = (item, year) => ({
+      item: { value: `http://www.wikidata.org/entity/${item}` },
+      pid: { value: "P571" },
+      st: { value: `${item}-P571` },
+      rank: { value: "http://wikiba.se/ontology#NormalRank" },
+      time: { value: `${year}-01-01T00:00:00Z` },
+      precision: { value: "9" },
+      calendar: { value: "http://www.wikidata.org/entity/Q1985727" },
+    });
+    const fetch = fakeWikidata({
+      articles: {
+        C: [{ id: "Q2", title: "C" }],
+        "C programming language": [
+          { id: "Q5427464", title: "F (programming language)" },
+          { id: "Q15777", title: "C (programming language)" },
+        ],
+      },
+      bindings: [
+        began("Q2", 1900),
+        began("Q5427464", 1990),
+        began("Q15777", 1972),
+      ],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "C",
+          kind: "programming language",
+          property: "began",
+          value: 1972,
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "agrees",
+      entity: { id: "Q15777" },
+    });
+  });
+
+  it("needs the name in a title it picks for the kind", async () => {
+    const began = (item, year) => ({
+      item: { value: `http://www.wikidata.org/entity/${item}` },
+      pid: { value: "P571" },
+      st: { value: `${item}-P571` },
+      rank: { value: "http://wikiba.se/ontology#NormalRank" },
+      time: { value: `${year}-01-01T00:00:00Z` },
+      precision: { value: "9" },
+      calendar: { value: "http://www.wikidata.org/entity/Q1985727" },
+    });
+    const fetch = fakeWikidata({
+      articles: {
+        Fortran: [{ id: "Q83303", title: "Fortran" }],
+        // "F" is too short for words(), which once let this pass for Fortran.
+        "Fortran programming language": [
+          { id: "Q5427464", title: "F (programming language)" },
+        ],
+      },
+      bindings: [began("Q83303", 1957), began("Q5427464", 1990)],
+    });
+    const [result] = await checkClaims(
+      [
+        {
+          subject: "Fortran",
+          kind: "programming language",
+          property: "began",
+          value: 1957,
+        },
+      ],
+      { fetch },
+    );
+    expect(result).toMatchObject({
+      status: "agrees",
+      entity: { id: "Q83303" },
     });
   });
 

@@ -173,6 +173,19 @@ deliberately generous and "disagrees" means something.
   States), and the claim agrees if any of the items it could mean is among them; a name
   the search doesn't know is compared as words against the value's label instead. The
   Nile's `country` is seven countries, and a passage naming any one of them is right.
+- **A place can be named at any level.** When a `region` or `country` claim doesn't match
+  the item's own values, it is checked against every place above the item as well,
+  following "located in" (P131) upward. Wikidata puts Disneyland in Anaheim, which is in
+  Orange County, which is in California, so "Disneyland is in California" agrees, and so
+  does "Alton Towers is in England". Only current links are followed, by the same rule as
+  an item's own values, so a county a town was moved out of doesn't count. A place above
+  has to be the stated one by item or by its exact name, or its formal name ("Canton of
+  Geneva" for Geneva): the "ends with" rule named facts use for people would let "Mexico"
+  match New Mexico. That second lookup only runs for claims that would otherwise
+  disagree, and alongside the Smithsonian's.
+- **A population of 0 is no figure.** Wikidata gives a ruined or abandoned town (Pompeii)
+  a population of 0, which says nothing about how many people lived there, so it is
+  treated as missing and Wikipedia is read instead.
 - **Except dated figures, where only the latest counts.** A population with several
   "point in time" qualifiers is compared with the most recent, and the finding says which
   year it is from ("2,103,778 as of 2023"). A passage agreeing with the 1910 census is out of
@@ -325,7 +338,9 @@ above penicillin.
 
 The one used is the first candidate whose article _title_ is the name with the kind added
 and nothing else ("Mercury (planet)", "Amazon River", "Georgia (U.S. state)"); failing
-that, the first. A title that merely has the kind in it is something else: "Australian
+that, the first. The name part of the title is compared with every word kept, however
+short: "F (programming language)" is the kind with a name added, but the name isn't
+Fortran, or C. A title that merely has the kind in it is something else: "Australian
 country music" is not Australia. The title and not Wikidata's description, because a
 description is prose that says "tragedy" for a play and "liner" for a ship, and matching a
 word of it picked Ur-Hamlet over Hamlet. Having the property never
@@ -378,7 +393,7 @@ token.
 - **Limits.** At most 60 passages, 4,000 characters each and 40,000 in all
   (`cleanPassages` in `apps/api/src/lib/factCheck.js`), and 40 claims.
 - **Results** are cached in KV for 7 days (`FACT_CHECK_TTL` in `routes/ai.js`), keyed on the lesson title and the passages' text
-  in order (plus `FACT_CHECK_VERSION`, currently `v5`, to bump when the prompt or the rules change). A cache hit is served
+  in order (plus `FACT_CHECK_VERSION`, currently `v6`, to bump when the prompt or the rules change). A cache hit is served
   before the rate limiter and costs nothing. Block ids are not part of the key: they are
   attached to the cached facts per request, so two lessons with the same text both get
   their own ids back.

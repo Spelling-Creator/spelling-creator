@@ -166,6 +166,15 @@ const JULIAN = "Q1985786";
  * animal to the next (how big, heavy or fast it is), so that it varies when
  * the item is a kind of living thing, and only then.
  *
+ * `emptyAtZero` marks a figure that, at zero, means there is none to compare
+ * with: Wikidata gives a ruined or abandoned town (Pompeii) a population of 0,
+ * which says nothing about how many people lived there.
+ *
+ * `placesAbove` marks a place that may be named at any level: Disneyland is in
+ * Anaheim on Wikidata, and a passage that puts it in California is right too.
+ * A claim that would otherwise disagree is checked against every place above
+ * the item as well (see placesAboveQuery).
+ *
  * `hint` is the plain description a model is given when choosing.
  */
 export const FACT_PROPERTIES = {
@@ -232,6 +241,7 @@ export const FACT_PROPERTIES = {
     kind: "quantity",
     dimension: "count",
     pids: ["P1082"],
+    emptyAtZero: true,
     hint: "how many people live in a place",
   },
   mass: {
@@ -367,6 +377,7 @@ export const FACT_PROPERTIES = {
   country: {
     kind: "item",
     pids: ["P17"],
+    placesAbove: true,
     hint: "the country something is in",
   },
   continent: {
@@ -378,6 +389,7 @@ export const FACT_PROPERTIES = {
     kind: "item",
     pids: ["P131", "P276"],
     pooled: true,
+    placesAbove: true,
     hint: "the state, province, county or city something is in",
   },
   language: {
@@ -820,6 +832,104 @@ export function itemsFromBindings(bindings) {
   return out;
 }
 
+/**
+ * A SPARQL query for the "located in the administrative territorial entity"
+ * (P131) statements of each item and of every place above it: Disneyland's
+ * run Anaheim, Orange County, California, the United States. Each statement
+ * comes with its rank and any end date, and placesAbove follows only the
+ * current ones, by the same rule as an item's own values: a county a town was
+ * moved out of is not above it any more. The places are found through
+ * Wikidata's best-ranked links (wdt:), since following every statement
+ * (p:/ps:) upward times out on the query service; a place reached only through
+ * a lower-ranked link is missed, which leaves a claim disagreeing, never
+ * agreeing wrongly.
+ * @param {string[]} itemIds
+ * @param {string} [language]  For the places' labels.
+ */
+export function placesAboveQuery(itemIds, language = "en") {
+  const items = itemIds.map((id) => `wd:${id}`).join(" ");
+  const languages = [...new Set([language, "en", "mul"])].join(",");
+  // The patterns run in the order written. Left to its optimizer, the query
+  // service starts from every P131 statement there is and times out.
+  return `SELECT ?from ?st ?rank ?ended ?place ?placeLabel WHERE {
+  hint:Query hint:optimizer "None" .
+  VALUES ?item { ${items} }
+  ?item wdt:P131* ?from .
+  ?from p:P131 ?st .
+  ?st ps:P131 ?place ; wikibase:rank ?rank .
+  OPTIONAL { ?st pq:P582 ?ended . }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "${languages}". }
+}`;
+}
+
+/**
+ * placesAboveQuery's rows, as each place's P131 statements:
+ * `Map<itemId, { value, valueLabel, rank, ended }[]>`.
+ */
+export function placeLinksFromBindings(bindings) {
+  const out = new Map();
+  const seen = new Set();
+  for (const row of bindings || []) {
+    const from = lastSegment(row.from?.value);
+    const place = lastSegment(row.place?.value);
+    const id = row.st?.value;
+    if (!from || !id || !/^Q\d+$/.test(place || "") || seen.has(id)) continue;
+    seen.add(id);
+    if (!out.has(from)) out.set(from, []);
+    out.get(from).push({
+      value: place,
+      valueLabel: row.placeLabel?.value || place,
+      rank: rankOf(row.rank?.value),
+      ended: Boolean(row.ended),
+    });
+  }
+  return out;
+}
+
+/**
+ * Every place above an item, nearest first, through current statements only
+ * (see currentStatements).
+ * @param {string} itemId
+ * @param {Map<string, object[]>} links  From placeLinksFromBindings.
+ * @returns {{ value: string, valueLabel: string }[]}
+ */
+export function placesAbove(itemId, links) {
+  const out = [];
+  const seen = new Set([itemId]);
+  let frontier = [itemId];
+  while (frontier.length) {
+    const next = [];
+    for (const id of frontier) {
+      for (const s of currentStatements(links.get(id))) {
+        if (seen.has(s.value)) continue;
+        seen.add(s.value);
+        out.push(s);
+        next.push(s.value);
+      }
+    }
+    frontier = next;
+  }
+  return out;
+}
+
+// The formal names Wikidata gives some places: "Canton of Geneva", "State of
+// New York". A passage says Geneva.
+const FORMAL_PLACE =
+  /^(canton|state|province|county|city|metropolitan city|region|department|district|municipality|commonwealth|republic|kingdom) of /;
+
+/**
+ * Whether a place above an item is the place a claim states: by item id, by
+ * its name, or by its formal name. Stricter than itemAgrees, whose "ends
+ * with" rule is for people ("Fleming"): among places it lets "Mexico" match
+ * New Mexico and "Wales" New South Wales.
+ */
+export function placeAgrees(claim, place, statedIds = []) {
+  if (statedIds.includes(place.value)) return true;
+  const wanted = squashText(claim.stated);
+  const have = squashText(place.valueLabel);
+  return have === wanted || have.replace(FORMAL_PLACE, "") === wanted;
+}
+
 function timeKey(t) {
   return t ? t.year * 10000 + (t.month || 0) * 100 + (t.day || 0) : -Infinity;
 }
@@ -969,7 +1079,9 @@ function judgeStatements(claim, byPid, statedIds) {
   let pid;
   let statements = [];
   for (const candidate of spec.pids) {
-    const current = currentStatements(byPid?.get(candidate));
+    const current = currentStatements(byPid?.get(candidate)).filter(
+      (s) => !(spec.emptyAtZero && s.amount === 0),
+    );
     if (!current.length) continue;
     pid ??= candidate;
     statements = statements.concat(current);
@@ -1381,6 +1493,13 @@ const words = (text) =>
     .split(/[^\p{L}\p{N}]+/u)
     .filter((w) => w.length > 2);
 
+// Every word, however short: for comparing names, where "C" and "F" differ.
+const allWords = (text) =>
+  String(text || "")
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
 const hasWord = (text, wanted) => {
   const present = new Set(words(text));
   return wanted.some((w) => present.has(w));
@@ -1420,11 +1539,19 @@ function chooseItem(claim, candidates, statements) {
     // The name with the kind added, and nothing else: "Mercury (planet)",
     // "Amazon River", "Georgia (U.S. state)". A title that merely has the
     // kind in it is something else: "Australian country music" is not
-    // Australia, and "Sleep Country Canada" is not Canada.
+    // Australia, and "Sleep Country Canada" is not Canada. The name part (the
+    // title without a bracketed kind) is also compared with every word kept,
+    // however short, since words() drops them: otherwise "F (programming
+    // language)" passes for Fortran, or for C.
     const subject = new Set(words(claim.subject));
+    const subjectAll = new Set(allWords(claim.subject));
+    const kindAll = new Set(allWords(claim.kind));
     const nameAndKind = (c) => {
       const title = words(c.title);
+      const name = allWords(c.title.replace(/\s*\([^)]*\)\s*$/, ""));
       return (
+        name.some((w) => subjectAll.has(w)) &&
+        name.every((w) => subjectAll.has(w) || kindAll.has(w)) &&
         title.some((w) => kind.includes(w)) &&
         title.every((w) => subject.has(w) || kind.includes(w))
       );
@@ -1661,16 +1788,59 @@ export async function checkPreparedClaims(claims, opts = {}) {
     }
   };
 
+  // The places above the items of place claims Wikidata's own values don't
+  // bear out, all at once: "Disneyland is in California" when Wikidata says
+  // Anaheim. A failed lookup leaves the claim disagreeing, as it would have.
+  const statedIdsOf = (claim) =>
+    statedIdsByName.get(claim.stated?.toLowerCase());
+  // Wikidata's verdict on each claim, once: the places lookup and judge both
+  // read it.
+  for (const p of picked) {
+    if (!p.done) p.first = judgeClaim(p.claim, p.byPid, statedIdsOf(p.claim));
+  }
+  const placeItems = [
+    ...new Set(
+      picked
+        .filter(
+          (p) =>
+            !p.done &&
+            FACT_PROPERTIES[p.claim.property].placesAbove &&
+            p.first.status === "disagrees",
+        )
+        .map((p) => p.item.id),
+    ),
+  ];
+  let placeLinks = new Map();
+  const askPlacesAbove = async () => {
+    if (!placeItems.length) return;
+    try {
+      placeLinks = placeLinksFromBindings(
+        await sparql(placesAboveQuery(placeItems, settings.language), settings),
+      );
+    } catch {
+      // Judged on the item's own values alone.
+    }
+  };
+
   const judge = (p) => {
     if (p.done) return p.done;
     const { claim, entity, byPid, volcano } = p;
-    const verdicts = [
-      judgeClaim(
-        claim,
-        byPid,
-        statedIdsByName.get(claim.stated?.toLowerCase()),
-      ),
-    ];
+    const verdicts = [p.first];
+    if (p.first.status === "disagrees" && placeLinks.size) {
+      const match = placesAbove(p.item.id, placeLinks).find((place) =>
+        placeAgrees(claim, place, statedIdsOf(claim)),
+      );
+      if (match) {
+        verdicts[0] = {
+          status: "agrees",
+          source: "wikidata",
+          found: {
+            pid: "P131",
+            items: [{ id: match.value, label: match.valueLabel }],
+          },
+        };
+      }
+    }
     if (volcano) {
       verdicts.push(
         volcanoesFailed
@@ -1717,8 +1887,12 @@ export async function checkPreparedClaims(claims, opts = {}) {
   // A claim with no volcano to ask about is settled by Wikidata alone, so its
   // article is read while the Smithsonian answers. The volcanoes' own claims
   // are judged after, and read what they still need.
+  // The Smithsonian is asked while the places above are looked up, since
+  // only the claims that aren't about volcanoes are judged before it answers.
+  const smithsonian = askSmithsonian();
+  await askPlacesAbove();
   const judged = picked.map((p) => (p.volcano ? null : judge(p)));
-  await Promise.all([askSmithsonian(), readArticles(judged)]);
+  await Promise.all([smithsonian, readArticles(judged)]);
   picked.forEach((p, i) => {
     if (p.volcano) judged[i] = judge(p);
   });

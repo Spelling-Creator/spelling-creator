@@ -17,14 +17,21 @@ Worker API.
 Short screen recordings of the app, embedded in the docs and kept in
 [`apps/docs/docs/public/videos`](apps/docs/docs/public/videos):
 
-| Video                                                                                                                   | File                                                           |
-| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [Building a lesson](https://spellingcreator.org/docs/guide/overview#see-it-in-action)                                   | [MP4](apps/docs/docs/public/videos/editor-build-a-lesson.mp4)  |
-| [Working in a finished lesson](https://spellingcreator.org/docs/guide/overview#see-it-in-action)                        | [MP4](apps/docs/docs/public/videos/editor-fork-and-export.mp4) |
-| [Finding a lesson and joining the discussion](https://spellingcreator.org/docs/guide/hub-and-accounts#see-it-in-action) | [MP4](apps/docs/docs/public/videos/hub-browse-and-discuss.mp4) |
-| [Publishing a draft](https://spellingcreator.org/docs/guide/hub-and-accounts#see-it-in-action)                          | [MP4](apps/docs/docs/public/videos/hub-publish-a-draft.mp4)    |
-| [Following someone, then merging a proposal](https://spellingcreator.org/docs/guide/pull-requests#see-it-in-action)     | [MP4](apps/docs/docs/public/videos/hub-follow-and-merge.mp4)   |
-| [Two practitioners editing one lesson](https://spellingcreator.org/docs/guide/live-collaboration#see-it-in-action)      | [MP4](apps/docs/docs/public/videos/live-collaboration.mp4)     |
+| Video                                                                                                                    | File                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| [Building a lesson](https://spellingcreator.org/docs/guide/overview#see-it-in-action)                                    | [MP4](apps/docs/docs/public/videos/editor-build-a-lesson.mp4)        |
+| [Working in a finished lesson](https://spellingcreator.org/docs/guide/overview#see-it-in-action)                         | [MP4](apps/docs/docs/public/videos/editor-fork-and-export.mp4)       |
+| [Importing a lesson from text](https://spellingcreator.org/docs/guide/import-from-text#see-it-in-action)                 | [MP4](apps/docs/docs/public/videos/editor-import-from-text.mp4)      |
+| [Adding a VAKT activity](https://spellingcreator.org/docs/guide/vakt-activities)                                         | [MP4](apps/docs/docs/public/videos/editor-vakt-activity.mp4)         |
+| [Trying changes in a variation](https://spellingcreator.org/docs/guide/variations#see-it-in-action)                      | [MP4](apps/docs/docs/public/videos/editor-variations.mp4)            |
+| [Writing a lesson with AI help](https://spellingcreator.org/docs/guide/ai-writing-help#see-it-in-action)                 | [MP4](apps/docs/docs/public/videos/editor-ai-writing-help.mp4)       |
+| [Checking a lesson and fixing problems with AI](https://spellingcreator.org/docs/guide/ai-lesson-fixes#see-it-in-action) | [MP4](apps/docs/docs/public/videos/editor-check-and-fix-with-ai.mp4) |
+| [Checking a lesson's facts](https://spellingcreator.org/docs/guide/fact-checking#see-it-in-action)                       | [MP4](apps/docs/docs/public/videos/editor-fact-check.mp4)            |
+| [Working through a lesson](https://spellingcreator.org/docs/guide/interactive-mode#see-it-in-action)                     | [MP4](apps/docs/docs/public/videos/hub-practice-a-lesson.mp4)        |
+| [Finding a lesson and joining the discussion](https://spellingcreator.org/docs/guide/hub-and-accounts#see-it-in-action)  | [MP4](apps/docs/docs/public/videos/hub-browse-and-discuss.mp4)       |
+| [Publishing a draft](https://spellingcreator.org/docs/guide/hub-and-accounts#see-it-in-action)                           | [MP4](apps/docs/docs/public/videos/hub-publish-a-draft.mp4)          |
+| [Following someone, then merging a proposal](https://spellingcreator.org/docs/guide/pull-requests#see-it-in-action)      | [MP4](apps/docs/docs/public/videos/hub-follow-and-merge.mp4)         |
+| [Two practitioners editing one lesson](https://spellingcreator.org/docs/guide/live-collaboration#see-it-in-action)       | [MP4](apps/docs/docs/public/videos/live-collaboration.mp4)           |
 
 ## Documentation
 

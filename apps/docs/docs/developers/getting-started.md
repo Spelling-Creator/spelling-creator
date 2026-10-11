@@ -73,7 +73,8 @@ gitignored except the `.env.example` files and `apps/web/.env.stub`.
   [web app's getting started page](./web-app/getting-started.md) explains each
   one.
 - `apps/web/.env.stub`: committed, because it holds nothing but local URLs. It
-  points the app at the stub API for `pnpm dev:web:stub`.
+  points the app at the stub API for `pnpm dev:web:stub`, including the stub's
+  stand-in Turnstile widget (`VITE_TURNSTILE_SCRIPT_URL`).
 - `apps/api/.env`: Worker secrets for `wrangler dev`, such as
   `SUPABASE_SERVICE_ROLE_KEY`, `TURNSTILE_SECRET_KEY`, `PIXABAY_API_KEY`,
   `ADMIN_MIGRATE_TOKEN` and the AI provider keys below. Plain settings

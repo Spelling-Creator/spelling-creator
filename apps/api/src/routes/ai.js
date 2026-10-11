@@ -10,7 +10,7 @@
 import { generateWithFallback, QUESTION_SCHEMAS, QUESTION_LABELS, QUESTION_INSTRUCTIONS, LESSON_IDEA_SCHEMA } from '../lib/ai/index.js';
 import { checkPassages, cleanPassages } from '../lib/factCheck.js';
 import { FixError, MAX_FIX_DOC_CHARS, cleanFixDoc, findFinding, suggestLessonFix } from '../lib/lessonFix.js';
-import { cacheKey } from '../lib/cache.js';
+import { cacheKey, textCacheKey } from '../lib/cache.js';
 import { clientIp, rateLimitStore } from '../platform/index.js';
 import { verifyTurnstile } from '../lib/turnstile.js';
 import { textResponse } from '../lib/http.js';
@@ -28,7 +28,9 @@ const FACT_CHECK_TTL = 60 * 60 * 24 * 7; // 7 days
 // v4: the Smithsonian and Wikipedia as sources, and `found` with `source` in
 // place of `wikidata` in each fact. v5: the prompt describes the lesson as a
 // Spelling lesson for nonspeaking spellers rather than "a lesson for students".
-const FACT_CHECK_VERSION = 'v5';
+// v6: a place may be named at any level above the item (Disneyland is in
+// California, not only Anaheim), and a population of 0 is no figure at all.
+const FACT_CHECK_VERSION = 'v6';
 
 // The request modes this Worker understands. "text"/"question" drive the AI
 // suggesters; "imageSearch"/"imageFetch" drive the Pixabay image search. Any
@@ -148,8 +150,12 @@ async function handleImageFetch(rawUrl, okHeaders, cors) {
  * The Turnstile-gated AI / image entrypoint (POST /). Reads the request JSON,
  * verifies Turnstile, charges the per-IP rate limiter (a cached text answer is
  * served first and costs nothing), then dispatches on `mode`.
+ *
+ * `verify` replaces the Turnstile check. Only code can pass it, never config:
+ * the local stub API (apps/stub-api) runs this handler with a check that always
+ * passes, since its stand-in widget has no Cloudflare challenge behind it.
  */
-export async function handleAi(request, env, cors, allowedHostnames) {
+export async function handleAi(request, env, cors, allowedHostnames, { verify = verifyTurnstile } = {}) {
 	const LIMIT = 60;
 	const WINDOW = 60;
 	const ip = clientIp(env, request) || 'unknown';
@@ -225,7 +231,7 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	// Validate the request really came from our domain via Turnstile.
 	// This relies on the verified `hostname` from Cloudflare's siteverify
 	// response, not on spoofable Origin/Referer headers.
-	const turnstile = await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, allowedHostnames, ip);
+	const turnstile = await verify(token, env.TURNSTILE_SECRET_KEY, allowedHostnames, ip);
 	if (!turnstile.ok) {
 		return new Response(turnstile.reason, { status: turnstile.status, headers: cors });
 	}
@@ -259,7 +265,7 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	// shape the text, normalized case-insensitively, so repeated requests skip
 	// the AI call. A cache hit is served before the rate-limit charge below,
 	// so it neither consumes a token nor can be rejected by the limiter.
-	const cKey = mode === 'text' ? await cacheKey(['text', subject, documentName]) : null;
+	const cKey = mode === 'text' ? await textCacheKey(subject, documentName) : null;
 	if (cKey) {
 		const cached = await kv.get(cKey);
 		if (cached) {
@@ -407,7 +413,7 @@ export async function handleAi(request, env, cors, allowedHostnames) {
 	// that forces the model to ground the text in, and explicitly reference,
 	// the document title so the block reads as part of that specific lesson.
 	const documentBlock = documentName
-		? `\n\nThis text is a section of a lesson titled "${documentName}". You MUST treat "${documentName}" as the overarching topic: write the section as part of that lesson, keep it consistent with and relevant to "${documentName}", and explicitly reference the lesson's subject in the text. Do not write a generic, standalone summary of "${subject}" that ignores the lesson title.`
+		? `\n\nThis text is a section of a lesson titled "${documentName}". You MUST treat "${documentName}" as the overarching topic: write the section as part of that lesson, keep it consistent with and relevant to "${documentName}", and connect it to the lesson's subject in the text. Do not write a generic, standalone summary of "${subject}" that ignores the lesson title. Do not name the lesson or quote its title (no "in ${documentName}" or "the story of ${documentName}"): the speller already knows which lesson this is, so talk about the subject itself.`
 		: '';
 	const prompt = `Suggest a block of text about the following subject: "${subject}".${documentBlock}\n\nWrite any unusual or important words, BUT NOT THE LESSON TITLE — THAT IS UNACCEPTABLE, including proper nouns, in ALL CAPITALS so they stand out as spelling words. You may also include numbers to be used as number answers.\n\nRespond with only the block of text, no preamble or explanation.`;
 

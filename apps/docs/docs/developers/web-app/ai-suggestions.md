@@ -44,7 +44,9 @@ An unknown `mode` falls back to `text`.
 The web app needs `VITE_API_URL` and `VITE_TURNSTILE_SITE_KEY`, and the Worker
 `TURNSTILE_SECRET_KEY`, a rate-limit store and at least one AI provider. See
 [Getting started](./getting-started.md) and the monorepo
-[Getting started](../getting-started.md).
+[Getting started](../getting-started.md). To try them with none of that, run
+the [stub API](../stub-api.md#ai-and-turnstile), which runs this same handler
+with a stand-in Turnstile and answers from saved answers or `claude -p`.
 
 ## Lesson ideas
 
@@ -75,12 +77,16 @@ title; nothing else in the lesson changes.
 `suggestText(subject, token, { documentName })` sends the section name as
 `subject` and the lesson title as `documentName` (no `mode`, so it is the
 default). The prompt tells the model to treat the lesson title as the
-overarching topic, to write unusual or important words in ALL CAPS so they read
-as spelling words (but never the lesson title), and that it may include numbers
-for number questions. The response is `{ "text" }`.
+overarching topic without naming the lesson or quoting its title in the text
+(the speller knows which lesson it is), to write unusual or important words in
+ALL CAPS so they read as spelling words (but never the lesson title), and that
+it may include numbers for number questions. The response is `{ "text" }`.
 
-Text answers are cached in KV for 30 days (`CACHE_TTL`), keyed by `cacheKey`
-on `["text", subject, documentName]`, normalized case-insensitively. A repeat
+Text answers are cached in KV for 30 days (`CACHE_TTL`), keyed by
+`textCacheKey(subject, documentName)` in `apps/api/src/lib/cache.js`, which
+hashes `["text", TEXT_CACHE_VERSION, subject, documentName]` normalized
+case-insensitively. Bump `TEXT_CACHE_VERSION` when the prompt changes what it
+writes, or answers to the old prompt are served for up to 30 days. A repeat
 request is served from the cache before the rate limiter, so it costs neither
 a token nor a model call.
 
@@ -90,7 +96,7 @@ A signed-in user can thumbs-down a suggestion. `dislikeText()` calls
 `POST /ai-text/dislike` (`handleTextFeedback` in
 `apps/api/src/routes/feedback.js`) with the Supabase session as a Bearer token
 and the same `subject` and `documentName`. The route verifies the user,
-rebuilds the identical cache key and deletes it, so the next request writes a
+rebuilds the identical cache key with the same `textCacheKey` and deletes it, so the next request writes a
 fresh answer. It is gated by sign-in rather than Turnstile because it changes
 the shared server cache, and it neither consumes a rate-limit token nor calls a
 model. Deleting a key that has already expired still answers `{ ok: true }`.

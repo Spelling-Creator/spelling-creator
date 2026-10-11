@@ -14,6 +14,15 @@ passage, and it takes something that reads both to say which. For those the
 set up. To make a fix, your lesson is sent to that site's server and on to an
 AI service.
 
+## See it in action
+
+<DemoVideo name="editor-check-and-fix-with-ai" title="Checking a lesson and fixing problems with AI">
+Two problems from the Check panel fixed with AI: an answer that gave away a
+spelling word, shortened, and a spelling word that was too long, swapped for
+another. Each change is shown before it's applied. The fixes were written by an
+AI model, so yours may differ.
+</DemoVideo>
+
 ## Making a fix
 
 1. Press **Fix with AI** under a finding. A **Fix with AI** window opens over

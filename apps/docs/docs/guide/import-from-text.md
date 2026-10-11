@@ -14,6 +14,15 @@ You'll find it in the editor's **Menu** (the button in the editor's top bar),
 in the **Lesson actions** menu on a phone, and on the screen of an empty
 lesson, next to the other two imports.
 
+## See it in action
+
+<DemoVideo name="editor-import-from-text" title="Importing a lesson from text">
+A lesson typed out in plain text, pasted into Import from text from an empty
+lesson. The dialog lists the two sections it found with their paragraphs,
+spelling words and questions, and the import opens as a new lesson with its
+question types worked out, then in Preview.
+</DemoVideo>
+
 ## Which import to use
 
 | Import                   | Use it for                                                                                                                                                                                             |
@@ -51,7 +60,8 @@ question.
   plain. The answer can follow in any of the usual ways: in brackets as
   "(Answer: ...)" or "[...]", on the next line as "A: ...", after a colon, or as
   a word in CAPITALS at the end. A question that ends with its question mark has
-  no answer.
+  no answer. Several answers are separated by commas or semicolons, but a
+  number written with a comma, like "3,000", stays one answer.
 - **Working out** for a number question can follow it as numbered lines or a
   "Working out:" line.
 - **A VAKT line** becomes a [VAKT activity](./vakt-activities.md).

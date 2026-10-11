@@ -295,10 +295,18 @@ export default function DocumentImportDialog({
                       </span>
                       <span className="shrink-0 tabular-nums">
                         {t("documentImport.sectionCounts", {
-                          paragraphs: s.paragraphs,
-                          words: s.spellingWords,
-                          questions: s.questions,
-                          answered: s.answered,
+                          paragraphs: t("documentImport.sectionParagraphs", {
+                            count: s.paragraphs,
+                          }),
+                          words: t("documentImport.sectionWords", {
+                            count: s.spellingWords,
+                          }),
+                          questions: t("documentImport.sectionQuestions", {
+                            count: s.questions,
+                          }),
+                          answered: t("documentImport.sectionAnswered", {
+                            count: s.answered,
+                          }),
                         })}
                       </span>
                     </li>

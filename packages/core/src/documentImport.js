@@ -196,8 +196,17 @@ export function splitSections(text) {
 const QUESTION_PREFIX = /^(?:q\s*)?\d+\s*[.):]\s*|^[-*]\s+|^q:\s*/i;
 const ANSWER_LINE = /^a(?:nswers?)?\s*:\s*/i;
 
+// A comma between a digit and exactly three more digits is a thousands
+// separator ("3,000"), not a gap between two answers.
+const LIST_COMMA = /(?<!\d),|,(?!\d{3}(?!\d))/;
+const THOUSANDS_COMMA = /(?<=\d),(?=\d{3}(?!\d))/g;
+
 function listOf(text) {
-  const sep = text.includes(";") ? ";" : text.includes(" / ") ? "/" : ",";
+  const sep = text.includes(";")
+    ? ";"
+    : text.includes(" / ")
+      ? "/"
+      : LIST_COMMA;
   return text
     .split(sep)
     .map((s) => s.trim())
@@ -372,7 +381,7 @@ export function deriveQuestionType(question, passage) {
   if (answers.length > 1) {
     return answers.every(inPassage) ? "multiple" : "multiple_open";
   }
-  if (/^\d[\d\s.]*$/.test(answers[0])) return "number";
+  if (/^\d[\d\s.,]*$/.test(answers[0])) return "number";
   return inPassage(answers[0]) ? "single" : "background";
 }
 
@@ -386,7 +395,11 @@ function questionBlock(q, passage) {
   const base = { type: "question", questionType, prompt: q.prompt };
   switch (questionType) {
     case "number":
-      return { ...base, answer: q.answers[0] ?? "", steps: q.steps };
+      return {
+        ...base,
+        answer: (q.answers[0] ?? "").replace(THOUSANDS_COMMA, ""),
+        steps: q.steps,
+      };
     case "single":
     case "background":
       return { ...base, answer: q.answers[0] ?? "" };

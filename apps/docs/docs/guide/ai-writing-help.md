@@ -16,6 +16,14 @@ and on to an AI service. To check a lesson you've written, see
 [Lesson checks](./lesson-checks.md) and [AI lesson fixes](./ai-lesson-fixes.md)
 instead.
 
+## See it in action
+
+<DemoVideo name="editor-ai-writing-help" title="Writing a lesson with AI help">
+Lesson ideas for ages 11 to 14, one of them used as the title, then a section
+with AI-written text and a question about it, each added with a click. The
+ideas, text and question were written by an AI model, so yours will differ.
+</DemoVideo>
+
 ## Lesson ideas
 
 Under the lesson's title there's an age range menu (**Any age** until you pick
