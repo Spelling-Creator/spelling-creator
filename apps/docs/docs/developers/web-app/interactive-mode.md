@@ -337,12 +337,12 @@ How it behaves:
 Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudEngine.js`
 spells out numbers and abbreviations, turns the words into IPA with
 [Spellophone](https://spellophone.spellingcreator.org/) (our WebAssembly build of
-espeak-ng, the phonemizer Kokoro was trained against, installed as
+espeak-ng, the phonemizer Kokoro was trained against, installed from npm as
 `@spelling-creator/spellophone`), and passes that to the model. The text clean-up
 follows kokoro.js, the reference JavaScript port. That package isn't used itself
 because it pins transformers.js 3, which would put a second ONNX runtime in the
-bundle. Only Spellophone's English data is bundled (about 830 KB), as hashed
-assets of the build, not fetched from a CDN. `readAloudEngine.js` is only ever
+bundle. Only Spellophone's English data is bundled, as hashed assets of the build
+rather than fetched from a CDN: about 860 KB with the WebAssembly. `readAloudEngine.js` is only ever
 reached through a dynamic `import()` in `readAloud.js`, so none of this weight
 lands in the main bundle.
 

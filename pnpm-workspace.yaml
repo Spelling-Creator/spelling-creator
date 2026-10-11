@@ -20,6 +20,12 @@ allowBuilds:
   # browser (onnxruntime-web), so there is nothing here for them to do.
   onnxruntime-node: false
 
+# pnpm holds back versions published less than a day ago. Spellophone is our
+# own package, published from its repo with trusted publishing, so a release
+# can be picked up the day it goes out.
+minimumReleaseAgeExclude:
+  - "@spelling-creator/spellophone"
+
 # Transitive dependencies held back on vulnerable versions by their parents.
 # Each override stays inside the parent's major, so it is a drop-in bump.
 # Drop an entry once every dependent resolves to a fixed version on its own.
