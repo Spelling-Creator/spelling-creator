@@ -93,7 +93,7 @@
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
     "@isomorphic-git/lightning-fs": "^4.7.0",
-    "@spelling-creator/spellophone": "https://github.com/Spelling-Creator/spellophone/releases/download/v0.1.0/spellophone-v0.1.0.tgz",
+    "@spelling-creator/spellophone": "^0.2.1",
     "@supabase/supabase-js": "^2.112.3",
     "docx": "^9.0.3",
     "dompurify": "^3.4.13",

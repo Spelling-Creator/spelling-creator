@@ -59,28 +59,18 @@ const ESPEAK_FILES = {
 };
 const ESPEAK_DATA_URL = "https://espeak-ng-data.invalid/";
 
-// A server that sees a .gz file may send it with Content-Encoding: gzip (Vite's
-// dev server does, and so can a self-host's), and then the browser has already
-// unzipped it by the time Spellophone, which always unzips, reads it. Such a
-// body is zipped up again so both kinds of server give the same bytes. This can
-// go once Spellophone checks for itself:
-// https://github.com/Spelling-Creator/spellophone/issues/2
-const GZIP_MAGIC = [0x1f, 0x8b];
-
-async function fetchEspeakFile(url) {
+// A server may send the .gz files with Content-Encoding: gzip (Vite's dev
+// server does), so the browser has unzipped them already. Spellophone spots
+// that and passes them on as they are, so nothing needs doing about it here.
+function fetchEspeakFile(url) {
   const name = new URL(url).pathname.split("/").pop();
   const asset = ESPEAK_FILES[name];
-  if (!asset)
-    return new Response(null, { status: 404, statusText: "Not bundled" });
-  const res = await fetch(asset);
-  if (!res.ok || !name.endsWith(".gz")) return res;
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  if (bytes[0] === GZIP_MAGIC[0] && bytes[1] === GZIP_MAGIC[1]) {
-    return new Response(bytes);
+  if (!asset) {
+    return Promise.resolve(
+      new Response(null, { status: 404, statusText: "Not bundled" }),
+    );
   }
-  return new Response(
-    new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip")),
-  );
+  return fetch(asset);
 }
 
 let espeakPromise = null;
@@ -215,10 +205,7 @@ const STRAY_Z = new RegExp(` z(?=[${PUNCTUATION_MARKS} ]|$)`, "g");
  */
 function phonemize(espeak, text, accent) {
   const normalized = normalizeText(text);
-  // "en" is espeak-ng's British voice. "en-gb" would be clearer, but
-  // Spellophone can't select it by that tag yet:
-  // https://github.com/Spelling-Creator/spellophone/issues/1
-  const voice = accent === "b" ? "en" : "en-us";
+  const voice = accent === "b" ? "en-gb" : "en-us";
   let ipa = "";
   let last = 0;
   const speakWords = (words) => {
