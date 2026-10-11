@@ -129,7 +129,7 @@ function checkConfiguration(env) {
 	if (!env.SUPABASE_URL) missing.push('SUPABASE_URL');
 	if (!env.SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
 	if (missing.length > 0) {
-		return failed('configuration', `not set: ${missing.join(', ')}`, 'Set them in the environment; see /monorepo/self-hosting.');
+		return failed('configuration', `not set: ${missing.join(', ')}`, 'Set them in the environment; see /docs/developers/self-hosting.');
 	}
 	// Deliberately reports only that a value exists, never any part of it.
 	return ok('configuration', 'database and identity credentials are set');

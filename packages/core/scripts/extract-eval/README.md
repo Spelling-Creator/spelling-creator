@@ -93,4 +93,5 @@ style. `rescore.mjs` re-scores the saved outputs in `out/` with the current
 q4, the 350M one about 460 MB.
 
 The results and what they mean are written up in the docs site under
-Monorepo, "Document import experiment".
+Developers, "Document import experiment"
+(`apps/docs/docs/developers/document-import-experiment.md`).

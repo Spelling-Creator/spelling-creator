@@ -39,6 +39,11 @@
         "body": "Download a finished lesson as a Word document or PDF, or save it straight to Google Docs for printing and sharing."
       }
     },
+    "spelling": {
+      "title": "For Spelling, however you practice it",
+      "body": "Spelling is the umbrella term for the ways nonspeakers communicate by pointing to letters. It includes S2C, RPM and Spellers Method, and plenty of practitioners who follow no named method at all. None of them is a single standard, so the editor's defaults, like the question types and the lesson checks, are a starting point. Change anything to fit how you and your speller work.",
+      "learnMore": "More about Spelling and this app"
+    },
     "cta": {
       "title": "Ready to make your first lesson?",
       "body": "No account needed to start building. Sign in only when you want to publish or collaborate.",

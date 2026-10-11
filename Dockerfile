@@ -2,9 +2,9 @@
 #
 # Builds the SPA and the docs site, then runs the Node API (apps/api/src/node/
 # server.js), which serves both from disk alongside the API itself. See
-# /docs/monorepo/self-hosting for what this host does and does not provide, and
+# /docs/developers/self-hosting for what this host does and does not provide, and
 # docker-compose.yml for a worked example with Postgres, PostgREST, GoTrue and
-# MinIO around it.
+# RustFS around it.
 #
 #   docker build -t spelling-creator \
 #     --build-arg VITE_API_URL=https://spelling.example.com \

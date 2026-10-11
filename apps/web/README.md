@@ -1,9 +1,13 @@
 # Spelling Lesson Maker
 
-A web app for building and printing [**Spelling**](https://i-asc.org) (also known
-as S2C) lessons. Create a document, add named sections, and fill each section with
-text and images. Export the finished lesson as a Word document (`.docx`) or print
-it to PDF.
+A web app for building, sharing and printing lessons for **Spelling**, the
+umbrella term for ways nonspeaking people communicate by pointing to letters.
+Spelling is not one method: it covers [S2C](https://i-asc.org), RPM,
+[Spellers Method](https://www.spellers.com) and many practices with no label,
+none of them standardized (see
+[What is Spelling Creator?](https://spellingcreator.org/docs/intro)). Create a
+document, add named sections, and fill each section with text and images. Export
+the finished lesson as a Word document (`.docx`) or print it to PDF.
 
 Built with **React + Vite + shadcn/ui + Tailwind**, using [`docx`](https://docx.js.org) for Word
 export and [`html2pdf.js`](https://github.com/eKoopmans/html2pdf.js) (via
@@ -12,29 +16,21 @@ PDF printing.
 
 ## Documentation
 
-Full documentation lives on the docs site under **Web App**:
-**https://spellingcreator.org/docs/web-app/overview**
+The docs site has two halves:
 
-- [Overview & features](https://spellingcreator.org/docs/web-app/overview)
-- [Pages & routing](https://spellingcreator.org/docs/web-app/pages-and-routing)
-- [Question blocks](https://spellingcreator.org/docs/web-app/question-blocks)
-- [AI text suggestions](https://spellingcreator.org/docs/web-app/ai-text-suggestions)
-- [AI question suggestions](https://spellingcreator.org/docs/web-app/ai-question-suggestions)
-- [AI lesson ideas](https://spellingcreator.org/docs/web-app/ai-lesson-ideas)
-- [Search images](https://spellingcreator.org/docs/web-app/search-images)
-- [Save to Google Docs](https://spellingcreator.org/docs/web-app/save-to-google-docs)
-- [Live collaboration](https://spellingcreator.org/docs/web-app/live-collaboration)
-- [Lesson hub & accounts](https://spellingcreator.org/docs/web-app/lesson-hub-and-accounts)
-- [Profiles & display names](https://spellingcreator.org/docs/web-app/profiles-and-display-names)
-- [Notifications](https://spellingcreator.org/docs/web-app/notifications)
-- [Moderation](https://spellingcreator.org/docs/web-app/moderation)
-- [Getting started & environment variables](https://spellingcreator.org/docs/web-app/getting-started)
-- [How the export pipeline works](https://spellingcreator.org/docs/web-app/export-pipeline)
-- [Project structure](https://spellingcreator.org/docs/web-app/project-structure)
-- [Design system (surfaces, borders, boxes)](https://spellingcreator.org/docs/web-app/design-system)
-- [Installable app & offline use](https://spellingcreator.org/docs/web-app/pwa-and-offline)
+- **[User guide](https://spellingcreator.org/docs/guide/overview)**: what the
+  app does and how to use each feature.
+- **[Developers: web app](https://spellingcreator.org/docs/developers/web-app/overview)**:
+  how it is built, with a page per feature's internals. Good places to start:
+  - [Getting started & environment variables](https://spellingcreator.org/docs/developers/web-app/getting-started)
+  - [Project structure](https://spellingcreator.org/docs/developers/web-app/project-structure)
+  - [Pages & routing](https://spellingcreator.org/docs/developers/web-app/pages-and-routing)
+  - [How the export pipeline works](https://spellingcreator.org/docs/developers/web-app/export-pipeline)
+  - [Design system](https://spellingcreator.org/docs/developers/web-app/design-system)
+  - [Installable app & offline use](https://spellingcreator.org/docs/developers/web-app/pwa-and-offline)
 
-The docs source is in `apps/docs/docs/web-app`.
+The docs source is in `apps/docs/docs/guide` and
+`apps/docs/docs/developers/web-app`.
 
 ## Quick start
 
@@ -45,5 +41,5 @@ pnpm build    # production build into dist/
 pnpm preview  # preview the production build
 ```
 
-See **[Getting started](https://spellingcreator.org/docs/web-app/getting-started)**
+See **[Getting started](https://spellingcreator.org/docs/developers/web-app/getting-started)**
 for the environment variables each feature needs.

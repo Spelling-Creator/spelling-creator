@@ -16,7 +16,7 @@
 // merged state, and relays the update to the other admitted peers. Two people
 // editing different blocks therefore both keep their work, where the old
 // whole-document last-write-wins model silently dropped one of them. See
-// apps/web/src/lib/ydoc.js for the document model and the plain-JSON bridge.
+// packages/core/src/ydoc.js for the document model and the plain-JSON bridge.
 //
 // Every relayed update is preceded by an EDITED frame naming its sender's slot,
 // which is how version history knows whom to credit for a session's edits.

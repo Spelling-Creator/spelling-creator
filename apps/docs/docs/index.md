@@ -3,15 +3,18 @@ layout: home
 
 hero:
   name: Spelling Creator
-  tagline: Documentation and updates for Spelling Creator
+  tagline: Write, share and run Spelling lessons
   image:
     src: /img/screenshot.jpg
     alt: Spelling Creator
   actions:
     - theme: brand
-      text: Get Started
+      text: User guide
+      link: /guide/overview
+    - theme: alt
+      text: What is Spelling?
       link: /intro
     - theme: alt
-      text: GitHub
-      link: https://github.com/Spelling-Creator/spelling-creator
+      text: Developers
+      link: /developers/overview
 ---

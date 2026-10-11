@@ -11,7 +11,7 @@
 //
 // `head` is the lesson itself — the default branch — and `refs` maps every branch
 // the repository holds to its tip, one per *variation* its author is trying out
-// (see /web-app/lesson-variations). `head` came first and is kept as its own
+// (see /docs/developers/web-app/variations). `head` came first and is kept as its own
 // field rather than being read out of the map: everything that wants "the
 // lesson" wants exactly that one branch, and a reader written before variations
 // existed still gets the right answer from it.

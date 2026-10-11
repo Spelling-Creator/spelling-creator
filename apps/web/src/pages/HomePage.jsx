@@ -255,6 +255,26 @@ function LandingView() {
           ))}
         </div>
 
+        {/* What "Spelling" means here. It is an umbrella over several
+            unstandardized practices (S2C is one), and visitors arriving from
+            any of them should know the app's defaults are not a rulebook.
+            The docs are a separate static site, so a plain link rather than
+            a router one. */}
+        <div className="mx-auto mt-16 max-w-2xl text-center md:mt-24">
+          <h2 className="mb-3 font-serif text-2xl font-semibold md:text-3xl">
+            {t("marketing.spelling.title")}
+          </h2>
+          <p className="mb-4 text-base text-muted-foreground">
+            {t("marketing.spelling.body")}
+          </p>
+          <a
+            href="/docs/intro"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t("marketing.spelling.learnMore")}
+          </a>
+        </div>
+
         <div className="mt-16 rounded-panel border border-border bg-card p-8 text-center text-card-foreground md:mt-24 md:p-12">
           <h2 className="mb-1.5 font-serif text-2xl font-semibold md:text-3xl">
             {t("marketing.cta.title")}

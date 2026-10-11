@@ -92,7 +92,7 @@ export function registerCollabTools(server, ctx) {
     "still hosting; otherwise edit the saved lesson with patch_lesson.";
 
   const stillWaitingMessage = (code) =>
-    `The request to join session "${code}" is still waiting for the host to admit it. Ask them to click Add in ` +
+    `The request to join session "${code}" is still waiting for the host to admit it. Ask them to click Add to lesson in ` +
     "the Collaborate dialog, then call join_collab_session again with the same code to keep waiting; it picks " +
     "this request back up rather than sending a new one.";
 
@@ -298,7 +298,7 @@ export function registerCollabTools(server, ctx) {
           waiting: code,
           note:
             "The host hasn't admitted you yet. The request is still showing in their Collaborate dialog: ask " +
-            "them to click Add, then call join_collab_session again with the same code to keep waiting (it " +
+            "them to click Add to lesson, then call join_collab_session again with the same code to keep waiting (it " +
             "resumes this request rather than sending a new one). A request nobody answers is withdrawn on its " +
             "own after five minutes.",
         });

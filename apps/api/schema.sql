@@ -134,9 +134,9 @@ create policy "ratings are public to read"
 -- verified caller's own user_id, and there is no endpoint — moderator, admin or
 -- otherwise — that returns anyone else's. The lesson's author cannot see who has
 -- worked through their lesson or what they wrote. Treat that as a load-bearing
--- property of this table, not an oversight: a child's attempts at a spelling
--- exercise are exactly the kind of thing that should not become a teacher-facing
--- dashboard by accident.
+-- property of this table, not an oversight: a speller's answers are exactly the
+-- kind of thing that should not end up on somebody else's dashboard by
+-- accident.
 --
 -- `answers` is the array the browser builds in core/src/interactive.js: one entry
 -- per question, each carrying { blockId, sectionId, sectionName, questionType,
@@ -264,7 +264,7 @@ create table if not exists public.lesson_pull_requests (
   author_ip     text,
   created_at    timestamptz not null default now(),
   -- The branch of the fork this was proposed from, for display. A proposer can
-  -- work on a variation of their fork (see /web-app/lesson-variations) and offer
+  -- work on a variation of their fork (see /docs/guide/variations) and offer
   -- that, so "which one is this?" is a question the queue has to be able to
   -- answer. Null on a proposal opened before this, and on one from the default
   -- branch, where naming it would say nothing.
@@ -318,14 +318,14 @@ alter table public.lesson_pull_requests enable row level security;
 --               ban users by IP.
 --
 -- As with everything else, only the service-role Worker writes these tables; the
--- browser asks the Worker (GET /moderation/whoami) what it's allowed to do. The
+-- browser asks the Worker (GET /mod/whoami) what it's allowed to do. The
 -- Worker re-derives the caller's role from user_roles on every privileged
 -- request, so a tampered client can never grant itself a role.
 -- ============================================================================
 
 -- One row per privileged user. Admins are seeded by hand (see the snippet at the
 -- bottom of this file) — the app deliberately offers no way to create an admin,
--- only moderators (POST /moderation/moderators, admin-only). granted_by records
+-- only moderators (POST /mod/moderators, admin-only). granted_by records
 -- which admin added a moderator (null for hand-seeded admins).
 create table if not exists public.user_roles (
   user_id    uuid primary key references auth.users (id) on delete cascade,
@@ -405,7 +405,7 @@ alter table public.lesson_delete_requests enable row level security;
 -- buckets, cached AI answers and MCP OAuth state in a KV namespace; an instance
 -- without one puts them here instead, reached over PostgREST with the same
 -- service-role key as everything else (see apps/api/src/platform/postgrestKv.js
--- and /monorepo/platform-seam). Creating the table on the hosted instance too is
+-- and /docs/developers/platform-seam). Creating the table on the hosted instance too is
 -- harmless — nothing writes to it there.
 --
 -- Nothing in here is authoritative. Every row is small, short-lived, and has an

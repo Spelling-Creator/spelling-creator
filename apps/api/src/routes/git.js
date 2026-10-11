@@ -42,7 +42,7 @@
 //
 // A variation is exactly as public as the lesson it belongs to: it is in the same
 // pack, and the pack of a published lesson is public so that forking is. See
-// /web-app/lesson-variations, which says so where an author can read it.
+// /docs/guide/variations, which says so where an author can read it.
 //
 // ---- Who may push, and why it can't lose work -------------------------------
 //
@@ -50,7 +50,7 @@
 // on the lesson's trusted-collaborator list. Nobody else — a forker cannot push
 // into the lesson they forked, however much work they have done on it. What they
 // can do is open a pull request and have one of those two merge it (see
-// routes/pulls.js and /web-app/pull-requests); the merge commit is then pushed
+// routes/pulls.js and /docs/developers/web-app/pull-requests); the merge commit is then pushed
 // here by the reviewer, under their own credentials.
 //
 // The moment more than one writer exists, a plain "last write wins" would

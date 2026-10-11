@@ -107,7 +107,7 @@ export function fixPrompt({ title, finding, context, retry }) {
 	const section = context.sectionName ? `section ${context.sectionNumber}, "${context.sectionName}"` : `section ${context.sectionNumber}`;
 	const used = context.usedElsewhere.length ? context.usedElsewhere.map((w) => `"${w}"`).join(', ') : '(none)';
 	const lines = [
-		'You are fixing one problem in a lesson for Spelling to Communicate (S2C). A nonspeaking speller listens to the passage read aloud, then answers each question by pointing to letters on a letterboard, so every answer must be short and exact.',
+		'You are fixing one problem in a Spelling lesson. Spelling is the umbrella term for ways nonspeakers communicate by pointing to letters (S2C, RPM, Spellers Method and many unlabeled practices). A nonspeaking speller listens to the passage read aloud, then answers each question by pointing to letters on a letterboard, so every answer must be short and exact.',
 		'',
 		`The lesson is titled "${title || 'Untitled'}". Here is ${section}, block by block:`,
 		JSON.stringify(context.blocks, null, 2),

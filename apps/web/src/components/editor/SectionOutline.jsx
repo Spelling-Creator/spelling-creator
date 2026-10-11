@@ -1,6 +1,6 @@
 // The editor's left-hand section outline.
 //
-// docs/web-app/navigating-large-lessons.md measured the problem this answers: a
+// docs/developers/web-app/navigating-large-lessons.md measured the problem this answers: a
 // lesson built to the shape the MCP server documents is ~37 screenfuls on a
 // desktop, one section is ~4,900px, and the scrollbar thumb is 21px tall. The
 // sticky section headers tell you where you are; this tells you where

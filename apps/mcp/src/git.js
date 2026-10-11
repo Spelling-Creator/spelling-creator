@@ -8,7 +8,7 @@
 // LightningFS). Two rules it exists to respect, both the hub's rather than ours:
 //
 //   - Every edit is a commit. A lesson is a real git repository (see
-//     docs monorepo/version-history), and the editor commits as the user works,
+//     docs developers/version-history), and the editor commits as the user works,
 //     so the History tab is the record of how the lesson got here. An assistant
 //     writing over MCP is one more writer, and its edits belong in that record
 //     alongside the rest — attributed, diffable, and revertable.

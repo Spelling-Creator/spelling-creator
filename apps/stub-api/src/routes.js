@@ -1,7 +1,7 @@
 // The HTTP side: the Worker API routes the hub, profiles, notifications and
 // editor use, plus the handful of Supabase Auth endpoints sign-in needs. Shapes
 // follow the real API (see the mappers in apps/api/src and the contracts in
-// apps/docs/docs/web-app/lesson-hub-and-accounts.md).
+// apps/docs/docs/developers/web-app/hub-and-accounts.md).
 
 import crypto from "node:crypto";
 import { PEOPLE, byId, personFromEmail, personFromToken } from "./people.js";

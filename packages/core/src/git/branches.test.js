@@ -49,14 +49,14 @@ async function seeded() {
 
 describe("branch names", () => {
   it("turns what someone typed into something git will store", () => {
-    expect(toBranchName("Simpler for Year 3")).toBe("Simpler-for-Year-3");
+    expect(toBranchName("Shorter sections 2")).toBe("Shorter-sections-2");
     expect(toBranchName("  spaced   out  ")).toBe("spaced-out");
     expect(toBranchName("emoji ✨ and ?marks")).toBe("emoji-and-marks");
   });
 
   it("reads a stored name back as the words it came from", () => {
-    expect(branchLabel(toBranchName("Simpler for Year 3"))).toBe(
-      "Simpler for Year 3",
+    expect(branchLabel(toBranchName("Shorter sections 2"))).toBe(
+      "Shorter sections 2",
     );
   });
 

@@ -39,7 +39,7 @@ const PASSWORD_MIN_LENGTH = 8;
  *   POST   /mod/password                          admin  { identifier, password } set a password
  *
  * Named "/mod", not "/moderation", so it can't collide with the SPA's own
- * "/moderation" page route — see the registration comment in index.js.
+ * "/moderation" page route. See the registration comment in app.js.
  *
  * Errors are short plain-text reasons, matching the rest of the API.
  */
@@ -392,7 +392,7 @@ export async function handleModeration(request, env, url, cors) {
 	// POST /mod/password — admin sets a user's password.
 	//
 	// The recovery path for an instance with no mail server. Sign-in there is by
-	// username and password (see /monorepo/self-hosting), and resetting a password
+	// username and password (see /docs/developers/self-hosting), and resetting a password
 	// the ordinary way means emailing a link — so without this, a forgotten
 	// password on such an instance is unrecoverable short of the database.
 	//
