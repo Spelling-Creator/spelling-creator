@@ -49,7 +49,7 @@ export function headingText(block) {
 
 /** The Word style id for a heading paragraph. */
 export const HEADING_STYLE_ID = "s2cHeading";
-/** The Word style *name* — what mammoth matches on in a style map. */
+/** The Word style *name*, which is what mammoth matches on in a style map. */
 export const HEADING_STYLE_NAME = "S2C Heading";
 /** The HTML class mammoth is told to emit for that style. */
 export const HEADING_STYLE_CLASS = "s2c-heading";
