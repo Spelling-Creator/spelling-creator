@@ -216,7 +216,7 @@ A `paraphrase` question asks the speller to restate the section's passage, or pa
 own words ("In your own words, explain why..." / "In your own words, describe..." / "Summarize how
 ..."). Its job is comprehension of the passage itself rather than opinion about it, which is why it
 prints in its own colour and is never written as an `open` question. Like `open`, it carries no
-answer, answers, or exampleAnswer field — just the "prompt".
+answer, answers, or exampleAnswer field, just the "prompt".
 
 The default section shape above still asks for 3 `open` extended opens; a `paraphrase` may be used
 in place of the first of them where a section wants the distinction drawn explicitly.
