@@ -25,6 +25,7 @@ import { normalizeLessonFile } from "./jsonImport.js";
 import {
   ANSWER_GAP,
   QUESTION_TAG_PREFIX,
+  readQuestionTag,
   QUESTION_TYPES,
   resolveOpenType,
 } from "./questions.js";
@@ -347,16 +348,16 @@ export function parseSection(lines, heading = "") {
         if (q) q.steps.push(line.replace(/^\d+\s*[.)]\s*/, ""));
         return;
       }
-      const split = splitQuestionLine(
-        line
-          .trim()
-          .replace(QUESTION_TAG_PREFIX, "")
-          .replace(QUESTION_PREFIX, ""),
-      );
+      // The printed tag comes off the front; its three-board mark, when it
+      // has one, stays with the question for questionBlock to put on the
+      // block.
+      const tag = readQuestionTag(line.trim());
+      const split = splitQuestionLine(tag.text.replace(QUESTION_PREFIX, ""));
       out.questions.push({
         prompt: split.prompt.trim(),
         answers: split.answers.map((a) => a.trim()).filter(Boolean),
         steps: [],
+        ...(tag.threeBoard ? { threeBoard: true } : {}),
       });
     }
   });
@@ -421,7 +422,12 @@ function questionBlock(q, passage) {
     case "single":
     case "background":
       return { ...base, answer: q.answers[0] ?? "" };
+    // Only a `multiple` can be marked for the three boards; the mark on a
+    // line that reads as anything else is dropped with the rest of the tag.
     case "multiple":
+      return q.threeBoard
+        ? { ...base, answers: q.answers, threeBoard: true }
+        : { ...base, answers: q.answers };
     case "multiple_open":
       return { ...base, answers: q.answers };
     default:

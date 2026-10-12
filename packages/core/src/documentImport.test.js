@@ -83,6 +83,7 @@ describe("classifyLine", () => {
     expect(classifyLine("Name a wild animal that hunts.")).toBe("question");
     // Text copied from a printed lesson carries the type tag.
     expect(classifyLine("O Name a wild animal that hunts.")).toBe("question");
+    expect(classifyLine("SO (3B)  Name one creature.")).toBe("question");
     expect(
       classifyLine("Should we judge the past? Explain your thinking."),
     ).toBe("question");
@@ -196,7 +197,7 @@ describe("parseSection", () => {
   it("drops the type tag text copied from a printed lesson carries", () => {
     const { questions } = parseSection([
       "K Who explained light as packets of energy in 1900? MAX PLANCK",
-      `SO The piles drew ______. Name one.${ANSWER_GAP}MICE${ANSWER_GAP}BIRDS`,
+      `SO (3B)  The piles drew ______. Name one.${ANSWER_GAP}MICE${ANSWER_GAP}BIRDS`,
       "O Name a wild animal that hunts.",
     ]);
     expect(questions.map((q) => q.prompt)).toEqual([
@@ -205,6 +206,12 @@ describe("parseSection", () => {
       "Name a wild animal that hunts.",
     ]);
     expect(questions[1].answers).toEqual(["MICE", "BIRDS"]);
+    // The three-board mark leaves the prompt and stays on the question.
+    expect(questions.map((q) => q.threeBoard)).toEqual([
+      undefined,
+      true,
+      undefined,
+    ]);
   });
 
   it("stays fast on a long run of capitals that is not an answer", () => {
@@ -321,6 +328,19 @@ describe("importLessonText", () => {
       "Round to the nearest hundred: about 400",
     ]);
     expect(doc.sections[0].blocks[2].words).toHaveLength(4);
+  });
+
+  it("keeps a three-board mark off the prompt and on the block", () => {
+    const doc = importLessonText(
+      EXPORTED.replace("The great piles drew", "SO (3B)  The great piles drew"),
+    );
+    const question = doc.sections[0].blocks.find(
+      (b) => b.type === "question" && b.questionType === "multiple",
+    );
+    expect(question.prompt).toBe(
+      "The great piles drew ______ in enormous numbers. Name one creature the piles attracted.",
+    );
+    expect(question.threeBoard).toBe(true);
   });
 
   it("reads an answer on its own line, in brackets, and as bare capitals", () => {

@@ -220,11 +220,12 @@ const PRINT_STYLES = `
      them — the colour, not the spacing, is what separates one from the next. */
   .s2c-pdf-root .${QUESTION_LINE_CLASS} { margin: 0 0 1px; }
   /* The Besides line under a three-board question, indented like its working
-     would be, in the same colour as the question it follows up. */
+     would be. Its label comes through in the question's own character style,
+     so the type rule below colours it; the answers after it stay in the body
+     colour, as in Word. */
   .s2c-pdf-root .${BESIDES_LINE_CLASS} {
     margin: 0 0 1px;
     padding-left: 24px;
-    color: ${QUESTION_TYPE_LIST.find((type) => type.key === "multiple").color};
   }
   .s2c-pdf-root figure { margin: 0; }
   .s2c-pdf-root img {

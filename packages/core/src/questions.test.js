@@ -9,6 +9,7 @@ import {
   ANSWER_GAP,
   QUESTION_LEGEND,
   QUESTION_TAG_PREFIX,
+  readQuestionTag,
   QUESTION_TYPES,
   QUESTION_TYPE_LIST,
   QUESTION_TYPE_MENU,
@@ -357,6 +358,20 @@ describe("the type tags", () => {
       "So the fire was lit.",
     );
     expect("K".replace(QUESTION_TAG_PREFIX, "")).toBe("K");
+  });
+
+  it("takes the three-board mark off with the tag and keeps it on the side", () => {
+    expect(readQuestionTag("SO (3B)  Ships avoided ______. Name one.")).toEqual(
+      { text: "Ships avoided ______. Name one.", threeBoard: true },
+    );
+    expect(readQuestionTag("SO  Ships avoided ______.")).toEqual({
+      text: "Ships avoided ______.",
+      threeBoard: false,
+    });
+    expect(readQuestionTag("Ships avoided (3B) rocks.")).toEqual({
+      text: "Ships avoided (3B) rocks.",
+      threeBoard: false,
+    });
   });
 });
 

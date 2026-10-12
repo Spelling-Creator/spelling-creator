@@ -352,7 +352,11 @@ function questionBlockParagraphs(block) {
   // The Besides line under a three-board question: 'Besides "rocks"' in the
   // question's colour, then the other accepted answers in black, indented
   // under the question it follows up. Its own paragraph style is what lets the
-  // importer attach it to that question instead of reading a new one.
+  // importer attach it to that question instead of reading a new one. The
+  // label run carries the question's character style as well as its colour,
+  // because mammoth drops run colours: the style is what gets the PDF to
+  // colour the label alone and leave the answers after it in the body colour,
+  // as Word prints them.
   const besides = questionBesides(block);
   if (besides != null) {
     paragraphs.push(
@@ -363,6 +367,7 @@ function questionBlockParagraphs(block) {
         children: [
           new TextRun({
             text: `${BESIDES_LABEL} "${besides}"`,
+            style: questionStyleId(meta.key),
             color: hex(meta.color),
             size: BODY_SIZE,
           }),

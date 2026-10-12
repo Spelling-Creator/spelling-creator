@@ -301,13 +301,32 @@ export const QUESTION_TAG_GAP = "  ";
 
 /**
  * A question tag at the start of a line, as a printed lesson writes it, with
- * the whitespace after it. For readers taking a lesson back in from text.
+ * the three-board mark when the tag carries one ("SO (3B)") and the
+ * whitespace after it. For readers taking a lesson back in from text.
  * Case-sensitive on purpose: "So the..." opens a sentence, "SO " marks a
  * question.
  */
 export const QUESTION_TAG_PREFIX = new RegExp(
-  `^(?:${[...new Set(QUESTION_TYPE_LIST.map((q) => q.tag))].join("|")})\\s+(?=\\S)`,
+  `^(?:${[...new Set(QUESTION_TYPE_LIST.map((q) => q.tag))].join("|")})` +
+    `(?:\\s+${THREE_BOARD_MARK.replace(/[()]/g, "\\$&")})?\\s+(?=\\S)`,
 );
+
+/**
+ * A line of text with its printed tag taken off, and whether that tag carried
+ * the three-board mark. The mark is part of the marking, not the wording, so
+ * a reader taking a printed lesson back in puts it on the block rather than
+ * leaving "(3B)" at the front of the prompt.
+ * @param {string} line
+ * @returns {{ text: string, threeBoard: boolean }}
+ */
+export function readQuestionTag(line) {
+  const match = QUESTION_TAG_PREFIX.exec(line);
+  if (!match) return { text: line, threeBoard: false };
+  return {
+    text: line.slice(match[0].length),
+    threeBoard: match[0].includes(THREE_BOARD_MARK),
+  };
+}
 
 /**
  * The legend entries a printed lesson needs: QUESTION_LEGEND's order, cut down

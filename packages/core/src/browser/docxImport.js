@@ -585,6 +585,10 @@ function isSpellingHeading(text) {
 // character styles: `<p><span class="s2c-q-single">prompt</span>  answer</p>`.
 // Returns { type, prompt, answer } or null when the paragraph isn't one.
 function matchQuestion(el) {
+  // A Besides line's label wears the question style too (so the PDF can
+  // colour it), but the line belongs to the question above it: readQuestion
+  // takes it from there, and one it can't attach is not a question either.
+  if (el.classList?.contains(BESIDES_LINE_CLASS)) return null;
   const span = el.querySelector?.(QUESTION_SPAN_SELECTOR);
   if (!span) return null;
   const type = matchQuestionClass(span);

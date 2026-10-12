@@ -107,8 +107,11 @@ editor:
   the other accepted answers in black, indented like working. The line has a
   paragraph style of its own (`S2C Besides Line`, `BESIDES_LINE_CLASS`) so
   the importer attaches it to the question above instead of reading a new
-  one. `questionBesides` and `besidesAnswers` in `questions.js` decide both
-  halves, and return nothing when the named answer is no longer in the list.
+  one, and the label run wears the question's character style, which is how
+  the PDF (where mammoth drops run colors) colors the label and leaves the
+  answers black. `questionBesides` and `besidesAnswers` in `questions.js`
+  decide both halves, and return nothing when the named answer is no longer
+  in the list.
 - **Spelling words on one running line**, `Spell:` followed by the words as
   typed, separated by the same `ANSWER_GAP` as multiple answers.
 - **A footer on every page**: the copyright line above a legend naming each
@@ -162,7 +165,8 @@ mammoth for the same style map and reads the type off the
 what follows it. The tag's own span sits before all of that, so it is never
 read as part of the prompt. (Text pasted from a printed lesson into
 [Document import](./document-import.md) does carry the tag as plain text;
-`QUESTION_TAG_PREFIX` strips it there.) Section _divisions_ have nothing left
+`readQuestionTag` takes it off there, and keeps a `(3B)` mark it carried as
+the block's `threeBoard`.) Section _divisions_ have nothing left
 to carry them, so a DOCX round trip collapses a lesson into a single section
 (the importer does split on Heading 2 or 3 in a document that has them);
 Export/Import **JSON** is the lossless one. A document that was never exported from

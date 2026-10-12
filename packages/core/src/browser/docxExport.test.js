@@ -340,8 +340,9 @@ describe("questions", () => {
     expect(out).toMatch(
       /<span class="s2c-q-tag"><strong>SO \(3B\)\s+<\/strong><\/span><span class="s2c-q-multiple">Ships avoided/,
     );
+    // The label rides in the question's style so the PDF colours it alone.
     expect(out).toMatch(
-      /<p class="s2c-besides-line">Besides "ROCKS"\s+REEFS\s+SANDBARS<\/p>/,
+      /<p class="s2c-besides-line"><span class="s2c-q-multiple">Besides "ROCKS"<\/span>\s+REEFS\s+SANDBARS<\/p>/,
     );
   });
 });
