@@ -18,6 +18,7 @@ import {
   QUESTION_TYPES,
 } from "@spelling-creator/core/lessonBuild";
 import { buildLessonFile } from "@spelling-creator/core/lessonFile";
+import { oslfFileName, toOslf } from "@spelling-creator/core/oslf";
 import {
   forkLesson,
   mergeProposal,
@@ -484,6 +485,43 @@ function text(value) {
   const body =
     typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return { content: [{ type: "text", text: body }] };
+}
+
+// Which file a lesson leaves the server as: the app's own lesson file, or the
+// Open Spelling Lesson Format for tools that aren't this app.
+const lessonFileFormatSchema = z
+  .enum(["spelling-creator", "oslf"])
+  .optional()
+  .describe(
+    '"spelling-creator" (the default): the app\'s own lesson file, which the editor imports without loss. ' +
+      '"oslf": the Open Spelling Lesson Format (https://github.com/playforge-coding/open-spelling-lesson-format), ' +
+      "the open, method-neutral file other tools read; save it as `.oslf.json`. Only when the user asks for " +
+      "OSLF, or for a file another tool will read.",
+  );
+
+// The file a lesson is handed over as, in the format asked for. In an OSLF
+// file a picture is its public address on the hub, which is the only place a
+// stored picture's bytes can be fetched from by whatever opens the file.
+function lessonFileResult(doc, format, config) {
+  if (format === "oslf") {
+    return {
+      lessonFile: toOslf(doc, {
+        imageSrc: (block) => `${config.apiUrl}/images/${block.image.hash}`,
+      }),
+      filename: oslfFileName(doc.title),
+      note:
+        "Save the `lessonFile` object as an .oslf.json file (suggested name in `filename`). It is an Open " +
+        "Spelling Lesson Format file, which any tool that reads the format can open, the Spelling Creator " +
+        'editor included (its "Import JSON or OSLF" button).',
+    };
+  }
+  return {
+    lessonFile: buildLessonFile(doc),
+    filename: lessonFileName(doc.title),
+    note:
+      "Save the `lessonFile` object as a .json file (suggested name in `filename`), then import it in the " +
+      'Spelling Creator editor via the "Import JSON or OSLF" button. This works fully offline — no account needed.',
+  };
 }
 
 // A safe-ish .json filename derived from the lesson title (mirrors the web
@@ -1346,9 +1384,12 @@ export function registerTools(server, ctx) {
         "Build a spelling lesson entirely offline — no account, network, or sign-in needed. You compose the content " +
         "(same structure as create_lesson); this validates it, generates all ids, and returns a self-contained lesson " +
         "FILE. Save the returned `lessonFile` object verbatim as a `.json` file, then open the Spelling Creator editor " +
-        "(spellingcreator.org) and load it with the “Import JSON” button (next to “Import Word " +
+        "(spellingcreator.org) and load it with the “Import JSON or OSLF” button (next to “Import Word " +
         "document”). Use this when you can't (or don't want to) publish to the hub; use create_lesson when you " +
         "want it saved to the cloud directly.\n\n" +
+        'Pass `format: "oslf"` to get the lesson as an Open Spelling Lesson Format file instead (save it as ' +
+        "`.oslf.json`): the open, method-neutral format other tools read. The default is Spelling Creator's own " +
+        "lesson file, which the editor reads back without loss.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), spelling (an " +
         "explicit word list), question (number/single/multiple/multiple_open/paraphrase/tight_open/broad_open/wyr/background), image, " +
         "and vakt (a regulation " +
@@ -1362,23 +1403,18 @@ export function registerTools(server, ctx) {
         title: z.string().describe("The lesson title / topic."),
         sections: sectionsSchema,
         sources: sourcesSchema,
+        format: lessonFileFormatSchema,
         skipValidation: skipValidationSchema,
       },
     },
-    tool(async ({ title, sections, sources, skipValidation }) => {
+    tool(async ({ title, sections, sources, format, skipValidation }) => {
       const doc = buildDoc({ title, sections, sources });
       const warnings = await checkStandard({
         doc,
         rawBlocks: inputBlocksFromSections(sections),
         skipValidation,
       });
-      const result = {
-        lessonFile: buildLessonFile(doc),
-        filename: lessonFileName(doc.title),
-        note:
-          "Save the `lessonFile` object as a .json file (suggested name in `filename`), then import it in the " +
-          'Spelling Creator editor via the "Import JSON" button. This works fully offline — no account needed.',
-      };
+      const result = lessonFileResult(doc, format, config);
       if (warnings.length) result.warnings = warnings;
       return text(result);
     }),
@@ -2036,11 +2072,23 @@ export function registerTools(server, ctx) {
         "study an existing lesson's structure as a template.\n\n" +
         "Text blocks come back as the same markup you write them in (**bold**, *italic*, <u>underline</u>, " +
         "^[footnotes]), with literal asterisks escaped, so a block can be passed straight back to replace_block or " +
-        "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.",
-      inputSchema: { id: z.string().describe("The lesson id.") },
+        "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.\n\n" +
+        'Pass `format: "oslf"` to get the lesson as an Open Spelling Lesson Format file instead (`lessonFile`, ' +
+        "with a `filename` to save it under), for a tool that isn't Spelling Creator.",
+      inputSchema: {
+        id: z.string().describe("The lesson id."),
+        format: lessonFileFormatSchema,
+      },
     },
-    tool(async ({ id }) => {
+    tool(async ({ id, format }) => {
       const lesson = await api.getLesson(id);
+      if (format === "oslf" && lesson?.doc) {
+        return text({
+          id: lesson.id ?? id,
+          title: lesson.doc.title,
+          ...lessonFileResult(lesson.doc, "oslf", config),
+        });
+      }
       return text(
         lesson?.doc ? { ...lesson, doc: presentDoc(lesson.doc) } : lesson,
       );

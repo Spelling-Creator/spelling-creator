@@ -22,8 +22,12 @@ two at a time. Each pass is saved as its own version with a short name ("Add sec
 the cat's senses"), so you can see how the lesson came together.
 
 If you don't want to use an account at all, ask it for a **lesson file** instead. It hands
-you a file to save, which you open in the editor with **Import JSON** (in the menu, next to
-**Import Word document**). Nothing is stored online.
+you a file to save, which you open in the editor with **Import JSON or OSLF** (in the menu,
+next to **Import Word document**). Nothing is stored online. Ask for an **OSLF file** and
+it hands you the same lesson in the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+which tools other than Spelling Creator can read too; it can also give you a lesson that's
+already on the hub that way.
 
 ### The lesson it writes by default
 

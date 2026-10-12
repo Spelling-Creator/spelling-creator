@@ -17,7 +17,7 @@ the remote endpoint) get the same set.
 | `validate_lesson`       | Check lesson content against the authoring standard, saving nothing.                                                                                                                          |
 | `check_facts`           | Compare numbers, dates and named facts (a capital, a discoverer) with Wikidata, the Smithsonian and Wikipedia before they go into a lesson. See [Fact checking](../web-app/fact-checking.md). |
 | `create_lesson`         | Build and save a new lesson (draft by default; `published: true` to share).                                                                                                                   |
-| `create_lesson_file`    | Build an importable lesson file offline, with no account or network.                                                                                                                          |
+| `create_lesson_file`    | Build an importable lesson file offline, with no account or network, as the app's own file or (`format: "oslf"`) an Open Spelling Lesson Format file.                                         |
 | `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                                                                                                                 |
 | `update_lesson`         | Replace a lesson's whole title/content (author only).                                                                                                                                         |
 | `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                                                                                                                  |
@@ -534,6 +534,19 @@ list at the end of the lesson. `update_lesson` keeps the lesson's existing sourc
 `sources` is left out. Assistants are told to cite only sources the user gave them or
 that they have actually checked. See
 [Formatting and footnotes](../web-app/formatting-and-footnotes.md).
+
+## Lesson files in two formats
+
+`create_lesson_file` and `get_lesson` take an optional `format`. The default,
+`"spelling-creator"`, is the app's own lesson file (`buildLessonFile`), which the editor
+imports without loss. `"oslf"` returns the lesson as an
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+file instead (`toOslf` in `packages/core/src/oslf.js`, see
+[the export pipeline](../web-app/export-pipeline.md#the-open-spelling-lesson-format)),
+with a `filename` ending in `.oslf.json`, for tools that aren't this app. A stored picture
+becomes its public address on the hub (`<apiUrl>/images/<hash>`), the only place its bytes
+can be fetched from by whatever opens the file. The editor's **Import JSON or OSLF** button
+reads either file.
 
 ## Placing an image
 

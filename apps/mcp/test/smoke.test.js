@@ -908,6 +908,49 @@ test("create_lesson_file builds an importable lesson file offline", async () => 
   assert.ok(payload.lessonFile.doc.sections[0].blocks[0].id);
   assert.equal(payload.filename, "Volcanoes.json");
 
+  // The same lesson as an Open Spelling Lesson Format file, for other tools.
+  const oslf = await client.callTool({
+    name: "create_lesson_file",
+    arguments: {
+      title: "Volcanoes!",
+      format: "oslf",
+      sections: [
+        {
+          name: "Reading",
+          blocks: [
+            { type: "text", text: "A volcano ERUPTS." },
+            {
+              type: "image",
+              image: { hash: "abc123", mime: "image/png", ext: "png" },
+            },
+            {
+              type: "question",
+              questionType: "single",
+              prompt: "What erupts?",
+              answer: "volcano",
+            },
+          ],
+        },
+      ],
+    },
+  });
+  assert.equal(oslf.isError, undefined);
+  const file = JSON.parse(oslf.content[0].text);
+  assert.equal(file.lessonFile.oslf, "0.1");
+  assert.equal(file.lessonFile.title, "Volcanoes!");
+  assert.equal(file.lessonFile.sections[0].title, "Reading");
+  assert.deepEqual(
+    file.lessonFile.sections[0].blocks.map((b) => b.type),
+    ["passage", "image", "question"],
+  );
+  // A stored picture is its public address on the hub.
+  assert.equal(
+    file.lessonFile.sections[0].blocks[1].src,
+    "https://example.test/images/abc123",
+  );
+  assert.equal(file.lessonFile.sections[0].blocks[2].questionType, "known");
+  assert.equal(file.filename, "Volcanoes.oslf.json");
+
   await client.close();
   await server.close();
 });
