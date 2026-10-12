@@ -26,6 +26,7 @@ import {
   ANSWER_GAP,
   QUESTION_TAG_PREFIX,
   QUESTION_TYPES,
+  resolveOpenType,
 } from "./questions.js";
 
 export class DocumentImportError extends Error {
@@ -385,7 +386,10 @@ export function deriveQuestionType(question, passage) {
   const answers = (question.answers || []).map(norm).filter(Boolean);
   if (prompt.startsWith("would you rather")) return "wyr";
   if (/\bin your own words\b/.test(prompt)) return "paraphrase";
-  if (!answers.length) return "open";
+  // No answer makes an open question, and its wording says which kind.
+  if (!answers.length) {
+    return resolveOpenType({ questionType: "open", prompt: question.prompt });
+  }
   const text = ` ${norm(passage)} `;
   const inPassage = (a) =>
     text.includes(` ${a} `) ||
@@ -399,10 +403,12 @@ export function deriveQuestionType(question, passage) {
 
 // The type is derived unless the section came from the model, whose own type
 // (when it names a real one) was right more often than the rule in the
-// experiment; the parser never sets one.
+// experiment; the parser never sets one. The model was trained before tight
+// and broad opens were separate types, so its `open` is sorted by wording the
+// way a legacy block is.
 function questionBlock(q, passage) {
   const questionType = QUESTION_TYPES[q.type]
-    ? q.type
+    ? resolveOpenType({ questionType: q.type, prompt: q.prompt })
     : deriveQuestionType(q, passage);
   const base = { type: "question", questionType, prompt: q.prompt };
   switch (questionType) {

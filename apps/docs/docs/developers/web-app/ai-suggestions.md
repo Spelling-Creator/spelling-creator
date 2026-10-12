@@ -109,9 +109,10 @@ After a dislike, the dialog offers **Generate fresh** and demotes **Insert** to
 `suggestQuestion(subject, token, { questionType, documentName, sectionText,
 existingQuestions })` sends `mode: "question"` with:
 
-- `questionType`, one of the eight keys in `QUESTION_TYPES`
+- `questionType`, one of the keys in `QUESTION_TYPE_MENU`
   (`packages/core/src/questions.js`), the same list as the **Add question**
-  menu. The dialog defaults to `single`.
+  menu. The dialog defaults to `single`. (The Worker also still accepts the
+  legacy `open` key.)
 - `sectionText`, the section's existing text, so the question is answerable
   from the lesson. For `background` the prompt inverts it: the question must
   test knowledge the text does not explain.

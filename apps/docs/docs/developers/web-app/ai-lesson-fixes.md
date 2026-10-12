@@ -29,8 +29,7 @@ questions or spelling words:
   already vocabulary (`E_SPELLING_LENGTH`, `E_SPELLING_DUPLICATE`,
   `E_SPELLING_COLLISION`, `W_SPELLING_IN_CAPS`)
 - answers or numbers used twice (`E_ANSWER_WORD_REUSED`, `E_NUMBER_DUPLICATE`)
-- question wording (`E_RETIRED_STEM`, `W_WYR_SHAPE`, `W_OPEN_SPLIT`,
-  `W_NUMBER_NO_STEPS`)
+- question wording (`E_RETIRED_STEM`, `W_WYR_SHAPE`, `W_NUMBER_NO_STEPS`)
 
 Left out are the codes with a quick fix (`W_ORANGE_ORDER` and
 `E_ORANGE_PARTIAL_LIST` among them), the shape of the lesson or a section

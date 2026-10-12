@@ -269,6 +269,29 @@ describe("questionAnswer", () => {
     });
   });
 
+  // A tight open has no key; its examples, when it has any, are shown as
+  // suggestions so nobody scores against them.
+  it("marks a tight open's examples as suggestions, and reveals nothing without them", () => {
+    expect(
+      questionAnswer({
+        type: "question",
+        questionType: "tight_open",
+        answers: [{ text: "window" }, { text: "bottle" }],
+      }),
+    ).toEqual({
+      answer: "",
+      answers: ["window", "bottle"],
+      steps: [],
+      suggested: true,
+    });
+    expect(
+      questionAnswer({ type: "question", questionType: "tight_open" }),
+    ).toBeNull();
+    expect(
+      questionAnswer({ type: "question", questionType: "broad_open" }),
+    ).toBeNull();
+  });
+
   it("has nothing to reveal for an open question, a blank one, or a non-question", () => {
     expect(
       questionAnswer({

@@ -38,12 +38,16 @@ import { newId } from "./id.js";
 
 export { newId };
 
+// `open` is accepted for lessons written before tight and broad opens were
+// told apart; a new question is one or the other (see questions.js).
 export const QUESTION_TYPES = [
   "number",
   "single",
   "multiple",
   "multiple_open",
   "paraphrase",
+  "tight_open",
+  "broad_open",
   "open",
   "wyr",
   "background",
@@ -215,9 +219,21 @@ function buildQuestionBlock(block, where) {
       return { ...base, answers };
     }
 
+    // A tight open may carry a few examples of what would count. They are
+    // optional, and they are examples, not a key: lessonChecks keeps them out
+    // of every answer pool.
+    case "tight_open": {
+      const raw = Array.isArray(block.answers) ? block.answers : [];
+      const answers = raw
+        .filter((t) => typeof t === "string" && t.trim())
+        .map((text) => ({ id: newId(), text: text.trim() }));
+      return { ...base, answers };
+    }
+
     // All free written responses: the speller answers on their own paper, so
     // none of them stores an answer.
     case "paraphrase":
+    case "broad_open":
     case "open":
     case "wyr":
       return { ...base };

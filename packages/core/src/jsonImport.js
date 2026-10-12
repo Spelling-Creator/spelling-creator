@@ -289,8 +289,16 @@ function normalizeQuestion(block) {
       if (answers.length === 0) answers.push({ id: newId(), text: "" });
       return { ...base, answers };
     }
+    // A tight open's examples are optional, so an empty list stays empty.
+    case "tight_open": {
+      const answers = (Array.isArray(block.answers) ? block.answers : [])
+        .map(normalizeTextItem)
+        .filter(Boolean);
+      return { ...base, answers };
+    }
     // Free written responses: no stored answer, so the base block is complete.
     case "paraphrase":
+    case "broad_open":
     case "open":
     case "wyr":
       return base;

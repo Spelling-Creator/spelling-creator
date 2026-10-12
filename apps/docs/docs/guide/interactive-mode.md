@@ -76,10 +76,11 @@ the lesson open in a second window to see what the question is looking for.
 - What's shown depends on the question type. A single answer, number answer or
   background knowledge question shows its answer, and a number question shows
   its working steps too. A multiple answers question shows every accepted
-  answer. Open ended, paraphrase and would you rather questions have no set
+  answer. Broad open, paraphrase and would you rather questions have no set
   answer, and say so ("This question has no set answer.") rather than leaving a
-  gap.
-- A **suggested answers** question labels its answers as suggestions:
+  gap. So does a tight open with no examples.
+- A **suggested answers** question, and a **tight open** with examples, label
+  their answers as suggestions:
   "Examples, not the only right answers. Anything that fits the topic counts."
   Whoever is looking at them is usually deciding whether the speller's answer
   fits, and for this type that's genuinely their call.

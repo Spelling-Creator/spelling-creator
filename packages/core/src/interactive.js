@@ -233,15 +233,19 @@ export function questionAnswer(block) {
       .filter(Boolean);
 
   switch (block.questionType) {
+    // A tight open's examples are suggestions in the same sense a loose
+    // orange question's are: a reveal shows them as what would count, never
+    // as the only right answers.
     case "multiple":
-    case "multiple_open": {
+    case "multiple_open":
+    case "tight_open": {
       const answers = texts(block.answers);
       if (!answers.length) return null;
       return {
         answer: "",
         answers,
         steps: [],
-        suggested: block.questionType === "multiple_open",
+        suggested: block.questionType !== "multiple",
       };
     }
     case "number": {

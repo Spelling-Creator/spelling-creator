@@ -11,7 +11,7 @@ scan a lesson and see its questions at a glance.
 
 ## The types are defaults, not rules
 
-The eight types follow the
+The nine types follow the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
 (OSLF), an open vocabulary for Spelling lessons that isn't tied to any one
 method and that anyone can comment on. The colors are the app's defaults.
@@ -22,20 +22,45 @@ do follow the app's lesson standard (for example, they expect a **Single
 answer** question's answer to appear word for word in the passage), so expect
 them to flag lessons that use the types differently.
 
-| Type                     | Tag | Color           | What it's for                                                                    |
-| ------------------------ | --- | --------------- | -------------------------------------------------------------------------------- |
-| **Number answer**        | M   | purple          | The answer is a number. You can add the steps to work it out.                    |
-| **Single answer**        | K   | green           | One typed answer, usually a word from the passage.                               |
-| **Multiple answers**     | SO  | amber           | Several accepted answers; any one of them is right.                              |
-| **Suggested answers**    | SO  | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right. |
-| **Paraphrase**           | P   | brown           | Restate the passage in their own words. No stored answer.                        |
-| **Open ended**           | O   | pink            | A free written response. No stored answer.                                       |
-| **Would you rather**     | WYR | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.        |
-| **Background knowledge** | PK  | blue            | A question that needs knowledge from outside the passage, with its answer.       |
+| Type                     | Tag | Color           | What it's for                                                                                            |
+| ------------------------ | --- | --------------- | -------------------------------------------------------------------------------------------------------- |
+| **Number answer**        | M   | purple          | The answer is a number. You can add the steps to work it out.                                            |
+| **Single answer**        | K   | green           | One typed answer, usually a word from the passage.                                                       |
+| **Multiple answers**     | SO  | amber           | Several accepted answers; any one of them is right.                                                      |
+| **Suggested answers**    | SO  | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right.                         |
+| **Paraphrase**           | P   | brown           | Restate the passage in their own words. No stored answer.                                                |
+| **Tight open**           | TO  | pink            | A quick one word answer from the speller's own world. No answer key, though you can list a few examples. |
+| **Broad open**           | BO  | pink            | Their own reasoning, opinion or imagination, often in a sentence. No stored answer.                      |
+| **Would you rather**     | WYR | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.                                |
+| **Background knowledge** | PK  | blue            | A question that needs knowledge from outside the passage, with its answer.                               |
 
 The tags are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
 defaults: K for a known answer, PK for prior knowledge, M for math, SO for
-semi-open, P for paraphrase, O for open, WYR for would you rather.
+semi-open, TO for a tight open, BO for a broad open, P for paraphrase, WYR for
+would you rather.
+
+## Tight and broad opens
+
+Both are open questions with no single right answer, and both print in pink.
+What separates them is how much they ask of the speller:
+
+- A **Tight open** names an everyday category and wants one word, fast:
+  "Name something that gives off light", "Name a color of a crayon". The answer
+  comes from the speller's own life, not from the passage. You can add a few
+  **examples** of what would count; they print after "e.g." and are not an
+  answer key.
+- A **Broad open** asks what the speller thinks: "Why do you think people
+  built lighthouses?", "If you designed one, what would you paint on it?". It
+  usually takes a sentence or more.
+
+"In your own words, explain..." is neither. It asks the speller to retell the
+passage, which is a **Paraphrase** question.
+
+Lessons saved before the two were separate have an **Open ended** question
+type (tag O) instead. Those questions still work everywhere; the editor just
+no longer offers the type for new questions. To sort an old one, change its
+type to Tight open or Broad open. The lesson checks read an old open question
+as whichever kind its wording suggests.
 
 **Multiple answers** used to be a burnt orange. It's amber now because the
 orange sat too close to **Paraphrase**'s brown, and on paper the color is
@@ -67,7 +92,7 @@ there. The help text under the answer rows also says which kind it is.
 
 A **Would you rather** question offers the speller a choice between two
 options: "Would you rather watch an opera or a movie?". It's about opinion,
-not understanding the passage, so like **Paraphrase** and **Open ended** it has
+not understanding the passage, so like **Paraphrase** and **Broad open** it has
 no stored answer. It prints in grape, and the wording itself ("Would you
 rather...") makes the type clear even if the color is hard to tell on paper.
 The legend at the foot of each page shortens it to **W.Y.R.** so a lesson that
@@ -96,8 +121,9 @@ on screen, with the same legend under the lesson, and hovering a tag names
 its type.
 
 A question without an answer, and the types with no stored answer
-(**Paraphrase**, **Open ended** and **Would you rather**), print as the question
-alone.
+(**Paraphrase**, **Broad open** and **Would you rather**), print as the question
+alone. A **Tight open** prints alone too unless you gave it examples, which
+follow "e.g.".
 
 ## Steps for number questions
 

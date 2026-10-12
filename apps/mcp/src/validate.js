@@ -28,24 +28,35 @@ export {
   validateLesson,
 } from "@spelling-creator/core/lessonChecks";
 
-// The types that store no answer at all. `paraphrase` and `wyr` are
-// mechanically `open` questions (the speller writes on their own paper either
-// way), so they are held to the same rule: buildBlock drops a stray answer from
-// all three, and being told about it is the only thing that stops the model
-// believing the lesson holds an answer it does not.
-const ANSWERLESS_TYPES = new Set(["open", "paraphrase", "wyr"]);
+// The fields each answerless type may not carry. `paraphrase`, `wyr` and the
+// broad open are mechanically open questions (the speller writes on their own
+// paper either way), so they are held to the same rule: buildBlock drops a
+// stray answer from all of them, and being told about it is the only thing
+// that stops the model believing the lesson holds an answer it does not. A
+// tight open may carry examples in `answers`, but has no key, so a single
+// `answer` or an `exampleAnswer` on it is the same mistake.
+const EVERY_ANSWER_FIELD = ["answer", "answers", "exampleAnswer"];
+const STRAY_FIELDS = {
+  open: EVERY_ANSWER_FIELD,
+  broad_open: EVERY_ANSWER_FIELD,
+  paraphrase: EVERY_ANSWER_FIELD,
+  wyr: EVERY_ANSWER_FIELD,
+  tight_open: ["answer", "exampleAnswer"],
+};
 
-// How validateInput names each answerless type in its rejection, colour and
-// all, so the model can find the question in a rendered lesson too.
+// How validateInput names each type in its rejection, colour and all, so the
+// model can find the question in a rendered lesson too.
 const ANSWERLESS_KIND = {
   open: "open (pink) question",
+  broad_open: "broad open (pink) question",
+  tight_open: "tight open (pink) question",
   paraphrase: "paraphrase (brown) question",
   wyr: "W.Y.R. (grape) question",
 };
 
 /**
  * Checks that can only be made against the caller's raw input, because buildBlock
- * drops the offending fields on the way into the doc — an `open` question that
+ * drops the offending fields on the way into the doc — an open question that
  * arrives carrying an answer would otherwise be silently stripped, leaving the
  * model believing the lesson holds an answer it does not.
  *
@@ -56,12 +67,19 @@ export function validateInput(entries) {
   const findings = [];
   for (const { block, where, section } of entries) {
     if (block?.type !== "question") continue;
-    if (!ANSWERLESS_TYPES.has(block.questionType)) continue;
-    const stray = ["answer", "answers", "exampleAnswer"].filter(
+    const fields = STRAY_FIELDS[block.questionType];
+    if (!fields) continue;
+    const stray = fields.filter(
       (field) => block[field] != null && block[field] !== "",
     );
     if (!stray.length) continue;
     const kind = ANSWERLESS_KIND[block.questionType];
+    const fix =
+      block.questionType === "tight_open"
+        ? "A tight open has no answer key. Put a few EXAMPLES of what would count in `answers` if you " +
+          "want to, or leave it as just the `prompt`."
+        : "Questions of this type have no answer of any kind, just the `prompt`. Remove the field, or " +
+          "change the question type to one that does take an answer.";
     findings.push({
       level: "error",
       code: "E_OPEN_HAS_ANSWER",
@@ -70,10 +88,7 @@ export function validateInput(entries) {
       sectionId: null,
       blockId: null,
       params: { fields: stray, questionType: block.questionType },
-      message:
-        `${where}: this ${kind} carries ${stray.map((f) => `\`${f}\``).join(", ")}. ` +
-        "Questions of this type have no answer of any kind, just " +
-        "the `prompt`. Remove the field, or change the question type to one that does take an answer.",
+      message: `${where}: this ${kind} carries ${stray.map((f) => `\`${f}\``).join(", ")}. ${fix}`,
     });
   }
   return findings;

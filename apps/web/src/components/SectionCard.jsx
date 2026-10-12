@@ -47,7 +47,7 @@ import { withImageCaptionParts } from "@spelling-creator/core/imageCredit";
 import { readImageFile } from "@spelling-creator/core/browser/imageFile";
 import { storeImageBytes } from "@spelling-creator/core/browser/imageRef";
 import {
-  QUESTION_TYPE_LIST,
+  QUESTION_TYPE_MENU,
   createQuestionBlock,
   buildQuestionBlock,
 } from "@spelling-creator/core/questions";
@@ -508,7 +508,7 @@ function SectionCard({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {QUESTION_TYPE_LIST.map((q) => (
+          {QUESTION_TYPE_MENU.map((q) => (
             <DropdownMenuItem
               key={q.key}
               onSelect={() => addQuestionBlock(q.key)}

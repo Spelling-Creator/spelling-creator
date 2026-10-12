@@ -4,12 +4,15 @@
 // gives its modules signatures in terms of them. Keep both in step with
 // packages/core/src/jsonImport.js when a block gains a field.
 
+/** `open` is the type lessons carried before tight and broad opens were separate. */
 export type QuestionType =
   | "number"
   | "single"
   | "multiple"
   | "multiple_open"
   | "paraphrase"
+  | "tight_open"
+  | "broad_open"
   | "open"
   | "wyr"
   | "background";

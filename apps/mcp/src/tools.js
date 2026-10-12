@@ -123,20 +123,24 @@ const blockSchema = z
         'For type "question": number (numeric answer), single (one text answer), multiple (the items of a list ' +
           "the passage states — every accepted answer), multiple_open (the looser semi-open question: a synonym, " +
           "a definition, anything bounded by the topic, whose answers are SUGGESTIONS the speller need not " +
-          "match), paraphrase (restate the passage in their own words — no stored answer), open (free " +
-          'response), wyr (a "Would you rather…?" choice between two options, joined by "or"; opinion only, ' +
-          "no stored answer), background (needs prior knowledge). Every answer except a background one and a " +
-          "multiple_open suggestion must appear, word for word, in that section's own passage; a background " +
-          "answer must NOT. A single " +
+          "match), paraphrase (restate the passage in their own words — no stored answer), tight_open (an " +
+          "easy one-word answer from the speller's own world; no key, though `answers` may hold a few " +
+          "examples), broad_open (their own reasoning, opinion or imagination in a sentence; no stored " +
+          'answer), wyr (a "Would you rather…?" choice between two options, joined by "or"; opinion only, ' +
+          "no stored answer), background (needs prior knowledge). `open` is only accepted for lessons written " +
+          "before tight and broad opens were separate: never write a new one. Every answer except a background " +
+          "one, a multiple_open suggestion and a tight_open example must appear, word for word, in that " +
+          "section's own passage; a background answer must NOT. A single " +
           "(green) answer must also be a HARD FACT with one right answer — being in the passage is not enough. " +
           '"What was the goddess called? → BASTET" is a fact; "What is a cat called when it purrs on a lap? → ' +
           'COMPANION" is interpretation, because pet, friend and lap-cat are all just as fair and COMPANION only ' +
           "looks right because the passage used that word. If a reasonable speller could answer differently and " +
-          "still be right, make it an open question or ask for a fact the passage states outright. Of the 7 " +
-          "open questions in a section, the first 4 are TIGHT OPENS — open-ended but answerable in ONE WORD from " +
-          "the speller's own everyday world, and crucially EASY, with no hard thinking, nothing abstract, and no " +
-          'reference to the lesson ("Name a color of a crayon", "Name something found in a hospital"). The last 3 ' +
-          'are EXTENDED OPENS, inviting a full sentence ("In your own words, explain…", "…Defend your answer.").',
+          "still be right, make it a tight open or ask for a fact the passage states outright. A section's 4 " +
+          "TIGHT OPENS are open-ended but answerable in ONE WORD from the speller's own everyday world, and " +
+          "crucially EASY, with no hard thinking, nothing abstract, and no reference to the lesson " +
+          '("Name a color of a crayon", "Name something found in a hospital"). Its 3 BROAD OPENS invite a full ' +
+          'sentence of the speller\'s own thinking ("Why do you think…?", "…Defend your answer.", "If you ' +
+          'could…"). "In your own words, explain…" is a paraphrase question, not a broad open.',
       ),
     prompt: z
       .string()
@@ -282,8 +286,9 @@ const sectionSchema = z.object({
         "section's content, in this fixed order: 3 single, 1 number (fill-in-the-blank), " +
         "1 number (word problem, with steps), 2 orange (default: 2 multiple, one per " +
         "planted list, 2-4 single-word answers each — a multiple_open may take either " +
-        "slot, tighter question first), 1 background, 4 open (tight — easy everyday " +
-        "one-word answers), 3 open (extended — full-sentence answers). Every section ends " +
+        "slot, tighter question first), 1 background, 4 tight_open (easy everyday " +
+        "one-word answers), 3 broad_open (full-sentence answers of the speller's own; a " +
+        "paraphrase may take the first of these slots). Every section ends " +
         "with its own questions — do not collect them into a separate quiz section at the end.",
     ),
 });
@@ -1238,7 +1243,7 @@ export function registerTools(server, ctx) {
         "public hub. Returns the new lesson id and its hub URL.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), " +
         "spelling (an explicit word list), question " +
-        "(number/single/multiple/multiple_open/paraphrase/open/wyr/background), image, and vakt " +
+        "(number/single/multiple/multiple_open/paraphrase/tight_open/broad_open/wyr/background), image, and vakt " +
         "(a regulation activity — OPTIONAL, only when the user asks for them, and last in its section).\n\n" +
         "DEFAULT STRUCTURE (unless the user asks otherwise): 6 sections; each section is [image?] + 2 text " +
         "paragraphs + 4 spelling words + 15 questions, and ENDS with those question blocks about that section. " +
@@ -1327,7 +1332,7 @@ export function registerTools(server, ctx) {
         "document”). Use this when you can't (or don't want to) publish to the hub; use create_lesson when you " +
         "want it saved to the cloud directly.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), spelling (an " +
-        "explicit word list), question (number/single/multiple/multiple_open/paraphrase/open/wyr/background), image, " +
+        "explicit word list), question (number/single/multiple/multiple_open/paraphrase/tight_open/broad_open/wyr/background), image, " +
         "and vakt (a regulation " +
         "activity — OPTIONAL, only when the user asks for them, and last in its section). DEFAULT STRUCTURE " +
         "(unless asked otherwise): 6 sections; each is [image?] + 2 text paragraphs + 4 spelling words + 15 " +

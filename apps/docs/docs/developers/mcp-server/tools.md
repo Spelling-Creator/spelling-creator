@@ -467,7 +467,12 @@ A lesson is **sections** of **blocks**. Block types:
     neither to the passage nor to a list)
   - `paraphrase` is a free response restating the passage in the speller's own words
     (no answer field; just the `prompt`)
-  - `open` is a free response (no answer field; just the `prompt`)
+  - `tight_open` is an easy one-word answer from the speller's own world (no answer key;
+    `answers` may hold a few examples, which print after "e.g.")
+  - `broad_open` is the speller's own reasoning, opinion or imagination in a sentence (no
+    answer field; just the `prompt`)
+  - `open` is accepted for lessons written before tight and broad opens were separate; an
+    assistant never writes a new one
   - `wyr` is a "Would you rather… or…?" choice between two options, opinion only
     (no answer field; just the `prompt`)
   - `background` takes `answer` (needs prior knowledge)

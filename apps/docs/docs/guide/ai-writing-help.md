@@ -73,7 +73,8 @@ question with AI**.
 1. Give the section a name first: that's what the question will be about.
 2. Pick a **Question type**. The list is the same as the **Add question**
    menu: Single answer, Number answer, Multiple answers, Suggested answers,
-   Paraphrase, Open ended, Would you rather and Background knowledge.
+   Paraphrase, Tight open, Broad open, Would you rather and Background
+   knowledge.
 3. Press **Generate**.
 
 The question goes straight into the section as a new question block, with its

@@ -25,6 +25,7 @@
 import mammoth from "mammoth";
 import { newId } from "../id.js";
 import {
+  EXAMPLE_ANSWER_PREFIX,
   QUESTION_TYPE_LIST,
   questionStyleClass,
   questionStyleMap,
@@ -637,6 +638,15 @@ function readQuestion(nodes, i, { type, prompt, answer }) {
     if (block.answers.length === 0) {
       block.answers.push({ id: newId(), text: "" });
     }
+  } else if (type === "tight_open") {
+    // A tight open's examples print after "e.g.", and are optional, so an
+    // empty list stays empty rather than gaining a blank row.
+    block.answers = answer
+      .replace(new RegExp(`^${EXAMPLE_ANSWER_PREFIX.trim()}\\s*`), "")
+      .split(/\s{2,}/)
+      .map((text) => text.trim())
+      .filter(Boolean)
+      .map((text) => ({ id: newId(), text }));
   }
 
   return { block, next: last };

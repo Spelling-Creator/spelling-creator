@@ -11,8 +11,10 @@ import {
   QUESTION_TAG_PREFIX,
   QUESTION_TYPES,
   QUESTION_TYPE_LIST,
+  QUESTION_TYPE_MENU,
   createQuestionBlock,
   questionAnswerText,
+  resolveOpenType,
   questionLegendFor,
   questionLegendText,
   questionMeta,
@@ -61,8 +63,50 @@ describe("questionAnswerText", () => {
 
   it("gives the free-response types nothing to print after the prompt", () => {
     expect(questionAnswerText({ questionType: "open" })).toBe("");
+    expect(questionAnswerText({ questionType: "broad_open" })).toBe("");
     expect(questionAnswerText({ questionType: "paraphrase" })).toBe("");
     expect(questionAnswerText({ questionType: "wyr" })).toBe("");
+  });
+
+  // A tight open has no key. Its examples, when it has any, print after
+  // "e.g." so whoever is scoring reads them as examples.
+  it("prints a tight open's examples after e.g., and nothing without them", () => {
+    expect(questionAnswerText({ questionType: "tight_open" })).toBe("");
+    expect(
+      questionAnswerText({
+        questionType: "tight_open",
+        answers: [{ text: "WINDOW" }, { text: "BOTTLE" }],
+      }),
+    ).toBe(`e.g. WINDOW${ANSWER_GAP}BOTTLE`);
+  });
+
+  // A lesson saved before tight and broad opens were separate carries `open`,
+  // which is never rewritten on load; its wording decides which kind the
+  // checks and the file export read it as.
+  it("sorts a legacy open question by its wording", () => {
+    const open = (prompt) => ({ questionType: "open", prompt });
+    expect(resolveOpenType(open("Name something found in a kitchen."))).toBe(
+      "tight_open",
+    );
+    expect(resolveOpenType(open("Give a synonym for praise."))).toBe(
+      "tight_open",
+    );
+    expect(
+      resolveOpenType(open("Why do you think the dam was built there?")),
+    ).toBe("broad_open");
+    expect(resolveOpenType(open("In your own words, explain why."))).toBe(
+      "broad_open",
+    );
+    expect(
+      resolveOpenType(
+        open("What would life in the Southwest look like today without it?"),
+      ),
+    ).toBe("broad_open");
+    // Explicit types pass through untouched.
+    expect(
+      resolveOpenType({ questionType: "broad_open", prompt: "Name a cat." }),
+    ).toBe("broad_open");
+    expect(resolveOpenType({ questionType: "single" })).toBe("single");
   });
 
   it("prints nothing for an unanswered question", () => {
@@ -170,16 +214,26 @@ describe("the footer legend", () => {
     );
   });
 
-  // Nothing in the printed lesson names a question's type, so two types that
-  // look identical in the legend are two types a reader cannot tell apart. The
-  // marking is the colour plus the italic — `multiple` and `multiple_open`
-  // deliberately share the amber, and the italic is the whole of what separates
-  // an exhaustive answer key from an advisory one on paper.
+  // Two types that look identical on the page are two types a reader cannot
+  // tell apart. The marking is the tag, the colour and the italic together:
+  // `multiple` and `multiple_open` deliberately share the amber and the SO
+  // tag, and the italic is the whole of what separates an exhaustive answer
+  // key from an advisory one on paper; the three open types share the pink,
+  // and their tags (TO, BO, O) are what tell them apart.
   it("gives every type a marking no other type has", () => {
     const markings = QUESTION_TYPE_LIST.map(
-      (q) => `${q.color}|${q.italic ? "italic" : "upright"}`,
+      (q) => `${q.tag}|${q.color}|${q.italic ? "italic" : "upright"}`,
     );
     expect(new Set(markings).size).toBe(markings.length);
+  });
+
+  it("keeps the legacy open type out of the menus but in the legend", () => {
+    expect(QUESTION_TYPES.open.legacy).toBe(true);
+    expect(QUESTION_TYPE_MENU.map((q) => q.key)).not.toContain("open");
+    expect(QUESTION_TYPE_MENU.map((q) => q.key)).toEqual(
+      expect.arrayContaining(["tight_open", "broad_open"]),
+    );
+    expect(QUESTION_LEGEND.map((q) => q.key)).toContain("open");
   });
 
   it("sets the one type that shares a colour in italic", () => {

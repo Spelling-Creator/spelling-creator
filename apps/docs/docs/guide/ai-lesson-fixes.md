@@ -76,8 +76,7 @@ questions or spelling words:
   already capitalized vocabulary in the passage
 - the same answer word or number used twice
 - question wording: "a word that comes to mind", a **Would you rather** that
-  doesn't read as a choice, open ended questions that don't split into quick
-  and longer ones, and number questions with no worked steps
+  doesn't read as a choice, and number questions with no worked steps
 
 Left out are the findings that already have a one-click fix, the shape of the
 lesson or a section (how many sections, spelling words or questions there are,

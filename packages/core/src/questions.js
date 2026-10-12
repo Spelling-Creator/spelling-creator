@@ -1,6 +1,13 @@
-// Shared definitions for the eight question types. Imported by the editor
+// Shared definitions for the question types. Imported by the editor
 // (SectionCard / ContentBlock) and the exporters so colours, labels, and the
 // default block shape stay in sync everywhere.
+//
+// The keys follow the Open Spelling Lesson Format's types, under the names
+// this app has always stored: single is OSLF's known, background its prior
+// knowledge, number its math, multiple and multiple_open its semi-open (with
+// an exhaustive and a suggested key), tight_open, broad_open, paraphrase and
+// wyr themselves. `open` is the type lessons were saved with before tight and
+// broad opens were told apart; it stays readable (see `legacy` below).
 //
 // `tag` is the short mark printed in front of every prompt (K, PK, M, ...),
 // the Open Spelling Lesson Format's default tags. Colour alone can't carry a
@@ -68,13 +75,38 @@ export const QUESTION_TYPES = {
     description: "Restate the passage in their own words",
     color: "#a0522d", // brown
   },
+  tight_open: {
+    key: "tight_open",
+    label: "Tight open",
+    short: "Tight open",
+    tag: "TO",
+    description: "A quick one-word answer from the speller's own world",
+    color: "#e64980", // pink
+  },
+  broad_open: {
+    key: "broad_open",
+    label: "Broad open",
+    short: "Broad open",
+    tag: "BO",
+    description: "Their own reasoning, opinion or imagination",
+    // The same pink as `tight_open`: on paper the two open kinds are told
+    // apart by their tag and by what they ask, not by colour.
+    color: "#e64980",
+  },
   open: {
     key: "open",
     label: "Open ended",
     short: "Open",
     tag: "O",
-    description: "Free written response",
+    description: "Saved before tight and broad opens were separate",
     color: "#e64980", // pink
+    // Lessons stored before the split carry this type, and the app never
+    // rewrites a stored block on load (that would show up as an edit in
+    // version history and broadcast to a live session; see imageCredit.js). So
+    // it stays a type every reader understands, printed and checked as the
+    // kind its wording suggests (resolveOpenType), but the menus no longer
+    // offer it: a new question is tight or broad.
+    legacy: true,
   },
   wyr: {
     key: "wyr",
@@ -105,6 +137,47 @@ export const QUESTION_TYPES = {
 
 export const QUESTION_TYPE_LIST = Object.values(QUESTION_TYPES);
 
+/** The types a menu offers for a new question: every type but the legacy one. */
+export const QUESTION_TYPE_MENU = QUESTION_TYPE_LIST.filter((q) => !q.legacy);
+
+// The open types: the two kinds a new question can be, and the one older
+// lessons were saved with. All print pink, carry no answer key (a tight open
+// may carry examples), and are the questions a speller answers from their own
+// world rather than from the passage.
+export const OPEN_TYPE_KEYS = ["tight_open", "broad_open", "open"];
+
+/** Is this one of the open (pink) types, the legacy one included? */
+export function isOpenType(questionType) {
+  return OPEN_TYPE_KEYS.includes(questionType);
+}
+
+// Telling a tight open from a broad one by its wording, for a legacy `open`
+// question that never said which it was. Word count alone misclassifies short
+// broad opens ("In your own words, explain why."), so the stems get the first
+// say. Only ever a guess, which is why a stored question's own type always
+// wins (resolveOpenType) and why the menus ask the author to choose.
+const BROAD_STEM =
+  /in your own words|defend your (answer|thinking|choice)|explain your (thinking|answer|reasoning|choice)|explain why|explain how|why do you think|how do you think|what do you think|do you think|describe (how|why|what)|if you (could|were)|what (would|could|might|does it take)|would you (want|have|volunteer)|should\b/i;
+const TIGHT_STEM =
+  /^\s*(name|give)\s+(a|an|one|some|something|someone|a kind|a type|a place|a way|a synonym|a word)\b/i;
+const TIGHT_OPEN_MAX_WORDS = 12;
+
+/**
+ * Which kind of open question a block is: its own type for a tight or broad
+ * open, and for a legacy `open` block the kind its wording reads as. Anything
+ * else comes back as it is.
+ * @param {{ questionType?: string, prompt?: string }} block
+ * @returns {string}
+ */
+export function resolveOpenType(block) {
+  if (block?.questionType !== "open") return block?.questionType;
+  const prompt = String(block.prompt || "");
+  if (BROAD_STEM.test(prompt)) return "broad_open";
+  if (TIGHT_STEM.test(prompt)) return "tight_open";
+  const words = prompt.trim().split(/\s+/).filter(Boolean).length;
+  return words > TIGHT_OPEN_MAX_WORDS ? "broad_open" : "tight_open";
+}
+
 // The two semi-open types, in the order a section asks them (tight first). They
 // share a colour and an `answers` list, and differ in what that list means: for
 // `multiple` it is the complete set of accepted answers, drawn from a list the
@@ -120,16 +193,20 @@ export function isOrangeType(questionType) {
 }
 
 // The order the printed footer legend lists the types in: recall first, opening
-// out to free response last. This is a reading order for the legend only — the
-// editor's type picker keeps QUESTION_TYPES' own order.
+// out to free response last, which is the Open Spelling Lesson Format's default
+// legend order. This is a reading order for the legend only — the editor's type
+// picker keeps QUESTION_TYPES' own order. The legacy open type comes last,
+// since it only appears under lessons saved before the split.
 export const QUESTION_LEGEND = [
   QUESTION_TYPES.single,
   QUESTION_TYPES.background,
   QUESTION_TYPES.number,
   QUESTION_TYPES.multiple,
   QUESTION_TYPES.multiple_open,
+  QUESTION_TYPES.tight_open,
   QUESTION_TYPES.wyr,
   QUESTION_TYPES.paraphrase,
+  QUESTION_TYPES.broad_open,
   QUESTION_TYPES.open,
 ];
 
@@ -181,10 +258,10 @@ export function questionLegendFor(doc) {
 // ---------------------------------------------------------------------------
 // Word character styles, one per question type.
 //
-// The printed lesson has no "[Number answer]" tag in front of a prompt any more
-// — the prompt's own colour is what marks its type. That leaves nothing in the
-// text for the DOCX importer to read the type back off, and mammoth drops run
-// colours, so the PDF path loses the colour coding too.
+// The printed lesson has no "[Number answer]" label in front of a prompt, only
+// the short tag and the prompt's own colour. The tag is shared by two types
+// (SO), so it can't carry the type back through the DOCX importer on its own,
+// and mammoth drops run colours, so the PDF path would lose the colour coding.
 //
 // A named character style fixes both: Word carries the colour, mammoth can be
 // told to map the style onto a `<span class>` (see docxImport / pdfExport), and
@@ -244,11 +321,30 @@ const SINGLE_ANSWER_TYPES = new Set(["number", "single", "background"]);
 // side still give the line somewhere to wrap.
 export const ANSWER_GAP = " \u00A0 ";
 
+// Types that hold a list of answers in `answers`: the two semi-open types, and
+// a tight open, whose list (when it has one) is examples of what would count.
+const LIST_ANSWER_TYPES = new Set(["multiple", "multiple_open", "tight_open"]);
+
+// What a printed lesson writes in front of a tight open's examples, so whoever
+// is scoring reads them as examples rather than as the answer key. The DOCX
+// importer strips exactly this.
+export const EXAMPLE_ANSWER_PREFIX = "e.g. ";
+
+/**
+ * Whether a block's answers are examples rather than an answer key. True for
+ * a tight open with examples; the suggested-answers type marks its key as
+ * advisory with the italic on its prompt instead, and prints its list plain.
+ * @param {object} block
+ */
+export function questionAnswersAreExamples(block) {
+  return block?.questionType === "tight_open";
+}
+
 // The answer strings a printed lesson shows, one per accepted answer: at most
 // one for the single-answer types, one per non-blank answer for the orange
-// (multiple-answer) types, and none for an unanswered question or an
-// `open`/`paraphrase`/`wyr` one, which is answered on the speller's own paper
-// and so prints as the prompt alone.
+// (multiple-answer) types and a tight open's examples, and none for an
+// unanswered question or a `broad_open`/`paraphrase`/`wyr` one, which is
+// answered on the speller's own paper and so prints as the prompt alone.
 //
 // Separate from questionAnswerText so each accepted answer stays its own
 // string where that matters: lesson translation translates them one at a
@@ -260,7 +356,7 @@ export function questionAnswerItems(block) {
     const answer = block.answer == null ? "" : String(block.answer).trim();
     return answer ? [answer] : [];
   }
-  if (isOrangeType(block.questionType)) {
+  if (LIST_ANSWER_TYPES.has(block.questionType)) {
     return (block.answers || [])
       .map((a) => (a.text || "").trim())
       .filter(Boolean);
@@ -270,11 +366,15 @@ export function questionAnswerItems(block) {
 
 // The answer text a printed lesson shows inline, immediately after the prompt
 // and in the body colour — the shape the exported lesson uses, where a question
-// is one line of coloured prompt followed by its answer in black.
+// is one line of coloured prompt followed by its answer in black. A tight
+// open's examples come after "e.g.".
 //
 // Returns "" when there is nothing to show (see questionAnswerItems).
 export function questionAnswerText(block) {
-  return questionAnswerItems(block).join(ANSWER_GAP);
+  const items = questionAnswerItems(block);
+  if (!items.length) return "";
+  const prefix = questionAnswersAreExamples(block) ? EXAMPLE_ANSWER_PREFIX : "";
+  return prefix + items.join(ANSWER_GAP);
 }
 
 export function questionMeta(questionType) {
@@ -293,8 +393,13 @@ export function createQuestionBlock(newId, questionType) {
     case "multiple":
     case "multiple_open":
       return { ...base, answers: [{ id: newId(), text: "" }] };
+    // A tight open may carry examples of what would count, but needn't, so it
+    // starts with none rather than with an empty row asking to be filled.
+    case "tight_open":
+      return { ...base, answers: [] };
     // All free written responses with no stored answer.
     case "paraphrase":
+    case "broad_open":
     case "open":
     case "wyr":
       return { ...base };
@@ -328,7 +433,13 @@ export function buildQuestionBlock(newId, questionType, data = {}) {
     case "multiple":
     case "multiple_open":
       return { ...base, answers: toAnswers(newId, data.answers) };
+    case "tight_open":
+      return {
+        ...base,
+        answers: toAnswers(newId, data.answers, { pad: false }),
+      };
     case "paraphrase":
+    case "broad_open":
     case "open":
     case "wyr":
       return { ...base };
@@ -343,13 +454,14 @@ export function buildQuestionBlock(newId, questionType, data = {}) {
 }
 
 // Turn an array of answer strings into answer objects, guaranteeing at least
-// one editable row so an AI-suggested block matches a hand-made one.
-function toAnswers(newId, raw) {
+// one editable row so an AI-suggested block matches a hand-made one. A tight
+// open's examples are optional, so it asks for no padding.
+function toAnswers(newId, raw, { pad = true } = {}) {
   const list = Array.isArray(raw)
     ? raw.filter((t) => typeof t === "string")
     : [];
   const answers = list.map((text) => ({ id: newId(), text }));
-  if (answers.length === 0) answers.push({ id: newId(), text: "" });
+  if (pad && answers.length === 0) answers.push({ id: newId(), text: "" });
   return answers;
 }
 

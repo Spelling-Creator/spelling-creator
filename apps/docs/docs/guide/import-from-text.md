@@ -75,7 +75,8 @@ rather than thrown away.
 
 The **question type** is worked out, since plain text doesn't say what it is.
 "Would you rather" makes a Would you rather question, "in your own words" makes
-a Paraphrase question, no answer makes an Open ended one, several answers make
+a Paraphrase question, no answer makes a Tight open or a Broad open (by how the
+question is worded), several answers make
 Multiple answers (or Suggested answers when one of them isn't in the passage),
 a number makes a Number answer question, and a single answer is a Single answer
 question when it appears in the passage and Background knowledge when it

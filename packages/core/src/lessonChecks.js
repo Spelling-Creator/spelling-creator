@@ -31,6 +31,7 @@ import {
   textBlockFormattedSpans,
   textBlockPlain,
 } from "@spelling-creator/core/lessonText";
+import { isOpenType, resolveOpenType } from "@spelling-creator/core/questions";
 
 /** The default lesson shape (see standards.md). Deviations are warnings. */
 export const SECTION_COUNT = 6;
@@ -39,7 +40,7 @@ export const SPELLING_MIN_LETTERS = 6;
 export const SPELLING_MAX_LETTERS = 9;
 
 // The fixed per-section question order: 3 green, 2 purple, 2 orange, 1 blue,
-// then 7 pink (4 tight opens followed by 3 extended opens).
+// then 7 pink (4 tight opens followed by 3 broad opens).
 const QUESTION_ORDER = [
   "single",
   "single",
@@ -49,16 +50,16 @@ const QUESTION_ORDER = [
   "multiple",
   "multiple",
   "background",
-  "open",
-  "open",
-  "open",
-  "open",
-  "open",
-  "open",
-  "open",
+  "tight_open",
+  "tight_open",
+  "tight_open",
+  "tight_open",
+  "broad_open",
+  "broad_open",
+  "broad_open",
 ];
 const TIGHT_OPENS = 4;
-const EXTENDED_OPENS = 3;
+const BROAD_OPENS = 3;
 const ORANGE_MIN_ANSWERS = 2;
 const ORANGE_MAX_ANSWERS = 4;
 
@@ -118,15 +119,6 @@ const ORANGE_BLANK = /_{3,}/;
 // Retired because it was overused to the point of becoming a tic. Matched
 // loosely so rephrasings ("name a word that comes to mind") are caught too.
 const RETIRED_STEM = /\bwords?\s+that\s+comes?\s+to\s+mind\b/i;
-
-// Heuristics for telling a tight open from an extended one, used only by the
-// W_OPEN_SPLIT warning. Word count alone misclassifies short extended opens
-// ("Explain why you think so."), so the stems get the first say.
-const EXTENDED_STEM =
-  /in your own words|defend your (answer|thinking|choice)|explain your (thinking|answer|reasoning|choice)|explain why|explain how|why do you think|describe (how|why|what)/i;
-const TIGHT_STEM =
-  /^\s*name\s+(a|an|one|some|something|someone|a kind|a type|a place|a way)\b/i;
-const TIGHT_OPEN_MAX_WORDS = 12;
 
 // The W_WYR_SHAPE check. A W.Y.R. choice is joined by ONE "or": "A or B", or a
 // short list written "A, B, or C" (the source lessons ask "Would you rather tour
@@ -445,20 +437,6 @@ function hasSteps(block) {
 
 function letterCount(word) {
   return (word.match(/\p{L}/gu) || []).length;
-}
-
-function wordCount(text) {
-  return String(text || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
-}
-
-function openKind(prompt) {
-  const text = String(prompt || "");
-  if (EXTENDED_STEM.test(text)) return "extended";
-  if (TIGHT_STEM.test(text)) return "tight";
-  return wordCount(text) > TIGHT_OPEN_MAX_WORDS ? "extended" : "tight";
 }
 
 function numericKey(value) {
@@ -817,6 +795,10 @@ export function validateLesson(doc) {
           break;
         }
 
+        // The retired stem is a tight open's habit, but a broad open or a
+        // legacy open can wear it too, so every pink type is read.
+        case "tight_open":
+        case "broad_open":
         case "open": {
           if (RETIRED_STEM.test(block.prompt || "")) {
             error(
@@ -933,29 +915,31 @@ export function validateLesson(doc) {
         },
       };
       // Some prompts are allowed to name the thing they are about, so for them
-      // the leak is not always a defect. An extended open exists to make the
-      // speller talk about the section's subject, and that subject is usually a
-      // green answer — "In your own words, explain how a delta forms" cannot
-      // avoid DELTA without going vague. A loose orange question has the same
-      // problem in a sharper form: "Give a synonym for X" has to say X. And a
-      // W.Y.R. question's options are often the section's own vocabulary:
-      // "Would you rather be circumspect and get one wish, or bet for ten?" is
-      // the question working as designed. Worth flagging in all three cases,
-      // never worth blocking.
+      // the leak is not always a defect. A paraphrase or broad open exists to
+      // make the speller talk about the section's subject, and that subject is
+      // usually a green answer — "In your own words, explain how a delta
+      // forms" cannot avoid DELTA without going vague. A loose orange question
+      // has the same problem in a sharper form: "Give a synonym for X" has to
+      // say X. And a W.Y.R. question's options are often the section's own
+      // vocabulary: "Would you rather be circumspect and get one wish, or bet
+      // for ten?" is the question working as designed. Worth flagging in every
+      // case, never worth blocking.
       if (
-        block.questionType === "open" ||
+        isOpenType(block.questionType) ||
+        block.questionType === "paraphrase" ||
         block.questionType === "wyr" ||
         block.questionType === ORANGE_LOOSE
       ) {
-        const kind =
-          block.questionType === "open"
-            ? "this pink prompt"
+        const kind = isOpenType(block.questionType)
+          ? "this pink prompt"
+          : block.questionType === "paraphrase"
+            ? "this paraphrase (brown) prompt"
             : block.questionType === "wyr"
               ? "this W.Y.R. (grape) prompt"
               : "this orange (multiple_open) prompt";
         const excuse =
-          block.questionType === "open"
-            ? "Fine when the open question genuinely has to name the section's subject; worth rewording if it doesn't."
+          isOpenType(block.questionType) || block.questionType === "paraphrase"
+            ? "Fine when the question genuinely has to name the section's subject; worth rewording if it doesn't."
             : block.questionType === "wyr"
               ? "Fine when the choice is genuinely about that word; worth rewording if it isn't."
               : 'Fine when the question is about that word ("Give a synonym for X" has to name X); worth ' +
@@ -1001,18 +985,30 @@ export function validateLesson(doc) {
       // Either orange type satisfies an orange slot — the standard asks for two
       // semi-open questions there, not for one of each — so the shapes are
       // compared with the two folded together and the ordering between them left
-      // to W_ORANGE_ORDER below.
-      const slot = (type) => (ORANGE_TYPES.has(type) ? ORANGE_TIGHT : type);
-      if (shape.map(slot).join(",") !== QUESTION_ORDER.join(",")) {
+      // to W_ORANGE_ORDER below. A paraphrase may stand in for a broad open
+      // (standards.md), and a legacy `open` question, which never said which
+      // kind it was, is read as the kind its wording suggests, so a lesson
+      // saved before the split is held to the same 4 tight + 3 broad order it
+      // was written to.
+      const slot = (block) => {
+        const type = block.questionType;
+        if (ORANGE_TYPES.has(type)) return ORANGE_TIGHT;
+        if (type === "paraphrase") return "broad_open";
+        return resolveOpenType(block);
+      };
+      if (ctx.questions.map(slot).join(",") !== QUESTION_ORDER.join(",")) {
         warn(
           "W_QUESTION_SHAPE",
           ctx.id,
           ctx.number,
           `${ctx.label} has ${shape.length} question(s) in the order ${shape.join(", ")}. ` +
             `The default is ${QUESTION_ORDER.length}, in this order: ${QUESTION_ORDER.join(", ")} ` +
-            `(3 green, 2 purple, 2 orange, 1 blue, then ${TIGHT_OPENS} tight opens and ${EXTENDED_OPENS} extended opens). ` +
+            `(3 green, 2 purple, 2 orange, 1 blue, then ${TIGHT_OPENS} tight opens and ${BROAD_OPENS} broad opens). ` +
             "Either orange type counts towards an orange slot: `multiple` for a list the passage states, " +
-            "`multiple_open` for the looser end.",
+            "`multiple_open` for the looser end. A `paraphrase` may take a broad open's slot. The first " +
+            `${TIGHT_OPENS} pink questions are tight opens (easy one-word answers from the speller's own ` +
+            `world: "Name something found in a hospital"); the last ${BROAD_OPENS} are broad opens inviting ` +
+            'a full sentence of their own reasoning or opinion ("Why do you think…?", "…Defend your answer.").',
           { ...firstQuestion, params: { count: shape.length } },
         );
       }
@@ -1040,31 +1036,6 @@ export function validateLesson(doc) {
             "the passage states goes ahead of the one the speller answers in their own words.",
           { blockId: orange[firstLoose]?.id },
         );
-      }
-
-      const opens = ctx.questions.filter((q) => q.questionType === "open");
-      if (opens.length === TIGHT_OPENS + EXTENDED_OPENS) {
-        const kinds = opens.map((q) => openKind(q.prompt));
-        const tightOk = kinds.slice(0, TIGHT_OPENS).every((k) => k === "tight");
-        const extendedOk = kinds
-          .slice(TIGHT_OPENS)
-          .every((k) => k === "extended");
-        if (!tightOk || !extendedOk) {
-          warn(
-            "W_OPEN_SPLIT",
-            ctx.id,
-            ctx.number,
-            `${ctx.label}: the ${opens.length} pink questions don't read as ${TIGHT_OPENS} tight opens followed by ` +
-              `${EXTENDED_OPENS} extended opens. The first ${TIGHT_OPENS} should be easy one-word recall from the ` +
-              'speller\'s own world ("Name something found in a hospital"); the last ' +
-              `${EXTENDED_OPENS} should invite a full sentence of their own thinking ("Why do you think...?", ` +
-              '"...Defend your answer.").',
-            {
-              blockId: opens[0]?.id,
-              params: { tight: TIGHT_OPENS, extended: EXTENDED_OPENS },
-            },
-          );
-        }
       }
 
       const numbers = ctx.questions.filter((q) => q.questionType === "number");

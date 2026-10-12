@@ -21,7 +21,7 @@ import {
 } from "./ui/select.jsx";
 import { Field, FieldLabel } from "./ui/field.jsx";
 import { suggestQuestion } from "@spelling-creator/core/aiSuggest";
-import { QUESTION_TYPE_LIST } from "@spelling-creator/core/questions";
+import { QUESTION_TYPE_MENU } from "@spelling-creator/core/questions";
 import { turnstileSiteKey } from "@spelling-creator/core/config";
 import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
 
@@ -165,7 +165,7 @@ export default function AiQuestionDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {QUESTION_TYPE_LIST.map((q) => (
+                {QUESTION_TYPE_MENU.map((q) => (
                   <SelectItem key={q.key} value={q.key}>
                     <span
                       className="inline-block size-3 shrink-0 rounded-full"

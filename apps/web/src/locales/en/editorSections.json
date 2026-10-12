@@ -113,7 +113,10 @@
       "removeAnswer": "Remove answer",
       "addAnswer": "Add answer",
       "answersHelp": "Type every accepted answer. The speller only needs to give one of them to be correct.",
-      "suggestedAnswersHelp": "Type a few answers that would count. These are suggestions, not the only right answers. Anything that fits the topic is correct."
+      "suggestedAnswersHelp": "Type a few answers that would count. These are suggestions, not the only right answers. Anything that fits the topic is correct.",
+      "answerPlaceholderExample": "Example {{number}}",
+      "addExampleAnswer": "Add example",
+      "exampleAnswersHelp": "Optional: a few examples of what would count. A tight open has no answer key, so leave these out if the question doesn't need them."
     },
     "vakt": {
       "badge": "VAKT activity",

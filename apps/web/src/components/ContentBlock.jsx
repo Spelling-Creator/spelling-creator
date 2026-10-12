@@ -50,6 +50,12 @@ import {
 import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import { isOrangeType, questionMeta } from "@spelling-creator/core/questions";
+
+// The types that edit a list of answers: the two semi-open types, whose list
+// is a key (exhaustive or suggested, never empty), and a tight open, whose
+// list is a few optional examples and may be empty.
+const listsAnswers = (questionType) =>
+  isOrangeType(questionType) || questionType === "tight_open";
 import { SPELLING_COLOR } from "@spelling-creator/core/spelling";
 import {
   VAKT_COLOR,
@@ -1044,13 +1050,15 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
             </Field>
           )}
 
-          {isOrangeType(block.questionType) && (
+          {listsAnswers(block.questionType) && (
             <div className="mt-3 flex flex-col gap-2">
               {answers.map((ans, i) => (
                 <div key={ans.id} className="flex items-center gap-1">
                   <LiveInput
                     placeholder={t(
-                      "contentBlock.question.answerPlaceholderMultiple",
+                      block.questionType === "tight_open"
+                        ? "contentBlock.question.answerPlaceholderExample"
+                        : "contentBlock.question.answerPlaceholderMultiple",
                       { number: i + 1 },
                     )}
                     value={ans.text}
@@ -1060,7 +1068,10 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
                   <IconActionButton
                     tooltip={t("contentBlock.question.removeAnswer")}
                     onClick={() => removeAnswer(ans.id)}
-                    disabled={answers.length <= 1}
+                    // A key needs at least one row; examples are optional.
+                    disabled={
+                      block.questionType !== "tight_open" && answers.length <= 1
+                    }
                   >
                     <Trash2Icon />
                   </IconActionButton>
@@ -1075,16 +1086,22 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
                   className={TOUCH_SM_BUTTON}
                 >
                   <PlusIcon data-icon="inline-start" />
-                  {t("contentBlock.question.addAnswer")}
+                  {t(
+                    block.questionType === "tight_open"
+                      ? "contentBlock.question.addExampleAnswer"
+                      : "contentBlock.question.addAnswer",
+                  )}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                {/* The two types take the same rows and mean different things by
-                    them, so the help text under them is what says which. */}
+                {/* The three types take the same rows and mean different things
+                    by them, so the help text under them is what says which. */}
                 {t(
                   block.questionType === "multiple_open"
                     ? "contentBlock.question.suggestedAnswersHelp"
-                    : "contentBlock.question.answersHelp",
+                    : block.questionType === "tight_open"
+                      ? "contentBlock.question.exampleAnswersHelp"
+                      : "contentBlock.question.answersHelp",
                 )}
               </p>
             </div>

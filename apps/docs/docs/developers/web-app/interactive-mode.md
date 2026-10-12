@@ -73,13 +73,14 @@ presentation differs; the content is the same blocks.
 shape, `{ answer, answers, steps, suggested }`, or null when there is nothing to
 reveal:
 
-| Type                                                            | What the reveal shows                                              |
-| --------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `single`, `background`                                          | `answer`                                                           |
-| `number`                                                        | `answer` plus the working `steps` (either alone is still revealed) |
-| `multiple`                                                      | every entry in `answers`, the whole accepted set                   |
-| `multiple_open`                                                 | the same list with `suggested: true`, labeled as suggestions       |
-| `open`, `paraphrase`, `wyr`, an unknown type, or a blank answer | null: "This question has no set answer."                           |
+| Type                                                                                                                  | What the reveal shows                                              |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `single`, `background`                                                                                                | `answer`                                                           |
+| `number`                                                                                                              | `answer` plus the working `steps` (either alone is still revealed) |
+| `multiple`                                                                                                            | every entry in `answers`, the whole accepted set                   |
+| `multiple_open`                                                                                                       | the same list with `suggested: true`, labeled as suggestions       |
+| `tight_open` with examples                                                                                            | its examples with `suggested: true`, labeled the same way          |
+| `broad_open`, `paraphrase`, `wyr`, a legacy `open`, a tight open without examples, an unknown type, or a blank answer | null: "This question has no set answer."                           |
 
 `revealedAnswers` turns that into the flat list of boxes the UI draws (the
 working is not one of them; it stays a numbered list below), and

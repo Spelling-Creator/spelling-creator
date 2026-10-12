@@ -278,7 +278,7 @@ describe("importLessonText", () => {
       "number",
       "multiple",
       "background",
-      "open",
+      "tight_open",
       "wyr",
       "paraphrase",
     ]);
@@ -312,7 +312,7 @@ describe("importLessonText", () => {
       "single",
       "number",
       "multiple",
-      "open",
+      "tight_open",
       "wyr",
     ]);
     expect(questions[1].answer).toBe("400");
@@ -448,12 +448,19 @@ describe("deriveQuestionType", () => {
         passage,
       ),
     ).toBe("paraphrase");
+    // No answer makes an open question, and the wording says which kind.
     expect(
       deriveQuestionType(
         { prompt: "Name something hot.", answers: [] },
         passage,
       ),
-    ).toBe("open");
+    ).toBe("tight_open");
+    expect(
+      deriveQuestionType(
+        { prompt: "Why do you think the core stays hot?", answers: [] },
+        passage,
+      ),
+    ).toBe("broad_open");
   });
   it("uses the answers for the rest", () => {
     expect(

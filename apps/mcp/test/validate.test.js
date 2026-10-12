@@ -1091,13 +1091,41 @@ test("shape deviations warn rather than block", () => {
   assert.ok(codes(spellingCount.warnings).includes("W_SPELLING_COUNT"));
 });
 
-test("pink questions that don't split 4 tight + 3 extended warn", () => {
+// The fixture's pink questions carry the legacy `open` type, as every lesson
+// written before tight and broad opens were separate does. They are sorted by
+// wording, so the 4 + 3 order is still held, and a broad open in a tight slot
+// is a shape warning like any other.
+test("legacy open questions are held to 4 tight + 3 broad by their wording", () => {
   const { errors, warnings } = check((input) => {
     question(input, 0, 8).prompt =
       "In your own words, explain how this forms over many centuries.";
   });
   assert.deepEqual(codes(errors), []);
-  assert.deepEqual(codes(warnings), ["W_OPEN_SPLIT"]);
+  assert.deepEqual(codes(warnings), ["W_QUESTION_SHAPE"]);
+});
+
+test("explicit tight and broad opens fill the pink slots, and a paraphrase a broad one", () => {
+  const { errors, warnings } = check((input) => {
+    for (let i = 8; i < 12; i += 1)
+      question(input, 0, i).questionType = "tight_open";
+    question(input, 0, 12).questionType = "paraphrase";
+    question(input, 0, 13).questionType = "broad_open";
+    question(input, 0, 14).questionType = "broad_open";
+  });
+  assert.deepEqual(codes(errors), []);
+  assert.deepEqual(codes(warnings), []);
+});
+
+test("a tight open may carry examples, which are held to nothing", () => {
+  const { errors, warnings } = check((input) => {
+    const block = question(input, 0, 8);
+    block.questionType = "tight_open";
+    // Examples that are elsewhere a green answer and a spelling word: both
+    // would be rejected on a real key, and both are fine on examples.
+    block.answers = ["current", "seabed", "spoon"];
+  });
+  assert.deepEqual(codes(errors), []);
+  assert.deepEqual(codes(warnings), []);
 });
 
 test("newFindings keeps only what an edit introduced", () => {

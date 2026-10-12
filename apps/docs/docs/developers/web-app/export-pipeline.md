@@ -23,22 +23,39 @@ For how to use this, see [Exporting & printing](../../guide/exporting.md) and
 
 ## Question types
 
-The eight question types, their labels, the one-line descriptions shown in the
-**Add question** menu, their colors and their default block shapes live in one
-place, `packages/core/src/questions.js` (`QUESTION_TYPES`), so the editor and
-both exporters stay in sync. Question type labels are not localized: the menu
-reads `label` and `description` straight from that file.
+The question types, their labels, the one-line descriptions shown in the
+**Add question** menu, their tags, their colors and their default block shapes
+live in one place, `packages/core/src/questions.js` (`QUESTION_TYPES`), so the
+editor and both exporters stay in sync. Question type labels are not localized:
+the menu reads `label` and `description` straight from that file. The keys are
+the app's own names for the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+types (`single` is OSLF's known, `background` its prior knowledge, `number`
+its math, the two amber types its semi-open).
 
-| Key             | Label                | Color                   | Stored answer                         |
-| --------------- | -------------------- | ----------------------- | ------------------------------------- |
-| `number`        | Number answer        | `#7048e8` purple        | `answer`, plus optional `steps`       |
-| `single`        | Single answer        | `#2f9e44` green         | `answer`                              |
-| `multiple`      | Multiple answers     | `#d68f00` amber         | `answers` (the complete accepted set) |
-| `multiple_open` | Suggested answers    | `#d68f00` amber, italic | `answers` (suggestions)               |
-| `paraphrase`    | Paraphrase           | `#a0522d` brown         | none                                  |
-| `open`          | Open ended           | `#e64980` pink          | none                                  |
-| `wyr`           | Would you rather     | `#9c36b5` grape         | none                                  |
-| `background`    | Background knowledge | `#1c7ed6` blue          | `answer`                              |
+| Key             | Label                | Tag | Color                   | Stored answer                         |
+| --------------- | -------------------- | --- | ----------------------- | ------------------------------------- |
+| `number`        | Number answer        | M   | `#7048e8` purple        | `answer`, plus optional `steps`       |
+| `single`        | Single answer        | K   | `#2f9e44` green         | `answer`                              |
+| `multiple`      | Multiple answers     | SO  | `#d68f00` amber         | `answers` (the complete accepted set) |
+| `multiple_open` | Suggested answers    | SO  | `#d68f00` amber, italic | `answers` (suggestions)               |
+| `paraphrase`    | Paraphrase           | P   | `#a0522d` brown         | none                                  |
+| `tight_open`    | Tight open           | TO  | `#e64980` pink          | `answers` (optional examples)         |
+| `broad_open`    | Broad open           | BO  | `#e64980` pink          | none                                  |
+| `open`          | Open ended           | O   | `#e64980` pink          | none                                  |
+| `wyr`           | Would you rather     | WYR | `#9c36b5` grape         | none                                  |
+| `background`    | Background knowledge | PK  | `#1c7ed6` blue          | `answer`                              |
+
+`open` is the type lessons were saved with before tight and broad opens were
+told apart. It carries `legacy: true`, which keeps it out of
+`QUESTION_TYPE_MENU` (the **Add question** menu and the AI question dialog use
+that list), while `QUESTION_TYPE_LIST` still has it for everything that reads a
+stored lesson. Stored blocks are never rewritten on load, for the reason
+`imageCredit.js` gives (it would show as an edit in version history and
+broadcast to a live session), so `resolveOpenType(block)` is how the checks,
+the text importer and the file export decide which kind a legacy question is:
+its own type for a tight or broad open, and for `open` the kind its wording
+reads as (`BROAD_STEM`, `TIGHT_STEM`, then word count).
 
 The two amber types are the _semi-open_ questions (`ORANGE_TYPE_KEYS`,
 `isOrangeType`). Treating them as one family, colored alike, is the app's
@@ -53,9 +70,12 @@ with a legend name shorter than its label.
 
 `questionAnswerItems` and `questionAnswerText` decide what a printed question
 shows after its prompt: one answer for the single-answer types, every non-blank
-answer for the amber types (joined with `ANSWER_GAP`, a space, a non-breaking
-space and a space, since the PDF's HTML would collapse ordinary spaces), and
-nothing for `paraphrase`, `open`, `wyr` or an unanswered question. A number
+answer for the amber types and a tight open's examples (joined with
+`ANSWER_GAP`, a space, a non-breaking space and a space, since the PDF's HTML
+would collapse ordinary spaces), and nothing for `paraphrase`, `broad_open`,
+`open`, `wyr` or an unanswered question. A tight open's examples print after
+`EXAMPLE_ANSWER_PREFIX` ("e.g. "), which the DOCX importer strips again, so
+whoever is scoring reads them as examples and not as the key. A number
 question's `steps` print as an indented numbered list under it and come back
 on DOCX and JSON import.
 
@@ -72,7 +92,8 @@ editor:
 - **No section headings.** A section's name is an organizing device for the
   editor; the printed lesson runs straight through from one block to the next.
 - **Questions marked by a tag and a color**: the type's short tag (`K`, `PK`,
-  `M`, `SO`, `P`, `O`, `WYR`; `tag` in `QUESTION_TYPES`) in small grey bold,
+  `M`, `SO`, `TO`, `BO`, `P`, `WYR`, and `O` for a legacy open; `tag` in
+  `QUESTION_TYPES`) in small grey bold,
   then the prompt in its type's color, then its answer in black on the same
   line. The tag is there for the reader who doesn't have the color: a grey
   photocopy, a printer out of ink, or someone who can't tell the colors apart.

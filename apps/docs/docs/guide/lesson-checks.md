@@ -62,8 +62,8 @@ practitioner follows.
 Many of them come from letterboard spelling, where the speller points to every
 letter of an answer one at a time. A long answer is real work, so the defaults
 keep answers short: spelling words of 6 to 9 letters, single words for the
-answers to a multiple answers question, and one word answers for the first few
-open ended questions.
+answers to a multiple answers question, and one word answers for the tight
+open questions.
 
 The question types follow the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
@@ -126,8 +126,10 @@ you can ignore those too: they never block anything.
 
 - Six sections.
 - In each section: 3 **Single answer**, 2 **Number answer**, 2 **Multiple
-  answers** or **Suggested answers**, 1 **Background knowledge**, then 7
-  **Open ended** (4 quick ones followed by 3 longer ones).
+  answers** or **Suggested answers**, 1 **Background knowledge**, 4 **Tight
+  open**, then 3 **Broad open** (a **Paraphrase** can stand in for one). An
+  **Open ended** question from an older lesson counts as whichever kind its
+  wording suggests.
 - One of the two number questions is a word problem with worked steps.
 - The VAKT activity comes at the end of the section.
 - A section with no questions yet.
