@@ -15,8 +15,8 @@ In the repository, `pnpm cli check lesson.json` from the root runs it from
 source, with no build (Node 22.18 or newer, for its built-in TypeScript
 support).
 
-Once a version has been [released](#releasing) to npm, it installs as the
-`spelling-creator` command, which runs on Node 22.12 or newer:
+From [npm](https://www.npmjs.com/package/@spelling-creator/cli) it installs as
+the `spelling-creator` command, which runs on Node 22.12 or newer:
 
 ```sh
 npm install -g @spelling-creator/cli
@@ -231,19 +231,15 @@ itself, so the workflow publishes with `pnpm publish`, which also turns the
 `workspace:*` devDependency on core into a plain version.
 
 npm only accepts a trusted publisher for a package that already exists, so the
-**first version is published by hand**, from the release tag, by a maintainer
-of the `@spelling-creator` scope:
+first version on npm, 0.1.0, was published by hand on 2026-10-12: packed with
+`pnpm pack` from the `cli-v0.1.0` tag and published with `npm publish` by a
+maintainer of the `@spelling-creator` scope (the same route Spellophone's first
+version took). It is byte for byte the tarball the tag builds, but it has no
+provenance attestation. Every version after it comes from the workflow; 0.1.1
+was the first.
 
-```bash
-git checkout cli-v0.1.0
-pnpm install --frozen-lockfile
-cd apps/cli
-pnpm pack --out spelling-creator-cli-v0.1.0.tgz
-pnpm publish spelling-creator-cli-v0.1.0.tgz --access public --no-git-checks
-```
-
-That version has no provenance. Then add the trusted publisher on npmjs.com,
-in the package's settings under "Trusted publishing", or with
+The trusted publisher is set on npmjs.com, in the package's settings under
+"Trusted publishing", or with
 `npm trust github @spelling-creator/cli --file release-cli.yml --repository Spelling-Creator/spelling-creator --allow-publish`:
 
 | Field             | Value              |
@@ -254,11 +250,11 @@ in the package's settings under "Trusted publishing", or with
 | Workflow filename | `release-cli.yml`  |
 | Environment       | (empty)            |
 
-A new trusted publisher that isn't used within two days expires, so cut the
-next release soon after adding it. Renaming the workflow file breaks
-publishing until this is updated. Once the workflow has published a version,
-set the package's publishing access to "Require two-factor authentication and
-disallow tokens" so nothing but the workflow can publish.
+Renaming the workflow file or moving the repository breaks publishing until
+this is updated, and a trusted publisher that is added but not used within two
+days expires. With the workflow publishing, the package's publishing access
+should be "Require two-factor authentication and disallow tokens", so nothing
+but the workflow can publish.
 
 ## Not yet
 

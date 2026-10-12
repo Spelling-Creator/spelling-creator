@@ -1,6 +1,6 @@
 {
   "name": "@spelling-creator/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Check, fix and convert Spelling Creator lessons from the terminal.",
   "keywords": [
     "cli",
