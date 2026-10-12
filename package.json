@@ -13,6 +13,7 @@
     "dev:stub": "pnpm --filter @spelling-creator/stub-api start",
     "dev:web:stub": "pnpm --filter @spelling-creator/web dev:stub",
     "mcp:login": "pnpm --filter @spelling-creator/mcp login",
+    "cli": "node apps/cli/src/cli.ts",
     "build": "pnpm --filter @spelling-creator/web build",
     "build:docs": "pnpm --filter @spelling-creator/docs build",
     "preview": "pnpm --filter @spelling-creator/web preview",

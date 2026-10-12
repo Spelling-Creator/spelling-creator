@@ -8,6 +8,7 @@ Worker API.
 | `apps/web`      | `@spelling-creator/web`      | Vite + React frontend (shadcn/ui + Tailwind, Supabase, react-router), installable as a PWA. Built into `apps/web/dist`, served by the Worker. |
 | `apps/api`      | `@spelling-creator/api`      | Cloudflare Worker backend (multi-provider AI suggestions, profanity filter, KV rate limiting, R2 lesson images).                              |
 | `apps/mcp`      | `@spelling-creator/mcp`      | MCP server that lets an AI assistant author and publish lessons to the hub.                                                                   |
+| `apps/cli`      | `@spelling-creator/cli`      | Command line tool that checks, fixes and converts lesson files (`.json`, `.docx`, text) offline.                                              |
 | `apps/stub-api` | `@spelling-creator/stub-api` | A local stand-in for the Worker API with a populated hub and made-up people, for demos and UI work without a backend.                         |
 | `apps/docs`     | `@spelling-creator/docs`     | The VitePress documentation site published at `/docs/`.                                                                                       |
 | `packages/core` | `@spelling-creator/core`     | Framework-agnostic lesson domain logic shared by the apps above.                                                                              |

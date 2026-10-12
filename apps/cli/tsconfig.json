@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    // tsc only checks; rolldown does the emit (rolldown.config.ts). In
+    // development the .ts sources also run directly under Node's type
+    // stripping, which is why the syntax is held to what stripping can erase
+    // (no enums, namespaces or parameter properties).
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "test", "rolldown.config.ts"]
+}
