@@ -640,9 +640,14 @@ function readQuestion(nodes, i, { type, prompt, answer }) {
     }
   } else if (type === "tight_open") {
     // A tight open's examples print after "e.g.", and are optional, so an
-    // empty list stays empty rather than gaining a blank row.
-    block.answers = answer
-      .replace(new RegExp(`^${EXAMPLE_ANSWER_PREFIX.trim()}\\s*`), "")
+    // empty list stays empty rather than gaining a blank row. The prefix is
+    // taken off as text, not as a pattern: its dots would otherwise match any
+    // letter, and eat an example that happens to start with "eg".
+    const prefix = EXAMPLE_ANSWER_PREFIX.trim();
+    const examples = answer.startsWith(prefix)
+      ? answer.slice(prefix.length)
+      : answer;
+    block.answers = examples
       .split(/\s{2,}/)
       .map((text) => text.trim())
       .filter(Boolean)

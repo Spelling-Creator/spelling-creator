@@ -88,7 +88,7 @@ different, equally valid answer — if they could, it isn't green. "What was the
 BASTET" is a fact and nothing else is right. "What is a cat called when it purrs on a lap? ->
 COMPANION" is interpretation: pet, friend and lap-cat are all just as fair, and COMPANION only
 looks right because the passage happened to use that word. Don't dress a soft, one-of-many answer
-up as factual retrieval just because the word is in the text — either make it a pink tight open
+up as factual retrieval just because the word is in the text: either make it a pink tight open
 question, or replace it with a fact the passage states outright ("Which animal does the cat now
 rival as the most popular pet? -> THE DOG").
 
@@ -211,7 +211,7 @@ astonishing? Defend your answer."
 A broad open is NOT "In your own words, explain..." or "Summarize...": those ask the speller to
 retell the passage, which is a `paraphrase` question (below), not an opinion.
 
-"broad_open" questions carry no answer, answers, or exampleAnswer field at all — just the "prompt".
+"broad_open" questions carry no answer, answers, or exampleAnswer field at all, just the "prompt".
 
 (`open` is the type lessons carried before tight and broad opens were told apart. Read it, leave it
 on an existing question if the user hasn't asked you to sort them, and never write a new one.)

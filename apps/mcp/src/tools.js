@@ -123,10 +123,10 @@ const blockSchema = z
         'For type "question": number (numeric answer), single (one text answer), multiple (the items of a list ' +
           "the passage states — every accepted answer), multiple_open (the looser semi-open question: a synonym, " +
           "a definition, anything bounded by the topic, whose answers are SUGGESTIONS the speller need not " +
-          "match), paraphrase (restate the passage in their own words — no stored answer), tight_open (an " +
+          "match), paraphrase (restate the passage in their own words; no stored answer), tight_open (an " +
           "easy one-word answer from the speller's own world; no key, though `answers` may hold a few " +
           "examples), broad_open (their own reasoning, opinion or imagination in a sentence; no stored " +
-          'answer), wyr (a "Would you rather…?" choice between two options, joined by "or"; opinion only, ' +
+          'answer), wyr (a "Would you rather...?" choice between two options, joined by "or"; opinion only, ' +
           "no stored answer), background (needs prior knowledge). `open` is only accepted for lessons written " +
           "before tight and broad opens were separate: never write a new one. Every answer except a background " +
           "one, a multiple_open suggestion and a tight_open example must appear, word for word, in that " +
@@ -139,8 +139,8 @@ const blockSchema = z
           "TIGHT OPENS are open-ended but answerable in ONE WORD from the speller's own everyday world, and " +
           "crucially EASY, with no hard thinking, nothing abstract, and no reference to the lesson " +
           '("Name a color of a crayon", "Name something found in a hospital"). Its 3 BROAD OPENS invite a full ' +
-          'sentence of the speller\'s own thinking ("Why do you think…?", "…Defend your answer.", "If you ' +
-          'could…"). "In your own words, explain…" is a paraphrase question, not a broad open.',
+          'sentence of the speller\'s own thinking ("Why do you think...?", "...Defend your answer.", "If you ' +
+          'could..."). "In your own words, explain..." is a paraphrase question, not a broad open.',
       ),
     prompt: z
       .string()

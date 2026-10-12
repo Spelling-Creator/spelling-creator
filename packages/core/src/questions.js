@@ -154,8 +154,12 @@ export function isOpenType(questionType) {
 // Telling a tight open from a broad one by its wording, for a legacy `open`
 // question that never said which it was. Word count alone misclassifies short
 // broad opens ("In your own words, explain why."), so the stems get the first
-// say. Only ever a guess, which is why a stored question's own type always
-// wins (resolveOpenType) and why the menus ask the author to choose.
+// say. A prompt that opens "Name a..." or "Give one..." is a tight open
+// whatever follows ("Name something you should bring camping" wants one
+// word, "should" or not), so the tight stem, anchored at the start, is
+// checked before the broad stems, which match anywhere. Only ever a guess,
+// which is why a stored question's own type always wins (resolveOpenType)
+// and why the menus ask the author to choose.
 const BROAD_STEM =
   /in your own words|defend your (answer|thinking|choice)|explain your (thinking|answer|reasoning|choice)|explain why|explain how|why do you think|how do you think|what do you think|do you think|describe (how|why|what)|if you (could|were)|what (would|could|might|does it take)|would you (want|have|volunteer)|should\b/i;
 const TIGHT_STEM =
@@ -172,8 +176,8 @@ const TIGHT_OPEN_MAX_WORDS = 12;
 export function resolveOpenType(block) {
   if (block?.questionType !== "open") return block?.questionType;
   const prompt = String(block.prompt || "");
-  if (BROAD_STEM.test(prompt)) return "broad_open";
   if (TIGHT_STEM.test(prompt)) return "tight_open";
+  if (BROAD_STEM.test(prompt)) return "broad_open";
   const words = prompt.trim().split(/\s+/).filter(Boolean).length;
   return words > TIGHT_OPEN_MAX_WORDS ? "broad_open" : "tight_open";
 }
@@ -194,7 +198,7 @@ export function isOrangeType(questionType) {
 
 // The order the printed footer legend lists the types in: recall first, opening
 // out to free response last, which is the Open Spelling Lesson Format's default
-// legend order. This is a reading order for the legend only — the editor's type
+// legend order. This is a reading order for the legend only; the editor's type
 // picker keeps QUESTION_TYPES' own order. The legacy open type comes last,
 // since it only appears under lessons saved before the split.
 export const QUESTION_LEGEND = [

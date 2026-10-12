@@ -917,7 +917,7 @@ export function validateLesson(doc) {
       // Some prompts are allowed to name the thing they are about, so for them
       // the leak is not always a defect. A paraphrase or broad open exists to
       // make the speller talk about the section's subject, and that subject is
-      // usually a green answer — "In your own words, explain how a delta
+      // usually a green answer: "In your own words, explain how a delta
       // forms" cannot avoid DELTA without going vague. A loose orange question
       // has the same problem in a sharper form: "Give a synonym for X" has to
       // say X. And a W.Y.R. question's options are often the section's own
@@ -978,12 +978,8 @@ export function validateLesson(doc) {
           "add them, or move them out of any separate quiz section at the end.",
       );
     } else {
-      // The shape findings are about the section as a whole, so they point at
-      // its first question: that is where the order starts going wrong.
-      const firstQuestion = { blockId: ctx.questions[0]?.id };
-      const shape = ctx.questions.map((q) => q.questionType);
-      // Either orange type satisfies an orange slot — the standard asks for two
-      // semi-open questions there, not for one of each — so the shapes are
+      // Either orange type satisfies an orange slot (the standard asks for two
+      // semi-open questions there, not for one of each), so the shapes are
       // compared with the two folded together and the ordering between them left
       // to W_ORANGE_ORDER below. A paraphrase may stand in for a broad open
       // (standards.md), and a legacy `open` question, which never said which
@@ -996,7 +992,21 @@ export function validateLesson(doc) {
         if (type === "paraphrase") return "broad_open";
         return resolveOpenType(block);
       };
-      if (ctx.questions.map(slot).join(",") !== QUESTION_ORDER.join(",")) {
+      const slots = ctx.questions.map(slot);
+      if (slots.join(",") !== QUESTION_ORDER.join(",")) {
+        // The order as written, with each legacy open followed by the kind it
+        // was read as: that reading is what the shape above counted, and it is
+        // the one thing the author can't see from the types alone.
+        const shape = ctx.questions.map((q) =>
+          q.questionType === "open"
+            ? `open (read as ${resolveOpenType(q)})`
+            : q.questionType,
+        );
+        // The finding points at the first question out of place, which is
+        // where the order starts going wrong; a section that is only short
+        // points at its last question.
+        const firstOff = slots.findIndex((s, i) => s !== QUESTION_ORDER[i]);
+        const at = firstOff === -1 ? ctx.questions.length - 1 : firstOff;
         warn(
           "W_QUESTION_SHAPE",
           ctx.id,
@@ -1005,11 +1015,15 @@ export function validateLesson(doc) {
             `The default is ${QUESTION_ORDER.length}, in this order: ${QUESTION_ORDER.join(", ")} ` +
             `(3 green, 2 purple, 2 orange, 1 blue, then ${TIGHT_OPENS} tight opens and ${BROAD_OPENS} broad opens). ` +
             "Either orange type counts towards an orange slot: `multiple` for a list the passage states, " +
-            "`multiple_open` for the looser end. A `paraphrase` may take a broad open's slot. The first " +
+            "`multiple_open` for the looser end. A `paraphrase` may take a broad open's slot. A legacy " +
+            "`open` question counts as the kind its wording reads as; give it its type to settle it. The first " +
             `${TIGHT_OPENS} pink questions are tight opens (easy one-word answers from the speller's own ` +
             `world: "Name something found in a hospital"); the last ${BROAD_OPENS} are broad opens inviting ` +
-            'a full sentence of their own reasoning or opinion ("Why do you think…?", "…Defend your answer.").',
-          { ...firstQuestion, params: { count: shape.length } },
+            'a full sentence of their own reasoning or opinion ("Why do you think...?", "...Defend your answer.").',
+          {
+            blockId: ctx.questions[at]?.id,
+            params: { count: shape.length, question: at + 1 },
+          },
         );
       }
 

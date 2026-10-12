@@ -129,7 +129,8 @@ you can ignore those too: they never block anything.
   answers** or **Suggested answers**, 1 **Background knowledge**, 4 **Tight
   open**, then 3 **Broad open** (a **Paraphrase** can stand in for one). An
   **Open ended** question from an older lesson counts as whichever kind its
-  wording suggests.
+  wording suggests, and the suggestion says which kind that was. It points at
+  the first question that is out of place.
 - One of the two number questions is a word problem with worked steps.
 - The VAKT activity comes at the end of the section.
 - A section with no questions yet.

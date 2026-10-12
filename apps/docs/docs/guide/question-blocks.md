@@ -111,7 +111,9 @@ appear in the editor; they aren't added to the lesson or printed.
 
 A question prints as **a short tag, then the question in its type's color,
 followed by its answer in black on the same line**. The tag is one to three
-letters in small gray type: K, PK, M, SO, P, O or WYR (see the table above).
+letters in small gray type: K, PK, M, SO, TO, BO, P or WYR (see the table
+above), or O on an **Open ended** question from before tight and broad opens
+were separate.
 It's there so the type can still be told on a gray photocopy or by a reader
 who can't tell the colors apart; the color (and the italic on **Suggested
 answers**) does the same job for everyone else. The legend at the foot of

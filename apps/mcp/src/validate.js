@@ -56,7 +56,7 @@ const ANSWERLESS_KIND = {
 
 /**
  * Checks that can only be made against the caller's raw input, because buildBlock
- * drops the offending fields on the way into the doc — an open question that
+ * drops the offending fields on the way into the doc: an open question that
  * arrives carrying an answer would otherwise be silently stripped, leaving the
  * model believing the lesson holds an answer it does not.
  *

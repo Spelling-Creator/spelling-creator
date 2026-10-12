@@ -91,6 +91,10 @@ describe("questionAnswerText", () => {
     expect(resolveOpenType(open("Give a synonym for praise."))).toBe(
       "tight_open",
     );
+    // A tight stem wins over a broad word further along the prompt.
+    expect(
+      resolveOpenType(open("Name something you should bring camping.")),
+    ).toBe("tight_open");
     expect(
       resolveOpenType(open("Why do you think the dam was built there?")),
     ).toBe("broad_open");
