@@ -68,7 +68,7 @@ The ones about a single section whose fix is a change to that section's text,
 questions or spelling words:
 
 - answers that aren't in the passage, or are in it when they shouldn't be
-- **Multiple answers** questions that give their answers away, aren't a list
+- **Semi-open** questions that give their answers away, aren't a list
   from the passage, accept too many or too few answers, have answers longer
   than one word, or don't show the blanked out sentence
 - questions that give another question's answer away

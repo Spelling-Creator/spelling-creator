@@ -14,30 +14,40 @@
 // question's type: printers run dry, photocopies are grey, and some readers
 // can't tell the colours apart. The tag is the second marking the format asks
 // every renderer for, and the legend explains it.
+//
+// `label` is the name the format and the lessons use. The labels the app
+// shipped with before it followed the format (Single answer, Number answer,
+// Multiple answers, Background knowledge) live on as `styleAliases`: a Word
+// style is matched by NAME, and the name carries the label (questionStyleName),
+// so every document exported under the old labels needs its old style name
+// mapped too or it imports as plain text.
 
 export const QUESTION_TYPES = {
   number: {
     key: "number",
-    label: "Number answer",
-    short: "Number",
+    label: "Math",
+    short: "Math",
     tag: "M",
     description: "The answer is a number",
     color: "#7048e8", // purple
+    styleAliases: ["Number answer"],
   },
   single: {
     key: "single",
-    label: "Single answer",
-    short: "Single",
+    label: "Known",
+    short: "Known",
     tag: "K",
-    description: "One typed answer",
+    description: "One answer, stated in the passage",
     color: "#2f9e44", // green
+    styleAliases: ["Single answer"],
   },
   multiple: {
     key: "multiple",
-    label: "Multiple answers",
-    short: "Multiple",
+    label: "Semi-open",
+    short: "Semi-open",
     tag: "SO",
-    description: "Several accepted answers",
+    description: "Several accepted answers, usually a list in the passage",
+    styleAliases: ["Multiple answers"],
     // Amber. Deliberately yellower than the burnt orange this used to be
     // (#e8590c), which sat too close to `paraphrase`'s brown to tell apart in a
     // printed lesson where the colour is the only thing marking the type.
@@ -127,11 +137,12 @@ export const QUESTION_TYPES = {
   },
   background: {
     key: "background",
-    label: "Background knowledge",
-    short: "Background",
+    label: "Prior knowledge",
+    short: "Prior",
     tag: "PK",
-    description: "Requires prior knowledge",
+    description: "Needs knowledge the passage doesn't give",
     color: "#1c7ed6", // blue
+    styleAliases: ["Background knowledge"],
   },
 };
 
@@ -353,7 +364,7 @@ export function questionLegendFor(doc) {
 // ---------------------------------------------------------------------------
 // Word character styles, one per question type.
 //
-// The printed lesson has no "[Number answer]" label in front of a prompt, only
+// The printed lesson has no "[Math]" label in front of a prompt, only
 // the short tag and the prompt's own colour. The tag is shared by two types
 // (SO), so it can't carry the type back through the DOCX importer on its own,
 // and mammoth drops run colours, so the PDF path would lose the colour coding.
@@ -385,9 +396,22 @@ export function questionStyleClass(key) {
  * @returns {string[]}
  */
 export function questionStyleMap() {
-  return QUESTION_TYPE_LIST.map(
-    (q) =>
-      `r[style-name='${questionStyleName(q.key)}'] => span.${questionStyleClass(q.key)}`,
+  return QUESTION_TYPE_LIST.flatMap((q) =>
+    [questionStyleName(q.key), ...questionStyleAliases(q.key)].map(
+      (name) => `r[style-name='${name}'] => span.${questionStyleClass(q.key)}`,
+    ),
+  );
+}
+
+/**
+ * The style names a type's prompt run carried in documents exported before
+ * its label changed, so those documents still import with their types.
+ * @param {string} key
+ * @returns {string[]}
+ */
+export function questionStyleAliases(key) {
+  return (questionMeta(key).styleAliases || []).map(
+    (label) => `S2C Question ${label}`,
   );
 }
 

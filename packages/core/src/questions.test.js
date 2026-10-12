@@ -24,6 +24,7 @@ import {
   questionMeta,
   questionStyleClass,
   questionStyleMap,
+  questionStyleName,
 } from "./questions.js";
 import { normalizeLessonFile } from "./jsonImport.js";
 
@@ -381,15 +382,38 @@ describe("the Word styles the DOCX round trip rides on", () => {
     expect(new Set(classes).size).toBe(classes.length);
   });
 
-  it("emits one mammoth rule per type, naming that type's style and class", () => {
+  it("emits a mammoth rule per type naming its style and class, plus one per old name", () => {
     const map = questionStyleMap();
-    expect(map).toHaveLength(QUESTION_TYPE_LIST.length);
+    const aliases = QUESTION_TYPE_LIST.flatMap((q) => q.styleAliases || []);
+    expect(map).toHaveLength(QUESTION_TYPE_LIST.length + aliases.length);
     for (const type of QUESTION_TYPE_LIST) {
       expect(map).toContainEqual(
         expect.stringContaining(questionStyleClass(type.key)),
       );
       expect(map).toContainEqual(expect.stringContaining(type.label));
     }
+  });
+
+  // A Word style is matched by name, and the name carries the label. Four
+  // labels changed when the app took the format's names, so a document
+  // exported under an old name has to map onto the same class or it imports
+  // as plain text.
+  it("still maps the style names exported under the old labels", () => {
+    const map = questionStyleMap();
+    expect(map).toContain(
+      "r[style-name='S2C Question Single answer'] => span.s2c-q-single",
+    );
+    expect(map).toContain(
+      "r[style-name='S2C Question Number answer'] => span.s2c-q-number",
+    );
+    expect(map).toContain(
+      "r[style-name='S2C Question Multiple answers'] => span.s2c-q-multiple",
+    );
+    expect(map).toContain(
+      "r[style-name='S2C Question Background knowledge'] => span.s2c-q-background",
+    );
+    // And a new export writes only the current name.
+    expect(questionStyleName("single")).toBe("S2C Question Known");
   });
 });
 

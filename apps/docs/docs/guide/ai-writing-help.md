@@ -72,9 +72,8 @@ question with AI**.
 
 1. Give the section a name first: that's what the question will be about.
 2. Pick a **Question type**. The list is the same as the **Add question**
-   menu: Single answer, Number answer, Multiple answers, Suggested answers,
-   Paraphrase, Tight open, Broad open, Would you rather and Background
-   knowledge.
+   menu: Known, Math, Semi-open, Suggested answers, Paraphrase, Tight open,
+   Broad open, Would you rather and Prior knowledge.
 3. Press **Generate**.
 
 The question goes straight into the section as a new question block, with its
@@ -83,7 +82,7 @@ where the type has one. There's no preview first, so read it over and edit it
 like any other question.
 
 The section's text is sent along, so the question can be answered from your
-passage. For **Background knowledge** it works the other way round: the
+passage. For **Prior knowledge** it works the other way round: the
 question asks about something the passage doesn't explain. The questions
 already in the section are sent too, so you don't get a repeat. Questions are
 never remembered on the server, so asking again gives you a different one.

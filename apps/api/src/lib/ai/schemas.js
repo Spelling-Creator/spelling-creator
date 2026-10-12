@@ -88,17 +88,19 @@ export const QUESTION_SCHEMAS = {
 
 // How to describe each question type in the prompt, and the type-specific rules
 // the model must follow so its JSON matches the schema above.
+// The names the Open Spelling Lesson Format gives the types, which is what a
+// lesson designer would call them.
 export const QUESTION_LABELS = {
-	number: 'number-answer',
-	single: 'single-answer',
-	multiple: 'multiple-answer',
-	multiple_open: 'suggested-answer',
+	number: 'math (number-answer)',
+	single: 'known-answer',
+	multiple: 'semi-open (multiple accepted answers)',
+	multiple_open: 'semi-open (suggested answers)',
 	paraphrase: 'paraphrase',
 	tight_open: 'tight open',
 	broad_open: 'broad open',
 	open: 'open-ended',
 	wyr: 'would-you-rather',
-	background: 'background-knowledge',
+	background: 'prior-knowledge',
 };
 
 export const QUESTION_INSTRUCTIONS = {

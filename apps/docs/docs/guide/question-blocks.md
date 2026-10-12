@@ -26,22 +26,25 @@ do follow the app's lesson standard (for example, they expect a **Single
 answer** question's answer to appear word for word in the passage), so expect
 them to flag lessons that use the types differently.
 
-| Type                     | Tag | Color           | What it's for                                                                                            |
-| ------------------------ | --- | --------------- | -------------------------------------------------------------------------------------------------------- |
-| **Number answer**        | M   | purple          | The answer is a number. You can add the steps to work it out.                                            |
-| **Single answer**        | K   | green           | One typed answer, usually a word from the passage.                                                       |
-| **Multiple answers**     | SO  | amber           | Several accepted answers; any one of them is right.                                                      |
-| **Suggested answers**    | SO  | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right.                         |
-| **Paraphrase**           | P   | brown           | Restate the passage in their own words. No stored answer.                                                |
-| **Tight open**           | TO  | pink            | A quick one word answer from the speller's own world. No answer key, though you can list a few examples. |
-| **Broad open**           | BO  | pink            | Their own reasoning, opinion or imagination, often in a sentence. No stored answer.                      |
-| **Would you rather**     | WYR | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.                                |
-| **Background knowledge** | PK  | blue            | A question that needs knowledge from outside the passage, with its answer.                               |
+| Type                  | Tag | Color           | What it's for                                                                                            |
+| --------------------- | --- | --------------- | -------------------------------------------------------------------------------------------------------- |
+| **Math**              | M   | purple          | The answer is a number. You can add the steps to work it out.                                            |
+| **Known**             | K   | green           | One answer, stated in the passage.                                                                       |
+| **Semi-open**         | SO  | amber           | Several accepted answers, usually a list in the passage; any one of them is right.                       |
+| **Suggested answers** | SO  | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right.                         |
+| **Paraphrase**        | P   | brown           | Restate the passage in their own words. No stored answer.                                                |
+| **Tight open**        | TO  | pink            | A quick one word answer from the speller's own world. No answer key, though you can list a few examples. |
+| **Broad open**        | BO  | pink            | Their own reasoning, opinion or imagination, often in a sentence. No stored answer.                      |
+| **Would you rather**  | WYR | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.                                |
+| **Prior knowledge**   | PK  | blue            | A question that needs knowledge from outside the passage, with its answer.                               |
 
 The tags are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
 defaults: K for a known answer, PK for prior knowledge, M for math, SO for
 semi-open, TO for a tight open, BO for a broad open, P for paraphrase, WYR for
-would you rather.
+would you rather. The names are the format's too. Lessons made before the app
+followed it called these types Single answer, Number answer, Multiple answers
+and Background knowledge; nothing in those lessons changes, only what the
+editor calls the type.
 
 ## Tight and broad opens
 
@@ -66,17 +69,17 @@ no longer offers the type for new questions. To sort an old one, change its
 type to Tight open or Broad open. The lesson checks read an old open question
 as whichever kind its wording suggests.
 
-**Multiple answers** used to be a burnt orange. It's amber now because the
+**Semi-open** used to be a burnt orange. It's amber now because the
 orange sat too close to **Paraphrase**'s brown, and on paper the color is
 nearly all there is to tell a question's type by.
 
 ## The two amber types
 
-**Multiple answers** and **Suggested answers** are one family, the
-_semi-open_ questions, which is why they share a color. The difference is what
-the list of answers means:
+**Semi-open** and **Suggested answers** are one family, which is why they
+share a color and the SO tag. The difference is what the list of answers
+means:
 
-- **Multiple answers**: the list is the **complete set** of accepted answers,
+- **Semi-open**: the list is the **complete set** of accepted answers,
   usually a list the passage states outright. The speller only needs to give
   one of them.
 - **Suggested answers**: the list is a **suggestion**. The question is bounded
@@ -94,7 +97,7 @@ there. The help text under the answer rows also says which kind it is.
 
 ## Three-board questions
 
-A **Multiple answers** question has two extras, both off unless you turn them
+A **Semi-open** question has two extras, both off unless you turn them
 on:
 
 - **Three-board (3B)** marks the question for the three boards. It prints
@@ -155,7 +158,7 @@ follow "e.g.".
 
 ## Steps for number questions
 
-A **Number answer** question can also have a list of **steps**, the stages of
+A **Math** question can also have a list of **steps**, the stages of
 working out the answer. Use **Add step** to add one and the remove button
 beside a step to take it away. Steps are optional, so the list starts empty.
 They print as an indented numbered list under the question, and they're kept

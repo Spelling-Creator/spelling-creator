@@ -33,18 +33,24 @@ the app's own names for the
 types (`single` is OSLF's known, `background` its prior knowledge, `number`
 its math, the two amber types its semi-open).
 
-| Key             | Label                | Tag | Color                   | Stored answer                         |
-| --------------- | -------------------- | --- | ----------------------- | ------------------------------------- |
-| `number`        | Number answer        | M   | `#7048e8` purple        | `answer`, plus optional `steps`       |
-| `single`        | Single answer        | K   | `#2f9e44` green         | `answer`                              |
-| `multiple`      | Multiple answers     | SO  | `#d68f00` amber         | `answers` (the complete accepted set) |
-| `multiple_open` | Suggested answers    | SO  | `#d68f00` amber, italic | `answers` (suggestions)               |
-| `paraphrase`    | Paraphrase           | P   | `#a0522d` brown         | none                                  |
-| `tight_open`    | Tight open           | TO  | `#e64980` pink          | `answers` (optional examples)         |
-| `broad_open`    | Broad open           | BO  | `#e64980` pink          | none                                  |
-| `open`          | Open ended           | O   | `#e64980` pink          | none                                  |
-| `wyr`           | Would you rather     | WYR | `#9c36b5` grape         | none                                  |
-| `background`    | Background knowledge | PK  | `#1c7ed6` blue          | `answer`                              |
+| Key             | Label             | Tag | Color                   | Stored answer                         |
+| --------------- | ----------------- | --- | ----------------------- | ------------------------------------- |
+| `number`        | Math              | M   | `#7048e8` purple        | `answer`, plus optional `steps`       |
+| `single`        | Known             | K   | `#2f9e44` green         | `answer`                              |
+| `multiple`      | Semi-open         | SO  | `#d68f00` amber         | `answers` (the complete accepted set) |
+| `multiple_open` | Suggested answers | SO  | `#d68f00` amber, italic | `answers` (suggestions)               |
+| `paraphrase`    | Paraphrase        | P   | `#a0522d` brown         | none                                  |
+| `tight_open`    | Tight open        | TO  | `#e64980` pink          | `answers` (optional examples)         |
+| `broad_open`    | Broad open        | BO  | `#e64980` pink          | none                                  |
+| `open`          | Open ended        | O   | `#e64980` pink          | none                                  |
+| `wyr`           | Would you rather  | WYR | `#9c36b5` grape         | none                                  |
+| `background`    | Prior knowledge   | PK  | `#1c7ed6` blue          | `answer`                              |
+
+The labels are the format's names. Four types were labeled differently before
+the app followed it (Single answer, Number answer, Multiple answers,
+Background knowledge), and those old labels live on as each type's
+`styleAliases`, because a Word style is matched by its name and the name
+carries the label (see [below](#color-and-alignment-have-to-be-smuggled-past-mammoth)).
 
 `open` is the type lessons were saved with before tight and broad opens were
 told apart. It carries `legacy: true`, which keeps it out of
@@ -104,8 +110,8 @@ editor:
   photocopy, a printer out of ink, or someone who can't tell the colors apart.
   The [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
   asks every renderer never to rely on color alone, and these are its default
-  tags. **Suggested answers** shares the amber and the `SO` tag of **Multiple
-  answers** and is set in italic to separate them.
+  tags. **Suggested answers** shares the amber and the `SO` tag of
+  **Semi-open** and is set in italic to separate them.
 - **Three-board questions**: a `multiple` question with `threeBoard` prints
   `(3B)` inside its tag run (`SO (3B)`), and one with a `besides` answer gets
   a **Besides line** under it: `Besides "rocks"` in the question's amber, then
@@ -118,14 +124,14 @@ editor:
   decide both halves, and return nothing when the named answer is no longer
   in the list.
 - **Spelling words on one running line**, `Spell:` followed by the words as
-  typed, separated by the same `ANSWER_GAP` as multiple answers.
+  typed, separated by the same `ANSWER_GAP` as a semi-open question's answers.
 - **A footer on every page**: the copyright line above a legend naming each
   question type the lesson uses in its own color (and its own italic, where it
   has one), uppercased (`questionLegendText`) and separated by `|`, in the
   order `QUESTION_LEGEND` gives. `questionLegendFor(doc)` cuts the list down to
   the types the lesson asks, so a lesson with no **Would you rather** questions
   has no W.Y.R. entry, and a lesson with no questions at all has no legend.
-  Each entry is the type's tag then its label (`K SINGLE ANSWER`), since the
+  Each entry is the type's tag then its label (`K KNOWN`), since the
   legend is where a reader looks up the tag in front of a prompt. **Would you
   rather** is abbreviated to **W.Y.R.** so a line naming every type still fits.
   [VAKT activities](./vakt-activities.md) are deliberately not in the legend:
@@ -162,7 +168,11 @@ to `<span class="s2c-q-{key}">`), one for the type tag in front of the prompt
 (`S2C Title Line`). `pdfExport` maps those onto CSS classes with a `styleMap`
 and colors them again from `questions.js`. The `S2C` and `s2c-` prefixes are
 historical names; they stay because renaming them would break the round trip
-for every document already exported.
+for every document already exported. A type's label is part of its style name
+for the same reason, so when four labels changed to the format's names, the
+old names stayed on as `styleAliases` and `questionStyleMap` emits a rule for
+each of them too (`S2C Question Single answer` still maps to `s2c-q-single`).
+A new export writes only the current name.
 
 That is also how **import** recovers a question's type: `docxImport` asks
 mammoth for the same style map and reads the type off the

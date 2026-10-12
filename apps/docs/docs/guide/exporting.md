@@ -42,7 +42,7 @@ outline of the editor:
   in black on the same line. The tag is there for anyone who doesn't have the
   color: a gray photocopy, a printer low on ink, or a reader who can't tell the
   colors apart. **Suggested answers** is also in italic, to tell it apart from
-  **Multiple answers**, which shares its color and its tag (see
+  **Semi-open**, which shares its color and its tag (see
   [Question blocks](./question-blocks.md)).
 - **Spelling words on one line**, after "Spell:".
 - **VAKT activities** in red, after "VAKT:" (see

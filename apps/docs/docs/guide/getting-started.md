@@ -65,7 +65,7 @@ yourself, use **Add word** for more rows, and remove any you don't want.
 ## 6. Ask a question
 
 Press **Add question** and pick a type. Each type has a color and a short
-description in the menu; for this one, pick **Single answer**. Type the
+description in the menu; for this one, pick **Known**. Type the
 question where it says "Type the question..." and its answer under **Answer**:
 
 > Where were cats first tamed? **Answer:** EGYPT
