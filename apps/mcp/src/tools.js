@@ -17,7 +17,10 @@ import {
   presentDoc,
   QUESTION_TYPES,
 } from "@spelling-creator/core/lessonBuild";
-import { buildLessonFile } from "@spelling-creator/core/lessonFile";
+import {
+  buildLessonFile,
+  lessonFileName,
+} from "@spelling-creator/core/lessonFile";
 import { oslfFileName, toOslf } from "@spelling-creator/core/oslf";
 import {
   forkLesson,
@@ -506,7 +509,10 @@ function lessonFileResult(doc, format, config) {
   if (format === "oslf") {
     return {
       lessonFile: toOslf(doc, {
-        imageSrc: (block) => `${config.apiUrl}/images/${block.image.hash}`,
+        imageSrc: (block) =>
+          block.image?.hash
+            ? `${config.apiUrl}/images/${block.image.hash}`
+            : null,
       }),
       filename: oslfFileName(doc.title),
       note:
@@ -520,18 +526,8 @@ function lessonFileResult(doc, format, config) {
     filename: lessonFileName(doc.title),
     note:
       "Save the `lessonFile` object as a .json file (suggested name in `filename`), then import it in the " +
-      'Spelling Creator editor via the "Import JSON or OSLF" button. This works fully offline — no account needed.',
+      'Spelling Creator editor via the "Import JSON or OSLF" button. This works fully offline, with no account needed.',
   };
-}
-
-// A safe-ish .json filename derived from the lesson title (mirrors the web
-// exporter's safeFileName). Falls back to "lesson" when nothing usable remains.
-function lessonFileName(title) {
-  const base = (title || "lesson")
-    .trim()
-    .replace(/[^a-z0-9\-_ ]/gi, "")
-    .replace(/\s+/g, "-");
-  return `${base || "lesson"}.json`;
 }
 
 function errorResult(err) {

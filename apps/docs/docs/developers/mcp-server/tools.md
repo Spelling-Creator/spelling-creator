@@ -546,7 +546,11 @@ file instead (`toOslf` in `packages/core/src/oslf.js`, see
 with a `filename` ending in `.oslf.json`, for tools that aren't this app. A stored picture
 becomes its public address on the hub (`<apiUrl>/images/<hash>`), the only place its bytes
 can be fetched from by whatever opens the file. The editor's **Import JSON or OSLF** button
-reads either file.
+reads either file. The format requires an answer on a known, prior-knowledge, math or
+semi-open question, so a lesson with one of those blank (which `skipValidation` lets through)
+can't be handed over as OSLF: the tool returns an error naming the question instead. Both
+file names come from `lessonFileName` and `oslfFileName` in core, so the two formats name a
+lesson the same way.
 
 ## Placing an image
 
