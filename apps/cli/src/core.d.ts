@@ -97,6 +97,8 @@ declare module "@spelling-creator/core/oslf" {
   export const OSLF_EXTENSION: string;
   export function isOslfFile(parsed: unknown): boolean;
   export function oslfFileName(title?: string): string;
+  /** Thrown by toOslf for a lesson the format can't hold as it stands. */
+  export class OslfExportError extends Error {}
   /** The lesson as an Open Spelling Lesson Format file. */
   export function toOslf(
     doc: LessonDoc,

@@ -229,13 +229,21 @@ reading one that something else wrote.
   (`imagePublicUrl`), a block already carrying a `src` data URL keeps it, and
   a picture with no URL either way is left out, since the format needs one.
   The CLI writes OSLF when an output path ends in `.oslf.json`, with no
-  `imageSrc`, so it keeps only data URLs.
+  `imageSrc`, so it keeps only data URLs. `toOslf` throws `OslfExportError`
+  for a lesson the format can't hold: a `single`, `background`, `number`,
+  `multiple` or `multiple_open` question with no answer, since the schema
+  requires one there. The message names the section and question; the
+  editor shows it as the export failing, the CLI reports it as a write that
+  failed, and the MCP server returns it as the tool's error. A line break in
+  a prompt, heading, caption or text run (the format's one-line strings) is
+  written as a space.
 - **Import JSON or OSLF** goes through `normalizeLessonFile`, which spots an
   OSLF file by its `oslf` field, turns it into a bare doc with `fromOslf`,
   and normalizes it like any other. A question type the app doesn't know is
   kept as a legacy `open` question with its prompt, as the format asks; a
   picture with a relative `src` is dropped, since a single file has nothing
-  for it to be relative to; a file with a major version above 1 is refused.
+  for it to be relative to; a file whose major version isn't 0 (the drafts
+  this module reads) is refused rather than read on 0.1's terms.
 - The type keys map both ways (`single` is `known`, `background` is
   `prior-knowledge`, `number` is `math`, the two amber types are `semi-open`
   with an `exhaustive` or `suggested` key, a tight open with examples has a

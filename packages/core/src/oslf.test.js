@@ -8,9 +8,11 @@ import { describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 
 import { normalizeLessonFile } from "./jsonImport.js";
+import { lessonFileName } from "./lessonFile.js";
 import { markupToContent } from "./lessonText.js";
 import {
   OSLF_VERSION,
+  OslfExportError,
   fromOslf,
   isOslfFile,
   oslfFileName,
@@ -218,6 +220,104 @@ describe("toOslf", () => {
       },
     ]);
   });
+
+  // The format requires an answer on a known, prior-knowledge, math or
+  // semi-open question, so a draft with one still blank can't become a valid
+  // file. Writing it anyway would hand over a file every reader rejects.
+  it("refuses a question the format needs an answer for, and names it", () => {
+    const blank = (questionType, fields) => ({
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            question("q1", "tight_open", { prompt: "Name a color." }),
+            question("q2", questionType, { prompt: "Which way?", ...fields }),
+          ],
+        },
+      ],
+    });
+    expect(() => toOslf(blank("single", { answer: "" }))).toThrow(
+      OslfExportError,
+    );
+    expect(() => toOslf(blank("single", { answer: "  " }))).toThrow(
+      /Section 1, question 2 \("Which way\?"\) has no answer.*Known question/,
+    );
+    expect(() => toOslf(blank("background", { answer: "" }))).toThrow(
+      /Prior knowledge question/,
+    );
+    expect(() => toOslf(blank("number", { answer: "", steps: [] }))).toThrow(
+      /Math question/,
+    );
+    expect(() =>
+      toOslf(blank("multiple", { answers: [{ id: "a", text: "" }] })),
+    ).toThrow(/Semi-open question/);
+    expect(() => toOslf(blank("multiple_open", { answers: [] }))).toThrow(
+      /Suggested answers question/,
+    );
+    // The types with no key, or an optional one, go out unanswered as they
+    // should.
+    for (const type of [
+      "tight_open",
+      "broad_open",
+      "paraphrase",
+      "wyr",
+      "open",
+    ]) {
+      expect(() => toOslf(blank(type, {}))).not.toThrow();
+    }
+  });
+
+  it("writes a line break in a one-line field as a space", () => {
+    const file = toOslf({
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            {
+              id: "t1",
+              type: "text",
+              content: {
+                type: "doc",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [
+                      { type: "text", text: "A line\nand " },
+                      {
+                        type: "text",
+                        text: "the next",
+                        marks: [{ type: "bold" }],
+                      },
+                      { type: "text", text: "." },
+                    ],
+                  },
+                ],
+              },
+            },
+            question("q1", "single", {
+              prompt: "Name one.\nBe quick.",
+              answer: "ROCKS",
+            }),
+            { id: "h1", type: "heading", text: "WOULD\r\nYOU RATHER" },
+            {
+              id: "img1",
+              type: "image",
+              src: "data:image/png;base64,AAAA",
+              caption: "Two\nlines",
+            },
+          ],
+        },
+      ],
+    });
+    expect(validate(file)).toBe(true);
+    const [passage, q, heading, image] = file.sections[0].blocks;
+    expect(passage.paragraphs).toEqual([
+      ["A line and ", { text: "the next", bold: true }, "."],
+    ]);
+    expect(q.prompt).toBe("Name one. Be quick.");
+    expect(heading.text).toBe("WOULD YOU RATHER");
+    expect(image.caption).toBe("Two lines");
+  });
 });
 
 describe("fromOslf", () => {
@@ -342,6 +442,14 @@ describe("fromOslf", () => {
     expect(() =>
       normalizeLessonFile({ oslf: "2.0", title: "T", sections: [] }),
     ).toThrow(/OSLF 2.0/);
+    // This module reads the 0.x drafts; a 1.0 may move fields it would
+    // otherwise read as 0.1's and quietly drop.
+    expect(() =>
+      normalizeLessonFile({ oslf: "1.0", title: "T", sections: [] }),
+    ).toThrow(/OSLF 1.0/);
+    expect(() =>
+      fromOslf({ oslf: "0.2", title: "T", sections: [] }),
+    ).not.toThrow();
   });
 });
 
@@ -352,10 +460,13 @@ describe("the file's name and marker", () => {
     expect(isOslfFile(null)).toBe(false);
   });
 
-  it("names the file after the lesson with the format's extension", () => {
+  it("names the file as the app's own lesson file is named, with the format's extension", () => {
     expect(oslfFileName("The First Lighthouses!")).toBe(
       "The-First-Lighthouses.oslf.json",
     );
     expect(oslfFileName("")).toBe("lesson.oslf.json");
+    expect(oslfFileName("Lighthouses")).toBe(
+      lessonFileName("Lighthouses").replace(/\.json$/, ".oslf.json"),
+    );
   });
 });

@@ -39,6 +39,7 @@ import {
 import { buildLessonFile } from "@spelling-creator/core/lessonFile";
 import {
   OSLF_EXTENSION,
+  OslfExportError,
   isOslfFile,
   toOslf,
 } from "@spelling-creator/core/oslf";
@@ -322,6 +323,22 @@ export interface WriteOptions {
   unchangedSince?: string;
 }
 
+// The lesson as an OSLF file. Pictures in one are URLs, and the CLI has no
+// image store or hub to resolve a stored picture against, so a picture the
+// lesson refers to by hash alone is left out; one carrying a data URL is
+// kept. A lesson the format can't hold (a question it requires an answer for
+// is blank) is a write that fails, reported like any other.
+function oslfFile(path: string, doc: LessonDoc): unknown {
+  try {
+    return toOslf(doc);
+  } catch (err) {
+    if (err instanceof OslfExportError) {
+      throw new LessonWriteError(`Couldn't write ${path}: ${err.message}`);
+    }
+    throw err;
+  }
+}
+
 /**
  * Write a lesson as an importable .json lesson file. Refuses to replace an
  * existing file unless `force` is set, since the input may be the only copy.
@@ -337,10 +354,7 @@ export async function writeLesson(
   doc: LessonDoc,
   { force = false, unchangedSince }: WriteOptions = {},
 ): Promise<void> {
-  // Pictures in an OSLF file are URLs. The CLI has no image store or hub to
-  // resolve a stored picture against, so a picture the lesson refers to by
-  // hash alone is left out of the file; one carrying a data URL is kept.
-  const file = isOslfPath(path) ? toOslf(doc) : buildLessonFile(doc);
+  const file = isOslfPath(path) ? oslfFile(path, doc) : buildLessonFile(doc);
   const contents = `${JSON.stringify(file, null, 2)}\n`;
   try {
     if (force) {

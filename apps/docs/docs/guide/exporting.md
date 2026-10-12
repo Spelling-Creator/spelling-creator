@@ -72,8 +72,12 @@ words, questions, pictures, activities, headings and sources as the lesson
 file, under the format's own names (a Known question is `known`, a Semi-open
 one `semi-open`, and so on).
 
-Two things to know:
+Three things to know:
 
+- Every **Known**, **Prior knowledge**, **Math**, **Semi-open** and
+  **Suggested answers** question needs its answer filled in first. The format
+  requires one, so a lesson with one of those still blank isn't exported; the
+  message names the section and question to fill in.
 - Pictures are referred to by their address on the hub, so a picture in a
   lesson that has never been saved to the cloud won't show for whoever opens
   the file elsewhere.

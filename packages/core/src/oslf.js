@@ -25,11 +25,13 @@
 
 import { headingText } from "./heading.js";
 import { imageCaptionParts } from "./imageCredit.js";
+import { lessonFileBase } from "./lessonFile.js";
 import { normalizeTextContent, textBlockContent } from "./lessonText.js";
 import {
   isThreeBoard,
   questionAnswerItems,
   questionBesides,
+  questionMeta,
   resolveOpenType,
 } from "./questions.js";
 import { SOURCE_FIELDS } from "./sources.js";
@@ -80,16 +82,13 @@ export function isOslfFile(parsed) {
 }
 
 /**
- * A file name for a lesson exported as OSLF, from its title.
+ * A file name for a lesson exported as OSLF, from its title: the same stem
+ * the app's own lesson file gets, with the format's extension.
  * @param {string} [title]
  * @returns {string}
  */
 export function oslfFileName(title) {
-  const base = (title || "lesson")
-    .trim()
-    .replace(/[^a-z0-9\-_ ]/gi, "")
-    .replace(/\s+/g, "-");
-  return `${base || "lesson"}${OSLF_EXTENSION}`;
+  return `${lessonFileBase(title)}${OSLF_EXTENSION}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +96,39 @@ export function oslfFileName(title) {
 // ---------------------------------------------------------------------------
 
 /**
- * A lesson document as an OSLF lesson file.
+ * Thrown when a lesson can't be written as a valid OSLF file as it stands:
+ * a question of a kind the format requires an answer for has none. The
+ * message names the question, so whoever asked for the file can fill it in.
+ */
+export class OslfExportError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "OslfExportError";
+  }
+}
+
+// The types the format requires at least one answer for (known, math,
+// semi-open and prior-knowledge all do). A draft with one of these still
+// blank can't be a valid file, so exporting it stops rather than writing a
+// file every reader of the format would reject.
+const ANSWER_REQUIRED_TYPES = new Set([
+  "single",
+  "background",
+  "number",
+  "multiple",
+  "multiple_open",
+]);
+
+// The format's one-line strings (a prompt, a heading, a caption, a run of
+// rich text) can't hold a line break. The editor's fields can, so a break is
+// written as a space on the way out.
+function oneLine(value) {
+  return String(value ?? "").replace(/\s*\r?\n\s*/g, " ");
+}
+
+/**
+ * A lesson document as an OSLF lesson file. Throws OslfExportError for a
+ * lesson the format can't hold as it stands (see the class).
  *
  * @param {object} doc  The app's lesson document.
  * @param {{ imageSrc?: (block: object) => string | null | undefined }} [options]
@@ -117,9 +148,16 @@ export function toOslf(doc, { imageSrc } = {}) {
     .filter(Boolean);
   if (sources.length) out.sources = sources;
   out.sections = (Array.isArray(doc?.sections) ? doc.sections : []).map(
-    (section) => {
+    (section, si) => {
+      let questions = 0;
       const blocks = (Array.isArray(section?.blocks) ? section.blocks : [])
-        .map((block) => blockToOslf(block, imageSrc))
+        .map((block) => {
+          if (block?.type === "question") {
+            questions += 1;
+            requireAnswer(block, si + 1, questions);
+          }
+          return blockToOslf(block, imageSrc);
+        })
         .filter(Boolean);
       const result = {};
       if (typeof section?.id === "string" && section.id) result.id = section.id;
@@ -131,6 +169,20 @@ export function toOslf(doc, { imageSrc } = {}) {
     },
   );
   return out;
+}
+
+function requireAnswer(block, section, number) {
+  const type = block.questionType;
+  if (!ANSWER_REQUIRED_TYPES.has(type) || questionAnswerItems(block).length) {
+    return;
+  }
+  const prompt = oneLine(block.prompt).trim();
+  const named = prompt ? ` ("${prompt}")` : "";
+  throw new OslfExportError(
+    `Section ${section}, question ${number}${named} has no answer. The Open Spelling Lesson Format ` +
+      `needs one for a ${questionMeta(type).label} question: fill it in, or change the question's type, ` +
+      "and export again.",
+  );
 }
 
 function sourceToOslf(source) {
@@ -180,7 +232,7 @@ function blockToOslf(block, imageSrc) {
       return withId(block, out);
     }
     case "heading": {
-      const text = headingText(block);
+      const text = oneLine(headingText(block));
       return text ? withId(block, { type: "heading", text }) : null;
     }
     default:
@@ -197,17 +249,18 @@ function passageOf(block) {
     for (const node of paragraph.content || []) {
       if (node.type === "text") {
         const marks = new Set((node.marks || []).map((m) => m.type));
+        const text = oneLine(node.text);
         if (!marks.size) {
           // Adjacent plain runs join, so a paragraph with no formatting is
           // one string.
           if (typeof runs[runs.length - 1] === "string") {
-            runs[runs.length - 1] += node.text;
+            runs[runs.length - 1] += text;
           } else {
-            runs.push(node.text);
+            runs.push(text);
           }
           continue;
         }
-        const run = { text: node.text };
+        const run = { text };
         if (marks.has("bold")) run.bold = true;
         if (marks.has("italic")) run.italic = true;
         if (marks.has("underline")) run.underline = true;
@@ -217,9 +270,11 @@ function passageOf(block) {
         const { sourceId, locator, note: text } = node.attrs || {};
         if (typeof sourceId === "string" && sourceId) note.source = sourceId;
         if (typeof locator === "string" && locator.trim()) {
-          note.locator = locator.trim();
+          note.locator = oneLine(locator).trim();
         }
-        if (typeof text === "string" && text.trim()) note.text = text.trim();
+        if (typeof text === "string" && text.trim()) {
+          note.text = oneLine(text).trim();
+        }
         // A note with neither a source nor any text says nothing.
         if (note.source || note.text) runs.push({ note });
       }
@@ -239,7 +294,9 @@ function imageToOslf(block, imageSrc) {
         : null;
   if (typeof src !== "string" || !src) return null;
   const out = { src };
-  const { caption, credit } = imageCaptionParts(block);
+  const parts = imageCaptionParts(block);
+  const caption = oneLine(parts.caption);
+  const { credit } = parts;
   if (caption) {
     out.alt = caption;
     out.caption = caption;
@@ -264,7 +321,7 @@ function questionToOslf(block) {
   const out = {
     type: "question",
     questionType,
-    prompt: String(block.prompt || ""),
+    prompt: oneLine(block.prompt),
   };
   const answers = questionAnswerItems(block);
   switch (type) {
@@ -328,8 +385,11 @@ export function fromOslf(file) {
   if (!isOslfFile(file)) {
     throw new OslfImportError("This file isn't an OSLF lesson.");
   }
+  // This module reads the 0.x drafts. A 1.0 may change what a field holds,
+  // so a file that says it is one is refused rather than read on 0.1's terms
+  // and quietly emptied of whatever moved.
   const [major] = String(file.oslf).split(".");
-  if (major !== "0" && major !== "1") {
+  if (major !== "0") {
     throw new OslfImportError(
       `This lesson is OSLF ${file.oslf}, which is newer than this app can read.`,
     );

@@ -91,7 +91,10 @@ at `--out`. An `--out` ending in `.oslf.json` writes the
 instead, for tools that aren't this app (`fix` does the same when the lesson
 it rewrites in place is one). The CLI has no image store to resolve a stored
 picture against, so a picture the lesson refers to by hash alone is left out
-of an OSLF file; one carrying a data URL is kept. It never replaces an
+of an OSLF file; one carrying a data URL is kept. The format requires an
+answer on a known, prior-knowledge, math or semi-open question, so a lesson
+with one of those blank can't be written as OSLF: the command reports which
+question and exits 2, as for any write that fails. It never replaces an
 existing file unless `--force` is passed,
 since the document may be the author's only copy. It doesn't run the checks,
 so its report says "converted, not checked" rather than counting problems

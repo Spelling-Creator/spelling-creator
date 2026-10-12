@@ -30,7 +30,8 @@ export function exportJson(doc) {
 // for whoever opens the file elsewhere.
 export function exportOslf(doc) {
   const file = toOslf(doc, {
-    imageSrc: (block) => imagePublicUrl(block.image.hash),
+    imageSrc: (block) =>
+      block.image?.hash ? imagePublicUrl(block.image.hash) : null,
   });
   const json = JSON.stringify(file, null, 2);
   const blob = new Blob([json], { type: "application/json" });
