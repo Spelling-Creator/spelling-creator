@@ -121,7 +121,7 @@ const RETIRED_STEM = /\bwords?\s+that\s+comes?\s+to\s+mind\b/i;
 
 // Heuristics for telling a tight open from an extended one, used only by the
 // W_OPEN_SPLIT warning. Word count alone misclassifies short extended opens
-// ("In your own words, explain why."), so the stems get the first say.
+// ("Explain why you think so."), so the stems get the first say.
 const EXTENDED_STEM =
   /in your own words|defend your (answer|thinking|choice)|explain your (thinking|answer|reasoning|choice)|explain why|explain how|why do you think|describe (how|why|what)/i;
 const TIGHT_STEM =
@@ -1057,7 +1057,8 @@ export function validateLesson(doc) {
             `${ctx.label}: the ${opens.length} pink questions don't read as ${TIGHT_OPENS} tight opens followed by ` +
               `${EXTENDED_OPENS} extended opens. The first ${TIGHT_OPENS} should be easy one-word recall from the ` +
               'speller\'s own world ("Name something found in a hospital"); the last ' +
-              `${EXTENDED_OPENS} should invite a full sentence ("In your own words, explain…", "…Defend your answer.").`,
+              `${EXTENDED_OPENS} should invite a full sentence of their own thinking ("Why do you think...?", ` +
+              '"...Defend your answer.").',
             {
               blockId: opens[0]?.id,
               params: { tight: TIGHT_OPENS, extended: EXTENDED_OPENS },
