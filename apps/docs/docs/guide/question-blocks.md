@@ -118,8 +118,12 @@ not understanding the passage, so like **Paraphrase** and **Broad open** it has
 no stored answer. It prints in grape, and the wording itself ("Would you
 rather...") makes the type clear even if the color is hard to tell on paper.
 The legend at the foot of each page shortens it to **W.Y.R.** so a lesson that
-uses all eight types still fits on one line. The legend only lists the types a
+uses every type still fits on one line. The legend only lists the types a
 lesson uses, so it only appears there when the lesson has one.
+
+Lessons often ask several of these in a row under a heading. **Heading** in
+the section toolbar adds one: a short line, such as "WOULD YOU RATHER", that
+prints in bold where you put it. It's part of the section, not a new one.
 
 ## Question numbers
 

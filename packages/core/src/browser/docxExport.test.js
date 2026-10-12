@@ -262,6 +262,31 @@ describe("formatted text, footnotes and sources", () => {
   });
 });
 
+describe("headings", () => {
+  // A heading inside a section prints in its own paragraph style, which the
+  // importer reads back as a heading block and never as a section break.
+  it("prints a heading block in bold, in the heading style", async () => {
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const { headingStyleMap } = await import("../heading.js");
+    const buffer = await Packer.toBuffer(
+      await buildDocument(
+        lesson([
+          { id: "h1", type: "heading", text: "WOULD YOU RATHER" },
+          { id: "b1", type: "text", text: "Next" },
+        ]),
+      ),
+    );
+    const { value: out } = await mammoth.convertToHtml(
+      { buffer },
+      { styleMap: headingStyleMap() },
+    );
+    expect(out).toContain(
+      '<p class="s2c-heading"><strong>WOULD YOU RATHER</strong></p><p>Next</p>',
+    );
+  });
+});
+
 describe("questions", () => {
   // Read back with the same style map the PDF path and the importer use, so
   // the tag's own span and the prompt's are both visible.

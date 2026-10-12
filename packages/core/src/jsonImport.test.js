@@ -54,6 +54,33 @@ describe("three-board questions in a lesson file", () => {
   });
 });
 
+describe("heading blocks in a lesson file", () => {
+  const read = (block) =>
+    normalizeLessonFile({
+      title: "T",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          blocks: [{ id: "b1", type: "text", text: "Prose." }, block],
+        },
+      ],
+    }).sections[0].blocks;
+
+  it("keeps a heading's text, trimmed", () => {
+    expect(
+      read({ id: "h1", type: "heading", text: " WOULD YOU RATHER " }),
+    ).toEqual([
+      { id: "b1", type: "text", text: "Prose." },
+      { id: "h1", type: "heading", text: "WOULD YOU RATHER" },
+    ]);
+  });
+
+  it("drops an empty heading", () => {
+    expect(read({ id: "h1", type: "heading", text: "  " })).toHaveLength(1);
+  });
+});
+
 describe("lesson file age range", () => {
   it("survives an export and import round trip", () => {
     const file = buildLessonFile({

@@ -20,6 +20,7 @@ import {
   ArrowDownIcon,
   ChevronDownIcon,
   GripVerticalIcon,
+  HeadingIcon,
 } from "lucide-react";
 import { Button } from "./ui/button.jsx";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip.jsx";
@@ -53,6 +54,7 @@ import {
 } from "@spelling-creator/core/questions";
 import { createSpellingBlock } from "@spelling-creator/core/spelling";
 import { createVaktBlock } from "@spelling-creator/core/vakt";
+import { createHeadingBlock } from "@spelling-creator/core/heading";
 
 // The add-block toolbar's buttons are `size="sm"` — 32px tall, under the touch
 // target minimum, and there are six of them wrapping across a phone screen.
@@ -201,6 +203,10 @@ function SectionCard({
 
   const addVaktBlock = () => {
     insertBlocks([createVaktBlock(newId)]);
+  };
+
+  const addHeadingBlock = () => {
+    insertBlocks([createHeadingBlock(newId)]);
   };
 
   const addSuggestedQuestionBlock = (questionType, data) => {
@@ -545,6 +551,15 @@ function SectionCard({
         <ActivityIcon data-icon="inline-start" />
         {t("sectionCard.toolbar.addVakt")}
       </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={addHeadingBlock}
+        className={TOUCH_SM_BUTTON}
+      >
+        <HeadingIcon data-icon="inline-start" />
+        {t("sectionCard.toolbar.addHeading")}
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className={TOUCH_SM_BUTTON}>
@@ -630,7 +645,7 @@ function SectionCard({
     acc[b.type] = (acc[b.type] || 0) + 1;
     return acc;
   }, {});
-  const summary = ["text", "image", "spelling", "question", "vakt"]
+  const summary = ["text", "image", "spelling", "question", "vakt", "heading"]
     .filter((type) => counts[type])
     .map((type) =>
       t(`sectionCard.collapsedSummary.${type}`, { count: counts[type] }),

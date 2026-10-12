@@ -6,6 +6,7 @@
 // don't recognise, and reject files that aren't structured as a lesson.
 
 import { AGE_RANGES } from "./ageRanges.js";
+import { headingText } from "./heading.js";
 import { newId } from "./id.js";
 import { QUESTION_TYPES, questionBesides } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
@@ -187,6 +188,12 @@ function normalizeBlock(block) {
 
     case "vakt":
       return normalizeVakt(block);
+
+    // A heading with nothing in it is a blank line nobody meant to keep.
+    case "heading": {
+      const text = headingText(block);
+      return text ? { id: keepId(block.id), type: "heading", text } : null;
+    }
 
     case "image": {
       // Preserve image blocks verbatim (binary ref / src / dimensions) and just

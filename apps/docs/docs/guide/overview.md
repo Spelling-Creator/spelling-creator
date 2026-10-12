@@ -59,8 +59,10 @@ the one about monarch butterflies was written for the videos.
   leaving the editor, or upload your own. A picture's credit is kept separate
   from its caption, printed small underneath, and never read aloud (see
   [Pictures](./images.md)).
-- **Questions.** Add questions in eight color-coded types (see
+- **Questions.** Add questions in nine color-coded types (see
   [Question blocks](./question-blocks.md)).
+- **Headings.** Add a short heading inside a section, such as "WOULD YOU
+  RATHER" over a run of those questions. It prints in bold where it sits.
 - **VAKT activities.** Add a movement or sensory break to a section, printed in
   red with a "VAKT:" label, optionally with a picture and links. It's an
   instruction for whoever runs the lesson, not a question (see

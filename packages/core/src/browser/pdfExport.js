@@ -35,6 +35,7 @@ import {
   questionStyleMap,
   questionTagStyleMap,
 } from "../questions.js";
+import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.js";
 import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.js";
 
 // Text destined for an HTML string we build ourselves. The PDF container is
@@ -137,6 +138,7 @@ const STYLE_MAP = [
   ...questionStyleMap(),
   ...questionTagStyleMap(),
   ...besidesStyleMap(),
+  ...headingStyleMap(),
   ...vaktStyleMap(),
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
@@ -226,6 +228,10 @@ const PRINT_STYLES = `
   .s2c-pdf-root .${BESIDES_LINE_CLASS} {
     margin: 0 0 1px;
     padding-left: 24px;
+  }
+  .s2c-pdf-root .${HEADING_STYLE_CLASS} {
+    margin: 10px 0 3px;
+    font-weight: 700;
   }
   .s2c-pdf-root figure { margin: 0; }
   .s2c-pdf-root img {

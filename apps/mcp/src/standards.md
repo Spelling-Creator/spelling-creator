@@ -251,7 +251,15 @@ appealing (or genuinely awful): a choice with one obvious winner asks nothing.
 
 OPTIONAL, and not part of the default 15-question shape. When the user asks for W.Y.R. questions,
 put them after the tight opens and before the broad opens, several in a row (the lessons this
-type comes from run six or more per section).
+type comes from run six or more per section), with a `heading` block reading "WOULD YOU RATHER"
+in front of the run so the printed lesson shows where it starts.
+
+## Headings
+
+A `heading` block (`{ "type": "heading", "text": "WOULD YOU RATHER" }`) is a short heading inside a
+section: one line, printed in bold where it sits. It is not a section (sections never print) and
+not a question. Use one over a run of W.Y.R. questions, or where the user asks for one; otherwise a
+section needs none.
 
 ## No prompt gives away another question's answer
 

@@ -28,6 +28,7 @@
 import { imageCaptionParts } from "../imageCredit.js";
 import { textBlockPlain } from "../lessonText.js";
 import { baseLanguageTag } from "../translationLanguages.js";
+import { headingText } from "../heading.js";
 import { VAKT_LABEL, vaktText } from "../vakt.js";
 import {
   holdsLargeModel,
@@ -479,6 +480,9 @@ export function lessonSummaryText(doc) {
         // read by a language model is bulk with no meaning in it.
         const activity = vaktText(block);
         if (activity) parts.push(`${VAKT_LABEL} ${activity}`);
+      } else if (block.type === "heading") {
+        const heading = headingText(block);
+        if (heading) parts.push(heading);
       }
     }
   }

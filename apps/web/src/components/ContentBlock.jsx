@@ -197,6 +197,12 @@ function ContentBlock({
     );
   }
 
+  if (block.type === "heading") {
+    return (
+      <HeadingBlock block={block} onChange={onChange} controls={controls} />
+    );
+  }
+
   if (block.type === "image") {
     return (
       <ImageBlock
@@ -1137,6 +1143,38 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
               />
             </Field>
           )}
+        </div>
+        {controls}
+      </div>
+    </div>
+  );
+}
+
+// A heading inside the section: one line of text and nothing else. Drawn in
+// the body colour rather than a colour of its own, since it marks nothing a
+// legend would need to explain.
+function HeadingBlock({ block, onChange, controls }) {
+  const { t } = useTranslation("editorSections");
+  return (
+    <div className="rounded-md border border-border bg-card p-4 text-card-foreground">
+      <div className={BLOCK_LAYOUT}>
+        <div className="min-w-0 grow">
+          <Badge variant="secondary" className="mb-3">
+            {t("contentBlock.heading.badge")}
+          </Badge>
+          <Field>
+            <FieldLabel htmlFor={`${block.id}-heading`}>
+              {t("contentBlock.heading.label")}
+            </FieldLabel>
+            <LiveInput
+              id={`${block.id}-heading`}
+              placeholder={t("contentBlock.heading.placeholder")}
+              value={block.text || ""}
+              onCommit={(text) => onChange({ ...block, text })}
+              data-collab-field={`block:${block.id}:text`}
+              className="font-semibold"
+            />
+          </Field>
         </div>
         {controls}
       </div>

@@ -22,6 +22,7 @@ import { ArrowUpIcon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton.jsx";
 import { CitationParts, TextRuns } from "./TextRuns.jsx";
 import { fitWithin, imageSizeScale } from "@spelling-creator/core/image";
+import { headingText } from "@spelling-creator/core/heading";
 import { imageCaptionParts } from "@spelling-creator/core/imageCredit";
 import {
   CAPTION_CLASS,
@@ -168,6 +169,8 @@ const LESSON_STYLES = `
   .s2c-lesson-root .s2c-legend dd { margin: 0; }
   /* The Besides line under a three-board question, indented like working. */
   .s2c-lesson-root .s2c-besides { margin-left: 24px; }
+  /* A heading inside a section, with a little air above it. */
+  .s2c-lesson-root .s2c-heading { margin: 14px 0 4px; }
   .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
   .s2c-lesson-root sup.s2c-fn a {
     color: var(--primary);
@@ -551,6 +554,15 @@ function Block({ block, si, bi, translation, footnoteStart }) {
     return (
       <VaktBlock block={block} si={si} bi={bi} translation={translation} />
     );
+  if (block.type === "heading" && headingText(block))
+    return (
+      <p className="s2c-heading">
+        <strong>
+          {translation?.get(lessonSegmentKey.heading(si, bi)) ??
+            headingText(block)}
+        </strong>
+      </p>
+    );
   return null;
 }
 
@@ -652,6 +664,9 @@ export function lessonPlainText(doc) {
       } else if (block.type === "vakt") {
         const activity = vaktText(block);
         if (activity) parts.push(activity);
+      } else if (block.type === "heading") {
+        const heading = headingText(block);
+        if (heading) parts.push(heading);
       }
     }
   }

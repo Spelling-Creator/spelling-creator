@@ -42,6 +42,7 @@
 import { imageCaptionParts } from "./imageCredit.js";
 import { textBlockFootnotes, textBlockLines } from "./lessonText.js";
 import { questionAnswerItems } from "./questions.js";
+import { headingText } from "./heading.js";
 import { vaktText } from "./vakt.js";
 
 /**
@@ -59,6 +60,7 @@ export const lessonSegmentKey = {
   step: (si, bi, i) => `s${si}.b${bi}.step${i}`,
   caption: (si, bi) => `s${si}.b${bi}.caption`,
   vakt: (si, bi) => `s${si}.b${bi}.vakt`,
+  heading: (si, bi) => `s${si}.b${bi}.heading`,
 };
 
 /**
@@ -145,6 +147,11 @@ export function lessonTranslationBatches(doc) {
         const text = vaktText(block);
         if (text) {
           segments.push({ key: lessonSegmentKey.vakt(si, bi), text });
+        }
+      } else if (block.type === "heading") {
+        const text = headingText(block);
+        if (text) {
+          segments.push({ key: lessonSegmentKey.heading(si, bi), text });
         }
       }
     });

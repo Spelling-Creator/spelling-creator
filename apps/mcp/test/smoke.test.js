@@ -103,6 +103,19 @@ test("buildDoc maps every block type to the stored shape with ids", () => {
   assert.equal(new Set(ids).size, ids.length, "ids are unique");
 });
 
+test("buildDoc builds a heading block, and refuses an empty one", () => {
+  const block = buildDoc({
+    sections: [{ blocks: [{ type: "heading", text: " WOULD YOU RATHER " }] }],
+  }).sections[0].blocks[0];
+  assert.equal(block.type, "heading");
+  assert.equal(block.text, "WOULD YOU RATHER");
+  assert.ok(block.id);
+  assert.throws(
+    () => buildDoc({ sections: [{ blocks: [{ type: "heading", text: "" }] }] }),
+    /a heading block needs a non-empty "text"/,
+  );
+});
+
 // The three-board mark and the Besides line ride on a multiple question. A
 // Besides answer has to be one of the question's own, spelled as the list
 // spells it, or the line would print nothing.

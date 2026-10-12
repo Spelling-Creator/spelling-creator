@@ -16,7 +16,9 @@
       "question_one": "{{count}} question",
       "question_other": "{{count}} questions",
       "vakt_one": "{{count}} VAKT activity",
-      "vakt_other": "{{count}} VAKT activities"
+      "vakt_other": "{{count}} VAKT activities",
+      "heading_one": "{{count}} heading",
+      "heading_other": "{{count}} headings"
     },
     "moveUp": "Move section up",
     "moveDown": "Move section down",
@@ -42,7 +44,8 @@
         "label": "Question",
         "description": "Generate a question with AI"
       },
-      "addVakt": "VAKT activity"
+      "addVakt": "VAKT activity",
+      "addHeading": "Heading"
     },
     "errors": {
       "addImageFailed": "Failed to add image.",
@@ -122,6 +125,11 @@
       "answerPlaceholderExample": "Example {{number}}",
       "addExampleAnswer": "Add example",
       "exampleAnswersHelp": "Optional: a few examples of what would count. A tight open has no answer key, so leave these out if the question doesn't need them."
+    },
+    "heading": {
+      "badge": "Heading",
+      "label": "Heading",
+      "placeholder": "A short heading, such as WOULD YOU RATHER over a run of those questions"
     },
     "vakt": {
       "badge": "VAKT activity",

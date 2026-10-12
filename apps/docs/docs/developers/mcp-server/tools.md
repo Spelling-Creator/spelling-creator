@@ -495,6 +495,10 @@ jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pair
   and off by default**: only add them when the user asks. When they do, a section gets one
   and it goes **last**, after that section's questions. See
   [VAKT activities](../web-app/vakt-activities.md).
+- **`heading`**: a short heading inside the section:
+  `{ "type": "heading", "text": "WOULD YOU RATHER" }`. It prints in bold where it sits.
+  It is not a section (sections never print) and not a question; the standard puts one in
+  front of a run of `wyr` questions, and otherwise a section needs none.
 
 ## Formatting and footnotes
 

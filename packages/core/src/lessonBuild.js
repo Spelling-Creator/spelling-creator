@@ -2,9 +2,10 @@
 // the MCP server's tools accept. The Worker stores `doc` verbatim and the web
 // editor renders it, so the shapes here must match the editor's exactly. They
 // are kept in sync with:
-//   • ./questions.js  (question block shapes, the eight types)
+//   • ./questions.js  (question block shapes and types)
 //   • ./spelling.js   (spelling block shape)
 //   • ./vakt.js       (VAKT activity block shape)
+//   • ./heading.js    (heading block shape)
 //
 // The canonical doc is:
 //   { title, sources?, sections: [ { id, name, blocks: [ Block, ... ] } ] }
@@ -99,9 +100,19 @@ export function buildBlock(block, where) {
     case "vakt":
       return buildVaktBlock(block, where);
 
+    // A short heading inside the section, such as one over a run of W.Y.R.
+    // questions. Its text is all it has.
+    case "heading": {
+      const text = typeof block.text === "string" ? block.text.trim() : "";
+      if (!text) {
+        throw new Error(`${where}: a heading block needs a non-empty "text".`);
+      }
+      return { id: newId(), type: "heading", text };
+    }
+
     default:
       throw new Error(
-        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image, vakt.`,
+        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image, vakt, heading.`,
       );
   }
 }

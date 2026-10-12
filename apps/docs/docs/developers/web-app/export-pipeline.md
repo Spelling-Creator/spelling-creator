@@ -91,6 +91,11 @@ editor:
   lesson with no author or publication date simply prints without those lines.
 - **No section headings.** A section's name is an organizing device for the
   editor; the printed lesson runs straight through from one block to the next.
+  A `heading` block (`packages/core/src/heading.js`) is content, not a
+  section: it prints in bold where it sits, in a paragraph style of its own
+  (`S2C Heading`, `HEADING_STYLE_CLASS`) rather than a Word heading level,
+  because the importer reads Word headings as section breaks and a heading
+  inside a section has to come back inside it.
 - **Questions marked by a tag and a color**: the type's short tag (`K`, `PK`,
   `M`, `SO`, `TO`, `BO`, `P`, `WYR`, and `O` for a legacy open; `tag` in
   `QUESTION_TYPES`) in small grey bold,

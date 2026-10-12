@@ -35,6 +35,8 @@ outline of the editor:
   lesson that hasn't been published has no release date yet.
 - **No section headings.** Section names help you organize the lesson in the
   editor; the printed lesson runs straight through from one block to the next.
+  A **Heading** block you add inside a section does print, in bold, where you
+  put it.
 - **Questions marked by a tag and a color**: a short tag for the type (K, PK,
   M, SO, P, O or WYR), then the question in its type's color, with its answer
   in black on the same line. The tag is there for anyone who doesn't have the

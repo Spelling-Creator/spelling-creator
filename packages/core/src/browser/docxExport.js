@@ -79,6 +79,11 @@ import {
   questionStyleName,
 } from "../questions.js";
 import {
+  HEADING_STYLE_ID,
+  HEADING_STYLE_NAME,
+  headingText,
+} from "../heading.js";
+import {
   SPELLING_COLOR,
   SPELLING_LABEL,
   SPELLING_WORD_SEPARATOR,
@@ -509,6 +514,23 @@ async function sectionParagraphs(section, embedded, notes) {
       paragraphs.push(...spellingBlockParagraphs(block));
     } else if (block.type === "vakt") {
       paragraphs.push(...(await vaktBlockParagraphs(block, embedded)));
+    } else if (block.type === "heading" && headingText(block)) {
+      // A heading inside the section, bold with a little air above it. Its
+      // own paragraph style rather than a Word heading level, since the
+      // importer reads those as section breaks.
+      paragraphs.push(
+        new Paragraph({
+          style: HEADING_STYLE_ID,
+          spacing: { before: 120, after: 40 },
+          children: [
+            new TextRun({
+              text: headingText(block),
+              bold: true,
+              size: BODY_SIZE,
+            }),
+          ],
+        }),
+      );
     }
   }
   return paragraphs;
@@ -701,6 +723,12 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
         {
           id: BESIDES_LINE_STYLE_ID,
           name: BESIDES_LINE_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: HEADING_STYLE_ID,
+          name: HEADING_STYLE_NAME,
           basedOn: "Normal",
           quickFormat: false,
         },

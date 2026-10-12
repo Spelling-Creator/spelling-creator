@@ -35,6 +35,7 @@ import {
   questionStyleMap,
   questionTagStyleMap,
 } from "../questions.js";
+import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.js";
 import { SPELLING_LABEL } from "../spelling.js";
 import { isSafeLink } from "../richText.js";
 import {
@@ -98,6 +99,7 @@ const IMPORT_STYLE_MAP = [
   // answer off what follows it, and the tag sits before both.
   ...questionTagStyleMap(),
   ...besidesStyleMap(),
+  ...headingStyleMap(),
   `p[style-name='${SOURCES_HEADING_STYLE_NAME}'] => p.${SOURCES_HEADING_CLASS}:fresh`,
   `p[style-name='${SOURCE_ENTRY_STYLE_NAME}'] => p.${SOURCE_ENTRY_CLASS}:fresh`,
   `p[style-name='${CAPTION_STYLE_NAME}'] => p.${CAPTION_CLASS}:fresh`,
@@ -304,6 +306,15 @@ function parseHtmlToDoc(html, fileName) {
       const { block, next } = readQuestion(nodes, i, question);
       current.blocks.push(block);
       i = next;
+      continue;
+    }
+
+    // A heading inside the section, marked by the style the exporter wrote.
+    // Word's own heading levels are section breaks (handled above); this one
+    // is content and stays where it sits.
+    if (el.classList?.contains(HEADING_STYLE_CLASS)) {
+      ensureSection();
+      current.blocks.push({ id: newId(), type: "heading", text });
       continue;
     }
 

@@ -85,12 +85,20 @@ export interface ImageBlock {
   align: string;
 }
 
+/** A short heading inside a section, such as one over a run of W.Y.R. questions. */
+export interface HeadingBlock {
+  id: string;
+  type: "heading";
+  text: string;
+}
+
 export type Block =
   | TextBlock
   | SpellingBlock
   | QuestionBlock
   | VaktBlock
-  | ImageBlock;
+  | ImageBlock
+  | HeadingBlock;
 
 export interface Section {
   id: string;

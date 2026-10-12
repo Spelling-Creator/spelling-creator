@@ -65,14 +65,16 @@ import {
 const blockSchema = z
   .object({
     type: z
-      .enum(["text", "spelling", "question", "image", "vakt"])
+      .enum(["text", "spelling", "question", "image", "vakt", "heading"])
       .describe(
         "text = a paragraph of lesson prose (put any words you're teaching the spelling of in ALL CAPS); " +
           "spelling = an explicit list of spelling words; question = a quiz question; " +
           "image = a picture (don't write these by hand — add them with the add_image tool, which uploads the bytes); " +
           "vakt = a regulation activity (a movement or sensory break). VAKT blocks are OPTIONAL and OFF by " +
           "default: add them only when the user asks for them. When they are wanted, a section gets one and it " +
-          "goes LAST, after that section's questions.",
+          "goes LAST, after that section's questions; " +
+          'heading = a short heading inside the section (its "text"), such as "WOULD YOU RATHER" over a run of ' +
+          "wyr questions. Optional, and not a section: sections never print, a heading does.",
       ),
     text: z
       .string()
@@ -94,7 +96,8 @@ const blockSchema = z
           "free-text notes rare. A backslash makes a character literal (\\* for an asterisk).\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
           'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
-          "or footnotes here.",
+          "or footnotes here.\n\n" +
+          'For type "heading": the heading itself, e.g. "WOULD YOU RATHER". Plain text, one line.',
       ),
     links: z
       .array(

@@ -48,6 +48,7 @@
     "./git/refs": "./src/git/refs.js",
     "./git/remote": "./src/git/remote.js",
     "./git/repo": "./src/git/repo.js",
+    "./heading": "./src/heading.js",
     "./id": "./src/id.js",
     "./image": "./src/image.js",
     "./imageCredit": "./src/imageCredit.js",
