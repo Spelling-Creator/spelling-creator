@@ -1,16 +1,23 @@
 // The readers: a typed text file, a Word document of the same text, and a
 // .json lesson file, each coming out as a lesson the checks can run on, with
-// the notes a typed document earns.
+// the notes a typed document earns. Then the writer, and what it leaves on
+// disk when it replaces a file or fails to.
 
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { Document, Packer, Paragraph } from "docx";
 
-import { readLesson, sourceOf } from "../src/lesson.ts";
+import {
+  LessonWriteError,
+  OutputExistsError,
+  readLesson,
+  sourceOf,
+  writeLesson,
+} from "../src/lesson.ts";
 import { withTempDir, writeTemp } from "./helpers.ts";
 
 const fixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
@@ -104,4 +111,33 @@ test("a file with no lesson in it is refused with a reason", async () => {
 
 test("a missing file is refused with its path", async () => {
   await assert.rejects(readLesson("/nowhere/lesson.json"), /nowhere/);
+});
+
+test("a forced write replaces the file whole and leaves nothing beside it", async () => {
+  const { doc } = await readLesson(join(fixtures, "bold-passage.json"));
+  await withTempDir(async (dir) => {
+    const path = await writeTemp(dir, "lesson.json", "the old lesson");
+    await assert.rejects(writeLesson(path, doc), OutputExistsError);
+    assert.equal(await readFile(path, "utf8"), "the old lesson");
+
+    await writeLesson(path, doc, { force: true });
+    const written = JSON.parse(await readFile(path, "utf8"));
+    assert.equal(written.doc.title, "Domestic Cats");
+    assert.deepEqual(await readdir(dir), ["lesson.json"]);
+  });
+});
+
+test("a forced write that fails reports it and removes its temporary file", async () => {
+  const { doc } = await readLesson(join(fixtures, "bold-passage.json"));
+  await withTempDir(async (dir) => {
+    // A directory where the file should go: the temporary file is written,
+    // and the rename over the directory is what fails.
+    await mkdir(join(dir, "lesson.json"));
+    await assert.rejects(
+      writeLesson(join(dir, "lesson.json"), doc, { force: true }),
+      (err) =>
+        err instanceof LessonWriteError && !(err instanceof OutputExistsError),
+    );
+    assert.deepEqual(await readdir(dir), ["lesson.json"]);
+  });
 });

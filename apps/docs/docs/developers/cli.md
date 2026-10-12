@@ -62,6 +62,10 @@ for what remains.
 Fixes are made one at a time with the checks rerun in between, since one fix
 can change the next finding.
 
+Replacing a file (the in-place rewrite, or anything with `--force`) writes the
+new lesson to a temporary file beside it and renames that over the old one, so
+a write that fails partway leaves the old file as it was rather than cut off.
+
 ### `convert <file>`
 
 Reads a document and writes it as a `.json` lesson file, beside the input or

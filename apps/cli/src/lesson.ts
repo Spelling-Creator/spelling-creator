@@ -17,7 +17,8 @@
 // Everything written out is a .json lesson file, so a converted or fixed
 // lesson opens in the editor and round-trips from there.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 
 import mammoth from "mammoth";
@@ -194,23 +195,42 @@ export class OutputExistsError extends LessonWriteError {
  * Write a lesson as an importable .json lesson file. Refuses to replace an
  * existing file unless `force` is set, since the input may be the only copy.
  * The refusal is the open itself ("wx"), so nothing can appear in between.
+ *
+ * A forced write goes to a temporary file beside the target and is renamed
+ * over it, so the file being replaced (for `fix`, the lesson itself) stays
+ * whole until the new one is complete, rather than being truncated first and
+ * lost if the write fails partway.
  */
 export async function writeLesson(
   path: string,
   doc: LessonDoc,
   { force = false } = {},
 ): Promise<void> {
-  const json = JSON.stringify(buildLessonFile(doc), null, 2);
+  const contents = `${JSON.stringify(buildLessonFile(doc), null, 2)}\n`;
   try {
-    await writeFile(path, `${json}\n`, {
-      encoding: "utf8",
-      flag: force ? "w" : "wx",
-    });
+    if (force) {
+      await replaceFile(path, contents);
+    } else {
+      await writeFile(path, contents, { encoding: "utf8", flag: "wx" });
+    }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "EEXIST") {
       throw new OutputExistsError(path);
     }
     const reason = err instanceof Error ? err.message : String(err);
     throw new LessonWriteError(`Couldn't write ${path}: ${reason}`);
+  }
+}
+
+// The same directory as the target, so the rename stays on one filesystem
+// and is atomic. The temporary file is removed if anything fails.
+async function replaceFile(path: string, contents: string): Promise<void> {
+  const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temp, contents, { encoding: "utf8", flag: "wx" });
+    await rename(temp, path);
+  } catch (err) {
+    await rm(temp, { force: true });
+    throw err;
   }
 }
