@@ -29,15 +29,12 @@ declare module "@spelling-creator/core/lessonChecks" {
     errors: Finding[];
     warnings: Finding[];
   };
-  export function newFindings(before: Finding[], after: Finding[]): Finding[];
-  export function isFormattingFinding(finding: Finding): boolean;
 }
 
 declare module "@spelling-creator/core/lessonFixes" {
   import type { Finding } from "@spelling-creator/core/lessonChecks";
   import type { LessonDoc } from "./types.ts";
 
-  export const QUICK_FIX_CODES: readonly string[];
   export function hasQuickFix(finding: { code: string }): boolean;
   /** The doc with the fix made, or null when there is nothing left to do. */
   export function applyQuickFix(
@@ -77,7 +74,6 @@ declare module "@spelling-creator/core/documentImport" {
     title: string,
     sections: ParsedSection[],
   ): LessonDoc;
-  export function importLessonText(text: string): LessonDoc;
 }
 
 declare module "@spelling-creator/core/jsonImport" {
@@ -91,8 +87,5 @@ declare module "@spelling-creator/core/jsonImport" {
 declare module "@spelling-creator/core/lessonFile" {
   import type { LessonDoc, LessonFile } from "./types.ts";
 
-  export const LESSON_FILE_FORMAT: string;
-  export const LESSON_FILE_VERSION: number;
   export function buildLessonFile(doc: LessonDoc): LessonFile;
-  export function lessonFileName(title?: string): string;
 }

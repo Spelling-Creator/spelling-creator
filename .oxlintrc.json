@@ -80,7 +80,7 @@
       "env": { "node": true }
     },
 
-    // The command line tool — TypeScript, run under Node's type stripping.
+    // The command line tool, which is TypeScript run under Node's type stripping.
     {
       "files": ["apps/cli/**/*.ts"],
       "env": { "node": true }

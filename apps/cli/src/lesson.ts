@@ -17,7 +17,7 @@
 // Everything written out is a .json lesson file, so a converted or fixed
 // lesson opens in the editor and round-trips from there.
 
-import { access, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 
 import mammoth from "mammoth";
@@ -174,8 +174,16 @@ export function defaultOutputPath(input: string): string {
   return join(dirname(input), `${stem}.json`);
 }
 
+/** Thrown when a lesson cannot be written. The message is for the user. */
+export class LessonWriteError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LessonWriteError";
+  }
+}
+
 /** Thrown when writing would overwrite a file the user didn't say to replace. */
-export class OutputExistsError extends Error {
+export class OutputExistsError extends LessonWriteError {
   constructor(path: string) {
     super(`${path} already exists. Pass --force to replace it.`);
     this.name = "OutputExistsError";
@@ -185,22 +193,24 @@ export class OutputExistsError extends Error {
 /**
  * Write a lesson as an importable .json lesson file. Refuses to replace an
  * existing file unless `force` is set, since the input may be the only copy.
+ * The refusal is the open itself ("wx"), so nothing can appear in between.
  */
 export async function writeLesson(
   path: string,
   doc: LessonDoc,
   { force = false } = {},
 ): Promise<void> {
-  if (!force && (await exists(path))) throw new OutputExistsError(path);
   const json = JSON.stringify(buildLessonFile(doc), null, 2);
-  await writeFile(path, `${json}\n`, "utf8");
-}
-
-async function exists(path: string): Promise<boolean> {
   try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
+    await writeFile(path, `${json}\n`, {
+      encoding: "utf8",
+      flag: force ? "w" : "wx",
+    });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new OutputExistsError(path);
+    }
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new LessonWriteError(`Couldn't write ${path}: ${reason}`);
   }
 }

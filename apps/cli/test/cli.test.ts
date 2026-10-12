@@ -145,6 +145,46 @@ test("fix on a document converts it, and takes --out", async () => {
   });
 });
 
+test("fix won't write a lesson file over the document it read without --force", async () => {
+  await withTempDir(async (dir) => {
+    const input = join(dir, "cats.txt");
+    await copyFile(TYPED, input);
+    const before = await readFile(input, "utf8");
+    const { code, stdout } = run("fix", input, "--out", input, "--json");
+    assert.equal(code, 2);
+    assert.match(reportsOf(stdout)[0]!.error!, /--force/);
+    assert.equal(await readFile(input, "utf8"), before);
+  });
+});
+
+test("fix rewrites a .json lesson in place however its path is spelled", async () => {
+  await withTempDir(async (dir) => {
+    const path = join(dir, "lesson.json");
+    await copyFile(BOLD, path);
+    const { stdout } = run("fix", path, "--out", join(dir, ".", "lesson.json"));
+    assert.match(stdout, /1 fix\b|\d+ fixes/);
+    assert.doesNotMatch(stdout, /already exists/);
+  });
+});
+
+test("a lesson that can't be written is reported and exits 2", async () => {
+  await withTempDir(async (dir) => {
+    const out = join(dir, "missing", "cats.json");
+    const { code, stdout } = run("convert", TYPED, "--out", out, "--json");
+    assert.equal(code, 2);
+    assert.match(reportsOf(stdout)[0]!.error!, /Couldn't write/);
+  });
+});
+
+test("convert doesn't claim a lesson has no problems", async () => {
+  await withTempDir(async (dir) => {
+    const out = join(dir, "cats.json");
+    const { stdout } = run("convert", TYPED, "--out", out);
+    assert.match(stdout, /converted, not checked/);
+    assert.doesNotMatch(stdout, /0 problems/);
+  });
+});
+
 test("the bin shows help and refuses an unknown command", () => {
   const help = run("--help");
   assert.equal(help.code, 0);

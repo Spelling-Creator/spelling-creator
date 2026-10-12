@@ -44,7 +44,8 @@ the same split as the editor's Check panel. Each line is the prose the check
 wrote, which names the section and question, with the finding's code after it.
 
 The exit code is **0** when no file has problems, **1** when one does, and
-**2** when a file couldn't be read at all. `--strict` counts suggestions as
+**2** when a file couldn't be read at all (or, for `fix` and `convert`,
+couldn't be written). `--strict` counts suggestions as
 problems, for a lesson library that wants the standard shape enforced.
 
 ### `fix <file>`
@@ -54,7 +55,8 @@ a finding alone, such as removing bold from a passage or moving a VAKT
 activity to the end of its section), writes the lesson back, and reports what
 it fixed and what is left. A `.json` lesson is rewritten in place. A document
 is converted at the same time and written beside it as `.json`, or wherever
-`--out` says. `--dry-run` reports without writing. The exit code is `check`'s,
+`--out` says; replacing an existing file there, the document itself included,
+takes `--force`. `--dry-run` reports without writing. The exit code is `check`'s,
 for what remains.
 
 Fixes are made one at a time with the checks rerun in between, since one fix
@@ -64,7 +66,9 @@ can change the next finding.
 
 Reads a document and writes it as a `.json` lesson file, beside the input or
 at `--out`. It never replaces an existing file unless `--force` is passed,
-since the document may be the author's only copy.
+since the document may be the author's only copy. It doesn't run the checks,
+so its report says "converted, not checked" rather than counting problems
+(and has `"checked": false` in `--json`); `check` the output for those.
 
 ### Options every command takes
 
@@ -94,8 +98,8 @@ since the document may be the author's only copy.
 
 The findings are core's `Finding` objects exactly as `validateLesson` returns
 them, so a script gets the `code`, `section`, `blockId` and `params` the editor
-and the MCP server work from. A file that couldn't be read has `error` instead
-of `source`.
+and the MCP server work from. A file that couldn't be read or written has
+`error` instead of `source`.
 
 ## What it reads
 

@@ -9,7 +9,7 @@ import type { CommandModule } from "yargs";
 import {
   defaultOutputPath,
   LessonReadError,
-  OutputExistsError,
+  LessonWriteError,
   readLesson,
   writeLesson,
 } from "../lesson.ts";
@@ -59,9 +59,17 @@ export const convertCommand: CommandModule<object, ConvertArgs> = {
       const { doc, source, notes } = await readLesson(file);
       const target = out ?? defaultOutputPath(file);
       await writeLesson(target, doc, { force });
-      report = { file, source, notes, errors: [], warnings: [], wrote: target };
+      report = {
+        file,
+        source,
+        notes,
+        checked: false,
+        errors: [],
+        warnings: [],
+        wrote: target,
+      };
     } catch (err) {
-      if (err instanceof LessonReadError || err instanceof OutputExistsError) {
+      if (err instanceof LessonReadError || err instanceof LessonWriteError) {
         report = failedReport(file, err.message);
       } else {
         throw err;

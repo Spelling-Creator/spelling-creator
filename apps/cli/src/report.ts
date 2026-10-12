@@ -20,6 +20,8 @@ export interface FileReport {
   /** Missing when the file couldn't be read, in which case `error` says why. */
   source?: LessonSource;
   error?: string;
+  /** False when the command didn't run the checks (`convert`), so the empty lists mean nothing. */
+  checked?: boolean;
   notes: string[];
   errors: Finding[];
   warnings: Finding[];
@@ -29,18 +31,21 @@ export interface FileReport {
   wrote?: string;
 }
 
-/** A report for a file that couldn't be read at all. */
+/** A report for a file that couldn't be read, or whose lesson couldn't be written. */
 export function failedReport(file: string, error: string): FileReport {
   return { file, error, notes: [], errors: [], warnings: [] };
 }
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+function plural(count: number, noun: string, nouns = `${noun}s`): string {
+  return `${count} ${count === 1 ? noun : nouns}`;
 }
 
 function summary(report: FileReport): string {
+  if (report.checked === false) return "converted, not checked";
   const parts = [];
-  if (report.fixed?.length) parts.push(plural(report.fixed.length, "fix"));
+  if (report.fixed?.length) {
+    parts.push(plural(report.fixed.length, "fix", "fixes"));
+  }
   parts.push(plural(report.errors.length, "problem"));
   parts.push(plural(report.warnings.length, "suggestion"));
   return parts.join(", ");
@@ -103,7 +108,7 @@ export function printReports(reports: FileReport[], json: boolean): void {
 
 /**
  * The process exit code the reports add up to: 2 when a file couldn't be
- * read, 1 when a lesson has problems (or, with `strict`, suggestions), else 0.
+ * read or written, 1 when a lesson has problems (or, with `strict`, suggestions), else 0.
  */
 export function exitCodeFor(reports: FileReport[], strict: boolean): number {
   if (reports.some((r) => r.error)) return 2;

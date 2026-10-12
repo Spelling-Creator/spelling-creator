@@ -10,6 +10,8 @@
 // its marks). A finding whose fix turns out to have nothing to do is set aside
 // so the loop cannot spin on it.
 
+import { resolve } from "node:path";
+
 import type { CommandModule } from "yargs";
 
 import {
@@ -21,7 +23,7 @@ import { applyQuickFix, hasQuickFix } from "@spelling-creator/core/lessonFixes";
 import {
   defaultOutputPath,
   LessonReadError,
-  OutputExistsError,
+  LessonWriteError,
   readLesson,
   writeLesson,
 } from "../lesson.ts";
@@ -46,17 +48,22 @@ interface FixArgs {
 // fix or sets one finding aside, and both are bounded by the findings.
 const MAX_PASSES = 200;
 
-/** The lesson with every quick fix made, and the findings that were fixed. */
+/**
+ * The lesson with every quick fix made, the findings that were fixed, and what
+ * the checks still find in the fixed lesson.
+ */
 export function fixLesson(doc: LessonDoc): {
   doc: LessonDoc;
   fixed: Finding[];
+  errors: Finding[];
+  warnings: Finding[];
 } {
   const fixed: Finding[] = [];
   const skipped = new Set<string>();
   let current = doc;
+  let checks = validateLesson(current);
   for (let pass = 0; pass < MAX_PASSES; pass += 1) {
-    const { errors, warnings } = validateLesson(current);
-    const finding = [...errors, ...warnings].find(
+    const finding = [...checks.errors, ...checks.warnings].find(
       (f) => hasQuickFix(f) && !skipped.has(f.key),
     );
     if (!finding) break;
@@ -64,11 +71,12 @@ export function fixLesson(doc: LessonDoc): {
     if (next) {
       current = next;
       fixed.push(finding);
+      checks = validateLesson(current);
     } else {
       skipped.add(finding.key);
     }
   }
-  return { doc: current, fixed };
+  return { doc: current, fixed, ...checks };
 }
 
 export const fixCommand: CommandModule<object, FixArgs> = {
@@ -111,20 +119,20 @@ export const fixCommand: CommandModule<object, FixArgs> = {
     let report: FileReport;
     try {
       const { doc, source, notes } = await readLesson(file);
-      const { doc: fixedDoc, fixed } = fixLesson(doc);
-      const { errors, warnings } = validateLesson(fixedDoc);
+      const { doc: fixedDoc, fixed, errors, warnings } = fixLesson(doc);
       report = { file, source, notes, errors, warnings, fixed };
       if (!dryRun) {
         // Rewriting the file that was read is the point of `fix` on a .json
-        // lesson, so that case needs no --force; a different output does.
+        // lesson, so that case needs no --force; a different output does, and
+        // so does writing a lesson file over the document it came from.
         const target =
           out ?? (source === "json" ? file : defaultOutputPath(file));
-        const inPlace = target === file;
+        const inPlace = source === "json" && resolve(target) === resolve(file);
         await writeLesson(target, fixedDoc, { force: force || inPlace });
         report.wrote = target;
       }
     } catch (err) {
-      if (err instanceof LessonReadError || err instanceof OutputExistsError) {
+      if (err instanceof LessonReadError || err instanceof LessonWriteError) {
         report = failedReport(file, err.message);
       } else {
         throw err;
