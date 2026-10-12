@@ -35,10 +35,13 @@ outline of the editor:
   lesson that hasn't been published has no release date yet.
 - **No section headings.** Section names help you organize the lesson in the
   editor; the printed lesson runs straight through from one block to the next.
-- **Questions marked by color**: each question in its type's color, with its
-  answer in black on the same line. There are no type labels. **Suggested
-  answers** is also in italic, to tell it apart from **Multiple answers**, which
-  shares its color (see [Question blocks](./question-blocks.md)).
+- **Questions marked by a tag and a color**: a short tag for the type (K, PK,
+  M, SO, P, O or WYR), then the question in its type's color, with its answer
+  in black on the same line. The tag is there for anyone who doesn't have the
+  color: a gray photocopy, a printer low on ink, or a reader who can't tell the
+  colors apart. **Suggested answers** is also in italic, to tell it apart from
+  **Multiple answers**, which shares its color and its tag (see
+  [Question blocks](./question-blocks.md)).
 - **Spelling words on one line**, after "Spell:".
 - **VAKT activities** in red, after "VAKT:" (see
   [VAKT activities](./vakt-activities.md)).

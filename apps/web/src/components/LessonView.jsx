@@ -138,6 +138,14 @@ const LESSON_STYLES = `
   .s2c-lesson-root .s2c-label {
     color: color-mix(in oklab, var(--s2c-label) 78%, black);
   }
+  /* The type tag in front of a prompt: small and muted, so it reads as a mark
+     rather than as the first word of the question. */
+  .s2c-lesson-root .s2c-tag {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    margin-right: 0.5em;
+  }
   .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
   .s2c-lesson-root sup.s2c-fn a {
     color: var(--primary);
@@ -352,10 +360,12 @@ function ImageBlock({ block, si, bi, translation }) {
   );
 }
 
-// A question reads the way it prints: the prompt in the colour of its type, then
-// its answer in the body colour on the same line. Nothing is labelled — the
-// colour is what marks the type — so this matches the exported lesson exactly.
-// The answers translate one accepted answer at a time and are joined back here,
+// A question reads the way it prints: the type's tag, the prompt in the colour
+// of its type, then its answer in the body colour on the same line, so this
+// matches the exported lesson exactly. The tag is what marks the type for a
+// reader who can't tell the colours apart; the legend in the app's chrome
+// explains it. The answers translate one accepted answer at a time and are
+// joined back here,
 // so the wide gaps separating them never pass through a model (see
 // questionAnswerItems); untranslated, the join is questionAnswerText verbatim.
 function QuestionBlock({ block, si, bi, translation }) {
@@ -371,6 +381,9 @@ function QuestionBlock({ block, si, bi, translation }) {
   return (
     <>
       <p>
+        <span className="s2c-tag" aria-label={meta.label}>
+          {meta.tag}
+        </span>
         <span
           className="s2c-label"
           style={{

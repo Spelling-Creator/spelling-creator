@@ -28,6 +28,7 @@ import {
   QUESTION_TYPE_LIST,
   questionStyleClass,
   questionStyleMap,
+  questionTagStyleMap,
 } from "../questions.js";
 import { SPELLING_LABEL } from "../spelling.js";
 import { isSafeLink } from "../richText.js";
@@ -87,6 +88,10 @@ const QUESTION_SPAN_SELECTOR = QUESTION_TYPE_LIST.map(
 
 const IMPORT_STYLE_MAP = [
   ...questionStyleMap(),
+  // The type tag printed in front of a prompt. Mapped so it lands in a span of
+  // its own: matchQuestion reads the prompt off the question span and the
+  // answer off what follows it, and the tag sits before both.
+  ...questionTagStyleMap(),
   `p[style-name='${SOURCES_HEADING_STYLE_NAME}'] => p.${SOURCES_HEADING_CLASS}:fresh`,
   `p[style-name='${SOURCE_ENTRY_STYLE_NAME}'] => p.${SOURCE_ENTRY_CLASS}:fresh`,
   `p[style-name='${CAPTION_STYLE_NAME}'] => p.${CAPTION_CLASS}:fresh`,

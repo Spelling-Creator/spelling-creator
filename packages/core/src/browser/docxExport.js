@@ -60,6 +60,9 @@ import {
 } from "../lessonLayout.js";
 import {
   ANSWER_GAP,
+  QUESTION_TAG_GAP,
+  QUESTION_TAG_STYLE_ID,
+  QUESTION_TAG_STYLE_NAME,
   QUESTION_TYPE_LIST,
   questionAnswerText,
   questionLegendFor,
@@ -91,6 +94,12 @@ export { DOCX_MAX_IMAGE_WIDTH };
 
 // Body text size, in docx half-points (28 = 14pt).
 const BODY_SIZE = 28;
+// The type tag in front of a prompt: smaller than the body and grey, so it
+// reads as a mark rather than as the first word of the question. Grey rather
+// than the type's colour because the tag exists for the reader who can't see
+// the colour; it has to stand on its own.
+const TAG_SIZE = 20;
+const QUESTION_TAG_COLOR = "555555";
 
 const ALIGNMENT_MAP = {
   left: AlignmentType.LEFT,
@@ -278,9 +287,10 @@ async function imageBlockParagraphs(block, embedded) {
   return paragraphs;
 }
 
-// One question: the prompt in its type's colour, then the answer in black on the
-// same line. Consecutive questions sit directly under one another, so the run of
-// them reads as a block of colour-coded lines rather than a list of headings.
+// One question: its type's tag, the prompt in its type's colour, then the
+// answer in black on the same line. Consecutive questions sit directly under
+// one another, so the run of them reads as a block of colour-coded lines rather
+// than a list of headings.
 function questionBlockParagraphs(block) {
   const meta = questionMeta(block.questionType);
   const answer = questionAnswerText(block);
@@ -289,6 +299,15 @@ function questionBlockParagraphs(block) {
     .filter(Boolean);
 
   const children = [
+    // The tag is the marking that survives a grey photocopy. Its own style
+    // keeps it out of the prompt span the importer reads the question off.
+    new TextRun({
+      text: `${meta.tag}${QUESTION_TAG_GAP}`,
+      style: QUESTION_TAG_STYLE_ID,
+      color: QUESTION_TAG_COLOR,
+      bold: true,
+      size: TAG_SIZE,
+    }),
     // The named character style is what carries the type through mammoth to the
     // PDF and the importer; the explicit colour is what Word itself renders.
     new TextRun({
@@ -551,6 +570,13 @@ function colourCharacterStyles() {
       quickFormat: false,
       run: { color: hex(type.color), italics: Boolean(type.italic) },
     })),
+    {
+      id: QUESTION_TAG_STYLE_ID,
+      name: QUESTION_TAG_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+      run: { color: QUESTION_TAG_COLOR, bold: true, size: TAG_SIZE },
+    },
     {
       id: VAKT_STYLE_ID,
       name: VAKT_STYLE_NAME,

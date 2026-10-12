@@ -71,9 +71,14 @@ editor:
   lesson with no author or publication date simply prints without those lines.
 - **No section headings.** A section's name is an organizing device for the
   editor; the printed lesson runs straight through from one block to the next.
-- **Questions marked by color alone**: the prompt in its type's color,
-  its answer in black on the same line, with no `[Label]` in front of it. The one
-  exception is **Suggested answers**, which shares the amber of **Multiple
+- **Questions marked by a tag and a color**: the type's short tag (`K`, `PK`,
+  `M`, `SO`, `P`, `O`, `WYR`; `tag` in `QUESTION_TYPES`) in small grey bold,
+  then the prompt in its type's color, then its answer in black on the same
+  line. The tag is there for the reader who doesn't have the color: a grey
+  photocopy, a printer out of ink, or someone who can't tell the colors apart.
+  The [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+  asks every renderer never to rely on color alone, and these are its default
+  tags. **Suggested answers** shares the amber and the `SO` tag of **Multiple
   answers** and is set in italic to separate them.
 - **Spelling words on one running line**, `Spell:` followed by the words as
   typed, separated by the same `ANSWER_GAP` as multiple answers.
@@ -83,8 +88,9 @@ editor:
   order `QUESTION_LEGEND` gives. `questionLegendFor(doc)` cuts the list down to
   the types the lesson asks, so a lesson with no **Would you rather** questions
   has no W.Y.R. entry, and a lesson with no questions at all has no legend.
-  The legend prints each type's label, except **Would you rather**, which it
-  abbreviates to **W.Y.R.** so a line naming every type still fits.
+  Each entry is the type's tag then its label (`K SINGLE ANSWER`), since the
+  legend is where a reader looks up the tag in front of a prompt. **Would you
+  rather** is abbreviated to **W.Y.R.** so a line naming every type still fits.
   [VAKT activities](./vakt-activities.md) are deliberately not in the legend:
   they aren't questions, and their `VAKT:` label already names them.
 - **A page number** in the top right corner.
@@ -113,15 +119,21 @@ mammoth drops run colors and paragraph alignment, so on the PDF path neither the
 question color coding nor the centered title lines survive on their own. The docx
 therefore marks both with **named Word styles**: a character style per question
 type (`questionStyleName`, `S2C Question {label}`, mapped by `questionStyleMap`
-to `<span class="s2c-q-{key}">`) and one paragraph style for the title lines
+to `<span class="s2c-q-{key}">`), one for the type tag in front of the prompt
+(`S2C Question Tag`, mapped by `questionTagStyleMap` to
+`<span class="s2c-q-tag">`), and one paragraph style for the title lines
 (`S2C Title Line`). `pdfExport` maps those onto CSS classes with a `styleMap`
 and colors them again from `questions.js`. The `S2C` and `s2c-` prefixes are
 historical names; they stay because renaming them would break the round trip
 for every document already exported.
 
-That is also how **import** recovers a question's type now that nothing in the
-visible text names it: `docxImport` asks mammoth for the same style map and reads
-the type off the `<span class="s2c-q-…">`. Section _divisions_ have nothing left
+That is also how **import** recovers a question's type: `docxImport` asks
+mammoth for the same style map and reads the type off the
+`<span class="s2c-q-…">`, the prompt off that span's text and the answer off
+what follows it. The tag's own span sits before all of that, so it is never
+read as part of the prompt. (Text pasted from a printed lesson into
+[Document import](./document-import.md) does carry the tag as plain text;
+`QUESTION_TAG_PREFIX` strips it there.) Section _divisions_ have nothing left
 to carry them, so a DOCX round trip collapses a lesson into a single section
 (the importer does split on Heading 2 or 3 in a document that has them);
 Export/Import **JSON** is the lossless one. A document that was never exported from

@@ -261,3 +261,41 @@ describe("formatted text, footnotes and sources", () => {
     expect(out).not.toContain("footnote");
   });
 });
+
+describe("questions", () => {
+  // Read back with the same style map the PDF path and the importer use, so
+  // the tag's own span and the prompt's are both visible.
+  async function html(doc) {
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const { questionStyleMap, questionTagStyleMap } =
+      await import("../questions.js");
+    const buffer = await Packer.toBuffer(await buildDocument(doc));
+    const { value } = await mammoth.convertToHtml(
+      { buffer },
+      { styleMap: [...questionStyleMap(), ...questionTagStyleMap()] },
+    );
+    return value;
+  }
+
+  // The tag is the marking a reader has when the colour is gone. It sits in a
+  // span of its own in front of the prompt span, so the importer, which reads
+  // the prompt off the question span and the answer off what follows it, is
+  // never handed the tag as part of either.
+  it("prints each question's type tag in its own span before the prompt", async () => {
+    const out = await html(
+      lesson([
+        {
+          id: "q1",
+          type: "question",
+          questionType: "single",
+          prompt: "Which island?",
+          answer: "PHAROS",
+        },
+      ]),
+    );
+    expect(out).toMatch(
+      /<span class="s2c-q-tag"><strong>K\s+<\/strong><\/span><span class="s2c-q-single">Which island\?<\/span>\s+PHAROS/,
+    );
+  });
+});

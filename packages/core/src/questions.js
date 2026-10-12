@@ -1,12 +1,19 @@
 // Shared definitions for the eight question types. Imported by the editor
 // (SectionCard / ContentBlock) and the exporters so colours, labels, and the
 // default block shape stay in sync everywhere.
+//
+// `tag` is the short mark printed in front of every prompt (K, PK, M, ...),
+// the Open Spelling Lesson Format's default tags. Colour alone can't carry a
+// question's type: printers run dry, photocopies are grey, and some readers
+// can't tell the colours apart. The tag is the second marking the format asks
+// every renderer for, and the legend explains it.
 
 export const QUESTION_TYPES = {
   number: {
     key: "number",
     label: "Number answer",
     short: "Number",
+    tag: "M",
     description: "The answer is a number",
     color: "#7048e8", // purple
   },
@@ -14,6 +21,7 @@ export const QUESTION_TYPES = {
     key: "single",
     label: "Single answer",
     short: "Single",
+    tag: "K",
     description: "One typed answer",
     color: "#2f9e44", // green
   },
@@ -21,6 +29,7 @@ export const QUESTION_TYPES = {
     key: "multiple",
     label: "Multiple answers",
     short: "Multiple",
+    tag: "SO",
     description: "Several accepted answers",
     // Amber. Deliberately yellower than the burnt orange this used to be
     // (#e8590c), which sat too close to `paraphrase`'s brown to tell apart in a
@@ -31,6 +40,9 @@ export const QUESTION_TYPES = {
     key: "multiple_open",
     label: "Suggested answers",
     short: "Suggested",
+    // The same tag as `multiple`: on paper the two are one semi-open family,
+    // and the italic below is what marks this one's key as advisory.
+    tag: "SO",
     description: "Answers bounded by the topic; the key only suggests",
     // The same amber as `multiple`, because these two are one pedagogical
     // family: the semi-open questions, which this app's default treats as a
@@ -52,6 +64,7 @@ export const QUESTION_TYPES = {
     key: "paraphrase",
     label: "Paraphrase",
     short: "Paraphrase",
+    tag: "P",
     description: "Restate the passage in their own words",
     color: "#a0522d", // brown
   },
@@ -59,6 +72,7 @@ export const QUESTION_TYPES = {
     key: "open",
     label: "Open ended",
     short: "Open",
+    tag: "O",
     description: "Free written response",
     color: "#e64980", // pink
   },
@@ -66,6 +80,7 @@ export const QUESTION_TYPES = {
     key: "wyr",
     label: "Would you rather",
     short: "W.Y.R.",
+    tag: "WYR",
     // What the printed footer legend calls it. The legend otherwise prints the
     // label, but "WOULD YOU RATHER" would crowd an eight-entry footer line, and
     // the lessons this type comes from abbreviate it there too.
@@ -82,6 +97,7 @@ export const QUESTION_TYPES = {
     key: "background",
     label: "Background knowledge",
     short: "Background",
+    tag: "PK",
     description: "Requires prior knowledge",
     color: "#1c7ed6", // blue
   },
@@ -117,11 +133,28 @@ export const QUESTION_LEGEND = [
   QUESTION_TYPES.open,
 ];
 
-/** What the printed footer legend calls a type: the label, unless the type
- * carries a shorter legend name of its own (only `wyr` does today). */
+/** What the printed footer legend calls a type: its tag, then the label,
+ * unless the type carries a shorter legend name of its own (only `wyr` does
+ * today). The tag comes first because the legend is where a reader looks up
+ * the mark in front of a prompt. */
 export function questionLegendText(type) {
-  return (type.legend || type.label).toUpperCase();
+  return `${type.tag} ${(type.legend || type.label).toUpperCase()}`;
 }
+
+// The tag in front of a prompt, as the renderers print it: the tag and a gap,
+// so "K Alexandria's lighthouse stood on...". Shared so the text importer can
+// strip exactly what the exporters wrote.
+export const QUESTION_TAG_GAP = "  ";
+
+/**
+ * A question tag at the start of a line, as a printed lesson writes it, with
+ * the whitespace after it. For readers taking a lesson back in from text.
+ * Case-sensitive on purpose: "So the..." opens a sentence, "SO " marks a
+ * question.
+ */
+export const QUESTION_TAG_PREFIX = new RegExp(
+  `^(?:${[...new Set(QUESTION_TYPE_LIST.map((q) => q.tag))].join("|")})\\s+(?=\\S)`,
+);
 
 /**
  * The legend entries a printed lesson needs: QUESTION_LEGEND's order, cut down
@@ -184,6 +217,21 @@ export function questionStyleMap() {
     (q) =>
       `r[style-name='${questionStyleName(q.key)}'] => span.${questionStyleClass(q.key)}`,
   );
+}
+
+// The type tag printed in front of a prompt gets a character style of its own,
+// for the same reason the prompt has one: mammoth keeps the style, so the PDF
+// can set the tag apart and the importer can tell it from the prompt. One
+// style for every type, since the tag's text already says which type it is.
+export const QUESTION_TAG_STYLE_ID = "s2cQuestionTag";
+export const QUESTION_TAG_STYLE_NAME = "S2C Question Tag";
+export const QUESTION_TAG_STYLE_CLASS = "s2c-q-tag";
+
+/** The mammoth style-map entry turning the tag style back into a tagged span. */
+export function questionTagStyleMap() {
+  return [
+    `r[style-name='${QUESTION_TAG_STYLE_NAME}'] => span.${QUESTION_TAG_STYLE_CLASS}`,
+  ];
 }
 
 // Types whose answer is a single value held on `block.answer`.

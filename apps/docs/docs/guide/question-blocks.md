@@ -22,16 +22,20 @@ do follow the app's lesson standard (for example, they expect a **Single
 answer** question's answer to appear word for word in the passage), so expect
 them to flag lessons that use the types differently.
 
-| Type                     | Color           | What it's for                                                                    |
-| ------------------------ | --------------- | -------------------------------------------------------------------------------- |
-| **Number answer**        | purple          | The answer is a number. You can add the steps to work it out.                    |
-| **Single answer**        | green           | One typed answer, usually a word from the passage.                               |
-| **Multiple answers**     | amber           | Several accepted answers; any one of them is right.                              |
-| **Suggested answers**    | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right. |
-| **Paraphrase**           | brown           | Restate the passage in their own words. No stored answer.                        |
-| **Open ended**           | pink            | A free written response. No stored answer.                                       |
-| **Would you rather**     | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.        |
-| **Background knowledge** | blue            | A question that needs knowledge from outside the passage, with its answer.       |
+| Type                     | Tag | Color           | What it's for                                                                    |
+| ------------------------ | --- | --------------- | -------------------------------------------------------------------------------- |
+| **Number answer**        | M   | purple          | The answer is a number. You can add the steps to work it out.                    |
+| **Single answer**        | K   | green           | One typed answer, usually a word from the passage.                               |
+| **Multiple answers**     | SO  | amber           | Several accepted answers; any one of them is right.                              |
+| **Suggested answers**    | SO  | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right. |
+| **Paraphrase**           | P   | brown           | Restate the passage in their own words. No stored answer.                        |
+| **Open ended**           | O   | pink            | A free written response. No stored answer.                                       |
+| **Would you rather**     | WYR | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.        |
+| **Background knowledge** | PK  | blue            | A question that needs knowledge from outside the passage, with its answer.       |
+
+The tags are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+defaults: K for a known answer, PK for prior knowledge, M for math, SO for
+semi-open, P for paraphrase, O for open, WYR for would you rather.
 
 **Multiple answers** used to be a burnt orange. It's amber now because the
 orange sat too close to **Paraphrase**'s brown, and on paper the color is
@@ -80,11 +84,15 @@ appear in the editor; they aren't added to the lesson or printed.
 
 ## How questions print
 
-A question prints as its **question in its type's color, followed by its answer
-in black on the same line**. There are no labels or brackets: the color (and
-the italic on **Suggested answers**) is what shows the type. The legend at the
-foot of every page names each type in its color (see
-[Exporting & printing](./exporting.md)).
+A question prints as **a short tag, then the question in its type's color,
+followed by its answer in black on the same line**. The tag is one to three
+letters in small gray type: K, PK, M, SO, P, O or WYR (see the table above).
+It's there so the type can still be told on a gray photocopy or by a reader
+who can't tell the colors apart; the color (and the italic on **Suggested
+answers**) does the same job for everyone else. The legend at the foot of
+every page lists each tag with its type's name, in that type's color (see
+[Exporting & printing](./exporting.md)). The lesson page shows the same tags
+on screen.
 
 A question without an answer, and the types with no stored answer
 (**Paraphrase**, **Open ended** and **Would you rather**), print as the question

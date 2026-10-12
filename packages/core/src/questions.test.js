@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   ANSWER_GAP,
   QUESTION_LEGEND,
+  QUESTION_TAG_PREFIX,
   QUESTION_TYPES,
   QUESTION_TYPE_LIST,
   createQuestionBlock,
@@ -125,9 +126,10 @@ describe("W.Y.R. questions", () => {
 
   it("abbreviates its legend entry, and only its own", () => {
     // "WOULD YOU RATHER" would crowd an eight-entry footer line, so the legend
-    // prints the short form the source lessons use.
-    expect(questionLegendText(QUESTION_TYPES.wyr)).toBe("W.Y.R.");
-    expect(questionLegendText(QUESTION_TYPES.open)).toBe("OPEN ENDED");
+    // prints the short form the source lessons use. Each entry opens with the
+    // type's tag, since the legend is where a reader looks the tag up.
+    expect(questionLegendText(QUESTION_TYPES.wyr)).toBe("WYR W.Y.R.");
+    expect(questionLegendText(QUESTION_TYPES.open)).toBe("O OPEN ENDED");
   });
 
   it("builds with no answer field, like an open question", () => {
@@ -216,6 +218,45 @@ describe("the footer legend", () => {
   it("is empty for a lesson with no questions", () => {
     expect(questionLegendFor({ sections: [{ blocks: [] }] })).toEqual([]);
     expect(questionLegendFor(undefined)).toEqual([]);
+  });
+});
+
+// The tag is the marking that has to work when the colour doesn't: on a grey
+// photocopy, or for a reader who can't tell the colours apart.
+describe("the type tags", () => {
+  it("gives every type a short tag", () => {
+    for (const type of QUESTION_TYPE_LIST) {
+      expect(type.tag).toMatch(/^[A-Z]{1,3}$/);
+    }
+  });
+
+  // The two semi-open types are one family on paper and share the tag; the
+  // italic separates them. Every other tag belongs to one type alone.
+  it("shares a tag only between the two semi-open types", () => {
+    const byTag = new Map();
+    for (const type of QUESTION_TYPE_LIST) {
+      byTag.set(type.tag, [...(byTag.get(type.tag) || []), type.key]);
+    }
+    for (const [tag, keys] of byTag) {
+      if (tag === QUESTION_TYPES.multiple.tag) {
+        expect(keys.sort()).toEqual(["multiple", "multiple_open"]);
+      } else {
+        expect(keys).toHaveLength(1);
+      }
+    }
+  });
+
+  it("recognises a printed tag at the start of a line, case-sensitively", () => {
+    expect("K Name the island.".replace(QUESTION_TAG_PREFIX, "")).toBe(
+      "Name the island.",
+    );
+    expect("WYR Would you rather...".replace(QUESTION_TAG_PREFIX, "")).toBe(
+      "Would you rather...",
+    );
+    expect("So the fire was lit.".replace(QUESTION_TAG_PREFIX, "")).toBe(
+      "So the fire was lit.",
+    );
+    expect("K".replace(QUESTION_TAG_PREFIX, "")).toBe("K");
   });
 });
 

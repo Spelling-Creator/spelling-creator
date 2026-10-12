@@ -13,6 +13,7 @@ import {
   sectionSummary,
   splitSections,
 } from "./documentImport.js";
+import { ANSWER_GAP } from "./questions.js";
 
 const PASSAGE_1 =
   "Every pet cat curled up on a sofa today is descended from a single wild species: the AFRICAN WILDCAT. This sandy-coloured hunter still roams the deserts, grasslands, and plains of North Africa and the Near East, and it looks so much like a tabby that the two can be hard to tell apart at a glance.";
@@ -80,6 +81,8 @@ describe("classifyLine", () => {
     expect(classifyLine("The Wildcat Ancestor")).toBe("heading");
     expect(classifyLine("1. What is it? (Answer: X)")).toBe("question");
     expect(classifyLine("Name a wild animal that hunts.")).toBe("question");
+    // Text copied from a printed lesson carries the type tag.
+    expect(classifyLine("O Name a wild animal that hunts.")).toBe("question");
     expect(
       classifyLine("Should we judge the past? Explain your thinking."),
     ).toBe("question");
@@ -186,6 +189,22 @@ describe("parseSection", () => {
       ["HARSHNESS"],
       ["350"],
     ]);
+  });
+
+  // A printed lesson carries each question's type tag in front of it, and
+  // text copied out of one brings the tag along as the first word.
+  it("drops the type tag text copied from a printed lesson carries", () => {
+    const { questions } = parseSection([
+      "K Who explained light as packets of energy in 1900? MAX PLANCK",
+      `SO The piles drew ______. Name one.${ANSWER_GAP}MICE${ANSWER_GAP}BIRDS`,
+      "O Name a wild animal that hunts.",
+    ]);
+    expect(questions.map((q) => q.prompt)).toEqual([
+      "Who explained light as packets of energy in 1900?",
+      "The piles drew ______. Name one.",
+      "Name a wild animal that hunts.",
+    ]);
+    expect(questions[1].answers).toEqual(["MICE", "BIRDS"]);
   });
 
   it("stays fast on a long run of capitals that is not an answer", () => {

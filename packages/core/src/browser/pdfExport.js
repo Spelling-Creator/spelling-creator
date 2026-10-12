@@ -25,11 +25,13 @@ import {
   lessonCopyright,
 } from "../lessonLayout.js";
 import {
+  QUESTION_TAG_STYLE_CLASS,
   QUESTION_TYPE_LIST,
   questionLegendFor,
   questionLegendText,
   questionStyleClass,
   questionStyleMap,
+  questionTagStyleMap,
 } from "../questions.js";
 import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.js";
 
@@ -131,6 +133,7 @@ export function layoutImageFigures(html, embedded) {
 // those styles onto classes here lets PRINT_STYLES put the formatting back.
 const STYLE_MAP = [
   ...questionStyleMap(),
+  ...questionTagStyleMap(),
   ...vaktStyleMap(),
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
@@ -188,8 +191,8 @@ async function docToHtml(doc, meta) {
 
 // Print styles applied to the mammoth-generated HTML before rendering to PDF.
 // The question-type colours are restored here from the classes STYLE_MAP asked
-// mammoth to emit — the printed lesson has no type labels, so the colour of a
-// prompt is the only thing marking what kind of question it is.
+// mammoth to emit, and the type tag in front of each prompt is set small and
+// grey so it reads as a mark rather than as the first word of the question.
 const PRINT_STYLES = `
   .s2c-pdf-root {
     font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
@@ -224,6 +227,11 @@ const PRINT_STYLES = `
       `.s2c-pdf-root .${questionStyleClass(type.key)} { color: ${type.color};` +
       `${type.italic ? " font-style: italic;" : ""} }`,
   ).join("\n  ")}
+  .s2c-pdf-root .${QUESTION_TAG_STYLE_CLASS} {
+    color: #555555;
+    font-weight: 700;
+    font-size: 11px;
+  }
   .s2c-pdf-root .${VAKT_STYLE_CLASS} { color: ${VAKT_COLOR}; }
   .s2c-pdf-root sup { font-size: 9px; line-height: 0; }
   .s2c-pdf-root sup a { color: inherit; text-decoration: none; }

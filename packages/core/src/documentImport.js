@@ -22,7 +22,11 @@
 // answers and the wording, the same way a reader would tell them apart.
 
 import { normalizeLessonFile } from "./jsonImport.js";
-import { ANSWER_GAP, QUESTION_TYPES } from "./questions.js";
+import {
+  ANSWER_GAP,
+  QUESTION_TAG_PREFIX,
+  QUESTION_TYPES,
+} from "./questions.js";
 
 export class DocumentImportError extends Error {
   constructor(message) {
@@ -47,7 +51,10 @@ const RUN_TOGETHER = /[?)]\s+\d{1,2}[.)]\s+\S/;
  * @returns {string}
  */
 export function classifyLine(line) {
-  const t = line.trim();
+  // Text copied out of a printed lesson carries the type tag in front of each
+  // question ("K Name the island."). Set aside before the wording is read, or
+  // "K Name a..." would never match an opener anchored at the start.
+  const t = line.trim().replace(QUESTION_TAG_PREFIX, "");
   if (!t) return "other";
   if (/^(Spell(?:ing)?(?: words| list| these)?|Words)\s*[:-]/i.test(t)) {
     return "spelling";
@@ -339,7 +346,12 @@ export function parseSection(lines, heading = "") {
         if (q) q.steps.push(line.replace(/^\d+\s*[.)]\s*/, ""));
         return;
       }
-      const split = splitQuestionLine(line.replace(QUESTION_PREFIX, ""));
+      const split = splitQuestionLine(
+        line
+          .trim()
+          .replace(QUESTION_TAG_PREFIX, "")
+          .replace(QUESTION_PREFIX, ""),
+      );
       out.questions.push({
         prompt: split.prompt.trim(),
         answers: split.answers.map((a) => a.trim()).filter(Boolean),
