@@ -4,14 +4,24 @@
 // disk when it replaces a file or fails to.
 
 import assert from "node:assert/strict";
-import { mkdir, readdir, readFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { Document, Packer, Paragraph } from "docx";
 
+import { normalizeLessonFile } from "@spelling-creator/core/jsonImport";
+
 import {
+  droppedFields,
+  LessonChangedError,
   LessonWriteError,
   OutputExistsError,
   readLesson,
@@ -125,6 +135,70 @@ test("a forced write replaces the file whole and leaves nothing beside it", asyn
     assert.equal(written.doc.title, "Domestic Cats");
     assert.deepEqual(await readdir(dir), ["lesson.json"]);
   });
+});
+
+test("a write is refused when the file changed after it was read", async () => {
+  await withTempDir(async (dir) => {
+    const path = join(dir, "lesson.json");
+    await copyFile(join(fixtures, "bold-passage.json"), path);
+    const { doc, hash } = await readLesson(path);
+    await writeFile(path, "saved by the editor in the meantime");
+
+    await assert.rejects(
+      writeLesson(path, doc, { force: true, unchangedSince: hash }),
+      LessonChangedError,
+    );
+    assert.equal(
+      await readFile(path, "utf8"),
+      "saved by the editor in the meantime",
+    );
+    assert.deepEqual(await readdir(dir), ["lesson.json"]);
+
+    const fresh = await readLesson(join(fixtures, "bold-passage.json"));
+    await writeFile(path, await readFile(join(fixtures, "bold-passage.json")));
+    await writeLesson(path, doc, { force: true, unchangedSince: fresh.hash });
+    assert.equal(
+      JSON.parse(await readFile(path, "utf8")).doc.title,
+      "Domestic Cats",
+    );
+  });
+});
+
+test("droppedFields names what a rewrite would lose, and only that", async () => {
+  const lesson = JSON.parse(
+    await readFile(join(fixtures, "bold-passage.json"), "utf8"),
+  );
+  const keep = (raw: unknown) => droppedFields(raw, normalizeLessonFile(raw));
+
+  assert.deepEqual(
+    keep(lesson),
+    [],
+    "a lesson in the app's own shape loses nothing",
+  );
+
+  // The editor writes even plain text as a `content` document; the import
+  // stores it as `text`, which is the same words.
+  const plain = structuredClone(lesson);
+  plain.doc.sections[0].blocks[0].content.content[0].content = [
+    {
+      type: "text",
+      text: "Every pet cat is descended from the AFRICAN WILDCAT.",
+    },
+  ];
+  assert.deepEqual(keep(plain), []);
+
+  const extra = structuredClone(lesson);
+  extra.doc.trustedCollaborators = ["sam@example.com"];
+  extra.doc.sections[0].blocks.push({ id: "x1", type: "poll", options: [] });
+  extra.version = 2;
+  assert.deepEqual(keep(extra), [
+    "version (2)",
+    "doc.sections[0].blocks (5 items, 4 kept)",
+    "doc.trustedCollaborators",
+  ]);
+
+  // A bare doc, with no envelope, is named from its own root.
+  assert.deepEqual(keep({ ...lesson.doc, note: "hi" }), ["note"]);
 });
 
 test("a forced write that fails reports it and removes its temporary file", async () => {

@@ -31,7 +31,7 @@
     "build": "rolldown -c",
     "test": "pnpm build && node --test \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm build"
+    "prepack": "pnpm build"
   },
   "dependencies": {
     "mammoth": "^1.13.0",

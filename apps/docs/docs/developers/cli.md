@@ -11,15 +11,17 @@ makes the quick fixes, and converts a Word document or a text file into a
 network requests, which makes it the simplest way for a script, a CI job or an
 AI agent to check a lesson without the [MCP server](./mcp-server/overview.md).
 
-Installed from npm it is the `spelling-creator` command:
+In the repository, `pnpm cli check lesson.json` from the root runs it from
+source, with no build (Node 22.18 or newer, for its built-in TypeScript
+support).
+
+Once a version has been [released](#releasing) to npm, it installs as the
+`spelling-creator` command, which runs on Node 22.12 or newer:
 
 ```sh
 npm install -g @spelling-creator/cli
 spelling-creator check lesson.json
 ```
-
-In the repository, `pnpm cli check lesson.json` from the root runs it from
-source, with no build.
 
 ## Commands
 
@@ -65,6 +67,21 @@ can change the next finding.
 Replacing a file (the in-place rewrite, or anything with `--force`) writes the
 new lesson to a temporary file beside it and renames that over the old one, so
 a write that fails partway leaves the old file as it was rather than cut off.
+
+Rewriting a `.json` lesson in place has three more guards, since it is the
+author's own file:
+
+- **Nothing to fix, nothing written.** The file is left byte for byte as it
+  was, rather than reformatted.
+- **Nothing dropped without asking.** Reading a lesson keeps only what the
+  editor understands, so a field a newer version added, a block type this
+  version doesn't know, or `trustedCollaborators` (which a lesson file leaves
+  out on purpose) would vanish in a rewrite. When the file holds anything like
+  that, `fix` refuses and names it; `--out` writes the fixed lesson elsewhere,
+  and `--force` rewrites it anyway. A plain passage stored as a `content`
+  document coming back as `text` is the same words, so it doesn't count.
+- **No stale overwrites.** If the file changes after `fix` read it (the editor
+  saved it, say), `fix` leaves the new version alone and exits 2.
 
 ### `convert <file>`
 
@@ -145,7 +162,10 @@ apps/cli/
 
 The CLI is the first TypeScript package in the repository. In development it
 needs no build: `pnpm start` and the root's `pnpm cli` run `src/cli.ts`
-directly, with Node 24 stripping the types as it loads them. That holds the
+directly, with Node stripping the types as it loads them. That takes Node
+22.18 or newer, the first release where it does so without a flag; the
+`engines` field says 22.12 because it describes the published bundle, which is
+plain JavaScript. Running from source holds the
 code to syntax Node can erase (`erasableSyntaxOnly` in `tsconfig.json`: no
 enums, namespaces or parameter properties), and imports between its own files
 name the `.ts` extension. `pnpm --filter @spelling-creator/cli typecheck` runs
@@ -158,8 +178,8 @@ into one ESM file, `dist/cli.js`, that the package's `bin` points at.
 so the core modules the CLI uses are bundled in; they import nothing from npm
 themselves, so the bundle adds no dependencies. The CLI's own dependencies
 (yargs, mammoth) and Node's builtins stay external. `pnpm test` builds first
-and spawns the bundle, so what is tested is what is published, and
-`prepublishOnly` builds again before `pnpm publish`.
+and spawns the bundle, so what is tested is what is published, and `prepack`
+builds again whenever the package is packed.
 
 Rolldown rather than Vite or tsdown because the job is small and plain: Vite
 brings a dev server and an app's conventions, and tsdown adds declaration
@@ -172,6 +192,73 @@ against the document types in `src/types.ts`. That is a stopgap. When a second
 TypeScript package needs core, the better move is for core to emit
 declarations from its JSDoc (`tsc --allowJs --declaration --emitDeclarationOnly`)
 and for both to use those.
+
+## Releasing
+
+The CLI is published to npmjs.com as `@spelling-creator/cli`, under the same
+scope as Spellophone, by `.github/workflows/release-cli.yml`. That runs when a
+GitHub release whose tag starts with `cli-v` is published; the repository's
+other releases are left alone.
+
+1. Bump the version in `apps/cli/package.json`:
+
+   ```bash
+   pnpm --filter @spelling-creator/cli exec pnpm version minor --no-git-tag-version
+   ```
+
+2. Commit it and merge to `main`.
+
+3. Create the release on GitHub with the tag `cli-v` plus that version:
+
+   ```bash
+   gh release create cli-v0.2.0 --title "CLI 0.2.0" --generate-notes
+   ```
+
+4. Publishing the release runs the workflow. It checks that the tag matches
+   `package.json`, type-checks, builds and tests the bundle, packs it, publishes
+   the tarball, and attaches the same tarball to the release.
+
+### Trusted publishing
+
+The workflow publishes with npm's
+[trusted publishing](https://docs.npmjs.com/trusted-publishers): GitHub
+Actions hands the registry a short-lived OIDC token, which npm accepts because
+the package names this repository and workflow as its trusted publisher. No
+npm token is stored anywhere, and every version gets a
+[provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
+tying it to the commit and run that built it. pnpm does the token exchange
+itself, so the workflow publishes with `pnpm publish`, which also turns the
+`workspace:*` devDependency on core into a plain version.
+
+npm only accepts a trusted publisher for a package that already exists, so the
+**first version is published by hand**, from the release tag, by a maintainer
+of the `@spelling-creator` scope:
+
+```bash
+git checkout cli-v0.1.0
+pnpm install --frozen-lockfile
+cd apps/cli
+pnpm pack --out spelling-creator-cli-v0.1.0.tgz
+pnpm publish spelling-creator-cli-v0.1.0.tgz --access public --no-git-checks
+```
+
+That version has no provenance. Then add the trusted publisher on npmjs.com,
+in the package's settings under "Trusted publishing", or with
+`npm trust github @spelling-creator/cli --file release-cli.yml --repository Spelling-Creator/spelling-creator --allow-publish`:
+
+| Field             | Value              |
+| ----------------- | ------------------ |
+| Publisher         | GitHub Actions     |
+| Organization      | `Spelling-Creator` |
+| Repository        | `spelling-creator` |
+| Workflow filename | `release-cli.yml`  |
+| Environment       | (empty)            |
+
+A new trusted publisher that isn't used within two days expires, so cut the
+next release soon after adding it. Renaming the workflow file breaks
+publishing until this is updated. Once the workflow has published a version,
+set the package's publishing access to "Require two-factor authentication and
+disallow tokens" so nothing but the workflow can publish.
 
 ## Not yet
 

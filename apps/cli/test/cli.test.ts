@@ -4,7 +4,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFile, readFile } from "node:fs/promises";
+import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -182,6 +182,57 @@ test("convert doesn't claim a lesson has no problems", async () => {
     const { stdout } = run("convert", TYPED, "--out", out);
     assert.match(stdout, /converted, not checked/);
     assert.doesNotMatch(stdout, /0 problems/);
+  });
+});
+
+test("fix leaves a lesson with nothing to fix exactly as it was", async () => {
+  await withTempDir(async (dir) => {
+    const path = join(dir, "lesson.json");
+    await copyFile(BOLD, path);
+    run("fix", path);
+    // Squeezed onto one line: a rewrite would put the indentation back.
+    const fixed = JSON.stringify(JSON.parse(await readFile(path, "utf8")));
+    await writeFile(path, fixed);
+    const { stdout } = run("fix", path, "--json");
+    const [report] = reportsOf(stdout);
+    assert.deepEqual(report!.fixed, []);
+    assert.equal(report!.wrote, undefined);
+    assert.equal(await readFile(path, "utf8"), fixed);
+  });
+});
+
+test("fix won't rewrite in place what the lesson format would drop", async () => {
+  await withTempDir(async (dir) => {
+    const path = join(dir, "lesson.json");
+    const lesson = JSON.parse(await readFile(BOLD, "utf8"));
+    lesson.doc.sections[0].blocks[0].reviewedBy = "Sam";
+    const before = JSON.stringify(lesson, null, 2);
+    await writeFile(path, before);
+
+    const refused = run("fix", path, "--json");
+    assert.equal(refused.code, 2);
+    const [report] = reportsOf(refused.stdout);
+    assert.match(report!.error!, /doc\.sections\[0\]\.blocks\[0\]\.reviewedBy/);
+    assert.match(report!.error!, /--out/);
+    assert.equal(await readFile(path, "utf8"), before);
+
+    // A dry run says the same thing without failing.
+    const dry = reportsOf(run("fix", path, "--dry-run", "--json").stdout)[0]!;
+    assert.equal(dry.error, undefined);
+    assert.ok(dry.notes.some((n) => n.includes("reviewedBy")));
+
+    const copy = join(dir, "fixed.json");
+    assert.equal(
+      reportsOf(run("fix", path, "--out", copy, "--json").stdout)[0]!.wrote,
+      copy,
+    );
+    assert.equal(await readFile(path, "utf8"), before);
+
+    assert.equal(
+      reportsOf(run("fix", path, "--force", "--json").stdout)[0]!.wrote,
+      path,
+    );
+    assert.notEqual(await readFile(path, "utf8"), before);
   });
 });
 

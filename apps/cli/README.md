@@ -13,7 +13,11 @@ spelling-creator fix lesson.json                 # make the quick fixes in place
 spelling-creator convert lesson.docx             # write lesson.json beside it
 ```
 
-In the repository, `pnpm cli <command>` runs it from source without a build.
+It needs Node 22.12 or newer. In the
+[repository](https://github.com/Spelling-Creator/spelling-creator),
+`pnpm cli <command>` runs it from source without a build (Node 22.18 or
+newer).
 
-Full documentation: [Command line tool](../docs/docs/developers/cli.md) in the
+Full documentation:
+[Command line tool](https://spellingcreator.org/docs/developers/cli) in the
 developer docs.

@@ -17,7 +17,7 @@
 // Everything written out is a .json lesson file, so a converted or fixed
 // lesson opens in the editor and round-trips from there.
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 
@@ -44,6 +44,10 @@ export interface ReadLesson {
   source: LessonSource;
   /** What the reader wants the author to know, in order. Empty for a .json file. */
   notes: string[];
+  /** A hash of the file as read, so a rewrite can tell whether it changed since. */
+  hash: string;
+  /** For a .json file, what it held before normalizing, to see what a rewrite would drop. */
+  raw?: unknown;
 }
 
 /** Thrown when a file cannot be read as a lesson. The message is for the user. */
@@ -73,29 +77,116 @@ export async function readLesson(path: string): Promise<ReadLesson> {
     throw new LessonReadError(`Couldn't read ${path}: ${reason}`);
   }
 
+  const hash = hashOf(bytes);
   if (source === "json") {
-    return { doc: lessonFromJson(bytes.toString("utf8")), source, notes: [] };
+    return {
+      ...lessonFromJson(bytes.toString("utf8")),
+      source,
+      notes: [],
+      hash,
+    };
   }
 
   const text =
     source === "docx" ? await docxText(bytes) : bytes.toString("utf8");
-  return { ...lessonFromText(text), source };
+  return { ...lessonFromText(text), source, hash };
 }
 
-function lessonFromJson(text: string): LessonDoc {
-  let parsed: unknown;
+function hashOf(bytes: Buffer): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function lessonFromJson(text: string): { doc: LessonDoc; raw: unknown } {
+  let raw: unknown;
   try {
-    parsed = JSON.parse(text);
+    raw = JSON.parse(text);
   } catch {
     throw new LessonReadError(
       "This file isn't valid JSON. It may be corrupted or not a lesson file.",
     );
   }
   try {
-    return normalizeLessonFile(parsed);
+    return { doc: normalizeLessonFile(raw), raw };
   } catch (err) {
     if (err instanceof JsonImportError) throw new LessonReadError(err.message);
     throw err;
+  }
+}
+
+// How many dropped fields a refusal names before it summarizes the rest.
+const DROPPED_SHOWN = 5;
+
+/**
+ * What writing `doc` back over the .json file it was read from would lose:
+ * the paths of fields and items in `raw` (the file as parsed) that the
+ * written lesson file would not have. Empty when the rewrite keeps everything.
+ *
+ * Reading a lesson normalizes it, keeping only what the editor understands,
+ * so a field a newer version added, a block type this one doesn't know, or
+ * `trustedCollaborators` (which a lesson file leaves out on purpose) would
+ * quietly vanish from a file rewritten in place. A plain text block's
+ * `content` coming back as `text` is the same words in the smaller shape the
+ * import stores, so it isn't counted.
+ */
+export function droppedFields(raw: unknown, doc: LessonDoc): string[] {
+  const written = buildLessonFile(doc);
+  const dropped: string[] = [];
+  if (isObject(raw) && isObject(raw.doc)) {
+    if (raw.version !== undefined && raw.version !== written.version) {
+      dropped.push(`version (${String(raw.version)})`);
+    }
+    missingFrom(raw, written, "", dropped);
+  } else {
+    missingFrom(raw, written.doc, "", dropped);
+  }
+  return dropped;
+}
+
+/** Name the dropped fields for a message, the first few in full. */
+export function describeDropped(dropped: string[]): string {
+  const shown = dropped.slice(0, DROPPED_SHOWN).join(", ");
+  const more = dropped.length - DROPPED_SHOWN;
+  return more > 0 ? `${shown}, and ${more} more` : shown;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function missingFrom(
+  before: unknown,
+  after: unknown,
+  path: string,
+  out: string[],
+): void {
+  if (Array.isArray(before)) {
+    // Normalizing only ever drops items (never reorders them), so a shorter
+    // list has lost something, and items line up by position otherwise.
+    if (!Array.isArray(after) || after.length < before.length) {
+      out.push(
+        `${path} (${before.length} items, ${Array.isArray(after) ? after.length : 0} kept)`,
+      );
+      return;
+    }
+    before.forEach((item, i) =>
+      missingFrom(item, after[i], `${path}[${i}]`, out),
+    );
+    return;
+  }
+  if (!isObject(before)) return;
+  if (!isObject(after)) {
+    out.push(path || "the lesson");
+    return;
+  }
+  for (const key of Object.keys(before)) {
+    const at = path ? `${path}.${key}` : key;
+    if (key in after) {
+      missingFrom(before[key], after[key], at, out);
+    } else if (
+      !(key === "content" && after.type === "text" && "text" in after)
+    ) {
+      out.push(at);
+    }
   }
 }
 
@@ -120,7 +211,10 @@ const QUOTE_LENGTH = 60;
  * A lesson from the text of a document, with notes on what the rules had to
  * guess and what they could not place.
  */
-export function lessonFromText(text: string): Omit<ReadLesson, "source"> {
+export function lessonFromText(text: string): {
+  doc: LessonDoc;
+  notes: string[];
+} {
   const { title, loose, sections } = readLessonText(text);
   if (loose) {
     throw new LessonReadError(
@@ -191,6 +285,27 @@ export class OutputExistsError extends LessonWriteError {
   }
 }
 
+/** Thrown when the file being replaced changed after it was read. */
+export class LessonChangedError extends LessonWriteError {
+  constructor(path: string) {
+    super(
+      `${path} changed after it was read, so it was left as it is. Run the command again to work on the new version.`,
+    );
+    this.name = "LessonChangedError";
+  }
+}
+
+export interface WriteOptions {
+  /** Replace the file if it exists. */
+  force?: boolean;
+  /**
+   * The hash readLesson gave the file when it was read. When set, the file is
+   * only replaced if it still hashes the same, so a save made in between (by
+   * the editor, or anything else) isn't overwritten with a stale copy.
+   */
+  unchangedSince?: string;
+}
+
 /**
  * Write a lesson as an importable .json lesson file. Refuses to replace an
  * existing file unless `force` is set, since the input may be the only copy.
@@ -204,16 +319,17 @@ export class OutputExistsError extends LessonWriteError {
 export async function writeLesson(
   path: string,
   doc: LessonDoc,
-  { force = false } = {},
+  { force = false, unchangedSince }: WriteOptions = {},
 ): Promise<void> {
   const contents = `${JSON.stringify(buildLessonFile(doc), null, 2)}\n`;
   try {
     if (force) {
-      await replaceFile(path, contents);
+      await replaceFile(path, contents, unchangedSince);
     } else {
       await writeFile(path, contents, { encoding: "utf8", flag: "wx" });
     }
   } catch (err) {
+    if (err instanceof LessonWriteError) throw err;
     if ((err as NodeJS.ErrnoException).code === "EEXIST") {
       throw new OutputExistsError(path);
     }
@@ -224,10 +340,22 @@ export async function writeLesson(
 
 // The same directory as the target, so the rename stays on one filesystem
 // and is atomic. The temporary file is removed if anything fails.
-async function replaceFile(path: string, contents: string): Promise<void> {
+//
+// The changed-since check runs after the new file is complete, as close to
+// the rename as it can be. A save landing between the two would still be
+// lost, but that window is the length of one read, not of the whole command.
+async function replaceFile(
+  path: string,
+  contents: string,
+  unchangedSince: string | undefined,
+): Promise<void> {
   const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
   try {
     await writeFile(temp, contents, { encoding: "utf8", flag: "wx" });
+    if (unchangedSince !== undefined) {
+      const now = await readFile(path).then(hashOf, () => null);
+      if (now !== unchangedSince) throw new LessonChangedError(path);
+    }
     await rename(temp, path);
   } catch (err) {
     await rm(temp, { force: true });

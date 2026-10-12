@@ -9,6 +9,11 @@
 // fix can change what the next finding would be (a block moves, a span loses
 // its marks). A finding whose fix turns out to have nothing to do is set aside
 // so the loop cannot spin on it.
+//
+// Rewriting a .json lesson in place is guarded three ways, since it is the
+// author's file: nothing is written when nothing was fixed, a lesson holding
+// data the rewrite would drop is refused without --force, and a file that
+// changed after it was read is left alone (see writeLesson).
 
 import { resolve } from "node:path";
 
@@ -22,6 +27,8 @@ import { applyQuickFix, hasQuickFix } from "@spelling-creator/core/lessonFixes";
 
 import {
   defaultOutputPath,
+  describeDropped,
+  droppedFields,
   LessonReadError,
   LessonWriteError,
   readLesson,
@@ -118,17 +125,30 @@ export const fixCommand: CommandModule<object, FixArgs> = {
   handler: async ({ file, out, force, "dry-run": dryRun, json, strict }) => {
     let report: FileReport;
     try {
-      const { doc, source, notes } = await readLesson(file);
+      const { doc, source, notes, hash, raw } = await readLesson(file);
       const { doc: fixedDoc, fixed, errors, warnings } = fixLesson(doc);
       report = { file, source, notes, errors, warnings, fixed };
-      if (!dryRun) {
-        // Rewriting the file that was read is the point of `fix` on a .json
-        // lesson, so that case needs no --force; a different output does, and
-        // so does writing a lesson file over the document it came from.
-        const target =
-          out ?? (source === "json" ? file : defaultOutputPath(file));
-        const inPlace = source === "json" && resolve(target) === resolve(file);
-        await writeLesson(target, fixedDoc, { force: force || inPlace });
+      // Rewriting the file that was read is the point of `fix` on a .json
+      // lesson, so that case needs no --force; a different output does, and
+      // so does writing a lesson file over the document it came from.
+      const target =
+        out ?? (source === "json" ? file : defaultOutputPath(file));
+      const inPlace = source === "json" && resolve(target) === resolve(file);
+      // A lesson with nothing to fix is left exactly as it was.
+      const rewrite = !(inPlace && fixed.length === 0);
+      // Compared against the lesson as read, not as fixed: a fix moving a
+      // block is a change the author asked for, not data lost.
+      const dropped = inPlace && rewrite ? droppedFields(raw, doc) : [];
+      if (dropped.length && !force) {
+        const refusal = `Rewriting ${file} in place would drop data the lesson format doesn't keep: ${describeDropped(dropped)}. Pass --out to write the fixed lesson somewhere else, or --force to rewrite it anyway.`;
+        if (!dryRun) throw new LessonWriteError(refusal);
+        report.notes.push(refusal);
+      }
+      if (!dryRun && rewrite) {
+        await writeLesson(target, fixedDoc, {
+          force: force || inPlace,
+          unchangedSince: inPlace ? hash : undefined,
+        });
         report.wrote = target;
       }
     } catch (err) {
