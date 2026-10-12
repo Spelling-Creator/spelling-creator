@@ -89,3 +89,19 @@ declare module "@spelling-creator/core/lessonFile" {
 
   export function buildLessonFile(doc: LessonDoc): LessonFile;
 }
+
+declare module "@spelling-creator/core/oslf" {
+  import type { LessonDoc } from "./types.ts";
+
+  export const OSLF_VERSION: string;
+  export const OSLF_EXTENSION: string;
+  export function isOslfFile(parsed: unknown): boolean;
+  export function oslfFileName(title?: string): string;
+  /** The lesson as an Open Spelling Lesson Format file. */
+  export function toOslf(
+    doc: LessonDoc,
+    options?: { imageSrc?: (block: unknown) => string | null | undefined },
+  ): unknown;
+  /** An OSLF file as a bare lesson doc, before normalizing. */
+  export function fromOslf(file: unknown): LessonDoc;
+}

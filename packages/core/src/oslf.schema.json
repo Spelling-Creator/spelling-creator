@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:oslf:schema:lesson:0.1",
+  "title": "OSLF lesson file",
+  "description": "A lesson in the Open Spelling Lesson Format, version 0.1 (draft). See FILE-FORMAT.md section 3.",
+  "type": "object",
+  "required": ["oslf", "title", "sections"],
+  "additionalProperties": false,
+  "properties": {
+    "oslf": { "const": "0.1" },
+    "title": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "language": { "type": "string", "minLength": 1 },
+    "authors": { "type": "array", "items": { "$ref": "#/$defs/person" } },
+    "license": { "type": "string", "minLength": 1 },
+    "created": { "type": "string", "minLength": 1 },
+    "modified": { "type": "string", "minLength": 1 },
+    "ageRange": { "type": "string" },
+    "profiles": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "extensions": { "$ref": "#/$defs/extensions" }
+  },
+  "$defs": {
+    "extensions": {
+      "description": "Keys are URIs controlled by whoever defines the extension. Consumers ignore keys they do not understand.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:" }
+    },
+    "person": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "$ref": "#/$defs/link" }
+      }
+    },
+    "link": {
+      "description": "A URL a reader may follow. Only https, http and mailto are allowed.",
+      "type": "string",
+      "pattern": "^(https?://|mailto:)"
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "publisher": { "type": "string" },
+        "year": { "type": "string" },
+        "url": { "$ref": "#/$defs/link" }
+      }
+    },
+    "oneLine": {
+      "type": "string",
+      "pattern": "^[^\\r\\n]*$"
+    },
+    "richText": {
+      "description": "A plain string, or an array of runs. Never holds line breaks.",
+      "oneOf": [
+        { "$ref": "#/$defs/oneLine" },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/run" }
+        }
+      ]
+    },
+    "run": {
+      "oneOf": [
+        { "$ref": "#/$defs/oneLine" },
+        {
+          "type": "object",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "$ref": "#/$defs/oneLine" },
+            "bold": { "type": "boolean" },
+            "italic": { "type": "boolean" },
+            "underline": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["note"],
+          "additionalProperties": false,
+          "properties": {
+            "note": {
+              "type": "object",
+              "additionalProperties": false,
+              "anyOf": [{ "required": ["source"] }, { "required": ["text"] }],
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "locator": { "$ref": "#/$defs/oneLine" },
+                "text": { "$ref": "#/$defs/oneLine" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "section": {
+      "type": "object",
+      "required": ["blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string" },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": [
+            "passage",
+            "spelling",
+            "image",
+            "question",
+            "vakt",
+            "heading"
+          ]
+        }
+      },
+      "oneOf": [
+        { "$ref": "#/$defs/passage" },
+        { "$ref": "#/$defs/spelling" },
+        { "$ref": "#/$defs/imageBlock" },
+        { "$ref": "#/$defs/question" },
+        { "$ref": "#/$defs/vakt" },
+        { "$ref": "#/$defs/heading" }
+      ]
+    },
+    "passage": {
+      "type": "object",
+      "required": ["type", "paragraphs"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "passage" },
+        "id": { "$ref": "#/$defs/id" },
+        "paragraphs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/richText" }
+        },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "spelling": {
+      "type": "object",
+      "required": ["type", "words"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "spelling" },
+        "id": { "$ref": "#/$defs/id" },
+        "words": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "heading": {
+      "type": "object",
+      "required": ["type", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "heading" },
+        "id": { "$ref": "#/$defs/id" },
+        "text": { "$ref": "#/$defs/richText" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "credit": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string" },
+        "author": { "type": "string" },
+        "license": { "type": "string" },
+        "licenseUrl": { "$ref": "#/$defs/link" },
+        "sourceUrl": { "$ref": "#/$defs/link" }
+      }
+    },
+    "imageFields": {
+      "type": "object",
+      "required": ["src"],
+      "properties": {
+        "src": {
+          "description": "An https URL, a data: URL holding the image, or a relative reference resolved against the lesson file.",
+          "type": "string",
+          "minLength": 1,
+          "not": { "pattern": "^(?!(https|data):)[A-Za-z][A-Za-z0-9+.-]*:" }
+        },
+        "alt": { "type": "string" },
+        "caption": { "$ref": "#/$defs/richText" },
+        "credit": { "$ref": "#/$defs/credit" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "size": { "enum": ["small", "medium", "large", "full"] },
+        "align": { "enum": ["left", "center", "right"] }
+      }
+    },
+    "imageBlock": {
+      "type": "object",
+      "required": ["type"],
+      "$ref": "#/$defs/imageFields",
+      "unevaluatedProperties": false,
+      "properties": {
+        "type": { "const": "image" },
+        "id": { "$ref": "#/$defs/id" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "image": {
+      "$ref": "#/$defs/imageFields",
+      "unevaluatedProperties": false
+    },
+    "vakt": {
+      "type": "object",
+      "required": ["type", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "vakt" },
+        "id": { "$ref": "#/$defs/id" },
+        "text": { "type": "string", "minLength": 1 },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url"],
+            "additionalProperties": false,
+            "properties": {
+              "url": { "$ref": "#/$defs/link" },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "image": { "$ref": "#/$defs/image" },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "answers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "question": {
+      "type": "object",
+      "required": ["type", "questionType", "prompt"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "question" },
+        "id": { "$ref": "#/$defs/id" },
+        "questionType": {
+          "enum": [
+            "known",
+            "prior-knowledge",
+            "math",
+            "semi-open",
+            "tight-open",
+            "would-you-rather",
+            "paraphrase",
+            "broad-open"
+          ]
+        },
+        "prompt": { "$ref": "#/$defs/richText" },
+        "answerKey": { "enum": ["exhaustive", "suggested", "none"] },
+        "answers": { "$ref": "#/$defs/answers" },
+        "working": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "threeBoard": { "type": "boolean" },
+        "besides": { "type": "string", "minLength": 1 },
+        "extensions": { "$ref": "#/$defs/extensions" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "questionType": { "const": "math" } } },
+          "else": { "not": { "required": ["working"] } }
+        },
+        {
+          "if": { "properties": { "questionType": { "const": "semi-open" } } },
+          "else": {
+            "not": {
+              "anyOf": [
+                { "required": ["threeBoard"] },
+                { "required": ["besides"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "questionType": { "enum": ["known", "math"] } }
+          },
+          "then": {
+            "required": ["answers"],
+            "properties": {
+              "answerKey": { "const": "exhaustive" },
+              "answers": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "questionType": { "const": "math" } } },
+          "then": { "properties": { "answers": { "maxItems": 1 } } }
+        },
+        {
+          "if": {
+            "properties": { "questionType": { "const": "prior-knowledge" } }
+          },
+          "then": {
+            "required": ["answers"],
+            "properties": { "answerKey": { "const": "exhaustive" } }
+          }
+        },
+        {
+          "if": { "properties": { "questionType": { "const": "semi-open" } } },
+          "then": {
+            "required": ["answers"],
+            "properties": {
+              "answerKey": { "enum": ["exhaustive", "suggested"] },
+              "answers": { "minItems": 1 }
+            },
+            "if": {
+              "required": ["answerKey"],
+              "properties": { "answerKey": { "const": "suggested" } }
+            },
+            "then": { "not": { "required": ["besides"] } }
+          }
+        },
+        {
+          "if": { "properties": { "questionType": { "const": "tight-open" } } },
+          "then": {
+            "properties": { "answerKey": { "enum": ["none", "suggested"] } },
+            "if": {
+              "required": ["answerKey"],
+              "properties": { "answerKey": { "const": "suggested" } }
+            },
+            "then": {
+              "required": ["answers"],
+              "properties": { "answers": { "minItems": 1 } }
+            },
+            "else": { "not": { "required": ["answers"] } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "questionType": {
+                "enum": ["would-you-rather", "paraphrase", "broad-open"]
+              }
+            }
+          },
+          "then": {
+            "properties": { "answerKey": { "const": "none" } },
+            "not": { "required": ["answers"] }
+          }
+        }
+      ]
+    }
+  }
+}

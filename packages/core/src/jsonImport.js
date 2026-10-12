@@ -4,6 +4,9 @@
 // the lesson-file envelope { format, version, doc } or a bare { title, sections }
 // doc, ensure every section/block/word/answer has a stable id, drop anything we
 // don't recognise, and reject files that aren't structured as a lesson.
+//
+// An Open Spelling Lesson Format file (oslf.js) comes through the same door:
+// it is turned into a bare doc first, then normalised like one.
 
 import { AGE_RANGES } from "./ageRanges.js";
 import { headingText } from "./heading.js";
@@ -11,6 +14,7 @@ import { newId } from "./id.js";
 import { QUESTION_TYPES, questionBesides } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
+import { OslfImportError, fromOslf, isOslfFile } from "./oslf.js";
 import { isSafeLink } from "./richText.js";
 import {
   normalizeTextContent,
@@ -67,13 +71,23 @@ export async function importJsonFile(file) {
   return normalizeLessonFile(parsed);
 }
 
-// Accept either the lesson-file envelope { format, version, doc } or a bare doc
-// { title, sections }, then normalise and validate it.
+// Accept the lesson-file envelope { format, version, doc }, a bare doc
+// { title, sections }, or an Open Spelling Lesson Format file (oslf.js),
+// then normalise and validate it.
 export function normalizeLessonFile(parsed) {
   if (!parsed || typeof parsed !== "object") {
     throw new JsonImportError(
       "This file isn't a lesson: expected a JSON object.",
     );
+  }
+  if (isOslfFile(parsed)) {
+    try {
+      return normalizeDoc(fromOslf(parsed));
+    } catch (err) {
+      if (err instanceof OslfImportError)
+        throw new JsonImportError(err.message);
+      throw err;
+    }
   }
   // A wrong but explicit format marker is a clear, actionable error.
   if (parsed.format && parsed.format !== LESSON_FILE_FORMAT) {

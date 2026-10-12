@@ -215,6 +215,41 @@ with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,
 and mammoth converts only the document body, never the docx's own header and
 footer.
 
+## The Open Spelling Lesson Format
+
+`packages/core/src/oslf.js` maps the lesson document onto the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+(OSLF) and back: `toOslf(doc, { imageSrc })` and `fromOslf(file)`. The app's
+own lesson file stays what it is, a lossless dump of the editor's document;
+OSLF is for passing a lesson to something that isn't this app, and for
+reading one that something else wrote.
+
+- **Export OSLF** (`exportOslf` in `browser/jsonExport.js`) writes
+  `<title>.oslf.json`. A stored picture becomes its public URL on the hub
+  (`imagePublicUrl`), a block already carrying a `src` data URL keeps it, and
+  a picture with no URL either way is left out, since the format needs one.
+  The CLI writes OSLF when an output path ends in `.oslf.json`, with no
+  `imageSrc`, so it keeps only data URLs.
+- **Import JSON or OSLF** goes through `normalizeLessonFile`, which spots an
+  OSLF file by its `oslf` field, turns it into a bare doc with `fromOslf`,
+  and normalizes it like any other. A question type the app doesn't know is
+  kept as a legacy `open` question with its prompt, as the format asks; a
+  picture with a relative `src` is dropped, since a single file has nothing
+  for it to be relative to; a file with a major version above 1 is refused.
+- The type keys map both ways (`single` is `known`, `background` is
+  `prior-knowledge`, `number` is `math`, the two amber types are `semi-open`
+  with an `exhaustive` or `suggested` key, a tight open with examples has a
+  `suggested` key, and a legacy `open` is sorted with `resolveOpenType`).
+  `steps` are `working`, `threeBoard` and `besides` are themselves, and a
+  text block's paragraphs become the format's rich text (strings for plain
+  paragraphs, runs with `bold`/`italic`/`underline` and `note` entries
+  otherwise). Prompts, captions and headings are plain strings here and rich
+  text there, so they come back as their words.
+- `oslf.schema.json` beside the module is the format's lesson schema, copied
+  from the 0.1 draft so `oslf.test.js` can hold `toOslf`'s output to it with
+  `ajv` (a dev dependency only; nothing at runtime validates). Update the copy
+  when the format moves.
+
 ## Building a Word file is for Word files only
 
 The six entry points above are the whole list. Nothing else in the app touches

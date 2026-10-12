@@ -129,7 +129,10 @@ import { ensureImagesUploaded } from "@spelling-creator/core/imagesClient";
 // exportJson is a Blob and an <a> — no heavy dependency, so it stays static.
 // The docx/PDF/import pipeline is not: it loads on demand through
 // lib/exports/load.js. See the comment in lib/exports/engine.js.
-import { exportJson } from "@spelling-creator/core/browser/jsonExport";
+import {
+  exportJson,
+  exportOslf,
+} from "@spelling-creator/core/browser/jsonExport";
 import { importJsonFile } from "@spelling-creator/core/jsonImport";
 import { loadExportEngine } from "../lib/exports/load.js";
 import { hasGoogleDrive } from "@spelling-creator/core/config";
@@ -1478,6 +1481,9 @@ export default function EditorPage() {
       } else if (kind === "json") {
         exportJson(doc);
         notify({ severity: "success", message: t("messages.jsonDownloaded") });
+      } else if (kind === "oslf") {
+        exportOslf(doc);
+        notify({ severity: "success", message: t("messages.oslfDownloaded") });
       } else {
         const { exportPdf } = await loadExportEngine();
         await exportPdf(doc, meta);
@@ -2660,6 +2666,13 @@ export default function EditorPage() {
               {t("header.exportJson")}
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => handleExport("oslf")}
+              disabled={busy !== null}
+            >
+              <BracesIcon />
+              {t("header.exportOslf")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={() => handleExport("pdf")}
               disabled={busy !== null}
             >
@@ -2816,6 +2829,15 @@ export default function EditorPage() {
                   <span>{t("header.exportJson")}</span>
                   <span className="text-xs text-muted-foreground">
                     {t("header.exportJsonHint")}
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("oslf")}>
+                <BracesIcon />
+                <div className="flex flex-col">
+                  <span>{t("header.exportOslf")}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("header.exportOslfHint")}
                   </span>
                 </div>
               </DropdownMenuItem>

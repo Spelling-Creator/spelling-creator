@@ -86,7 +86,13 @@ author's own file:
 ### `convert <file>`
 
 Reads a document and writes it as a `.json` lesson file, beside the input or
-at `--out`. It never replaces an existing file unless `--force` is passed,
+at `--out`. An `--out` ending in `.oslf.json` writes the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+instead, for tools that aren't this app (`fix` does the same when the lesson
+it rewrites in place is one). The CLI has no image store to resolve a stored
+picture against, so a picture the lesson refers to by hash alone is left out
+of an OSLF file; one carrying a data URL is kept. It never replaces an
+existing file unless `--force` is passed,
 since the document may be the author's only copy. It doesn't run the checks,
 so its report says "converted, not checked" rather than counting problems
 (and has `"checked": false` in `--json`); `check` the output for those.
@@ -124,11 +130,12 @@ and the MCP server work from. A file that couldn't be read or written has
 
 ## What it reads
 
-| Extension          | How it is read                                                                                                                                                                                                         |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.json`            | The app's own lesson file, through core's `jsonImport`. Lossless, and the envelope or a bare `{ title, sections }` doc are both accepted.                                                                              |
-| `.docx`            | The document's text, extracted with mammoth, then read by the rules parser below.                                                                                                                                      |
-| `.txt`, `.md`, any | The file as text, read by the rules parser in `packages/core/src/documentImport.js`, the same one behind [Import from text](../guide/import-from-text.md): headings, passages, a spelling line, one question per line. |
+| Extension          | How it is read                                                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.json`            | The app's own lesson file, through core's `jsonImport`. Lossless, and the envelope or a bare `{ title, sections }` doc are both accepted.                                                                                             |
+| `.oslf.json`       | An [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format) file, through the same `jsonImport` (core's `oslf.js` turns it into a lesson first). Pictures given as relative files are left out. |
+| `.docx`            | The document's text, extracted with mammoth, then read by the rules parser below.                                                                                                                                                     |
+| `.txt`, `.md`, any | The file as text, read by the rules parser in `packages/core/src/documentImport.js`, the same one behind [Import from text](../guide/import-from-text.md): headings, passages, a spelling line, one question per line.                |
 
 A document was never a lesson file, so nothing in it says what a question's
 type is: the parser works that out from the answers and the wording. The report

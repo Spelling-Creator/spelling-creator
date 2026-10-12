@@ -15,7 +15,10 @@
 // well enough, since its "Spell:" line and answer gaps are shapes they know.
 //
 // Everything written out is a .json lesson file, so a converted or fixed
-// lesson opens in the editor and round-trips from there.
+// lesson opens in the editor and round-trips from there, unless the output
+// path ends in .oslf.json, which writes the Open Spelling Lesson Format
+// (core's oslf.js) for tools that aren't this app. An .oslf.json file reads
+// through the same door as a .json one, since core's jsonImport knows both.
 
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -34,8 +37,18 @@ import {
   normalizeLessonFile,
 } from "@spelling-creator/core/jsonImport";
 import { buildLessonFile } from "@spelling-creator/core/lessonFile";
+import {
+  OSLF_EXTENSION,
+  isOslfFile,
+  toOslf,
+} from "@spelling-creator/core/oslf";
 
 import type { LessonDoc } from "./types.ts";
+
+/** Whether a path names an Open Spelling Lesson Format file. */
+export function isOslfPath(path: string): boolean {
+  return path.toLowerCase().endsWith(OSLF_EXTENSION);
+}
 
 export type LessonSource = "json" | "docx" | "text";
 
@@ -129,6 +142,9 @@ const DROPPED_SHOWN = 5;
  * import stores, so it isn't counted.
  */
 export function droppedFields(raw: unknown, doc: LessonDoc): string[] {
+  // An OSLF file is written back as OSLF, a different shape altogether, so a
+  // field-for-field comparison with the app's own file would name everything.
+  if (isOslfFile(raw)) return [];
   const written = buildLessonFile(doc);
   const dropped: string[] = [];
   if (isObject(raw) && isObject(raw.doc)) {
@@ -321,7 +337,11 @@ export async function writeLesson(
   doc: LessonDoc,
   { force = false, unchangedSince }: WriteOptions = {},
 ): Promise<void> {
-  const contents = `${JSON.stringify(buildLessonFile(doc), null, 2)}\n`;
+  // Pictures in an OSLF file are URLs. The CLI has no image store or hub to
+  // resolve a stored picture against, so a picture the lesson refers to by
+  // hash alone is left out of the file; one carrying a data URL is kept.
+  const file = isOslfPath(path) ? toOslf(doc) : buildLessonFile(doc);
+  const contents = `${JSON.stringify(file, null, 2)}\n`;
   try {
     if (force) {
       await replaceFile(path, contents, unchangedSince);
