@@ -41,9 +41,10 @@ reads `label` and `description` straight from that file.
 | `background`    | Background knowledge | `#1c7ed6` blue          | `answer`                              |
 
 The two amber types are the _semi-open_ questions (`ORANGE_TYPE_KEYS`,
-`isOrangeType`). The idea, and the choice to color the whole family alike,
-come from the S2C guidebook, as the comment on `multiple_open` says; they are
-the app's defaults, not a rule every Spelling practice follows. Consumers that
+`isOrangeType`). Treating them as one family, colored alike, is the app's
+default, not a rule every Spelling practice follows (the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+lists the loose end as an open question). Consumers that
 care about the block's shape (the answer rows, the exporters) treat the two
 alike; consumers that care about the contract (validation, the answer reveal)
 don't. `multiple` was burnt orange (`#e8590c`) until it moved to amber to stay
@@ -77,10 +78,13 @@ editor:
 - **Spelling words on one running line**, `Spell:` followed by the words as
   typed, separated by the same `ANSWER_GAP` as multiple answers.
 - **A footer on every page**: the copyright line above a legend naming each
-  question type in its own color (and its own italic, where it has one),
-  uppercased (`questionLegendText`) and separated by `|`, in the order
-  `QUESTION_LEGEND` gives. The legend prints each type's label, except **Would
-  you rather**, which it abbreviates to **W.Y.R.** so the line still fits.
+  question type the lesson uses in its own color (and its own italic, where it
+  has one), uppercased (`questionLegendText`) and separated by `|`, in the
+  order `QUESTION_LEGEND` gives. `questionLegendFor(doc)` cuts the list down to
+  the types the lesson asks, so a lesson with no **Would you rather** questions
+  has no W.Y.R. entry, and a lesson with no questions at all has no legend.
+  The legend prints each type's label, except **Would you rather**, which it
+  abbreviates to **W.Y.R.** so a line naming every type still fits.
   [VAKT activities](./vakt-activities.md) are deliberately not in the legend:
   they aren't questions, and their `VAKT:` label already names them.
 - **A page number** in the top right corner.

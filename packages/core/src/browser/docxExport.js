@@ -60,9 +60,9 @@ import {
 } from "../lessonLayout.js";
 import {
   ANSWER_GAP,
-  QUESTION_LEGEND,
   QUESTION_TYPE_LIST,
   questionAnswerText,
+  questionLegendFor,
   questionLegendText,
   questionMeta,
   questionStyleId,
@@ -482,10 +482,10 @@ function titleParagraphs(doc, meta) {
   return paragraphs;
 }
 
-// The page footer: the copyright line, then the legend naming every question
-// type in its own colour. The legend is what makes the colour coding above it
-// readable, so it repeats on every page.
-function pageFooter(meta) {
+// The page footer: the copyright line, then the legend naming each question
+// type the lesson uses in its own colour (questionLegendFor). The legend is
+// what makes the colour coding above it readable, so it repeats on every page.
+function pageFooter(meta, legendTypes) {
   const children = [];
 
   const copyright = lessonCopyright(meta);
@@ -500,7 +500,7 @@ function pageFooter(meta) {
   }
 
   const legend = [];
-  QUESTION_LEGEND.forEach((type, i) => {
+  legendTypes.forEach((type, i) => {
     if (i > 0) {
       legend.push(
         new TextRun({ text: LEGEND_SEPARATOR, size: 16, color: "555555" }),
@@ -518,9 +518,11 @@ function pageFooter(meta) {
       }),
     );
   });
-  children.push(
-    new Paragraph({ alignment: AlignmentType.CENTER, children: legend }),
-  );
+  if (legend.length) {
+    children.push(
+      new Paragraph({ alignment: AlignmentType.CENTER, children: legend }),
+    );
+  }
 
   return new Footer({ children });
 }
@@ -660,7 +662,7 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
           },
         },
         headers: { default: pageHeader() },
-        footers: { default: pageFooter(meta) },
+        footers: { default: pageFooter(meta, questionLegendFor(doc)) },
         children,
       },
     ],

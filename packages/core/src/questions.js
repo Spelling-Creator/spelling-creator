@@ -33,10 +33,11 @@ export const QUESTION_TYPES = {
     short: "Suggested",
     description: "Answers bounded by the topic; the key only suggests",
     // The same amber as `multiple`, because these two are one pedagogical
-    // family — the semi-open questions, which the S2C guidebook describes as a
+    // family: the semi-open questions, which this app's default treats as a
     // spectrum from tight (a finite answer set the passage states) to less
     // tight (bounded by the topic, but open to improvisation), all formatted in
-    // the one colour.
+    // the one colour. The family is the app's own default, not a rule from any
+    // one method; see the Open Spelling Lesson Format's open question on it.
     color: "#d68f00",
     // Which leaves nothing to tell them apart where the colour is the only
     // marking — the printed lesson and its footer legend. So the loose end is
@@ -120,6 +121,28 @@ export const QUESTION_LEGEND = [
  * carries a shorter legend name of its own (only `wyr` does today). */
 export function questionLegendText(type) {
   return (type.legend || type.label).toUpperCase();
+}
+
+/**
+ * The legend entries a printed lesson needs: QUESTION_LEGEND's order, cut down
+ * to the types the lesson actually asks. A legend naming eight types under a
+ * lesson that uses five explains three colours the reader will never see, and
+ * crowds the one footer line the eight only just fit on.
+ *
+ * Unknown types count as `open`, the same fallback questionMeta applies when
+ * colouring the prompt, so the legend always names the colour that was printed.
+ * @param {{ sections?: Array<{ blocks?: any[] }> }} doc
+ * @returns {typeof QUESTION_LEGEND}
+ */
+export function questionLegendFor(doc) {
+  const used = new Set();
+  for (const section of doc?.sections || []) {
+    for (const block of section?.blocks || []) {
+      if (block?.type === "question")
+        used.add(questionMeta(block.questionType).key);
+    }
+  }
+  return QUESTION_LEGEND.filter((type) => used.has(type.key));
 }
 
 // ---------------------------------------------------------------------------

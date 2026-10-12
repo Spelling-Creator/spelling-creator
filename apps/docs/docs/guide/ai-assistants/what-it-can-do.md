@@ -43,8 +43,10 @@ standards:
   footnotes unless you ask for them.
 
 These are defaults, not rules. Spelling is practiced in many different ways (see
-[What is Spelling Creator](../../intro.md)), and no single approach is the standard one. Some of these conventions come from one particular source:
-the idea of semi-open questions follows the S2C (Spelling to Communicate) guidebook. If you work differently, just say so. Ask for four sections, a
+[What is Spelling Creator](../../intro.md)), and no single approach is the standard one. The
+question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format);
+the counts and order are the app's own. If you work differently, just say so. Ask for four sections, a
 different mix of questions, longer passages or a different order, and the assistant will
 write it that way.
 

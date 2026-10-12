@@ -11,15 +11,16 @@ scan a lesson and see its questions at a glance.
 
 ## The types are defaults, not rules
 
-The eight types and their colors are the app's defaults. The idea of
-"semi-open" questions (the two amber types below) comes from the S2C guidebook
-published for Spelling to Communicate. Spelling practices differ,
-and plenty of practitioners ask questions their own way, so use the types as
-they suit you. The editor doesn't require a set number of each or any
-particular order. The [lesson checks](./lesson-checks.md) do follow the app's
-lesson standard (for example, they expect a **Single answer** question's answer
-to appear word for word in the passage), so expect them to flag lessons that
-use the types differently.
+The eight types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+(OSLF), an open vocabulary for Spelling lessons that isn't tied to any one
+method and that anyone can comment on. The colors are the app's defaults.
+Spelling practices differ, and plenty of practitioners ask questions their own
+way, so use the types as they suit you. The editor doesn't require a set
+number of each or any particular order. The [lesson checks](./lesson-checks.md)
+do follow the app's lesson standard (for example, they expect a **Single
+answer** question's answer to appear word for word in the passage), so expect
+them to flag lessons that use the types differently.
 
 | Type                     | Color           | What it's for                                                                    |
 | ------------------------ | --------------- | -------------------------------------------------------------------------------- |
@@ -65,8 +66,9 @@ options: "Would you rather watch an opera or a movie?". It's about opinion,
 not understanding the passage, so like **Paraphrase** and **Open ended** it has
 no stored answer. It prints in grape, and the wording itself ("Would you
 rather...") makes the type clear even if the color is hard to tell on paper.
-The legend at the foot of each page shortens it to **W.Y.R.** so all eight
-types fit on one line.
+The legend at the foot of each page shortens it to **W.Y.R.** so a lesson that
+uses all eight types still fits on one line. The legend only lists the types a
+lesson uses, so it only appears there when the lesson has one.
 
 ## Question numbers
 

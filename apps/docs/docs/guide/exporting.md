@@ -48,9 +48,11 @@ outline of the editor:
   into a **Notes** list near the end. The lesson's **Sources** come last (see
   [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
 - **A footer on every page**: a copyright line with the author's name, above a
-  legend naming each question type in its own color. The legend shortens
-  **Would you rather** to **W.Y.R.** so it fits on one line. VAKT activities
-  aren't in the legend, since they aren't questions.
+  legend naming each question type the lesson uses in its own color. Types the
+  lesson doesn't ask are left out, so a lesson without **Would you rather**
+  questions has no W.Y.R. entry. The legend shortens **Would you rather** to
+  **W.Y.R.** so a lesson that uses every type still fits on one line. VAKT
+  activities aren't in the legend, since they aren't questions.
 - **A page number** in the top right corner.
 
 ## Opening an exported lesson again

@@ -85,10 +85,12 @@ reveal:
 working is not one of them; it stays a numbered list below), and
 `hasRevealableAnswers(steps)` decides whether the toggle is rendered at all.
 
-The two semi-open types share a color and an `answers` list because the S2C
-guidebook treats them as one family (see the comment in
-`packages/core/src/questions.js`). That grouping is the app's default, taken from
-one source; other Spelling practitioners categorize questions differently.
+The two semi-open types share a color and an `answers` list because the app's
+default treats them as one family (see the comment in
+`packages/core/src/questions.js`). Other Spelling practitioners categorize
+questions differently, and the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+lists the loose end as an open question.
 `suggested` is what tells the two apart, and it
 travels with the answers so the person looking at the reveal doesn't have to
 remember the question type.

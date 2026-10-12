@@ -12,6 +12,7 @@ import {
   QUESTION_TYPE_LIST,
   createQuestionBlock,
   questionAnswerText,
+  questionLegendFor,
   questionLegendText,
   questionMeta,
   questionStyleClass,
@@ -185,6 +186,36 @@ describe("the footer legend", () => {
     );
     expect(QUESTION_TYPES.multiple_open.italic).toBe(true);
     expect(QUESTION_TYPES.multiple.italic).toBeUndefined();
+  });
+
+  // The printed legend explains the colours on the page, so it lists the types
+  // the lesson asks and nothing else, in the legend's own order rather than the
+  // order the lesson happened to ask them in.
+  it("lists only the types a lesson uses, in legend order", () => {
+    const question = (questionType) => ({ type: "question", questionType });
+    const doc = {
+      sections: [
+        { blocks: [question("open"), { type: "text", text: "" }] },
+        { blocks: [question("single"), question("open"), question("wyr")] },
+      ],
+    };
+    expect(questionLegendFor(doc).map((q) => q.key)).toEqual([
+      "single",
+      "wyr",
+      "open",
+    ]);
+  });
+
+  it("names the colour an unknown type was printed in", () => {
+    const doc = {
+      sections: [{ blocks: [{ type: "question", questionType: "mystery" }] }],
+    };
+    expect(questionLegendFor(doc).map((q) => q.key)).toEqual(["open"]);
+  });
+
+  it("is empty for a lesson with no questions", () => {
+    expect(questionLegendFor({ sections: [{ blocks: [] }] })).toEqual([]);
+    expect(questionLegendFor(undefined)).toEqual([]);
   });
 });
 

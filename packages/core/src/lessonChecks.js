@@ -65,10 +65,10 @@ const ORANGE_MAX_ANSWERS = 4;
 // The two orange types, and the line every check below has to decide which side
 // of it falls on.
 //
-// The guidebook calls both SEMI-OPEN — questions with several known or
-// semi-known answers rooted in the text — and describes them as a spectrum from
-// tight to less tight, all printed orange. They are two types rather than one
-// with a flag because `answers` means opposite things at the two ends:
+// Both are SEMI-OPEN questions (several known or semi-known answers rooted in
+// the text), which the app's default treats as a spectrum from tight to less
+// tight, all printed orange. They are two types rather than one with a flag
+// because `answers` means opposite things at the two ends:
 //
 //   `multiple`      TIGHT. `answers` is the exhaustive accepted set, and it is
 //                   every item of one explicit list the passage states. Held to
@@ -1017,7 +1017,7 @@ export function validateLesson(doc) {
         );
       }
 
-      // The guidebook orders the semi-open questions TIGHT then LESS TIGHT, so a
+      // The default orders the semi-open questions TIGHT then LESS TIGHT, so a
       // section that mixes the two puts `multiple` first. Only a warning, and
       // only for a genuine inversion: the ordering is a convention about
       // increasing openness, not a rule about which types a section may hold.

@@ -52,8 +52,8 @@ For the full list, see [What an assistant can do](./what-it-can-do.md).
   version.
 - **It is held to the lesson checks.** The assistant follows the same rules the
   editor's [lesson checks](../lesson-checks.md) use, so its lessons arrive in
-  the shape the app expects. Those rules are defaults drawn from one way of
-  doing Spelling (some come from the S2C guidebook), not the only way. If you
+  the shape the app expects. Those rules are the app's defaults, not the only
+  way of doing Spelling. If you
   want something they rule out, such as a lesson with fewer sections or a
   different question order, say so and the assistant can save it anyway; in
   assistants that can ask you directly, it lists what would be skipped and

@@ -25,14 +25,14 @@ Many practitioners, parents and communication partners don't follow any one of
 these by name, and mix ideas from several. There is no single standard for how
 a lesson should look, how long answers should be, or how questions are marked.
 
-Spelling Creator tries to fit all of this. Some of its defaults come from a
-particular source (treating the two "semi-open" question types as one family,
-for example, follows the S2C guidebook), and the guide says so where that's the
-case. The rest, like the question colors and the usual lesson shape, are simply
-this app's choices. Treat every default as
-a starting point. The lesson checks and the AI helpers make suggestions, not
-rules, and you can change or ignore anything to suit how you and your speller
-work.
+Spelling Creator tries to fit all of this. Its question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+(OSLF), an open, method-neutral vocabulary for the parts of a lesson that
+anyone can read, comment on and build tools against. The rest, like the
+question colors and the usual lesson shape, are simply this app's choices.
+Treat every default as a starting point. The lesson checks and the AI helpers
+make suggestions, not rules, and you can change or ignore anything to suit how
+you and your speller work.
 
 ## Where to go next
 

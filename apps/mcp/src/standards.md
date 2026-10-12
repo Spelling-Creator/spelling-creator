@@ -5,9 +5,9 @@ Defaults: honor the user if they ask for something different.
 "Spelling" is an umbrella term, not one method. It covers Spelling to Communicate (S2C), the Rapid
 Prompting Method (RPM), Spellers Method and many practitioners who use no label at all, and their
 practices are not standardized. Never describe these lessons as S2C lessons or tell the user what
-"the" method requires. The standards below are this app's defaults (the semi-open question family
-comes from the S2C guidebook; the rest is this app's own house style); when a user works
-differently, follow them.
+"the" method requires. The standards below are this app's defaults: the question types follow the
+Open Spelling Lesson Format (OSLF), a method-neutral vocabulary for Spelling lessons, and the
+counts and order are this app's own house style. When a user works differently, follow them.
 
 ## Shape
 
@@ -199,20 +199,24 @@ becoming a tic).
 
 ### 13-15 · `open` (pink)
 
-3 EXTENDED OPENS: full-sentence responses, e.g. "In your own words, explain..." / "...Defend your
-answer." / "...Explain your thinking." The very last question of the whole lesson should look back
+3 EXTENDED OPENS: full-sentence responses asking for the speller's own reasoning, opinion or
+imagination, e.g. "Why do you think...?" / "...Defend your answer." / "...Explain your thinking." /
+"If you could..., what would you...?". The very last question of the whole lesson should look back
 across all sections, e.g. "Of the six parts of this lesson, which idea did you find most
 astonishing? Defend your answer."
+
+An extended open is NOT "In your own words, explain..." or "Summarize...": those ask the speller to
+retell the passage, which is a `paraphrase` question (below), not an opinion.
 
 "open" questions carry no answer, answers, or exampleAnswer field at all — just the "prompt".
 
 ### `paraphrase` (brown)
 
-A `paraphrase` question asks the speller to restate the section's passage in their own words
-("In your own words, explain why..." / "In your own words, describe..."). It is the one extended
-open whose job is comprehension of the passage itself rather than opinion about it, which is why it
-prints in its own colour. Like `open`, it carries no answer, answers, or exampleAnswer field —
-just the "prompt".
+A `paraphrase` question asks the speller to restate the section's passage, or part of it, in their
+own words ("In your own words, explain why..." / "In your own words, describe..." / "Summarize how
+..."). Its job is comprehension of the passage itself rather than opinion about it, which is why it
+prints in its own colour and is never written as an `open` question. Like `open`, it carries no
+answer, answers, or exampleAnswer field — just the "prompt".
 
 The default section shape above still asks for 3 `open` extended opens; a `paraphrase` may be used
 in place of the first of them where a section wants the distinction drawn explicitly.

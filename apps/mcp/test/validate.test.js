@@ -576,7 +576,7 @@ test("an orange question outside 2-4 answers warns without blocking", () => {
 // question the standard asks for: a synonym is not in the passage, and a
 // definition has no list behind it. So the cases worth having are mostly proof
 // that each of those checks stays quiet — a false positive here doesn't merely
-// annoy, it forbids a type the guidebook endorses.
+// annoy, it forbids a type the standard endorses.
 
 // Turn a section's second orange question into the loose kind, which is where
 // the standard puts it when a section has one.

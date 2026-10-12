@@ -65,11 +65,11 @@ keep answers short: spelling words of 6 to 9 letters, single words for the
 answers to a multiple answers question, and one word answers for the first few
 open ended questions.
 
-The idea of "semi-open" questions (the two orange types, **Multiple answers**
-and **Suggested answers**) comes from the S2C (Spelling to Communicate)
-guidebook. The colors and the usual lesson shape (six sections, four spelling
-words a section and fifteen questions in a set order) are the app's own
-defaults.
+The question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+an open vocabulary for Spelling lessons that isn't tied to any one method. The
+colors and the usual lesson shape (six sections, four spelling words a section
+and fifteen questions in a set order) are the app's own defaults.
 
 Practitioners who follow a different Spelling practice, or none in particular,
 may well make different choices. That's fine. Ignore any suggestion that

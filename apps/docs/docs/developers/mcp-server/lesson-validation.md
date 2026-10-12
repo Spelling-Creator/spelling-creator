@@ -30,9 +30,9 @@ same thing.
 The standard is the app's default house style, and `standards.md` says so in its first
 line: the assistant follows it unless the user asks for something different, and
 `skipValidation` (below) is how a write gets past the errors when they do. It is not a
-statement of how Spelling has to be done. Practices vary, and some of its conventions come
-from one source in particular (the semi-open idea follows the S2C guidebook; see the comment
-in `packages/core/src/questions.js`).
+statement of how Spelling has to be done. Practices vary. The question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format);
+the counts and order are the app's own.
 
 The checks live in core rather than in the MCP server because the web editor runs them
 too, as the author types (`useLessonChecks` in `apps/web/src/lib/lessonChecks.js`): see
@@ -51,12 +51,14 @@ fixture so the `params` are exercised too.
 Nearly every check below that reads the passage belongs to **`multiple`**, the tight of the
 two semi-open types. None of them run on **`multiple_open`**.
 
-The S2C guidebook, which is where the default standard takes this from, describes
-semi-open questions as a spectrum: tight ("Name a cardinal direction": a finite answer set
-the text establishes) through less tight ("Give a synonym for gratitude": bounded by the
-topic, but open to improvisation). Both print orange (the same amber, with
-`multiple_open` set in italic so a scorer can tell them apart). They are two types rather than one type with a flag because `answers` means
-opposite things at the two ends:
+The default standard treats semi-open questions as a spectrum: tight ("Name a cardinal
+direction": a finite answer set the text establishes) through less tight ("Give a synonym
+for gratitude": bounded by the topic, but open to improvisation). Whether the loose end is
+really a semi-open question is an open question in the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+which keeps it as a provisional "suggested" answer key. Both print orange (the same amber,
+with `multiple_open` set in italic so a scorer can tell them apart). They are two types
+rather than one type with a flag because `answers` means opposite things at the two ends:
 
 |                             | `multiple` | `multiple_open` |
 | --------------------------- | ---------- | --------------- |

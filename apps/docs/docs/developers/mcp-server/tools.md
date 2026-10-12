@@ -419,10 +419,10 @@ property list and matching live in `packages/core/src/factCheck.js`).
 The authoring standard lives in `apps/mcp/src/standards.md` and opens by calling itself a
 set of defaults the assistant should drop when the user asks for something different. It is
 the app's own house style for a lesson, not a description of how Spelling must be done:
-practices vary between practitioners, and some conventions in it come from one particular
-source. The idea of "semi-open" questions, for example, follows the S2C guidebook (see the
-comment in `packages/core/src/questions.js`); other practitioners organize questions
-differently. The colors themselves and the lesson shape are the app's own choices.
+practices vary between practitioners. The question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+a method-neutral vocabulary for lessons; the colors and the lesson shape are the app's own
+choices.
 
 By default, the assistant builds **6 sections**, each one an optional image, 2 text
 paragraphs, 4 spelling words, and 15 questions in a fixed order, covering

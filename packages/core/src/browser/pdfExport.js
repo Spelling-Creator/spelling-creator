@@ -25,8 +25,8 @@ import {
   lessonCopyright,
 } from "../lessonLayout.js";
 import {
-  QUESTION_LEGEND,
   QUESTION_TYPE_LIST,
+  questionLegendFor,
   questionLegendText,
   questionStyleClass,
   questionStyleMap,
@@ -253,15 +253,15 @@ function hexToRgb(color) {
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
 
-// The legend naming every question type in its own colour, centred on `y`.
-// Drawn segment by segment because each entry needs its own colour, so the line
-// has to be measured first to know where to start.
-function drawLegend(pdf, centerX, y) {
+// The legend naming each question type the lesson uses in its own colour,
+// centred on `y`. Drawn segment by segment because each entry needs its own
+// colour, so the line has to be measured first to know where to start.
+function drawLegend(pdf, centerX, y, legendTypes) {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
 
   const parts = [];
-  QUESTION_LEGEND.forEach((type, i) => {
+  legendTypes.forEach((type, i) => {
     if (i > 0) parts.push({ text: LEGEND_SEPARATOR, rgb: [110, 110, 110] });
     parts.push({
       text: questionLegendText(type),
@@ -292,7 +292,7 @@ function drawLegend(pdf, centerX, y) {
 // The page number (top right) and the footer, on every page — the furniture
 // html2pdf doesn't carry over from the docx's own header and footer, since
 // mammoth converts only the document body.
-function drawPageFurniture(pdf, meta) {
+function drawPageFurniture(pdf, meta, legendTypes) {
   const copyright = lessonCopyright(meta);
   const pageCount = pdf.internal.getNumberOfPages();
 
@@ -314,7 +314,9 @@ function drawPageFurniture(pdf, meta) {
         align: "center",
       });
     }
-    drawLegend(pdf, PAGE_WIDTH / 2, PAGE_HEIGHT - 20);
+    if (legendTypes.length) {
+      drawLegend(pdf, PAGE_WIDTH / 2, PAGE_HEIGHT - 20, legendTypes);
+    }
   }
 }
 
@@ -402,7 +404,7 @@ export async function exportPdf(doc, meta = {}) {
       // the docx's own header/footer never reach mammoth.
       .toPdf()
       .get("pdf")
-      .then((pdf) => drawPageFurniture(pdf, meta))
+      .then((pdf) => drawPageFurniture(pdf, meta, questionLegendFor(doc)))
       .save();
   } finally {
     window.document.body.removeChild(offscreen);
