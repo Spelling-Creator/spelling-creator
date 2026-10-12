@@ -44,6 +44,7 @@ import {
 import {
   ANSWER_GAP,
   questionAnswerItems,
+  questionLegendFor,
   questionMeta,
 } from "@spelling-creator/core/questions";
 import {
@@ -146,6 +147,22 @@ const LESSON_STYLES = `
     color: var(--muted-foreground);
     margin-right: 0.5em;
   }
+  /* The legend under the lesson, the page footer's on screen: each tag the
+     lesson uses next to its type's name, in that type's colour. */
+  .s2c-lesson-root .s2c-legend {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .s2c-lesson-root .s2c-legend dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0;
+  }
+  .s2c-lesson-root .s2c-legend div { display: flex; gap: 0.5em; }
+  .s2c-lesson-root .s2c-legend dt { font-weight: 600; }
+  .s2c-lesson-root .s2c-legend dd { margin: 0; }
   .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
   .s2c-lesson-root sup.s2c-fn a {
     color: var(--primary);
@@ -363,11 +380,11 @@ function ImageBlock({ block, si, bi, translation }) {
 // A question reads the way it prints: the type's tag, the prompt in the colour
 // of its type, then its answer in the body colour on the same line, so this
 // matches the exported lesson exactly. The tag is what marks the type for a
-// reader who can't tell the colours apart; the legend in the app's chrome
-// explains it. The answers translate one accepted answer at a time and are
-// joined back here,
-// so the wide gaps separating them never pass through a model (see
-// questionAnswerItems); untranslated, the join is questionAnswerText verbatim.
+// reader who can't tell the colours apart; the Legend under the lesson
+// explains it, and hovering the tag names the type too. The answers translate
+// one accepted answer at a time and are joined back here, so the wide gaps
+// separating them never pass through a model (see questionAnswerItems);
+// untranslated, the join is questionAnswerText verbatim.
 function QuestionBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
   const meta = questionMeta(block.questionType);
@@ -381,7 +398,7 @@ function QuestionBlock({ block, si, bi, translation }) {
   return (
     <>
       <p>
-        <span className="s2c-tag" aria-label={meta.label}>
+        <span className="s2c-tag" title={meta.label}>
           {meta.tag}
         </span>
         <span
@@ -552,7 +569,31 @@ export default function LessonView({ doc, translation }) {
         </section>
       ))}
       <EndMatter doc={doc} translation={translation} />
+      <Legend doc={doc} />
     </div>
+  );
+}
+
+// The same legend the printed lesson carries in its page footer: the tag of
+// every question type the lesson uses, with the type's name in its colour.
+// Nothing for a lesson with no questions, as in print.
+function Legend({ doc }) {
+  const { t } = useTranslation("lesson");
+  const types = questionLegendFor(doc);
+  if (!types.length) return null;
+  return (
+    <aside className="s2c-legend" aria-label={t("lessonView.legendLabel")}>
+      <dl>
+        {types.map((type) => (
+          <div key={type.key}>
+            <dt>{type.tag}</dt>
+            <dd className="s2c-label" style={{ "--s2c-label": type.color }}>
+              {type.legend || type.label}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </aside>
   );
 }
 

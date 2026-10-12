@@ -129,7 +129,7 @@ for every document already exported.
 
 That is also how **import** recovers a question's type: `docxImport` asks
 mammoth for the same style map and reads the type off the
-`<span class="s2c-q-…">`, the prompt off that span's text and the answer off
+`<span class="s2c-q-<type>">`, the prompt off that span's text and the answer off
 what follows it. The tag's own span sits before all of that, so it is never
 read as part of the prompt. (Text pasted from a printed lesson into
 [Document import](./document-import.md) does carry the tag as plain text;

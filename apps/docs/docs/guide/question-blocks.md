@@ -92,7 +92,8 @@ who can't tell the colors apart; the color (and the italic on **Suggested
 answers**) does the same job for everyone else. The legend at the foot of
 every page lists each tag with its type's name, in that type's color (see
 [Exporting & printing](./exporting.md)). The lesson page shows the same tags
-on screen.
+on screen, with the same legend under the lesson, and hovering a tag names
+its type.
 
 A question without an answer, and the types with no stored answer
 (**Paraphrase**, **Open ended** and **Would you rather**), print as the question
