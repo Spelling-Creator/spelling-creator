@@ -216,7 +216,26 @@ function buildQuestionBlock(block, where) {
           `${where}: a ${questionType} question needs a non-empty "answers" array of strings.`,
         );
       }
-      return { ...base, answers };
+      const out = { ...base, answers };
+      if (questionType !== "multiple") return out;
+      // The three-board mark and the Besides line belong to the tight type
+      // alone: a Besides line names one accepted answer and asks for another,
+      // which only means something when the list is the whole key.
+      if (block.threeBoard === true) out.threeBoard = true;
+      if (block.besides != null && block.besides !== "") {
+        const besides = String(block.besides).trim();
+        const named = answers.find(
+          (a) => a.text.toLowerCase() === besides.toLowerCase(),
+        );
+        if (!named) {
+          throw new Error(
+            `${where}: "besides" must be one of the question's own answers ` +
+              `(${answers.map((a) => a.text).join(", ")}), not "${besides}".`,
+          );
+        }
+        out.besides = named.text;
+      }
+      return out;
     }
 
     // A tight open may carry a few examples of what would count. They are

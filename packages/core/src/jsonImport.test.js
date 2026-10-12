@@ -15,6 +15,45 @@ const sections = [
   },
 ];
 
+describe("three-board questions in a lesson file", () => {
+  const multiple = (fields) => ({
+    id: "q1",
+    type: "question",
+    questionType: "multiple",
+    prompt: "Name one.",
+    answers: [
+      { id: "a1", text: "ROCKS" },
+      { id: "a2", text: "REEFS" },
+    ],
+    ...fields,
+  });
+  const read = (block) =>
+    normalizeLessonFile({
+      title: "T",
+      sections: [{ id: "s1", name: "S", blocks: [block] }],
+    }).sections[0].blocks[0];
+
+  it("keeps the three-board mark and a Besides answer the list has", () => {
+    const block = read(multiple({ threeBoard: true, besides: "reefs" }));
+    expect(block.threeBoard).toBe(true);
+    // Spelled the way the answer list spells it.
+    expect(block.besides).toBe("REEFS");
+  });
+
+  it("drops a Besides answer the list no longer has, and both from other types", () => {
+    expect("besides" in read(multiple({ besides: "GRAVEL" }))).toBe(false);
+    const loose = read(
+      multiple({
+        questionType: "multiple_open",
+        threeBoard: true,
+        besides: "ROCKS",
+      }),
+    );
+    expect("threeBoard" in loose).toBe(false);
+    expect("besides" in loose).toBe(false);
+  });
+});
+
 describe("lesson file age range", () => {
   it("survives an export and import round trip", () => {
     const file = buildLessonFile({

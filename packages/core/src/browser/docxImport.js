@@ -25,8 +25,12 @@
 import mammoth from "mammoth";
 import { newId } from "../id.js";
 import {
+  BESIDES_LINE_CLASS,
   EXAMPLE_ANSWER_PREFIX,
+  QUESTION_TAG_STYLE_CLASS,
   QUESTION_TYPE_LIST,
+  THREE_BOARD_MARK,
+  besidesStyleMap,
   questionStyleClass,
   questionStyleMap,
   questionTagStyleMap,
@@ -93,6 +97,7 @@ const IMPORT_STYLE_MAP = [
   // its own: matchQuestion reads the prompt off the question span and the
   // answer off what follows it, and the tag sits before both.
   ...questionTagStyleMap(),
+  ...besidesStyleMap(),
   `p[style-name='${SOURCES_HEADING_STYLE_NAME}'] => p.${SOURCES_HEADING_CLASS}:fresh`,
   `p[style-name='${SOURCE_ENTRY_STYLE_NAME}'] => p.${SOURCE_ENTRY_CLASS}:fresh`,
   `p[style-name='${CAPTION_STYLE_NAME}'] => p.${CAPTION_CLASS}:fresh`,
@@ -591,7 +596,24 @@ function matchQuestion(el) {
   for (let node = span.nextSibling; node; node = node.nextSibling) {
     answer += node.textContent || "";
   }
-  return { type, prompt: span.textContent.trim(), answer: answer.trim() };
+  // The three-board mark travels in the tag span in front of the prompt.
+  const tag = el.querySelector?.(`span.${QUESTION_TAG_STYLE_CLASS}`);
+  const threeBoard = Boolean(tag?.textContent?.includes(THREE_BOARD_MARK));
+  return {
+    type,
+    prompt: span.textContent.trim(),
+    answer: answer.trim(),
+    threeBoard,
+  };
+}
+
+// The Besides line printed under a three-board question: 'Besides "rocks"' in
+// its own paragraph style, then the other answers. Returns the named answer,
+// or null when the paragraph isn't one.
+function matchBesides(el) {
+  if (!el?.classList?.contains(BESIDES_LINE_CLASS)) return null;
+  const match = el.textContent.match(/^\s*Besides\s+"([^"]+)"/);
+  return match ? match[1].trim() : null;
 }
 
 function matchQuestionClass(span) {
@@ -605,9 +627,10 @@ function matchQuestionClass(span) {
 // with the prompt; only a number question's working-out spills onto the indented
 // paragraphs that follow. Returns { block, next } where `next` is the index of
 // the last node consumed (so the caller resumes after it).
-function readQuestion(nodes, i, { type, prompt, answer }) {
+function readQuestion(nodes, i, { type, prompt, answer, threeBoard }) {
   const block = { id: newId(), type: "question", questionType: type, prompt };
   let last = i;
+  if (type === "multiple" && threeBoard) block.threeBoard = true;
 
   if (type === "number") {
     block.answer = answer;
@@ -637,6 +660,19 @@ function readQuestion(nodes, i, { type, prompt, answer }) {
       .map((text) => ({ id: newId(), text }));
     if (block.answers.length === 0) {
       block.answers.push({ id: newId(), text: "" });
+    }
+    // A Besides line directly under a tight question belongs to it. It names
+    // one of the answers just read, and the rest of the line repeats the
+    // others, so only the name is kept.
+    const besides = type === "multiple" ? matchBesides(nodes[i + 1]) : null;
+    if (besides != null) {
+      const named = block.answers.find(
+        (a) => a.text.toLowerCase() === besides.toLowerCase(),
+      );
+      if (named) {
+        block.besides = named.text;
+        last = i + 1;
+      }
     }
   } else if (type === "tight_open") {
     // A tight open's examples print after "e.g.", and are optional, so an

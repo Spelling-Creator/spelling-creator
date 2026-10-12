@@ -41,6 +41,10 @@ export interface QuestionBlock {
   id: string;
   type: "question";
   questionType: QuestionType;
+  /** `multiple` only: printed "(3B)" in front of the question. */
+  threeBoard?: boolean;
+  /** `multiple` only: the accepted answer a Besides line names. */
+  besides?: string;
   prompt: string;
   answer?: string;
   answers?: TextItem[];

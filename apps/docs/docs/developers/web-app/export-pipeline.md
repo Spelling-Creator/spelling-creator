@@ -101,6 +101,14 @@ editor:
   asks every renderer never to rely on color alone, and these are its default
   tags. **Suggested answers** shares the amber and the `SO` tag of **Multiple
   answers** and is set in italic to separate them.
+- **Three-board questions**: a `multiple` question with `threeBoard` prints
+  `(3B)` inside its tag run (`SO (3B)`), and one with a `besides` answer gets
+  a **Besides line** under it: `Besides "rocks"` in the question's amber, then
+  the other accepted answers in black, indented like working. The line has a
+  paragraph style of its own (`S2C Besides Line`, `BESIDES_LINE_CLASS`) so
+  the importer attaches it to the question above instead of reading a new
+  one. `questionBesides` and `besidesAnswers` in `questions.js` decide both
+  halves, and return nothing when the named answer is no longer in the list.
 - **Spelling words on one running line**, `Spell:` followed by the words as
   typed, separated by the same `ANSWER_GAP` as multiple answers.
 - **A footer on every page**: the copyright line above a legend naming each

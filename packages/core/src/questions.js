@@ -182,6 +182,78 @@ export function resolveOpenType(block) {
   return words > TIGHT_OPEN_MAX_WORDS ? "broad_open" : "tight_open";
 }
 
+// ---------------------------------------------------------------------------
+// Three-board semi-opens.
+//
+// A `multiple` question can be marked for the three boards (the lesson prints
+// "(3B)" in front of it), and can carry a "Besides" line: a follow-up printed
+// under the question that names one of its answers and asks for another
+// ('Besides "rocks"' leaves REEFS and SANDBARS). Both are the Open Spelling
+// Lesson Format's `threeBoard` and `besides`, stored under the same names.
+// What the three-board mark asks of the speller is the format's own open
+// question; this app records it and prints it, and defines nothing more.
+// ---------------------------------------------------------------------------
+
+/** What a printed lesson writes in front of a three-board question. */
+export const THREE_BOARD_MARK = "(3B)";
+
+/** The word a Besides line opens with, in print. */
+export const BESIDES_LABEL = "Besides";
+
+/** Whether a block carries the three-board mark. Only a `multiple` can. */
+export function isThreeBoard(block) {
+  return block?.questionType === "multiple" && block.threeBoard === true;
+}
+
+/**
+ * The answer a block's Besides line names, as the answer list spells it, or
+ * null when the block has no Besides line or names an answer that is no
+ * longer in the list (an answer edited or removed after the line was set).
+ * Matched without regard to case, as the format compares answers.
+ * @param {object} block
+ * @returns {string|null}
+ */
+export function questionBesides(block) {
+  if (block?.questionType !== "multiple") return null;
+  const wanted = String(block.besides ?? "")
+    .trim()
+    .toLowerCase();
+  if (!wanted) return null;
+  const match = (block.answers || [])
+    .map((a) => (typeof a === "string" ? a : a?.text) || "")
+    .map((text) => text.trim())
+    .find((text) => text && text.toLowerCase() === wanted);
+  return match ?? null;
+}
+
+/**
+ * What a Besides line asks for: every accepted answer but the one it names.
+ * Empty when the block has no usable Besides line.
+ * @param {object} block
+ * @returns {string[]}
+ */
+export function besidesAnswers(block) {
+  const named = questionBesides(block);
+  if (named == null) return [];
+  return questionAnswerItems(block).filter(
+    (text) => text.toLowerCase() !== named.toLowerCase(),
+  );
+}
+
+// The Besides line gets a Word paragraph style of its own, so the DOCX
+// importer can attach it to the question above it rather than read it as a
+// question in its own right, and so the PDF can indent it.
+export const BESIDES_LINE_STYLE_ID = "s2cBesidesLine";
+export const BESIDES_LINE_STYLE_NAME = "S2C Besides Line";
+export const BESIDES_LINE_CLASS = "s2c-besides-line";
+
+/** The mammoth style-map entry turning the Besides style back into a class. */
+export function besidesStyleMap() {
+  return [
+    `p[style-name='${BESIDES_LINE_STYLE_NAME}'] => p.${BESIDES_LINE_CLASS}:fresh`,
+  ];
+}
+
 // The two semi-open types, in the order a section asks them (tight first). They
 // share a colour and an `answers` list, and differ in what that list means: for
 // `multiple` it is the complete set of accepted answers, drawn from a list the

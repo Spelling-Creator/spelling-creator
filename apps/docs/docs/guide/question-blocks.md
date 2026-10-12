@@ -92,6 +92,24 @@ guide.
 In the editor every question has a label naming its type, so there's no italic
 there. The help text under the answer rows also says which kind it is.
 
+## Three-board questions
+
+A **Multiple answers** question has two extras, both off unless you turn them
+on:
+
+- **Three-board (3B)** marks the question for the three boards. It prints
+  "(3B)" after the tag, in front of the question, and changes nothing else.
+- A **Besides line** is a follow-up printed under the question. Pick one of
+  the question's own answers and the line reads 'Besides "rocks"' followed by
+  the other accepted answers, asking the speller for one of those. If you
+  later change or remove the answer you picked, the picker goes back to
+  **None** and no line prints.
+
+Both are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+`threeBoard` and `besides`. What the three-board mark asks of the speller is
+one of the format's open questions, so the app records and prints it without
+defining it further.
+
 ## Would you rather
 
 A **Would you rather** question offers the speller a choice between two

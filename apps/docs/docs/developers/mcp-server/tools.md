@@ -460,7 +460,10 @@ A lesson is **sections** of **blocks**. Block types:
   - `number` takes `answer` (numeric), plus optional `steps` (array of worked-solution steps, in order)
   - `single` takes `answer` (one text answer)
   - `multiple` takes `answers` (array of accepted answers: the items of a list the passage
-    states explicitly, with the prompt quoting that sentence with the list blanked out)
+    states explicitly, with the prompt quoting that sentence with the list blanked out).
+    Optionally `threeBoard: true` (printed "(3B)") and `besides`, one of its own answers,
+    which prints a 'Besides "..."' follow-up line under the question; a `besides` that isn't
+    one of the answers is refused by `buildDoc`
   - `multiple_open` takes `answers` (array of **suggested** answers for the looser semi-open
     question: a synonym, a definition, anything bounded by the topic. The key is a guide,
     not a match target: the speller need not produce one of them, and the answers are held

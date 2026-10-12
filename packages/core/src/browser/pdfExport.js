@@ -25,8 +25,10 @@ import {
   lessonCopyright,
 } from "../lessonLayout.js";
 import {
+  BESIDES_LINE_CLASS,
   QUESTION_TAG_STYLE_CLASS,
   QUESTION_TYPE_LIST,
+  besidesStyleMap,
   questionLegendFor,
   questionLegendText,
   questionStyleClass,
@@ -134,6 +136,7 @@ export function layoutImageFigures(html, embedded) {
 const STYLE_MAP = [
   ...questionStyleMap(),
   ...questionTagStyleMap(),
+  ...besidesStyleMap(),
   ...vaktStyleMap(),
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
@@ -216,6 +219,13 @@ const PRINT_STYLES = `
   /* Questions run tight against one another, the way the printed lesson sets
      them — the colour, not the spacing, is what separates one from the next. */
   .s2c-pdf-root .${QUESTION_LINE_CLASS} { margin: 0 0 1px; }
+  /* The Besides line under a three-board question, indented like its working
+     would be, in the same colour as the question it follows up. */
+  .s2c-pdf-root .${BESIDES_LINE_CLASS} {
+    margin: 0 0 1px;
+    padding-left: 24px;
+    color: ${QUESTION_TYPE_LIST.find((type) => type.key === "multiple").color};
+  }
   .s2c-pdf-root figure { margin: 0; }
   .s2c-pdf-root img {
     display: block;

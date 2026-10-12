@@ -12,8 +12,11 @@ import {
   QUESTION_TYPES,
   QUESTION_TYPE_LIST,
   QUESTION_TYPE_MENU,
+  besidesAnswers,
   createQuestionBlock,
+  isThreeBoard,
   questionAnswerText,
+  questionBesides,
   resolveOpenType,
   questionLegendFor,
   questionLegendText,
@@ -125,6 +128,45 @@ describe("questionAnswerText", () => {
     // The PDF renders the docx as HTML, which folds a run of ordinary spaces
     // down to one; the non-breaking space is what survives that.
     expect(ANSWER_GAP).toContain(" ");
+  });
+});
+
+// A Besides line names one accepted answer and asks for another. Both halves
+// come from the answer list, so a name the list no longer has means no line.
+describe("three-board questions", () => {
+  const block = (fields) => ({
+    questionType: "multiple",
+    answers: [{ text: "ROCKS" }, { text: "REEFS" }, { text: "SANDBARS" }],
+    ...fields,
+  });
+
+  it("marks only a multiple question as three-board", () => {
+    expect(isThreeBoard(block({ threeBoard: true }))).toBe(true);
+    expect(isThreeBoard(block({}))).toBe(false);
+    expect(
+      isThreeBoard({
+        ...block({ threeBoard: true }),
+        questionType: "multiple_open",
+      }),
+    ).toBe(false);
+  });
+
+  it("names the Besides answer as the list spells it, and the rest as what is asked for", () => {
+    const b = block({ besides: "rocks" });
+    expect(questionBesides(b)).toBe("ROCKS");
+    expect(besidesAnswers(b)).toEqual(["REEFS", "SANDBARS"]);
+  });
+
+  it("has no Besides line when the named answer left the list, or on another type", () => {
+    expect(questionBesides(block({ besides: "GRAVEL" }))).toBeNull();
+    expect(besidesAnswers(block({ besides: "GRAVEL" }))).toEqual([]);
+    expect(questionBesides(block({}))).toBeNull();
+    expect(
+      questionBesides({
+        ...block({ besides: "ROCKS" }),
+        questionType: "multiple_open",
+      }),
+    ).toBeNull();
   });
 });
 

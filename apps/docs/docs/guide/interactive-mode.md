@@ -79,6 +79,9 @@ the lesson open in a second window to see what the question is looking for.
   answer. Broad open, paraphrase and would you rather questions have no set
   answer, and say so ("This question has no set answer.") rather than leaving a
   gap. So does a tight open with no examples.
+- A **multiple answers** question with a Besides line shows the line under
+  the question ('Besides "rocks"'); the reveal still lists every accepted
+  answer.
 - A **suggested answers** question, and a **tight open** with examples, label
   their answers as suggestions:
   "Examples, not the only right answers. Anything that fits the topic counts."

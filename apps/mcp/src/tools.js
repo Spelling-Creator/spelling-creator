@@ -179,6 +179,21 @@ const blockSchema = z
           "Either way keep them SHORT, ideally one word — a speller pointing at a letterboard has to spell every " +
           "word, so no long evidence phrases or quotations.",
       ),
+    threeBoard: z
+      .boolean()
+      .optional()
+      .describe(
+        'For a "multiple" question: mark it for the three boards. Prints "(3B)" in front of the question. ' +
+          "Only when the user asks for three-board questions.",
+      ),
+    besides: z
+      .string()
+      .optional()
+      .describe(
+        'For a "multiple" question: a follow-up line printed under it that names ONE of its own accepted answers ' +
+          'and asks for another ("besides": "rocks" prints \'Besides "rocks"\' followed by the other answers). Must be ' +
+          "one of that question's `answers`, spelled the same way. Only when the user asks for Besides lines.",
+      ),
     steps: z
       .array(z.string())
       .optional()

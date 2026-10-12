@@ -35,6 +35,7 @@
   },
   "step": {
     "noQuestionText": "(no question text)",
+    "besides": "Besides \"{{answer}}\"",
     "yourAnswer": "Your answer",
     "answerPlaceholder": "Type your answer...",
     "imageAlt": "lesson image",

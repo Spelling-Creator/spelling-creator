@@ -298,4 +298,50 @@ describe("questions", () => {
       /<span class="s2c-q-tag"><strong>K\s+<\/strong><\/span><span class="s2c-q-single">Which island\?<\/span>\s+PHAROS/,
     );
   });
+
+  // The three-board mark rides in the tag run, and the Besides line is a
+  // paragraph of its own under the question, in its own style, so the importer
+  // can attach it to the question rather than read a second one.
+  it("prints the three-board mark in the tag and a Besides line underneath", async () => {
+    const { besidesStyleMap } = await import("../questions.js");
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const { questionStyleMap, questionTagStyleMap } =
+      await import("../questions.js");
+    const buffer = await Packer.toBuffer(
+      await buildDocument(
+        lesson([
+          {
+            id: "q1",
+            type: "question",
+            questionType: "multiple",
+            prompt: "Ships avoided ______. Name one.",
+            answers: [
+              { id: "a1", text: "ROCKS" },
+              { id: "a2", text: "REEFS" },
+              { id: "a3", text: "SANDBARS" },
+            ],
+            threeBoard: true,
+            besides: "ROCKS",
+          },
+        ]),
+      ),
+    );
+    const { value: out } = await mammoth.convertToHtml(
+      { buffer },
+      {
+        styleMap: [
+          ...questionStyleMap(),
+          ...questionTagStyleMap(),
+          ...besidesStyleMap(),
+        ],
+      },
+    );
+    expect(out).toMatch(
+      /<span class="s2c-q-tag"><strong>SO \(3B\)\s+<\/strong><\/span><span class="s2c-q-multiple">Ships avoided/,
+    );
+    expect(out).toMatch(
+      /<p class="s2c-besides-line">Besides "ROCKS"\s+REEFS\s+SANDBARS<\/p>/,
+    );
+  });
 });

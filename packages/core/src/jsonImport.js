@@ -7,7 +7,7 @@
 
 import { AGE_RANGES } from "./ageRanges.js";
 import { newId } from "./id.js";
-import { QUESTION_TYPES } from "./questions.js";
+import { QUESTION_TYPES, questionBesides } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
 import { isSafeLink } from "./richText.js";
@@ -287,7 +287,16 @@ function normalizeQuestion(block) {
         .map(normalizeTextItem)
         .filter(Boolean);
       if (answers.length === 0) answers.push({ id: newId(), text: "" });
-      return { ...base, answers };
+      const out = { ...base, answers };
+      // The three-board mark and the Besides line, on the tight type only. A
+      // Besides line naming an answer the list doesn't have is dropped rather
+      // than carried: it would print nothing and confuse the editor's picker.
+      if (block.questionType === "multiple") {
+        if (block.threeBoard === true) out.threeBoard = true;
+        const besides = questionBesides({ ...out, besides: block.besides });
+        if (besides != null) out.besides = besides;
+      }
+      return out;
     }
     // A tight open's examples are optional, so an empty list stays empty.
     case "tight_open": {

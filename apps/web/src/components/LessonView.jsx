@@ -43,7 +43,10 @@ import {
 } from "@spelling-creator/core/sources";
 import {
   ANSWER_GAP,
+  THREE_BOARD_MARK,
+  isThreeBoard,
   questionAnswerItems,
+  questionBesides,
   questionLegendFor,
   questionMeta,
 } from "@spelling-creator/core/questions";
@@ -163,6 +166,8 @@ const LESSON_STYLES = `
   .s2c-lesson-root .s2c-legend div { display: flex; gap: 0.5em; }
   .s2c-lesson-root .s2c-legend dt { font-weight: 600; }
   .s2c-lesson-root .s2c-legend dd { margin: 0; }
+  /* The Besides line under a three-board question, indented like working. */
+  .s2c-lesson-root .s2c-besides { margin-left: 24px; }
   .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
   .s2c-lesson-root sup.s2c-fn a {
     color: var(--primary);
@@ -394,12 +399,23 @@ function QuestionBlock({ block, si, bi, translation }) {
     )
     .join(ANSWER_GAP);
   const steps = questionStepsWithText(block);
+  // The Besides line names one answer and asks for the others; both halves
+  // come from the answer list, so they translate with it.
+  const besides = questionBesides(block);
+  const besidesIndex =
+    besides == null
+      ? -1
+      : questionAnswerItems(block).findIndex(
+          (item) => item.toLowerCase() === besides.toLowerCase(),
+        );
+  const translatedAnswer = (item, i) =>
+    translation?.get(lessonSegmentKey.answer(si, bi, i)) ?? item;
 
   return (
     <>
       <p>
         <span className="s2c-tag" title={meta.label}>
-          {meta.tag}
+          {isThreeBoard(block) ? `${meta.tag} ${THREE_BOARD_MARK}` : meta.tag}
         </span>
         <span
           className="s2c-label"
@@ -415,6 +431,21 @@ function QuestionBlock({ block, si, bi, translation }) {
         </span>
         {answer ? `${ANSWER_GAP}${answer}` : null}
       </p>
+
+      {besides != null && (
+        <p className="s2c-besides">
+          <span className="s2c-label" style={{ "--s2c-label": meta.color }}>
+            {t("lessonView.besides", {
+              answer: translatedAnswer(besides, besidesIndex),
+            })}
+          </span>
+          {ANSWER_GAP}
+          {questionAnswerItems(block)
+            .map(translatedAnswer)
+            .filter((_, i) => i !== besidesIndex)
+            .join(ANSWER_GAP)}
+        </p>
+      )}
 
       {steps.map((step, i) => (
         <p key={step.id} style={{ marginLeft: "24px" }}>

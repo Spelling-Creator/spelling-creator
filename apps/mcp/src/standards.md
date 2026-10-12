@@ -147,6 +147,13 @@ Two further limits:
 - no paraphrase — if the passage says "superheated" and "dangerous", then HOT and DEADLY are wrong
   answers, because they aren't the words the passage uses.
 
+OPTIONAL, and only when the user asks: a `multiple` question can be marked for the three boards
+(`"threeBoard": true`, printed as "(3B)" in front of the question), and can carry a Besides line
+(`"besides": "rock"`): a follow-up printed under the question that names one of its own accepted
+answers and asks the speller for another. `besides` must be one of that question's `answers`,
+spelled the same way, or the write is rejected. Neither changes what the question asks or how it is
+checked.
+
 #### `multiple_open` — the less tight end
 
 The answers are bounded by the topic, theme or lesson, but leave ROOM FOR IMPROVISATION: "Give a

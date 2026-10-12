@@ -60,11 +60,18 @@ import {
 } from "../lessonLayout.js";
 import {
   ANSWER_GAP,
+  BESIDES_LABEL,
+  BESIDES_LINE_STYLE_ID,
+  BESIDES_LINE_STYLE_NAME,
   QUESTION_TAG_GAP,
   QUESTION_TAG_STYLE_ID,
   QUESTION_TAG_STYLE_NAME,
   QUESTION_TYPE_LIST,
+  THREE_BOARD_MARK,
+  besidesAnswers,
+  isThreeBoard,
   questionAnswerText,
+  questionBesides,
   questionLegendFor,
   questionLegendText,
   questionMeta,
@@ -298,11 +305,17 @@ function questionBlockParagraphs(block) {
     .map((s) => (s.text || "").trim())
     .filter(Boolean);
 
+  // The three-board mark rides in the tag run, so it reads as part of the
+  // marking rather than as the first words of the prompt, and so the importer
+  // finds it in the tag span rather than in the prompt it reads back.
+  const tag = isThreeBoard(block)
+    ? `${meta.tag} ${THREE_BOARD_MARK}${QUESTION_TAG_GAP}`
+    : `${meta.tag}${QUESTION_TAG_GAP}`;
   const children = [
     // The tag is the marking that survives a grey photocopy. Its own style
     // keeps it out of the prompt span the importer reads the question off.
     new TextRun({
-      text: `${meta.tag}${QUESTION_TAG_GAP}`,
+      text: tag,
       style: QUESTION_TAG_STYLE_ID,
       color: QUESTION_TAG_COLOR,
       bold: true,
@@ -335,6 +348,33 @@ function questionBlockParagraphs(block) {
       children,
     }),
   ];
+
+  // The Besides line under a three-board question: 'Besides "rocks"' in the
+  // question's colour, then the other accepted answers in black, indented
+  // under the question it follows up. Its own paragraph style is what lets the
+  // importer attach it to that question instead of reading a new one.
+  const besides = questionBesides(block);
+  if (besides != null) {
+    paragraphs.push(
+      new Paragraph({
+        style: BESIDES_LINE_STYLE_ID,
+        spacing: { after: 20 },
+        indent: { left: 360 },
+        children: [
+          new TextRun({
+            text: `${BESIDES_LABEL} "${besides}"`,
+            color: hex(meta.color),
+            size: BODY_SIZE,
+          }),
+          new TextRun({
+            text: `${ANSWER_GAP}${besidesAnswers(block).join(ANSWER_GAP)}`,
+            size: BODY_SIZE,
+            color: "000000",
+          }),
+        ],
+      }),
+    );
+  }
 
   // Working-out for a number question, when the author recorded any. The scanned
   // layout has no separate steps line, so these stay indented and out of the way
@@ -650,6 +690,12 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
         {
           id: QUESTION_LINE_STYLE_ID,
           name: QUESTION_LINE_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: BESIDES_LINE_STYLE_ID,
+          name: BESIDES_LINE_STYLE_NAME,
           basedOn: "Normal",
           quickFormat: false,
         },

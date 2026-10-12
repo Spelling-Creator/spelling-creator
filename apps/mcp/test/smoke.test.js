@@ -103,6 +103,38 @@ test("buildDoc maps every block type to the stored shape with ids", () => {
   assert.equal(new Set(ids).size, ids.length, "ids are unique");
 });
 
+// The three-board mark and the Besides line ride on a multiple question. A
+// Besides answer has to be one of the question's own, spelled as the list
+// spells it, or the line would print nothing.
+test("buildDoc keeps a multiple question's three-board mark and Besides answer", () => {
+  const multiple = (fields) => ({
+    sections: [
+      {
+        blocks: [
+          {
+            type: "question",
+            questionType: "multiple",
+            prompt: "Name one.",
+            answers: ["rocks", "reefs"],
+            ...fields,
+          },
+        ],
+      },
+    ],
+  });
+  const block = buildDoc(multiple({ threeBoard: true, besides: "Reefs" }))
+    .sections[0].blocks[0];
+  assert.equal(block.threeBoard, true);
+  assert.equal(block.besides, "reefs");
+  const plain = buildDoc(multiple({})).sections[0].blocks[0];
+  assert.equal("threeBoard" in plain, false);
+  assert.equal("besides" in plain, false);
+  assert.throws(
+    () => buildDoc(multiple({ besides: "gravel" })),
+    /"besides" must be one of the question's own answers \(rocks, reefs\)/,
+  );
+});
+
 test("buildDoc rejects bad input with actionable errors", () => {
   assert.throws(
     () => buildDoc({ title: "x", sections: [] }),

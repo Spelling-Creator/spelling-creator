@@ -49,7 +49,20 @@ import {
 } from "@spelling-creator/core/imageCredit";
 import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
-import { isOrangeType, questionMeta } from "@spelling-creator/core/questions";
+import {
+  THREE_BOARD_MARK,
+  isOrangeType,
+  questionBesides,
+  questionMeta,
+} from "@spelling-creator/core/questions";
+import { Toggle } from "./ui/toggle.jsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select.jsx";
 
 // The types that edit a list of answers: the two semi-open types, whose list
 // is a key (exhaustive or suggested, never empty), and a tight open, whose
@@ -1104,6 +1117,9 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
                       : "contentBlock.question.answersHelp",
                 )}
               </p>
+              {block.questionType === "multiple" && (
+                <ThreeBoardControls block={block} onChange={onChange} />
+              )}
             </div>
           )}
 
@@ -1124,6 +1140,72 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
         </div>
         {controls}
       </div>
+    </div>
+  );
+}
+
+// The three-board mark and the Besides line, on a multiple-answers question
+// only (see questions.js). The Besides picker offers the question's own
+// answers, since the line names one of them and asks for another; an answer
+// edited or removed after it was picked leaves the picker showing "None",
+// which is also what prints.
+function ThreeBoardControls({ block, onChange }) {
+  const { t } = useTranslation("editorSections");
+  const answers = (block.answers || [])
+    .map((a) => (a.text || "").trim())
+    .filter(Boolean);
+  const besides = questionBesides(block);
+  const NONE = "__none__";
+
+  return (
+    <div className="mt-1 flex flex-wrap items-end gap-3">
+      <Field className="w-auto">
+        <FieldLabel>{t("contentBlock.question.threeBoard")}</FieldLabel>
+        <Toggle
+          size="sm"
+          variant="outline"
+          pressed={block.threeBoard === true}
+          onPressedChange={(pressed) =>
+            onChange({ ...block, threeBoard: pressed ? true : undefined })
+          }
+          aria-label={t("contentBlock.question.threeBoard")}
+        >
+          {THREE_BOARD_MARK}
+        </Toggle>
+        <FieldDescription>
+          {t("contentBlock.question.threeBoardHelp")}
+        </FieldDescription>
+      </Field>
+      <Field className="w-auto min-w-48">
+        <FieldLabel htmlFor={`${block.id}-besides`}>
+          {t("contentBlock.question.besidesLabel")}
+        </FieldLabel>
+        <Select
+          value={besides ?? NONE}
+          onValueChange={(value) =>
+            onChange({ ...block, besides: value === NONE ? undefined : value })
+          }
+        >
+          <SelectTrigger id={`${block.id}-besides`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>
+              {t("contentBlock.question.besidesNone")}
+            </SelectItem>
+            {answers.map((text) => (
+              <SelectItem key={text} value={text}>
+                {text}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldDescription>
+          {t("contentBlock.question.besidesHelp", {
+            answer: besides ?? answers[0] ?? "...",
+          })}
+        </FieldDescription>
+      </Field>
     </div>
   );
 }
