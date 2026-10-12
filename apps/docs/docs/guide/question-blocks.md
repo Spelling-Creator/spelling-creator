@@ -11,10 +11,14 @@ scan a lesson and see its questions at a glance.
 
 ## The types are defaults, not rules
 
-The nine types follow the
+The types take their names and meanings from the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
 (OSLF), an open vocabulary for Spelling lessons that isn't tied to any one
-method and that anyone can comment on. The colors are the app's defaults.
+method and that anyone can comment on. The format has eight question types;
+the app's two amber types are its one semi-open type with either a complete
+answer key or a suggested one, and the **Open ended** type is the app's own,
+left over from before tight and broad opens were separate. The colors are the
+app's defaults.
 Spelling practices differ, and plenty of practitioners ask questions their own
 way, so use the types as they suit you. The editor doesn't require a set
 number of each or any particular order. The [lesson checks](./lesson-checks.md)
