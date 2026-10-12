@@ -1,0 +1,66 @@
+{
+  "format": "spelling-creator-lesson",
+  "version": 1,
+  "doc": {
+    "title": "Domestic Cats",
+    "sections": [
+      {
+        "id": "s1",
+        "name": "The Wildcat Ancestor",
+        "blocks": [
+          {
+            "id": "t1",
+            "type": "text",
+            "content": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Every pet cat is descended from the "
+                    },
+                    {
+                      "type": "text",
+                      "text": "AFRICAN WILDCAT",
+                      "marks": [{ "type": "bold" }]
+                    },
+                    {
+                      "type": "text",
+                      "text": ", a sandy-coloured hunter of North Africa."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sp1",
+            "type": "spelling",
+            "words": [
+              { "id": "w1", "text": "FELINE" },
+              { "id": "w2", "text": "CREATURE" },
+              { "id": "w3", "text": "PROWLED" },
+              { "id": "w4", "text": "NATURAL" }
+            ]
+          },
+          {
+            "id": "q1",
+            "type": "question",
+            "questionType": "single",
+            "prompt": "Which wild species is every pet cat descended from?",
+            "answer": "AFRICAN WILDCAT"
+          },
+          {
+            "id": "q2",
+            "type": "question",
+            "questionType": "single",
+            "prompt": "What kind of animal is a cat?",
+            "answer": "A MAMMAL"
+          }
+        ]
+      }
+    ]
+  }
+}

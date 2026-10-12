@@ -223,7 +223,8 @@ pnpm run fmt && pnpm run lint
     iframe), and the docs theme's `.vue` files (plus `defineProps`);
   - worker + Node for `apps/api`, plus `WebSocketPair` and
     `WebSocketRequestResponsePair`, the Durable Objects' globals;
-  - Node for `apps/mcp`, `apps/stub-api` and the repo's own scripts;
+  - Node for `apps/mcp`, `apps/stub-api`, the repo's own scripts, and the
+    TypeScript sources of `apps/cli`;
   - `worker` for `packages/core`, the narrowest environment, so that anything
     reaching for a browser-only global there fails the lint rather than breaking
     at runtime inside the Worker. Its tests may also use Node globals, and the
@@ -272,7 +273,8 @@ The configs are `apps/api/vitest.workers.config.js` and
 `packages/core` and `apps/api` under vitest (the API's workerd project through
 `@cloudflare/vitest-pool-workers`, so its platform-adapter tests run against real
 R2 and KV), `apps/web` and `apps/stub-api` under vitest too, and `apps/mcp`
-under `node --test`. `apps/docs` has no test script and is skipped.
+and `apps/cli` under `node --test` (the CLI's tests are TypeScript, which Node
+runs directly). `apps/docs` has no test script and is skipped.
 
 `apps/web`'s tests run in Node by default. One that needs a DOM (to mount a hook
 in a real React root, say) opts in with a `// @vitest-environment happy-dom`

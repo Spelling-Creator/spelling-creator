@@ -1,0 +1,51 @@
+{
+  "name": "@spelling-creator/cli",
+  "version": "0.1.0",
+  "description": "Check, fix and convert Spelling Creator lessons from the terminal.",
+  "keywords": [
+    "cli",
+    "lessons",
+    "spelling",
+    "spelling-creator"
+  ],
+  "license": "AGPL-3.0-only",
+  "author": "playforge-coding",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spelling-Creator/spelling-creator.git",
+    "directory": "apps/cli"
+  },
+  "bin": {
+    "spelling-creator": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "node src/cli.ts",
+    "build": "rolldown -c",
+    "test": "pnpm build && node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "mammoth": "^1.13.0",
+    "yargs": "^18.2.0"
+  },
+  "devDependencies": {
+    "@spelling-creator/core": "workspace:*",
+    "@types/node": "^24.19.2",
+    "@types/yargs": "^17.0.35",
+    "docx": "^9.10.0",
+    "rolldown": "^1.2.13",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

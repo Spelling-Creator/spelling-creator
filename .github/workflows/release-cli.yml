@@ -1,0 +1,79 @@
+name: Release CLI
+
+# Publishes @spelling-creator/cli when a GitHub release tagged cli-vX.Y.Z is
+# published (Releases > Draft a new release). The tag has to match the version
+# in apps/cli/package.json. The package goes to npmjs.com through trusted
+# publishing (OIDC, no token), and the same tarball is attached to the
+# release. See "Releasing" in apps/docs/docs/developers/cli.md.
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+  # Lets the publish exchange the workflow's OIDC token for a short-lived npm
+  # token. npm checks it against the trusted publisher configured for the
+  # package, which names this repository and release-cli.yml.
+  id-token: write
+
+jobs:
+  release:
+    # The repository's other releases aren't this workflow's to publish.
+    if: startsWith(github.event.release.tag_name, 'cli-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.1
+
+      # No dependency cache: npm recommends release builds start clean, so
+      # nothing a poisoned cache holds can end up in the published package.
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check that the tag matches package.json
+        run: |
+          version=$(node -p "require('./apps/cli/package.json').version")
+          if [ "cli-v$version" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package version $version"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm --filter @spelling-creator/cli typecheck
+
+      # Builds the bundle and runs the tests against it.
+      - name: Test
+        run: pnpm --filter @spelling-creator/cli test
+
+      # pnpm pack runs the package's prepack (a fresh build) and rewrites the
+      # workspace:* devDependency on core to a plain version.
+      - name: Pack
+        working-directory: apps/cli
+        run: pnpm pack --out "spelling-creator-cli-${GITHUB_REF_NAME}.tgz"
+
+      # Publish the tarball packed above, so npm gets byte for byte what is
+      # attached to the release. pnpm does the OIDC exchange itself (since
+      # pnpm 11). --no-git-checks because a release checks out the tag, not a
+      # branch, which pnpm's publish-branch check would otherwise refuse.
+      - name: Publish to npmjs.com
+        working-directory: apps/cli
+        run: >-
+          pnpm publish "spelling-creator-cli-${GITHUB_REF_NAME}.tgz"
+          --access public --provenance --no-git-checks
+
+      - name: Attach the tarball to the release
+        run: gh release upload "${GITHUB_REF_NAME}" "apps/cli/spelling-creator-cli-${GITHUB_REF_NAME}.tgz" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -224,6 +224,7 @@ export default defineConfig({
               link: "/developers/stub-api",
             },
             { text: "Self-hosting", link: "/developers/self-hosting" },
+            { text: "Command line tool", link: "/developers/cli" },
           ],
         },
         {
