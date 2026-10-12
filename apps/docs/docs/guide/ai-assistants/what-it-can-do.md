@@ -22,8 +22,12 @@ two at a time. Each pass is saved as its own version with a short name ("Add sec
 the cat's senses"), so you can see how the lesson came together.
 
 If you don't want to use an account at all, ask it for a **lesson file** instead. It hands
-you a file to save, which you open in the editor with **Import JSON** (in the menu, next to
-**Import Word document**). Nothing is stored online.
+you a file to save, which you open in the editor with **Import JSON or OSLF** (in the menu,
+next to **Import Word document**). Nothing is stored online. Ask for an **OSLF file** and
+it hands you the same lesson in the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+which tools other than Spelling Creator can read too; it can also give you a lesson that's
+already on the hub that way.
 
 ### The lesson it writes by default
 
@@ -37,14 +41,17 @@ standards:
 - **15 questions** per section, in a set order: 3 green (one fact from the passage), 2
   purple (a number from the passage, then a word problem with worked steps), 2 orange
   (semi-open questions), 1 blue (background knowledge the passage doesn't give), and 7
-  pink open questions (4 quick one-word answers from everyday life, then 3 that invite a
-  full sentence). See [Question blocks](../question-blocks.md) for what each color means.
+  pink open questions (4 tight opens with quick one-word answers from everyday life, then
+  3 broad opens that invite a full sentence of the speller's own thinking). See
+  [Question blocks](../question-blocks.md) for what each color means.
 - No [VAKT activities](../vakt-activities.md), "Would you rather" questions, sources or
   footnotes unless you ask for them.
 
 These are defaults, not rules. Spelling is practiced in many different ways (see
-[What is Spelling Creator](../../intro.md)), and no single approach is the standard one. Some of these conventions come from one particular source:
-the idea of semi-open questions follows the S2C (Spelling to Communicate) guidebook. If you work differently, just say so. Ask for four sections, a
+[What is Spelling Creator](../../intro.md)), and no single approach is the standard one. The
+question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format);
+the counts and order are the app's own. If you work differently, just say so. Ask for four sections, a
 different mix of questions, longer passages or a different order, and the assistant will
 write it that way.
 

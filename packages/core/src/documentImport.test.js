@@ -13,6 +13,7 @@ import {
   sectionSummary,
   splitSections,
 } from "./documentImport.js";
+import { ANSWER_GAP } from "./questions.js";
 
 const PASSAGE_1 =
   "Every pet cat curled up on a sofa today is descended from a single wild species: the AFRICAN WILDCAT. This sandy-coloured hunter still roams the deserts, grasslands, and plains of North Africa and the Near East, and it looks so much like a tabby that the two can be hard to tell apart at a glance.";
@@ -80,6 +81,9 @@ describe("classifyLine", () => {
     expect(classifyLine("The Wildcat Ancestor")).toBe("heading");
     expect(classifyLine("1. What is it? (Answer: X)")).toBe("question");
     expect(classifyLine("Name a wild animal that hunts.")).toBe("question");
+    // Text copied from a printed lesson carries the type tag.
+    expect(classifyLine("O Name a wild animal that hunts.")).toBe("question");
+    expect(classifyLine("SO (3B)  Name one creature.")).toBe("question");
     expect(
       classifyLine("Should we judge the past? Explain your thinking."),
     ).toBe("question");
@@ -188,6 +192,28 @@ describe("parseSection", () => {
     ]);
   });
 
+  // A printed lesson carries each question's type tag in front of it, and
+  // text copied out of one brings the tag along as the first word.
+  it("drops the type tag text copied from a printed lesson carries", () => {
+    const { questions } = parseSection([
+      "K Who explained light as packets of energy in 1900? MAX PLANCK",
+      `SO (3B)  The piles drew ______. Name one.${ANSWER_GAP}MICE${ANSWER_GAP}BIRDS`,
+      "O Name a wild animal that hunts.",
+    ]);
+    expect(questions.map((q) => q.prompt)).toEqual([
+      "Who explained light as packets of energy in 1900?",
+      "The piles drew ______. Name one.",
+      "Name a wild animal that hunts.",
+    ]);
+    expect(questions[1].answers).toEqual(["MICE", "BIRDS"]);
+    // The three-board mark leaves the prompt and stays on the question.
+    expect(questions.map((q) => q.threeBoard)).toEqual([
+      undefined,
+      true,
+      undefined,
+    ]);
+  });
+
   it("stays fast on a long run of capitals that is not an answer", () => {
     // With the run's word separator optional, this took about two seconds
     // at 26 words and four times longer for every two more. 40 words keeps
@@ -259,7 +285,7 @@ describe("importLessonText", () => {
       "number",
       "multiple",
       "background",
-      "open",
+      "tight_open",
       "wyr",
       "paraphrase",
     ]);
@@ -293,7 +319,7 @@ describe("importLessonText", () => {
       "single",
       "number",
       "multiple",
-      "open",
+      "tight_open",
       "wyr",
     ]);
     expect(questions[1].answer).toBe("400");
@@ -302,6 +328,19 @@ describe("importLessonText", () => {
       "Round to the nearest hundred: about 400",
     ]);
     expect(doc.sections[0].blocks[2].words).toHaveLength(4);
+  });
+
+  it("keeps a three-board mark off the prompt and on the block", () => {
+    const doc = importLessonText(
+      EXPORTED.replace("The great piles drew", "SO (3B)  The great piles drew"),
+    );
+    const question = doc.sections[0].blocks.find(
+      (b) => b.type === "question" && b.questionType === "multiple",
+    );
+    expect(question.prompt).toBe(
+      "The great piles drew ______ in enormous numbers. Name one creature the piles attracted.",
+    );
+    expect(question.threeBoard).toBe(true);
   });
 
   it("reads an answer on its own line, in brackets, and as bare capitals", () => {
@@ -429,12 +468,19 @@ describe("deriveQuestionType", () => {
         passage,
       ),
     ).toBe("paraphrase");
+    // No answer makes an open question, and the wording says which kind.
     expect(
       deriveQuestionType(
         { prompt: "Name something hot.", answers: [] },
         passage,
       ),
-    ).toBe("open");
+    ).toBe("tight_open");
+    expect(
+      deriveQuestionType(
+        { prompt: "Why do you think the core stays hot?", answers: [] },
+        passage,
+      ),
+    ).toBe("broad_open");
   });
   it("uses the answers for the rest", () => {
     expect(

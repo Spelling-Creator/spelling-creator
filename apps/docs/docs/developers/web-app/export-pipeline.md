@@ -23,27 +23,51 @@ For how to use this, see [Exporting & printing](../../guide/exporting.md) and
 
 ## Question types
 
-The eight question types, their labels, the one-line descriptions shown in the
-**Add question** menu, their colors and their default block shapes live in one
-place, `packages/core/src/questions.js` (`QUESTION_TYPES`), so the editor and
-both exporters stay in sync. Question type labels are not localized: the menu
-reads `label` and `description` straight from that file.
+The question types, their labels, the one-line descriptions shown in the
+**Add question** menu, their tags, their colors and their default block shapes
+live in one place, `packages/core/src/questions.js` (`QUESTION_TYPES`), so the
+editor and both exporters stay in sync. Question type labels are not localized:
+the menu reads `label` and `description` straight from that file. The keys are
+the app's own names for the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+types (`single` is OSLF's known, `background` its prior knowledge, `number`
+its math, the two amber types its semi-open).
 
-| Key             | Label                | Color                   | Stored answer                         |
-| --------------- | -------------------- | ----------------------- | ------------------------------------- |
-| `number`        | Number answer        | `#7048e8` purple        | `answer`, plus optional `steps`       |
-| `single`        | Single answer        | `#2f9e44` green         | `answer`                              |
-| `multiple`      | Multiple answers     | `#d68f00` amber         | `answers` (the complete accepted set) |
-| `multiple_open` | Suggested answers    | `#d68f00` amber, italic | `answers` (suggestions)               |
-| `paraphrase`    | Paraphrase           | `#a0522d` brown         | none                                  |
-| `open`          | Open ended           | `#e64980` pink          | none                                  |
-| `wyr`           | Would you rather     | `#9c36b5` grape         | none                                  |
-| `background`    | Background knowledge | `#1c7ed6` blue          | `answer`                              |
+| Key             | Label             | Tag | Color                   | Stored answer                         |
+| --------------- | ----------------- | --- | ----------------------- | ------------------------------------- |
+| `number`        | Math              | M   | `#7048e8` purple        | `answer`, plus optional `steps`       |
+| `single`        | Known             | K   | `#2f9e44` green         | `answer`                              |
+| `multiple`      | Semi-open         | SO  | `#d68f00` amber         | `answers` (the complete accepted set) |
+| `multiple_open` | Suggested answers | SO  | `#d68f00` amber, italic | `answers` (suggestions)               |
+| `paraphrase`    | Paraphrase        | P   | `#a0522d` brown         | none                                  |
+| `tight_open`    | Tight open        | TO  | `#e64980` pink          | `answers` (optional examples)         |
+| `broad_open`    | Broad open        | BO  | `#e64980` pink          | none                                  |
+| `open`          | Open ended        | O   | `#e64980` pink          | none                                  |
+| `wyr`           | Would you rather  | WYR | `#9c36b5` grape         | none                                  |
+| `background`    | Prior knowledge   | PK  | `#1c7ed6` blue          | `answer`                              |
+
+The labels are the format's names. Four types were labeled differently before
+the app followed it (Single answer, Number answer, Multiple answers,
+Background knowledge), and those old labels live on as each type's
+`styleAliases`, because a Word style is matched by its name and the name
+carries the label (see [below](#color-and-alignment-have-to-be-smuggled-past-mammoth)).
+
+`open` is the type lessons were saved with before tight and broad opens were
+told apart. It carries `legacy: true`, which keeps it out of
+`QUESTION_TYPE_MENU` (the **Add question** menu and the AI question dialog use
+that list), while `QUESTION_TYPE_LIST` still has it for everything that reads a
+stored lesson. Stored blocks are never rewritten on load, for the reason
+`imageCredit.js` gives (it would show as an edit in version history and
+broadcast to a live session), so `resolveOpenType(block)` is how the checks,
+the text importer and the file export decide which kind a legacy question is:
+its own type for a tight or broad open, and for `open` the kind its wording
+reads as (`BROAD_STEM`, `TIGHT_STEM`, then word count).
 
 The two amber types are the _semi-open_ questions (`ORANGE_TYPE_KEYS`,
-`isOrangeType`). The idea, and the choice to color the whole family alike,
-come from the S2C guidebook, as the comment on `multiple_open` says; they are
-the app's defaults, not a rule every Spelling practice follows. Consumers that
+`isOrangeType`). Treating them as one family, colored alike, is the app's
+default, not a rule every Spelling practice follows (the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+lists the loose end as an open question). Consumers that
 care about the block's shape (the answer rows, the exporters) treat the two
 alike; consumers that care about the contract (validation, the answer reveal)
 don't. `multiple` was burnt orange (`#e8590c`) until it moved to amber to stay
@@ -52,9 +76,12 @@ with a legend name shorter than its label.
 
 `questionAnswerItems` and `questionAnswerText` decide what a printed question
 shows after its prompt: one answer for the single-answer types, every non-blank
-answer for the amber types (joined with `ANSWER_GAP`, a space, a non-breaking
-space and a space, since the PDF's HTML would collapse ordinary spaces), and
-nothing for `paraphrase`, `open`, `wyr` or an unanswered question. A number
+answer for the amber types and a tight open's examples (joined with
+`ANSWER_GAP`, a space, a non-breaking space and a space, since the PDF's HTML
+would collapse ordinary spaces), and nothing for `paraphrase`, `broad_open`,
+`open`, `wyr` or an unanswered question. A tight open's examples print after
+`EXAMPLE_ANSWER_PREFIX` ("e.g. "), which the DOCX importer strips again, so
+whoever is scoring reads them as examples and not as the key. A number
 question's `steps` print as an indented numbered list under it and come back
 on DOCX and JSON import.
 
@@ -70,17 +97,43 @@ editor:
   lesson with no author or publication date simply prints without those lines.
 - **No section headings.** A section's name is an organizing device for the
   editor; the printed lesson runs straight through from one block to the next.
-- **Questions marked by color alone**: the prompt in its type's color,
-  its answer in black on the same line, with no `[Label]` in front of it. The one
-  exception is **Suggested answers**, which shares the amber of **Multiple
-  answers** and is set in italic to separate them.
+  A `heading` block (`packages/core/src/heading.js`) is content, not a
+  section: it prints in bold where it sits, in a paragraph style of its own
+  (`S2C Heading`, `HEADING_STYLE_CLASS`) rather than a Word heading level,
+  because the importer reads Word headings as section breaks and a heading
+  inside a section has to come back inside it.
+- **Questions marked by a tag and a color**: the type's short tag (`K`, `PK`,
+  `M`, `SO`, `TO`, `BO`, `P`, `WYR`, and `O` for a legacy open; `tag` in
+  `QUESTION_TYPES`) in small grey bold,
+  then the prompt in its type's color, then its answer in black on the same
+  line. The tag is there for the reader who doesn't have the color: a grey
+  photocopy, a printer out of ink, or someone who can't tell the colors apart.
+  The [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+  asks every renderer never to rely on color alone, and these are its default
+  tags. **Suggested answers** shares the amber and the `SO` tag of
+  **Semi-open** and is set in italic to separate them.
+- **Three-board questions**: a `multiple` question with `threeBoard` prints
+  `(3B)` inside its tag run (`SO (3B)`), and one with a `besides` answer gets
+  a **Besides line** under it: `Besides "rocks"` in the question's amber, then
+  the other accepted answers in black, indented like working. The line has a
+  paragraph style of its own (`S2C Besides Line`, `BESIDES_LINE_CLASS`) so
+  the importer attaches it to the question above instead of reading a new
+  one, and the label run wears the question's character style, which is how
+  the PDF (where mammoth drops run colors) colors the label and leaves the
+  answers black. `questionBesides` and `besidesAnswers` in `questions.js`
+  decide both halves, and return nothing when the named answer is no longer
+  in the list.
 - **Spelling words on one running line**, `Spell:` followed by the words as
-  typed, separated by the same `ANSWER_GAP` as multiple answers.
+  typed, separated by the same `ANSWER_GAP` as a semi-open question's answers.
 - **A footer on every page**: the copyright line above a legend naming each
-  question type in its own color (and its own italic, where it has one),
-  uppercased (`questionLegendText`) and separated by `|`, in the order
-  `QUESTION_LEGEND` gives. The legend prints each type's label, except **Would
-  you rather**, which it abbreviates to **W.Y.R.** so the line still fits.
+  question type the lesson uses in its own color (and its own italic, where it
+  has one), uppercased (`questionLegendText`) and separated by `|`, in the
+  order `QUESTION_LEGEND` gives. `questionLegendFor(doc)` cuts the list down to
+  the types the lesson asks, so a lesson with no **Would you rather** questions
+  has no W.Y.R. entry, and a lesson with no questions at all has no legend.
+  Each entry is the type's tag then its label (`K KNOWN`), since the
+  legend is where a reader looks up the tag in front of a prompt. **Would you
+  rather** is abbreviated to **W.Y.R.** so a line naming every type still fits.
   [VAKT activities](./vakt-activities.md) are deliberately not in the legend:
   they aren't questions, and their `VAKT:` label already names them.
 - **A page number** in the top right corner.
@@ -109,15 +162,26 @@ mammoth drops run colors and paragraph alignment, so on the PDF path neither the
 question color coding nor the centered title lines survive on their own. The docx
 therefore marks both with **named Word styles**: a character style per question
 type (`questionStyleName`, `S2C Question {label}`, mapped by `questionStyleMap`
-to `<span class="s2c-q-{key}">`) and one paragraph style for the title lines
+to `<span class="s2c-q-{key}">`), one for the type tag in front of the prompt
+(`S2C Question Tag`, mapped by `questionTagStyleMap` to
+`<span class="s2c-q-tag">`), and one paragraph style for the title lines
 (`S2C Title Line`). `pdfExport` maps those onto CSS classes with a `styleMap`
 and colors them again from `questions.js`. The `S2C` and `s2c-` prefixes are
 historical names; they stay because renaming them would break the round trip
-for every document already exported.
+for every document already exported. A type's label is part of its style name
+for the same reason, so when four labels changed to the format's names, the
+old names stayed on as `styleAliases` and `questionStyleMap` emits a rule for
+each of them too (`S2C Question Single answer` still maps to `s2c-q-single`).
+A new export writes only the current name.
 
-That is also how **import** recovers a question's type now that nothing in the
-visible text names it: `docxImport` asks mammoth for the same style map and reads
-the type off the `<span class="s2c-q-…">`. Section _divisions_ have nothing left
+That is also how **import** recovers a question's type: `docxImport` asks
+mammoth for the same style map and reads the type off the
+`<span class="s2c-q-<type>">`, the prompt off that span's text and the answer off
+what follows it. The tag's own span sits before all of that, so it is never
+read as part of the prompt. (Text pasted from a printed lesson into
+[Document import](./document-import.md) does carry the tag as plain text;
+`readQuestionTag` takes it off there, and keeps a `(3B)` mark it carried as
+the block's `threeBoard`.) Section _divisions_ have nothing left
 to carry them, so a DOCX round trip collapses a lesson into a single section
 (the importer does split on Heading 2 or 3 in a document that has them);
 Export/Import **JSON** is the lossless one. A document that was never exported from
@@ -150,6 +214,49 @@ The page number and the footer are drawn straight onto the finished PDF pages
 with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,
 and mammoth converts only the document body, never the docx's own header and
 footer.
+
+## The Open Spelling Lesson Format
+
+`packages/core/src/oslf.js` maps the lesson document onto the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+(OSLF) and back: `toOslf(doc, { imageSrc })` and `fromOslf(file)`. The app's
+own lesson file stays what it is, a lossless dump of the editor's document;
+OSLF is for passing a lesson to something that isn't this app, and for
+reading one that something else wrote.
+
+- **Export OSLF** (`exportOslf` in `browser/jsonExport.js`) writes
+  `<title>.oslf.json`. A stored picture becomes its public URL on the hub
+  (`imagePublicUrl`), a block already carrying a `src` data URL keeps it, and
+  a picture with no URL either way is left out, since the format needs one.
+  The CLI writes OSLF when an output path ends in `.oslf.json`, with no
+  `imageSrc`, so it keeps only data URLs. `toOslf` throws `OslfExportError`
+  for a lesson the format can't hold: a `single`, `background`, `number`,
+  `multiple` or `multiple_open` question with no answer, since the schema
+  requires one there. The message names the section and question; the
+  editor shows it as the export failing, the CLI reports it as a write that
+  failed, and the MCP server returns it as the tool's error. A line break in
+  a prompt, heading, caption or text run (the format's one-line strings) is
+  written as a space.
+- **Import JSON or OSLF** goes through `normalizeLessonFile`, which spots an
+  OSLF file by its `oslf` field, turns it into a bare doc with `fromOslf`,
+  and normalizes it like any other. A question type the app doesn't know is
+  kept as a legacy `open` question with its prompt, as the format asks; a
+  picture with a relative `src` is dropped, since a single file has nothing
+  for it to be relative to; a file whose major version isn't 0 (the drafts
+  this module reads) is refused rather than read on 0.1's terms.
+- The type keys map both ways (`single` is `known`, `background` is
+  `prior-knowledge`, `number` is `math`, the two amber types are `semi-open`
+  with an `exhaustive` or `suggested` key, a tight open with examples has a
+  `suggested` key, and a legacy `open` is sorted with `resolveOpenType`).
+  `steps` are `working`, `threeBoard` and `besides` are themselves, and a
+  text block's paragraphs become the format's rich text (strings for plain
+  paragraphs, runs with `bold`/`italic`/`underline` and `note` entries
+  otherwise). Prompts, captions and headings are plain strings here and rich
+  text there, so they come back as their words.
+- `oslf.schema.json` beside the module is the format's lesson schema, copied
+  from the 0.1 draft so `oslf.test.js` can hold `toOslf`'s output to it with
+  `ajv` (a dev dependency only; nothing at runtime validates). Update the copy
+  when the format moves.
 
 ## Building a Word file is for Word files only
 

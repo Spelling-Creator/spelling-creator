@@ -25,12 +25,17 @@ import {
   lessonCopyright,
 } from "../lessonLayout.js";
 import {
-  QUESTION_LEGEND,
+  BESIDES_LINE_CLASS,
+  QUESTION_TAG_STYLE_CLASS,
   QUESTION_TYPE_LIST,
+  besidesStyleMap,
+  questionLegendFor,
   questionLegendText,
   questionStyleClass,
   questionStyleMap,
+  questionTagStyleMap,
 } from "../questions.js";
+import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.js";
 import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.js";
 
 // Text destined for an HTML string we build ourselves. The PDF container is
@@ -131,6 +136,9 @@ export function layoutImageFigures(html, embedded) {
 // those styles onto classes here lets PRINT_STYLES put the formatting back.
 const STYLE_MAP = [
   ...questionStyleMap(),
+  ...questionTagStyleMap(),
+  ...besidesStyleMap(),
+  ...headingStyleMap(),
   ...vaktStyleMap(),
   `p[style-name='${TITLE_STYLE_NAME}'] => p.${TITLE_CLASS}:fresh`,
   `p[style-name='${TITLE_LINE_STYLE_NAME}'] => p.${TITLE_LINE_CLASS}:fresh`,
@@ -188,8 +196,8 @@ async function docToHtml(doc, meta) {
 
 // Print styles applied to the mammoth-generated HTML before rendering to PDF.
 // The question-type colours are restored here from the classes STYLE_MAP asked
-// mammoth to emit — the printed lesson has no type labels, so the colour of a
-// prompt is the only thing marking what kind of question it is.
+// mammoth to emit, and the type tag in front of each prompt is set small and
+// grey so it reads as a mark rather than as the first word of the question.
 const PRINT_STYLES = `
   .s2c-pdf-root {
     font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
@@ -213,6 +221,18 @@ const PRINT_STYLES = `
   /* Questions run tight against one another, the way the printed lesson sets
      them — the colour, not the spacing, is what separates one from the next. */
   .s2c-pdf-root .${QUESTION_LINE_CLASS} { margin: 0 0 1px; }
+  /* The Besides line under a three-board question, indented like its working
+     would be. Its label comes through in the question's own character style,
+     so the type rule below colours it; the answers after it stay in the body
+     colour, as in Word. */
+  .s2c-pdf-root .${BESIDES_LINE_CLASS} {
+    margin: 0 0 1px;
+    padding-left: 24px;
+  }
+  .s2c-pdf-root .${HEADING_STYLE_CLASS} {
+    margin: 10px 0 3px;
+    font-weight: 700;
+  }
   .s2c-pdf-root figure { margin: 0; }
   .s2c-pdf-root img {
     display: block;
@@ -224,6 +244,11 @@ const PRINT_STYLES = `
       `.s2c-pdf-root .${questionStyleClass(type.key)} { color: ${type.color};` +
       `${type.italic ? " font-style: italic;" : ""} }`,
   ).join("\n  ")}
+  .s2c-pdf-root .${QUESTION_TAG_STYLE_CLASS} {
+    color: #555555;
+    font-weight: 700;
+    font-size: 11px;
+  }
   .s2c-pdf-root .${VAKT_STYLE_CLASS} { color: ${VAKT_COLOR}; }
   .s2c-pdf-root sup { font-size: 9px; line-height: 0; }
   .s2c-pdf-root sup a { color: inherit; text-decoration: none; }
@@ -253,15 +278,15 @@ function hexToRgb(color) {
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
 
-// The legend naming every question type in its own colour, centred on `y`.
-// Drawn segment by segment because each entry needs its own colour, so the line
-// has to be measured first to know where to start.
-function drawLegend(pdf, centerX, y) {
+// The legend naming each question type the lesson uses in its own colour,
+// centred on `y`. Drawn segment by segment because each entry needs its own
+// colour, so the line has to be measured first to know where to start.
+function drawLegend(pdf, centerX, y, legendTypes) {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
 
   const parts = [];
-  QUESTION_LEGEND.forEach((type, i) => {
+  legendTypes.forEach((type, i) => {
     if (i > 0) parts.push({ text: LEGEND_SEPARATOR, rgb: [110, 110, 110] });
     parts.push({
       text: questionLegendText(type),
@@ -292,7 +317,7 @@ function drawLegend(pdf, centerX, y) {
 // The page number (top right) and the footer, on every page — the furniture
 // html2pdf doesn't carry over from the docx's own header and footer, since
 // mammoth converts only the document body.
-function drawPageFurniture(pdf, meta) {
+function drawPageFurniture(pdf, meta, legendTypes) {
   const copyright = lessonCopyright(meta);
   const pageCount = pdf.internal.getNumberOfPages();
 
@@ -314,7 +339,9 @@ function drawPageFurniture(pdf, meta) {
         align: "center",
       });
     }
-    drawLegend(pdf, PAGE_WIDTH / 2, PAGE_HEIGHT - 20);
+    if (legendTypes.length) {
+      drawLegend(pdf, PAGE_WIDTH / 2, PAGE_HEIGHT - 20, legendTypes);
+    }
   }
 }
 
@@ -402,7 +429,7 @@ export async function exportPdf(doc, meta = {}) {
       // the docx's own header/footer never reach mammoth.
       .toPdf()
       .get("pdf")
-      .then((pdf) => drawPageFurniture(pdf, meta))
+      .then((pdf) => drawPageFurniture(pdf, meta, questionLegendFor(doc)))
       .save();
   } finally {
     window.document.body.removeChild(offscreen);

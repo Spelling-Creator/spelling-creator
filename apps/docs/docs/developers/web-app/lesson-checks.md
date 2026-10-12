@@ -12,9 +12,12 @@ runs on every write: `@spelling-creator/core/lessonChecks`. The rules that need
 judgment live in `apps/mcp/src/standards.md`; the checks are the mechanically
 checkable half of it.
 
-The standard's numbers are defaults, not universal rules. The two "semi-open"
-orange types, and their order, come from the S2C guidebook (see
-the comments in `packages/core/src/questions.js` and at `ORANGE_TIGHT` in
+The standard's numbers are defaults, not universal rules. The question types
+follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+and the split of the "semi-open" orange type into a tight and a loose end, with
+their order, is the app's own (see the comments in
+`packages/core/src/questions.js` and at `ORANGE_TIGHT` in
 `lessonChecks.js`); the short answer rules come from letterboard spelling,
 where every letter is pointed to; the lesson shape (`SECTION_COUNT`,
 `SPELLING_WORDS_PER_SECTION`, `QUESTION_ORDER`) is the app's own default. Other

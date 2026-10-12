@@ -15,7 +15,10 @@
 // well enough, since its "Spell:" line and answer gaps are shapes they know.
 //
 // Everything written out is a .json lesson file, so a converted or fixed
-// lesson opens in the editor and round-trips from there.
+// lesson opens in the editor and round-trips from there, unless the output
+// path ends in .oslf.json, which writes the Open Spelling Lesson Format
+// (core's oslf.js) for tools that aren't this app. An .oslf.json file reads
+// through the same door as a .json one, since core's jsonImport knows both.
 
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -34,8 +37,19 @@ import {
   normalizeLessonFile,
 } from "@spelling-creator/core/jsonImport";
 import { buildLessonFile } from "@spelling-creator/core/lessonFile";
+import {
+  OSLF_EXTENSION,
+  OslfExportError,
+  isOslfFile,
+  toOslf,
+} from "@spelling-creator/core/oslf";
 
 import type { LessonDoc } from "./types.ts";
+
+/** Whether a path names an Open Spelling Lesson Format file. */
+export function isOslfPath(path: string): boolean {
+  return path.toLowerCase().endsWith(OSLF_EXTENSION);
+}
 
 export type LessonSource = "json" | "docx" | "text";
 
@@ -129,6 +143,9 @@ const DROPPED_SHOWN = 5;
  * import stores, so it isn't counted.
  */
 export function droppedFields(raw: unknown, doc: LessonDoc): string[] {
+  // An OSLF file is written back as OSLF, a different shape altogether, so a
+  // field-for-field comparison with the app's own file would name everything.
+  if (isOslfFile(raw)) return [];
   const written = buildLessonFile(doc);
   const dropped: string[] = [];
   if (isObject(raw) && isObject(raw.doc)) {
@@ -306,6 +323,22 @@ export interface WriteOptions {
   unchangedSince?: string;
 }
 
+// The lesson as an OSLF file. Pictures in one are URLs, and the CLI has no
+// image store or hub to resolve a stored picture against, so a picture the
+// lesson refers to by hash alone is left out; one carrying a data URL is
+// kept. A lesson the format can't hold (a question it requires an answer for
+// is blank) is a write that fails, reported like any other.
+function oslfFile(path: string, doc: LessonDoc): unknown {
+  try {
+    return toOslf(doc);
+  } catch (err) {
+    if (err instanceof OslfExportError) {
+      throw new LessonWriteError(`Couldn't write ${path}: ${err.message}`);
+    }
+    throw err;
+  }
+}
+
 /**
  * Write a lesson as an importable .json lesson file. Refuses to replace an
  * existing file unless `force` is set, since the input may be the only copy.
@@ -321,7 +354,8 @@ export async function writeLesson(
   doc: LessonDoc,
   { force = false, unchangedSince }: WriteOptions = {},
 ): Promise<void> {
-  const contents = `${JSON.stringify(buildLessonFile(doc), null, 2)}\n`;
+  const file = isOslfPath(path) ? oslfFile(path, doc) : buildLessonFile(doc);
+  const contents = `${JSON.stringify(file, null, 2)}\n`;
   try {
     if (force) {
       await replaceFile(path, contents, unchangedSince);

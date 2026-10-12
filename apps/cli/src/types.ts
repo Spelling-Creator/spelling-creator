@@ -4,12 +4,15 @@
 // gives its modules signatures in terms of them. Keep both in step with
 // packages/core/src/jsonImport.js when a block gains a field.
 
+/** `open` is the type lessons carried before tight and broad opens were separate. */
 export type QuestionType =
   | "number"
   | "single"
   | "multiple"
   | "multiple_open"
   | "paraphrase"
+  | "tight_open"
+  | "broad_open"
   | "open"
   | "wyr"
   | "background";
@@ -38,6 +41,10 @@ export interface QuestionBlock {
   id: string;
   type: "question";
   questionType: QuestionType;
+  /** `multiple` only: printed "(3B)" in front of the question. */
+  threeBoard?: boolean;
+  /** `multiple` only: the accepted answer a Besides line names. */
+  besides?: string;
   prompt: string;
   answer?: string;
   answers?: TextItem[];
@@ -78,12 +85,20 @@ export interface ImageBlock {
   align: string;
 }
 
+/** A short heading inside a section, such as one over a run of W.Y.R. questions. */
+export interface HeadingBlock {
+  id: string;
+  type: "heading";
+  text: string;
+}
+
 export type Block =
   | TextBlock
   | SpellingBlock
   | QuestionBlock
   | VaktBlock
-  | ImageBlock;
+  | ImageBlock
+  | HeadingBlock;
 
 export interface Section {
   id: string;

@@ -3,6 +3,8 @@
 // the part that needs a document to click an <a> for the user.
 
 import { buildLessonFile, lessonFileName } from "../lessonFile.js";
+import { oslfFileName, toOslf } from "../oslf.js";
+import { imagePublicUrl } from "./imageRef.js";
 
 function triggerDownload(blob, fileName) {
   const url = URL.createObjectURL(blob);
@@ -20,4 +22,18 @@ export function exportJson(doc) {
   const json = JSON.stringify(buildLessonFile(doc), null, 2);
   const blob = new Blob([json], { type: "application/json" });
   triggerDownload(blob, lessonFileName(doc.title));
+}
+
+// Download the lesson as an Open Spelling Lesson Format file, for tools that
+// aren't this app. Pictures are referred to by their public URL on the hub,
+// so one that was never uploaded (a draft kept on this device) won't show
+// for whoever opens the file elsewhere.
+export function exportOslf(doc) {
+  const file = toOslf(doc, {
+    imageSrc: (block) =>
+      block.image?.hash ? imagePublicUrl(block.image.hash) : null,
+  });
+  const json = JSON.stringify(file, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  triggerDownload(blob, oslfFileName(doc.title));
 }

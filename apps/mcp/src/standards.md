@@ -5,9 +5,9 @@ Defaults: honor the user if they ask for something different.
 "Spelling" is an umbrella term, not one method. It covers Spelling to Communicate (S2C), the Rapid
 Prompting Method (RPM), Spellers Method and many practitioners who use no label at all, and their
 practices are not standardized. Never describe these lessons as S2C lessons or tell the user what
-"the" method requires. The standards below are this app's defaults (the semi-open question family
-comes from the S2C guidebook; the rest is this app's own house style); when a user works
-differently, follow them.
+"the" method requires. The standards below are this app's defaults: the question types follow the
+Open Spelling Lesson Format (OSLF), a method-neutral vocabulary for Spelling lessons, and the
+counts and order are this app's own house style. When a user works differently, follow them.
 
 ## Shape
 
@@ -88,7 +88,7 @@ different, equally valid answer — if they could, it isn't green. "What was the
 BASTET" is a fact and nothing else is right. "What is a cat called when it purrs on a lap? ->
 COMPANION" is interpretation: pet, friend and lap-cat are all just as fair, and COMPANION only
 looks right because the passage happened to use that word. Don't dress a soft, one-of-many answer
-up as factual retrieval just because the word is in the text — either make it a pink open
+up as factual retrieval just because the word is in the text: either make it a pink tight open
 question, or replace it with a fact the passage states outright ("Which animal does the cat now
 rival as the most popular pet? -> THE DOG").
 
@@ -103,7 +103,7 @@ A word problem (see MATH below).
 ### 6-7 · `multiple` / `multiple_open` (orange)
 
 2 SEMI-OPEN questions: questions with several known or semi-known answers rooted in the text. Their
-demand sits above a green single fact and below the extended opens, and they run along a spectrum
+demand sits above a green single fact and below the broad opens, and they run along a spectrum
 from TIGHT to LESS TIGHT — both printed orange, and asked in that order, tighter first.
 
 The two ends are two types, because "answers" means opposite things at each: for `multiple` it is
@@ -147,6 +147,13 @@ Two further limits:
 - no paraphrase — if the passage says "superheated" and "dangerous", then HOT and DEADLY are wrong
   answers, because they aren't the words the passage uses.
 
+OPTIONAL, and only when the user asks: a `multiple` question can be marked for the three boards
+(`"threeBoard": true`, printed as "(3B)" in front of the question), and can carry a Besides line
+(`"besides": "rock"`): a follow-up printed under the question that names one of its own accepted
+answers and asks the speller for another. `besides` must be one of that question's `answers`,
+spelled the same way, or the write is rejected. Neither changes what the question asks or how it is
+checked.
+
 #### `multiple_open` — the less tight end
 
 The answers are bounded by the topic, theme or lesson, but leave ROOM FOR IMPROVISATION: "Give a
@@ -174,7 +181,7 @@ hold too much in mind and to spell long strings on a letterboard.
 
 Prior knowledge the passage deliberately does NOT contain.
 
-### 9-12 · `open` (pink)
+### 9-12 · `tight_open` (pink)
 
 4 TIGHT OPENS: open-ended, with no single correct answer, but they must elicit an EASY one-word
 answer from the speller's own world, never from the passage. Two properties both matter:
@@ -197,25 +204,35 @@ something found in...", "Name a kind of...", "Name a place where...", "Name an a
 NEVER use "Give one word that comes to mind when you..." (retired — overused to the point of
 becoming a tic).
 
-### 13-15 · `open` (pink)
+A tight open has NO answer key. It may carry two or three one-word EXAMPLES of what would count in
+"answers" (they print after "e.g."), but needn't; never give it an "answer" or "exampleAnswer".
 
-3 EXTENDED OPENS: full-sentence responses, e.g. "In your own words, explain..." / "...Defend your
-answer." / "...Explain your thinking." The very last question of the whole lesson should look back
+### 13-15 · `broad_open` (pink)
+
+3 BROAD OPENS: full-sentence responses asking for the speller's own reasoning, opinion or
+imagination, e.g. "Why do you think...?" / "...Defend your answer." / "...Explain your thinking." /
+"If you could..., what would you...?". The very last question of the whole lesson should look back
 across all sections, e.g. "Of the six parts of this lesson, which idea did you find most
 astonishing? Defend your answer."
 
-"open" questions carry no answer, answers, or exampleAnswer field at all — just the "prompt".
+A broad open is NOT "In your own words, explain..." or "Summarize...": those ask the speller to
+retell the passage, which is a `paraphrase` question (below), not an opinion.
+
+"broad_open" questions carry no answer, answers, or exampleAnswer field at all, just the "prompt".
+
+(`open` is the type lessons carried before tight and broad opens were told apart. Read it, leave it
+on an existing question if the user hasn't asked you to sort them, and never write a new one.)
 
 ### `paraphrase` (brown)
 
-A `paraphrase` question asks the speller to restate the section's passage in their own words
-("In your own words, explain why..." / "In your own words, describe..."). It is the one extended
-open whose job is comprehension of the passage itself rather than opinion about it, which is why it
-prints in its own colour. Like `open`, it carries no answer, answers, or exampleAnswer field —
-just the "prompt".
+A `paraphrase` question asks the speller to restate the section's passage, or part of it, in their
+own words ("In your own words, explain why..." / "In your own words, describe..." / "Summarize how
+..."). Its job is comprehension of the passage itself rather than opinion about it, which is why it
+prints in its own colour and is never written as a broad open. Like `broad_open`, it carries no
+answer, answers, or exampleAnswer field, just the "prompt".
 
-The default section shape above still asks for 3 `open` extended opens; a `paraphrase` may be used
-in place of the first of them where a section wants the distinction drawn explicitly.
+The default section shape above still asks for 3 broad opens; a `paraphrase` may be used in place
+of the first of them where a section wants the distinction drawn explicitly.
 
 ### `wyr` (grape)
 
@@ -233,8 +250,16 @@ into a choice the speller has a stake in. Keep both options concrete and either 
 appealing (or genuinely awful): a choice with one obvious winner asks nothing.
 
 OPTIONAL, and not part of the default 15-question shape. When the user asks for W.Y.R. questions,
-put them after the tight opens and before the extended opens, several in a row (the lessons this
-type comes from run six or more per section).
+put them after the tight opens and before the broad opens, several in a row (the lessons this
+type comes from run six or more per section), with a `heading` block reading "WOULD YOU RATHER"
+in front of the run so the printed lesson shows where it starts.
+
+## Headings
+
+A `heading` block (`{ "type": "heading", "text": "WOULD YOU RATHER" }`) is a short heading inside a
+section: one line, printed in bold where it sits. It is not a section (sections never print) and
+not a question. Use one over a run of W.Y.R. questions, or where the user asks for one; otherwise a
+section needs none.
 
 ## No prompt gives away another question's answer
 
@@ -248,8 +273,8 @@ option in a green prompt does the same thing ("such as Siamese or Persian").
 
 Two things are fine. A prompt may name a topic word whose own question wants a NUMBER back: "more
 than ___ mummies at Bubastis" doesn't help anyone produce BUBASTIS for its own question, and
-scrubbing every such mention makes prompts clumsy for no gain. And a pink, `wyr` or `multiple_open`
-prompt may name the section's subject even when it is also a green answer, because all three exist
+scrubbing every such mention makes prompts clumsy for no gain. And a pink, `paraphrase`, `wyr` or
+`multiple_open` prompt may name the section's subject even when it is also a green answer, because all of them exist
 to make the speller talk about that word: "In your own words, explain how a delta forms" can't
 avoid DELTA without going vague, "Give a synonym for DELTA" has to say it outright, and "Would you
 rather live by a delta or a canyon?" is the choice the question offers. Everywhere else, a prompt
@@ -369,7 +394,8 @@ Rejected (errors):
 - a spelling word outside 6-9 letters, repeated in another section, or appearing inside any answer
 - the same answer word used by two different questions, anywhere, at any length
 - the same numeric answer given by two different questions
-- an open, paraphrase or wyr question carrying an answer, answers, or exampleAnswer
+- a broad open, paraphrase or wyr question carrying an answer, answers, or exampleAnswer, or a tight
+  open carrying an answer or exampleAnswer (its examples go in answers)
 - a pink question using the retired "...one word that comes to mind..." stem
 - a section whose text has more than 3 formatted spans, or more than a tenth of its prose formatted
 - bold or underlining across more than 4 words, or italics across more than 10
@@ -377,12 +403,12 @@ Rejected (errors):
 
 Flagged but allowed (warnings, returned with the saved lesson): a section count other than 6, a
 section with no questions at all, a section whose 15 questions differ in type or order from the
-list above, pink questions that don't read as 4 tight + 3 extended, a multi-word orange answer, a
+list above (4 tight opens then 3 broad opens included), a multi-word orange answer, a
 `multiple` question with fewer than 2 or more than 4 answers, a `multiple_open` question suggesting
 no answers at all, a `multiple` prompt that doesn't blank out the list it is asking about, a
 `multiple_open` question asked before a `multiple` one in the same section, a section without
-exactly 4 spelling words, a word problem with no steps, a pink, `wyr` or `multiple_open` prompt
-that names another question's recall answer, a `wyr` prompt that doesn't read as a "Would you
+exactly 4 spelling words, a word problem with no steps, a pink, `paraphrase`, `wyr` or `multiple_open`
+prompt that names another question's recall answer, a `wyr` prompt that doesn't read as a "Would you
 rather… or…" choice or chains several "or"s, a spelling word that is also ALL-CAPS vocabulary in the same section, a
 VAKT activity that isn't last in its section, any bold, any underlining, and formatting on an
 ALL-CAPS word.

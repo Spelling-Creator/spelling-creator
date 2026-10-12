@@ -97,7 +97,10 @@ import {
   loadInteractiveProgress,
   saveInteractiveProgress,
 } from "@spelling-creator/core/browser/interactiveProgress";
-import { questionMeta } from "@spelling-creator/core/questions";
+import {
+  questionBesides,
+  questionMeta,
+} from "@spelling-creator/core/questions";
 import { VAKT_COLOR, vaktLinks, vaktText } from "@spelling-creator/core/vakt";
 import { saveLessonResponses } from "@spelling-creator/core/lessonResponses";
 import { hasApi } from "@spelling-creator/core/config";
@@ -683,6 +686,13 @@ function QuestionStep({ step, value, onChange, showAnswers }) {
         <p className="mt-2 text-2xl leading-snug font-semibold">
           {step.block.prompt || t("step.noQuestionText")}
         </p>
+        {/* The Besides follow-up names one accepted answer and asks for
+            another; the reveal below still shows the whole list. */}
+        {questionBesides(step.block) != null && (
+          <p className="mt-2 text-lg text-muted-foreground">
+            {t("step.besides", { answer: questionBesides(step.block) })}
+          </p>
+        )}
       </div>
       <Field>
         <FieldLabel htmlFor={fieldId} className="sr-only">

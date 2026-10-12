@@ -46,6 +46,7 @@
       "question": "{{type}} question",
       "spelling": "spelling list",
       "vakt": "VAKT activity",
+      "heading": "heading",
       "image": "image",
       "text": "text block",
       "default": "block"

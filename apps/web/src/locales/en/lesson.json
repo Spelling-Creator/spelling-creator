@@ -77,6 +77,7 @@
   "lessonView": {
     "untitledLesson": "Untitled Lesson",
     "noQuestionText": "(no question text)",
+    "besides": "Besides \"{{answer}}\"",
     "spellingWordsLabel": "Spell:",
     "noSpellingWords": "(no spelling words yet)",
     "imageAlt": "lesson image",
@@ -85,7 +86,8 @@
     "footnoteLabel": "Footnote {{number}}",
     "backToText": "Back to where footnote {{number}} is used",
     "notesHeading": "Notes",
-    "sourcesHeading": "Sources"
+    "sourcesHeading": "Sources",
+    "legendLabel": "Question types"
   },
   "lessonSummary": {
     "heading": "Summary",

@@ -2,9 +2,10 @@
 // the MCP server's tools accept. The Worker stores `doc` verbatim and the web
 // editor renders it, so the shapes here must match the editor's exactly. They
 // are kept in sync with:
-//   • ./questions.js  (question block shapes, the eight types)
+//   • ./questions.js  (question block shapes and types)
 //   • ./spelling.js   (spelling block shape)
 //   • ./vakt.js       (VAKT activity block shape)
+//   • ./heading.js    (heading block shape)
 //
 // The canonical doc is:
 //   { title, sources?, sections: [ { id, name, blocks: [ Block, ... ] } ] }
@@ -38,12 +39,16 @@ import { newId } from "./id.js";
 
 export { newId };
 
+// `open` is accepted for lessons written before tight and broad opens were
+// told apart; a new question is one or the other (see questions.js).
 export const QUESTION_TYPES = [
   "number",
   "single",
   "multiple",
   "multiple_open",
   "paraphrase",
+  "tight_open",
+  "broad_open",
   "open",
   "wyr",
   "background",
@@ -95,9 +100,19 @@ export function buildBlock(block, where) {
     case "vakt":
       return buildVaktBlock(block, where);
 
+    // A short heading inside the section, such as one over a run of W.Y.R.
+    // questions. Its text is all it has.
+    case "heading": {
+      const text = typeof block.text === "string" ? block.text.trim() : "";
+      if (!text) {
+        throw new Error(`${where}: a heading block needs a non-empty "text".`);
+      }
+      return { id: newId(), type: "heading", text };
+    }
+
     default:
       throw new Error(
-        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image, vakt.`,
+        `${where}: unknown block type "${block.type}". Use one of: text, spelling, question, image, vakt, heading.`,
       );
   }
 }
@@ -212,12 +227,43 @@ function buildQuestionBlock(block, where) {
           `${where}: a ${questionType} question needs a non-empty "answers" array of strings.`,
         );
       }
+      const out = { ...base, answers };
+      if (questionType !== "multiple") return out;
+      // The three-board mark and the Besides line belong to the tight type
+      // alone: a Besides line names one accepted answer and asks for another,
+      // which only means something when the list is the whole key.
+      if (block.threeBoard === true) out.threeBoard = true;
+      if (block.besides != null && block.besides !== "") {
+        const besides = String(block.besides).trim();
+        const named = answers.find(
+          (a) => a.text.toLowerCase() === besides.toLowerCase(),
+        );
+        if (!named) {
+          throw new Error(
+            `${where}: "besides" must be one of the question's own answers ` +
+              `(${answers.map((a) => a.text).join(", ")}), not "${besides}".`,
+          );
+        }
+        out.besides = named.text;
+      }
+      return out;
+    }
+
+    // A tight open may carry a few examples of what would count. They are
+    // optional, and they are examples, not a key: lessonChecks keeps them out
+    // of every answer pool.
+    case "tight_open": {
+      const raw = Array.isArray(block.answers) ? block.answers : [];
+      const answers = raw
+        .filter((t) => typeof t === "string" && t.trim())
+        .map((text) => ({ id: newId(), text: text.trim() }));
       return { ...base, answers };
     }
 
     // All free written responses: the speller answers on their own paper, so
     // none of them stores an answer.
     case "paraphrase":
+    case "broad_open":
     case "open":
     case "wyr":
       return { ...base };

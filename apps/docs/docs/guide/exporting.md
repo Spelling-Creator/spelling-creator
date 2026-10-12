@@ -9,12 +9,13 @@ to print, or save it to Google Docs. In the editor these are all in the
 **Export** menu at the top (on a phone, in the **Lesson actions** menu). A
 lesson needs at least one section before it can be exported.
 
-| Menu item               | What you get                                                                                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| **Export DOCX**         | A Word document, downloaded to your device.                                                    |
-| **Export JSON**         | A lesson file you can open again later with **Import JSON**, with nothing lost.                |
-| **Print PDF**           | A PDF, downloaded to your device, laid out the same as the Word document. Open it to print it. |
-| **Save to Google Docs** | The lesson as an editable Google Doc in your Google Drive.                                     |
+| Menu item               | What you get                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Export DOCX**         | A Word document, downloaded to your device.                                                            |
+| **Export JSON**         | A lesson file you can open again later with **Import JSON or OSLF**, with nothing lost.                |
+| **Export OSLF**         | The lesson as an Open Spelling Lesson Format file, for tools that aren't Spelling Creator (see below). |
+| **Print PDF**           | A PDF, downloaded to your device, laid out the same as the Word document. Open it to print it.         |
+| **Save to Google Docs** | The lesson as an editable Google Doc in your Google Drive.                                             |
 
 A published lesson's page on the hub has **Print PDF** and **Download Word**
 buttons too, so anyone reading it can print it.
@@ -35,10 +36,15 @@ outline of the editor:
   lesson that hasn't been published has no release date yet.
 - **No section headings.** Section names help you organize the lesson in the
   editor; the printed lesson runs straight through from one block to the next.
-- **Questions marked by color**: each question in its type's color, with its
-  answer in black on the same line. There are no type labels. **Suggested
-  answers** is also in italic, to tell it apart from **Multiple answers**, which
-  shares its color (see [Question blocks](./question-blocks.md)).
+  A **Heading** block you add inside a section does print, in bold, where you
+  put it.
+- **Questions marked by a tag and a color**: a short tag for the type (K, PK,
+  M, SO, P, O or WYR), then the question in its type's color, with its answer
+  in black on the same line. The tag is there for anyone who doesn't have the
+  color: a gray photocopy, a printer low on ink, or a reader who can't tell the
+  colors apart. **Suggested answers** is also in italic, to tell it apart from
+  **Semi-open**, which shares its color and its tag (see
+  [Question blocks](./question-blocks.md)).
 - **Spelling words on one line**, after "Spell:".
 - **VAKT activities** in red, after "VAKT:" (see
   [VAKT activities](./vakt-activities.md)).
@@ -48,17 +54,47 @@ outline of the editor:
   into a **Notes** list near the end. The lesson's **Sources** come last (see
   [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
 - **A footer on every page**: a copyright line with the author's name, above a
-  legend naming each question type in its own color. The legend shortens
-  **Would you rather** to **W.Y.R.** so it fits on one line. VAKT activities
-  aren't in the legend, since they aren't questions.
+  legend naming each question type the lesson uses in its own color. Types the
+  lesson doesn't ask are left out, so a lesson without **Would you rather**
+  questions has no W.Y.R. entry. The legend shortens **Would you rather** to
+  **W.Y.R.** so a lesson that uses every type still fits on one line. VAKT
+  activities aren't in the legend, since they aren't questions.
 - **A page number** in the top right corner.
+
+## Sharing a lesson with other tools
+
+**Export OSLF** writes the lesson as an
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+file, named `something.oslf.json`. OSLF is an open, method-neutral format for
+Spelling lessons that any tool can read, so this is the file to hand to
+something that isn't Spelling Creator. It holds the same passages, spelling
+words, questions, pictures, activities, headings and sources as the lesson
+file, under the format's own names (a Known question is `known`, a Semi-open
+one `semi-open`, and so on).
+
+Three things to know:
+
+- Every **Known**, **Prior knowledge**, **Math**, **Semi-open** and
+  **Suggested answers** question needs its answer filled in first. The format
+  requires one, so a lesson with one of those still blank isn't exported; the
+  message names the section and question to fill in.
+- Pictures are referred to by their address on the hub, so a picture in a
+  lesson that has never been saved to the cloud won't show for whoever opens
+  the file elsewhere.
+- An old **Open ended** question is written as a tight open or a broad open,
+  whichever its wording suggests.
+
+**Import JSON or OSLF** reads an OSLF file too, whoever made it. A question of
+a kind this app doesn't have comes in as an Open ended question with its
+wording, so nothing is lost; a picture given as a file beside the lesson
+(rather than an address) is left out.
 
 ## Opening an exported lesson again
 
-- **Import JSON** brings back a lesson file exactly, with every section. The
-  one thing a lesson file leaves out on purpose is the list of people you trust
-  to merge changes into the lesson, since that's a list of email addresses and
-  lesson files get passed around.
+- **Import JSON or OSLF** brings back a lesson file exactly, with every
+  section. The one thing a lesson file leaves out on purpose is the list of
+  people you trust to merge changes into the lesson, since that's a list of
+  email addresses and lesson files get passed around.
 - **Import Word document** brings back a Word file this app exported, including
   each question's type, formatting, footnotes, sources and picture credits.
   Because the printed lesson has no section headings, the whole lesson comes

@@ -5,8 +5,10 @@
 // on a letterboard, which is why answers must be short, unambiguous, and
 // findable in the text. Spelling covers S2C, RPM, Spellers Method and plenty of
 // unlabeled practice, and none of them is standardized, so this is one set of
-// defaults (the semi-open question family comes from the S2C guidebook) rather
-// than "the" method.
+// defaults rather than "the" method. The shared vocabulary for the question
+// types is being written down as the Open Spelling Lesson Format
+// (https://github.com/playforge-coding/open-spelling-lesson-format); the
+// counts and order below are this app's own house style.
 //
 // The standard itself is prose, so it lives as prose: standards.md, edited as a
 // document rather than as an escaped JavaScript string. This module is only the

@@ -62,7 +62,6 @@ export const AI_FIX_CODES = Object.freeze([
   "W_ANSWER_REVEALED_OPEN",
   "W_NUMBER_NO_STEPS",
   "W_SPELLING_IN_CAPS",
-  "W_OPEN_SPLIT",
 ]);
 
 const AI_FIXABLE = new Set(AI_FIX_CODES);
@@ -131,14 +130,16 @@ export function fixContext(doc, finding) {
   for (const other of doc.sections) {
     if (other === section) continue;
     for (const block of other.blocks || []) {
-      // A loose orange question's answers are suggestions, which the checks
-      // deliberately keep out of every lesson-wide pool (see lessonChecks.js).
-      // Forbidding them here would steer the model away from words the checks
-      // would accept, sometimes the only word that passes.
+      // A loose orange question's answers, and a tight open's examples, are
+      // suggestions, which the checks deliberately keep out of every
+      // lesson-wide pool (see lessonChecks.js). Forbidding them here would
+      // steer the model away from words the checks would accept, sometimes
+      // the only word that passes.
       const words =
         block?.type === "spelling"
           ? texts(block.words)
-          : block?.type === "question" && block.questionType !== "multiple_open"
+          : block?.type === "question" &&
+              !SUGGESTION_TYPES.has(block.questionType)
             ? [...texts([String(block.answer ?? "")]), ...texts(block.answers)]
             : [];
       for (const word of words) usedElsewhere.add(word);
@@ -155,7 +156,10 @@ export function fixContext(doc, finding) {
   };
 }
 
-const ORANGE = new Set(["multiple", "multiple_open"]);
+// The types that hold a list in `answers`, and the subset whose list is
+// suggestions rather than a key.
+const LIST_ANSWER = new Set(["multiple", "multiple_open", "tight_open"]);
+const SUGGESTION_TYPES = new Set(["multiple_open", "tight_open"]);
 const SINGLE_ANSWER = new Set(["single", "background", "number"]);
 
 function nonEmpty(value) {
@@ -218,7 +222,7 @@ export function aiEditsToOperations(doc, finding, edits) {
       if (steps.length) next.steps = steps;
       // A change of type moves the answer between the one field and the list.
       if (
-        ORANGE.has(next.questionType) &&
+        LIST_ANSWER.has(next.questionType) &&
         !next.answers?.length &&
         next.answer
       ) {

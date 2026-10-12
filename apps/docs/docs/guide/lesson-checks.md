@@ -44,10 +44,10 @@ section to get started."
 The panel sorts what it finds into two kinds:
 
 - **Problems** are "things that would confuse the speller or mark a right
-  answer wrong": a single answer that isn't in its passage, a spelling word
-  hidden inside an answer, two number questions with the same answer, a
-  multiple answers question that accepts only part of the list the passage
-  gives. They are always listed and counted.
+  answer wrong": a known answer that isn't in its passage, a spelling word
+  hidden inside an answer, two math questions with the same answer, a
+  semi-open question that accepts only part of the list the passage gives.
+  They are always listed and counted.
 - **Suggestions** describe "the usual shape of a lesson": how many sections,
   how many spelling words, which questions come in which order. They start
   folded away behind **Show N suggestions**, and they are never counted in the
@@ -62,14 +62,14 @@ practitioner follows.
 Many of them come from letterboard spelling, where the speller points to every
 letter of an answer one at a time. A long answer is real work, so the defaults
 keep answers short: spelling words of 6 to 9 letters, single words for the
-answers to a multiple answers question, and one word answers for the first few
-open ended questions.
+answers to a semi-open question, and one word answers for the tight
+open questions.
 
-The idea of "semi-open" questions (the two orange types, **Multiple answers**
-and **Suggested answers**) comes from the S2C (Spelling to Communicate)
-guidebook. The colors and the usual lesson shape (six sections, four spelling
-words a section and fifteen questions in a set order) are the app's own
-defaults.
+The question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+an open vocabulary for Spelling lessons that isn't tied to any one method. The
+colors and the usual lesson shape (six sections, four spelling words a section
+and fifteen questions in a set order) are the app's own defaults.
 
 Practitioners who follow a different Spelling practice, or none in particular,
 may well make different choices. That's fine. Ignore any suggestion that
@@ -81,15 +81,15 @@ you can ignore those too: they never block anything.
 
 **Answers and their passage**
 
-- A **Single answer** question's answer is written word for word in the
+- A **Known** question's answer is written word for word in the
   section's text.
-- A **Multiple answers** question asks for the items of one list the passage
+- A **Semi-open** question asks for the items of one list the passage
   gives, uses the passage's own words, and accepts every item in that list. If
   you want the speller to answer in their own words, the panel suggests making
   it a **Suggested answers** question instead.
-- A **Background knowledge** question asks about something the passage doesn't
+- A **Prior knowledge** question asks about something the passage doesn't
   say.
-- A fill in the blank **Number answer** question has its number in the text.
+- A fill in the blank **Math** question has its number in the text.
 
 **Answers that give each other away**
 
@@ -113,21 +113,24 @@ you can ignore those too: they never block anything.
   hospital").
 - A **Would you rather** question starts "Would you rather" and offers two
   options, or a short list joined by one "or".
-- A **Multiple answers** question quotes the passage's sentence with the list
+- A **Semi-open** question quotes the passage's sentence with the list
   blanked out ("The blast sent out ______.") and doesn't give its own answers
   away.
-- Every answer to an orange question (**Multiple answers** or **Suggested
+- Every answer to an orange question (**Semi-open** or **Suggested
   answers**) is a single word.
-- A **Multiple answers** question accepts 2 to 4 answers, and a **Suggested
+- A **Semi-open** question accepts 2 to 4 answers, and a **Suggested
   answers** question suggests at least one, so whoever is scoring knows what
   would count.
 
 **The usual lesson shape** (all suggestions)
 
 - Six sections.
-- In each section: 3 **Single answer**, 2 **Number answer**, 2 **Multiple
-  answers** or **Suggested answers**, 1 **Background knowledge**, then 7
-  **Open ended** (4 quick ones followed by 3 longer ones).
+- In each section: 3 **Known**, 2 **Math**, 2 **Semi-open** or **Suggested
+  answers**, 1 **Prior knowledge**, 4 **Tight open**, then 3 **Broad open** (a
+  **Paraphrase** can stand in for one). An
+  **Open ended** question from an older lesson counts as whichever kind its
+  wording suggests, and the suggestion says which kind that was. It points at
+  the first question that is out of place.
 - One of the two number questions is a word problem with worked steps.
 - The VAKT activity comes at the end of the section.
 - A section with no questions yet.
@@ -156,7 +159,7 @@ The panel stays open, and the finding drops off the list a moment later.
 | **Remove all formatting in this section** | Removes every kind of formatting in the section's text, italics included.                              |
 | **Make it plain**                         | Unformats the one long run of formatting the finding quotes.                                           |
 | **Move it to the end**                    | Moves the section's VAKT activities to its end, keeping their order.                                   |
-| **Swap them**                             | Puts the **Multiple answers** question before the **Suggested answers** one.                           |
+| **Swap them**                             | Puts the **Semi-open** question before the **Suggested answers** one.                                  |
 | **Accept "silt" too**                     | Adds the item the passage's list goes on to as an accepted answer. A two-word item adds its last word. |
 
 After a fix, a line at the top of the panel says **Fixed.** with an **Undo**

@@ -137,6 +137,46 @@ test("a forced write replaces the file whole and leaves nothing beside it", asyn
   });
 });
 
+test("an OSLF path writes the format, and a blank answer the format needs is a failed write", async () => {
+  const { doc } = await readLesson(join(fixtures, "bold-passage.json"));
+  await withTempDir(async (dir) => {
+    const path = join(dir, "lesson.oslf.json");
+    await writeLesson(path, doc);
+    const written = JSON.parse(await readFile(path, "utf8"));
+    assert.equal(written.oslf, "0.1");
+    assert.equal(written.title, "Domestic Cats");
+
+    const blank = {
+      ...doc,
+      sections: [
+        {
+          ...doc.sections[0]!,
+          blocks: [
+            ...doc.sections[0]!.blocks,
+            {
+              id: "blank",
+              type: "question",
+              questionType: "single",
+              prompt: "Which way?",
+              answer: "",
+            },
+          ],
+        },
+        ...doc.sections.slice(1),
+      ],
+    };
+    await assert.rejects(
+      writeLesson(join(dir, "blank.oslf.json"), blank as typeof doc),
+      (err: unknown) =>
+        err instanceof LessonWriteError &&
+        /blank\.oslf\.json.*Section 1, question \d+ \("Which way\?"\) has no answer/.test(
+          err.message,
+        ),
+    );
+    assert.deepEqual(await readdir(dir), ["lesson.oslf.json"]);
+  });
+});
+
 test("a write is refused when the file changed after it was read", async () => {
   await withTempDir(async (dir) => {
     const path = join(dir, "lesson.json");

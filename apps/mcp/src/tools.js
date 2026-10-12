@@ -17,7 +17,11 @@ import {
   presentDoc,
   QUESTION_TYPES,
 } from "@spelling-creator/core/lessonBuild";
-import { buildLessonFile } from "@spelling-creator/core/lessonFile";
+import {
+  buildLessonFile,
+  lessonFileName,
+} from "@spelling-creator/core/lessonFile";
+import { oslfFileName, toOslf } from "@spelling-creator/core/oslf";
 import {
   forkLesson,
   mergeProposal,
@@ -65,14 +69,16 @@ import {
 const blockSchema = z
   .object({
     type: z
-      .enum(["text", "spelling", "question", "image", "vakt"])
+      .enum(["text", "spelling", "question", "image", "vakt", "heading"])
       .describe(
         "text = a paragraph of lesson prose (put any words you're teaching the spelling of in ALL CAPS); " +
           "spelling = an explicit list of spelling words; question = a quiz question; " +
           "image = a picture (don't write these by hand — add them with the add_image tool, which uploads the bytes); " +
           "vakt = a regulation activity (a movement or sensory break). VAKT blocks are OPTIONAL and OFF by " +
           "default: add them only when the user asks for them. When they are wanted, a section gets one and it " +
-          "goes LAST, after that section's questions.",
+          "goes LAST, after that section's questions; " +
+          'heading = a short heading inside the section (its "text"), such as "WOULD YOU RATHER" over a run of ' +
+          "wyr questions. Optional, and not a section: sections never print, a heading does.",
       ),
     text: z
       .string()
@@ -94,7 +100,8 @@ const blockSchema = z
           "free-text notes rare. A backslash makes a character literal (\\* for an asterisk).\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
           'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
-          "or footnotes here.",
+          "or footnotes here.\n\n" +
+          'For type "heading": the heading itself, e.g. "WOULD YOU RATHER". Plain text, one line.',
       ),
     links: z
       .array(
@@ -123,20 +130,24 @@ const blockSchema = z
         'For type "question": number (numeric answer), single (one text answer), multiple (the items of a list ' +
           "the passage states — every accepted answer), multiple_open (the looser semi-open question: a synonym, " +
           "a definition, anything bounded by the topic, whose answers are SUGGESTIONS the speller need not " +
-          "match), paraphrase (restate the passage in their own words — no stored answer), open (free " +
-          'response), wyr (a "Would you rather…?" choice between two options, joined by "or"; opinion only, ' +
-          "no stored answer), background (needs prior knowledge). Every answer except a background one and a " +
-          "multiple_open suggestion must appear, word for word, in that section's own passage; a background " +
-          "answer must NOT. A single " +
+          "match), paraphrase (restate the passage in their own words; no stored answer), tight_open (an " +
+          "easy one-word answer from the speller's own world; no key, though `answers` may hold a few " +
+          "examples), broad_open (their own reasoning, opinion or imagination in a sentence; no stored " +
+          'answer), wyr (a "Would you rather...?" choice between two options, joined by "or"; opinion only, ' +
+          "no stored answer), background (needs prior knowledge). `open` is only accepted for lessons written " +
+          "before tight and broad opens were separate: never write a new one. Every answer except a background " +
+          "one, a multiple_open suggestion and a tight_open example must appear, word for word, in that " +
+          "section's own passage; a background answer must NOT. A single " +
           "(green) answer must also be a HARD FACT with one right answer — being in the passage is not enough. " +
           '"What was the goddess called? → BASTET" is a fact; "What is a cat called when it purrs on a lap? → ' +
           'COMPANION" is interpretation, because pet, friend and lap-cat are all just as fair and COMPANION only ' +
           "looks right because the passage used that word. If a reasonable speller could answer differently and " +
-          "still be right, make it an open question or ask for a fact the passage states outright. Of the 7 " +
-          "open questions in a section, the first 4 are TIGHT OPENS — open-ended but answerable in ONE WORD from " +
-          "the speller's own everyday world, and crucially EASY, with no hard thinking, nothing abstract, and no " +
-          'reference to the lesson ("Name a color of a crayon", "Name something found in a hospital"). The last 3 ' +
-          'are EXTENDED OPENS, inviting a full sentence ("In your own words, explain…", "…Defend your answer.").',
+          "still be right, make it a tight open or ask for a fact the passage states outright. A section's 4 " +
+          "TIGHT OPENS are open-ended but answerable in ONE WORD from the speller's own everyday world, and " +
+          "crucially EASY, with no hard thinking, nothing abstract, and no reference to the lesson " +
+          '("Name a color of a crayon", "Name something found in a hospital"). Its 3 BROAD OPENS invite a full ' +
+          'sentence of the speller\'s own thinking ("Why do you think...?", "...Defend your answer.", "If you ' +
+          'could..."). "In your own words, explain..." is a paraphrase question, not a broad open.',
       ),
     prompt: z
       .string()
@@ -174,6 +185,21 @@ const blockSchema = z
           "come from a list. Give at least one, ideally two or three.\n\n" +
           "Either way keep them SHORT, ideally one word — a speller pointing at a letterboard has to spell every " +
           "word, so no long evidence phrases or quotations.",
+      ),
+    threeBoard: z
+      .boolean()
+      .optional()
+      .describe(
+        'For a "multiple" question: mark it for the three boards. Prints "(3B)" in front of the question. ' +
+          "Only when the user asks for three-board questions.",
+      ),
+    besides: z
+      .string()
+      .optional()
+      .describe(
+        'For a "multiple" question: a follow-up line printed under it that names ONE of its own accepted answers ' +
+          'and asks for another ("besides": "rocks" prints \'Besides "rocks"\' followed by the other answers). Must be ' +
+          "one of that question's `answers`, spelled the same way. Only when the user asks for Besides lines.",
       ),
     steps: z
       .array(z.string())
@@ -282,8 +308,9 @@ const sectionSchema = z.object({
         "section's content, in this fixed order: 3 single, 1 number (fill-in-the-blank), " +
         "1 number (word problem, with steps), 2 orange (default: 2 multiple, one per " +
         "planted list, 2-4 single-word answers each — a multiple_open may take either " +
-        "slot, tighter question first), 1 background, 4 open (tight — easy everyday " +
-        "one-word answers), 3 open (extended — full-sentence answers). Every section ends " +
+        "slot, tighter question first), 1 background, 4 tight_open (easy everyday " +
+        "one-word answers), 3 broad_open (full-sentence answers of the speller's own; a " +
+        "paraphrase may take the first of these slots). Every section ends " +
         "with its own questions — do not collect them into a separate quiz section at the end.",
     ),
 });
@@ -463,14 +490,44 @@ function text(value) {
   return { content: [{ type: "text", text: body }] };
 }
 
-// A safe-ish .json filename derived from the lesson title (mirrors the web
-// exporter's safeFileName). Falls back to "lesson" when nothing usable remains.
-function lessonFileName(title) {
-  const base = (title || "lesson")
-    .trim()
-    .replace(/[^a-z0-9\-_ ]/gi, "")
-    .replace(/\s+/g, "-");
-  return `${base || "lesson"}.json`;
+// Which file a lesson leaves the server as: the app's own lesson file, or the
+// Open Spelling Lesson Format for tools that aren't this app.
+const lessonFileFormatSchema = z
+  .enum(["spelling-creator", "oslf"])
+  .optional()
+  .describe(
+    '"spelling-creator" (the default): the app\'s own lesson file, which the editor imports without loss. ' +
+      '"oslf": the Open Spelling Lesson Format (https://github.com/playforge-coding/open-spelling-lesson-format), ' +
+      "the open, method-neutral file other tools read; save it as `.oslf.json`. Only when the user asks for " +
+      "OSLF, or for a file another tool will read.",
+  );
+
+// The file a lesson is handed over as, in the format asked for. In an OSLF
+// file a picture is its public address on the hub, which is the only place a
+// stored picture's bytes can be fetched from by whatever opens the file.
+function lessonFileResult(doc, format, config) {
+  if (format === "oslf") {
+    return {
+      lessonFile: toOslf(doc, {
+        imageSrc: (block) =>
+          block.image?.hash
+            ? `${config.apiUrl}/images/${block.image.hash}`
+            : null,
+      }),
+      filename: oslfFileName(doc.title),
+      note:
+        "Save the `lessonFile` object as an .oslf.json file (suggested name in `filename`). It is an Open " +
+        "Spelling Lesson Format file, which any tool that reads the format can open, the Spelling Creator " +
+        'editor included (its "Import JSON or OSLF" button).',
+    };
+  }
+  return {
+    lessonFile: buildLessonFile(doc),
+    filename: lessonFileName(doc.title),
+    note:
+      "Save the `lessonFile` object as a .json file (suggested name in `filename`), then import it in the " +
+      'Spelling Creator editor via the "Import JSON or OSLF" button. This works fully offline, with no account needed.',
+  };
 }
 
 function errorResult(err) {
@@ -1238,7 +1295,7 @@ export function registerTools(server, ctx) {
         "public hub. Returns the new lesson id and its hub URL.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), " +
         "spelling (an explicit word list), question " +
-        "(number/single/multiple/multiple_open/paraphrase/open/wyr/background), image, and vakt " +
+        "(number/single/multiple/multiple_open/paraphrase/tight_open/broad_open/wyr/background), image, and vakt " +
         "(a regulation activity — OPTIONAL, only when the user asks for them, and last in its section).\n\n" +
         "DEFAULT STRUCTURE (unless the user asks otherwise): 6 sections; each section is [image?] + 2 text " +
         "paragraphs + 4 spelling words + 15 questions, and ENDS with those question blocks about that section. " +
@@ -1323,11 +1380,14 @@ export function registerTools(server, ctx) {
         "Build a spelling lesson entirely offline — no account, network, or sign-in needed. You compose the content " +
         "(same structure as create_lesson); this validates it, generates all ids, and returns a self-contained lesson " +
         "FILE. Save the returned `lessonFile` object verbatim as a `.json` file, then open the Spelling Creator editor " +
-        "(spellingcreator.org) and load it with the “Import JSON” button (next to “Import Word " +
+        "(spellingcreator.org) and load it with the “Import JSON or OSLF” button (next to “Import Word " +
         "document”). Use this when you can't (or don't want to) publish to the hub; use create_lesson when you " +
         "want it saved to the cloud directly.\n\n" +
+        'Pass `format: "oslf"` to get the lesson as an Open Spelling Lesson Format file instead (save it as ' +
+        "`.oslf.json`): the open, method-neutral format other tools read. The default is Spelling Creator's own " +
+        "lesson file, which the editor reads back without loss.\n\n" +
         "A lesson is sections of blocks. Block types: text (prose — put words being taught in ALL CAPS), spelling (an " +
-        "explicit word list), question (number/single/multiple/multiple_open/paraphrase/open/wyr/background), image, " +
+        "explicit word list), question (number/single/multiple/multiple_open/paraphrase/tight_open/broad_open/wyr/background), image, " +
         "and vakt (a regulation " +
         "activity — OPTIONAL, only when the user asks for them, and last in its section). DEFAULT STRUCTURE " +
         "(unless asked otherwise): 6 sections; each is [image?] + 2 text paragraphs + 4 spelling words + 15 " +
@@ -1339,23 +1399,18 @@ export function registerTools(server, ctx) {
         title: z.string().describe("The lesson title / topic."),
         sections: sectionsSchema,
         sources: sourcesSchema,
+        format: lessonFileFormatSchema,
         skipValidation: skipValidationSchema,
       },
     },
-    tool(async ({ title, sections, sources, skipValidation }) => {
+    tool(async ({ title, sections, sources, format, skipValidation }) => {
       const doc = buildDoc({ title, sections, sources });
       const warnings = await checkStandard({
         doc,
         rawBlocks: inputBlocksFromSections(sections),
         skipValidation,
       });
-      const result = {
-        lessonFile: buildLessonFile(doc),
-        filename: lessonFileName(doc.title),
-        note:
-          "Save the `lessonFile` object as a .json file (suggested name in `filename`), then import it in the " +
-          'Spelling Creator editor via the "Import JSON" button. This works fully offline — no account needed.',
-      };
+      const result = lessonFileResult(doc, format, config);
       if (warnings.length) result.warnings = warnings;
       return text(result);
     }),
@@ -2013,11 +2068,23 @@ export function registerTools(server, ctx) {
         "study an existing lesson's structure as a template.\n\n" +
         "Text blocks come back as the same markup you write them in (**bold**, *italic*, <u>underline</u>, " +
         "^[footnotes]), with literal asterisks escaped, so a block can be passed straight back to replace_block or " +
-        "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.",
-      inputSchema: { id: z.string().describe("The lesson id.") },
+        "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.\n\n" +
+        'Pass `format: "oslf"` to get the lesson as an Open Spelling Lesson Format file instead (`lessonFile`, ' +
+        "with a `filename` to save it under), for a tool that isn't Spelling Creator.",
+      inputSchema: {
+        id: z.string().describe("The lesson id."),
+        format: lessonFileFormatSchema,
+      },
     },
-    tool(async ({ id }) => {
+    tool(async ({ id, format }) => {
       const lesson = await api.getLesson(id);
+      if (format === "oslf" && lesson?.doc) {
+        return text({
+          id: lesson.id ?? id,
+          title: lesson.doc.title,
+          ...lessonFileResult(lesson.doc, "oslf", config),
+        });
+      }
       return text(
         lesson?.doc ? { ...lesson, doc: presentDoc(lesson.doc) } : lesson,
       );

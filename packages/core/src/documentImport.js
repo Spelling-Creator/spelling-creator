@@ -22,7 +22,13 @@
 // answers and the wording, the same way a reader would tell them apart.
 
 import { normalizeLessonFile } from "./jsonImport.js";
-import { ANSWER_GAP, QUESTION_TYPES } from "./questions.js";
+import {
+  ANSWER_GAP,
+  QUESTION_TAG_PREFIX,
+  readQuestionTag,
+  QUESTION_TYPES,
+  resolveOpenType,
+} from "./questions.js";
 
 export class DocumentImportError extends Error {
   constructor(message) {
@@ -47,7 +53,10 @@ const RUN_TOGETHER = /[?)]\s+\d{1,2}[.)]\s+\S/;
  * @returns {string}
  */
 export function classifyLine(line) {
-  const t = line.trim();
+  // Text copied out of a printed lesson carries the type tag in front of each
+  // question ("K Name the island."). Set aside before the wording is read, or
+  // "K Name a..." would never match an opener anchored at the start.
+  const t = line.trim().replace(QUESTION_TAG_PREFIX, "");
   if (!t) return "other";
   if (/^(Spell(?:ing)?(?: words| list| these)?|Words)\s*[:-]/i.test(t)) {
     return "spelling";
@@ -339,11 +348,16 @@ export function parseSection(lines, heading = "") {
         if (q) q.steps.push(line.replace(/^\d+\s*[.)]\s*/, ""));
         return;
       }
-      const split = splitQuestionLine(line.replace(QUESTION_PREFIX, ""));
+      // The printed tag comes off the front; its three-board mark, when it
+      // has one, stays with the question for questionBlock to put on the
+      // block.
+      const tag = readQuestionTag(line.trim());
+      const split = splitQuestionLine(tag.text.replace(QUESTION_PREFIX, ""));
       out.questions.push({
         prompt: split.prompt.trim(),
         answers: split.answers.map((a) => a.trim()).filter(Boolean),
         steps: [],
+        ...(tag.threeBoard ? { threeBoard: true } : {}),
       });
     }
   });
@@ -373,7 +387,10 @@ export function deriveQuestionType(question, passage) {
   const answers = (question.answers || []).map(norm).filter(Boolean);
   if (prompt.startsWith("would you rather")) return "wyr";
   if (/\bin your own words\b/.test(prompt)) return "paraphrase";
-  if (!answers.length) return "open";
+  // No answer makes an open question, and its wording says which kind.
+  if (!answers.length) {
+    return resolveOpenType({ questionType: "open", prompt: question.prompt });
+  }
   const text = ` ${norm(passage)} `;
   const inPassage = (a) =>
     text.includes(` ${a} `) ||
@@ -387,10 +404,12 @@ export function deriveQuestionType(question, passage) {
 
 // The type is derived unless the section came from the model, whose own type
 // (when it names a real one) was right more often than the rule in the
-// experiment; the parser never sets one.
+// experiment; the parser never sets one. The model was trained before tight
+// and broad opens were separate types, so its `open` is sorted by wording the
+// way a legacy block is.
 function questionBlock(q, passage) {
   const questionType = QUESTION_TYPES[q.type]
-    ? q.type
+    ? resolveOpenType({ questionType: q.type, prompt: q.prompt })
     : deriveQuestionType(q, passage);
   const base = { type: "question", questionType, prompt: q.prompt };
   switch (questionType) {
@@ -403,7 +422,12 @@ function questionBlock(q, passage) {
     case "single":
     case "background":
       return { ...base, answer: q.answers[0] ?? "" };
+    // Only a `multiple` can be marked for the three boards; the mark on a
+    // line that reads as anything else is dropped with the rest of the tag.
     case "multiple":
+      return q.threeBoard
+        ? { ...base, answers: q.answers, threeBoard: true }
+        : { ...base, answers: q.answers };
     case "multiple_open":
       return { ...base, answers: q.answers };
     default:

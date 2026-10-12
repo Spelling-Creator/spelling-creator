@@ -32,14 +32,26 @@ export function buildLessonFile(doc) {
 }
 
 /**
+ * A filesystem-safe file name stem derived from the lesson title, with no
+ * extension: "lesson" when nothing usable remains. Every file a lesson is
+ * saved as (the app's own `.json`, an `.oslf.json`) builds on this, so they
+ * all name a lesson the same way.
+ * @param {string} [title]
+ * @returns {string}
+ */
+export function lessonFileBase(title) {
+  const base = (title || "lesson")
+    .trim()
+    .replace(/[^a-z0-9\-_ ]/gi, "")
+    .replace(/\s+/g, "-");
+  return base || "lesson";
+}
+
+/**
  * A filesystem-safe `.json` name derived from the lesson title.
  * @param {string} [title]
  * @returns {string}
  */
 export function lessonFileName(title) {
-  const base = (title || "lesson")
-    .trim()
-    .replace(/[^a-z0-9\-_ ]/gi, "")
-    .replace(/\s+/g, "-");
-  return `${base || "lesson"}.json`;
+  return `${lessonFileBase(title)}.json`;
 }

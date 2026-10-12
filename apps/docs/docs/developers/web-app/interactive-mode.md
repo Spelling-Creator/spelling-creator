@@ -73,22 +73,25 @@ presentation differs; the content is the same blocks.
 shape, `{ answer, answers, steps, suggested }`, or null when there is nothing to
 reveal:
 
-| Type                                                            | What the reveal shows                                              |
-| --------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `single`, `background`                                          | `answer`                                                           |
-| `number`                                                        | `answer` plus the working `steps` (either alone is still revealed) |
-| `multiple`                                                      | every entry in `answers`, the whole accepted set                   |
-| `multiple_open`                                                 | the same list with `suggested: true`, labeled as suggestions       |
-| `open`, `paraphrase`, `wyr`, an unknown type, or a blank answer | null: "This question has no set answer."                           |
+| Type                                                                                                                  | What the reveal shows                                              |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `single`, `background`                                                                                                | `answer`                                                           |
+| `number`                                                                                                              | `answer` plus the working `steps` (either alone is still revealed) |
+| `multiple`                                                                                                            | every entry in `answers`, the whole accepted set                   |
+| `multiple_open`                                                                                                       | the same list with `suggested: true`, labeled as suggestions       |
+| `tight_open` with examples                                                                                            | its examples with `suggested: true`, labeled the same way          |
+| `broad_open`, `paraphrase`, `wyr`, a legacy `open`, a tight open without examples, an unknown type, or a blank answer | null: "This question has no set answer."                           |
 
 `revealedAnswers` turns that into the flat list of boxes the UI draws (the
 working is not one of them; it stays a numbered list below), and
 `hasRevealableAnswers(steps)` decides whether the toggle is rendered at all.
 
-The two semi-open types share a color and an `answers` list because the S2C
-guidebook treats them as one family (see the comment in
-`packages/core/src/questions.js`). That grouping is the app's default, taken from
-one source; other Spelling practitioners categorize questions differently.
+The two semi-open types share a color and an `answers` list because the app's
+default treats them as one family (see the comment in
+`packages/core/src/questions.js`). Other Spelling practitioners categorize
+questions differently, and the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+lists the loose end as an open question.
 `suggested` is what tells the two apart, and it
 travels with the answers so the person looking at the reveal doesn't have to
 remember the question type.

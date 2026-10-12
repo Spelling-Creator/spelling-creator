@@ -22,6 +22,7 @@ import { ArrowUpIcon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton.jsx";
 import { CitationParts, TextRuns } from "./TextRuns.jsx";
 import { fitWithin, imageSizeScale } from "@spelling-creator/core/image";
+import { headingText } from "@spelling-creator/core/heading";
 import { imageCaptionParts } from "@spelling-creator/core/imageCredit";
 import {
   CAPTION_CLASS,
@@ -43,7 +44,11 @@ import {
 } from "@spelling-creator/core/sources";
 import {
   ANSWER_GAP,
+  THREE_BOARD_MARK,
+  isThreeBoard,
   questionAnswerItems,
+  questionBesides,
+  questionLegendFor,
   questionMeta,
 } from "@spelling-creator/core/questions";
 import {
@@ -138,6 +143,34 @@ const LESSON_STYLES = `
   .s2c-lesson-root .s2c-label {
     color: color-mix(in oklab, var(--s2c-label) 78%, black);
   }
+  /* The type tag in front of a prompt: small and muted, so it reads as a mark
+     rather than as the first word of the question. */
+  .s2c-lesson-root .s2c-tag {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    margin-right: 0.5em;
+  }
+  /* The legend under the lesson, the page footer's on screen: each tag the
+     lesson uses next to its type's name, in that type's colour. */
+  .s2c-lesson-root .s2c-legend {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .s2c-lesson-root .s2c-legend dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0;
+  }
+  .s2c-lesson-root .s2c-legend div { display: flex; gap: 0.5em; }
+  .s2c-lesson-root .s2c-legend dt { font-weight: 600; }
+  .s2c-lesson-root .s2c-legend dd { margin: 0; }
+  /* The Besides line under a three-board question, indented like working. */
+  .s2c-lesson-root .s2c-besides { margin-left: 24px; }
+  /* A heading inside a section, with a little air above it. */
+  .s2c-lesson-root .s2c-heading { margin: 14px 0 4px; }
   .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
   .s2c-lesson-root sup.s2c-fn a {
     color: var(--primary);
@@ -352,12 +385,14 @@ function ImageBlock({ block, si, bi, translation }) {
   );
 }
 
-// A question reads the way it prints: the prompt in the colour of its type, then
-// its answer in the body colour on the same line. Nothing is labelled — the
-// colour is what marks the type — so this matches the exported lesson exactly.
-// The answers translate one accepted answer at a time and are joined back here,
-// so the wide gaps separating them never pass through a model (see
-// questionAnswerItems); untranslated, the join is questionAnswerText verbatim.
+// A question reads the way it prints: the type's tag, the prompt in the colour
+// of its type, then its answer in the body colour on the same line, so this
+// matches the exported lesson exactly. The tag is what marks the type for a
+// reader who can't tell the colours apart; the Legend under the lesson
+// explains it, and hovering the tag names the type too. The answers translate
+// one accepted answer at a time and are joined back here, so the wide gaps
+// separating them never pass through a model (see questionAnswerItems);
+// untranslated, the join is questionAnswerText verbatim.
 function QuestionBlock({ block, si, bi, translation }) {
   const { t } = useTranslation("lesson");
   const meta = questionMeta(block.questionType);
@@ -367,10 +402,24 @@ function QuestionBlock({ block, si, bi, translation }) {
     )
     .join(ANSWER_GAP);
   const steps = questionStepsWithText(block);
+  // The Besides line names one answer and asks for the others; both halves
+  // come from the answer list, so they translate with it.
+  const besides = questionBesides(block);
+  const besidesIndex =
+    besides == null
+      ? -1
+      : questionAnswerItems(block).findIndex(
+          (item) => item.toLowerCase() === besides.toLowerCase(),
+        );
+  const translatedAnswer = (item, i) =>
+    translation?.get(lessonSegmentKey.answer(si, bi, i)) ?? item;
 
   return (
     <>
       <p>
+        <span className="s2c-tag" title={meta.label}>
+          {isThreeBoard(block) ? `${meta.tag} ${THREE_BOARD_MARK}` : meta.tag}
+        </span>
         <span
           className="s2c-label"
           style={{
@@ -385,6 +434,21 @@ function QuestionBlock({ block, si, bi, translation }) {
         </span>
         {answer ? `${ANSWER_GAP}${answer}` : null}
       </p>
+
+      {besides != null && (
+        <p className="s2c-besides">
+          <span className="s2c-label" style={{ "--s2c-label": meta.color }}>
+            {t("lessonView.besides", {
+              answer: translatedAnswer(besides, besidesIndex),
+            })}
+          </span>
+          {ANSWER_GAP}
+          {questionAnswerItems(block)
+            .map(translatedAnswer)
+            .filter((_, i) => i !== besidesIndex)
+            .join(ANSWER_GAP)}
+        </p>
+      )}
 
       {steps.map((step, i) => (
         <p key={step.id} style={{ marginLeft: "24px" }}>
@@ -490,6 +554,15 @@ function Block({ block, si, bi, translation, footnoteStart }) {
     return (
       <VaktBlock block={block} si={si} bi={bi} translation={translation} />
     );
+  if (block.type === "heading" && headingText(block))
+    return (
+      <p className="s2c-heading">
+        <strong>
+          {translation?.get(lessonSegmentKey.heading(si, bi)) ??
+            headingText(block)}
+        </strong>
+      </p>
+    );
   return null;
 }
 
@@ -539,7 +612,31 @@ export default function LessonView({ doc, translation }) {
         </section>
       ))}
       <EndMatter doc={doc} translation={translation} />
+      <Legend doc={doc} />
     </div>
+  );
+}
+
+// The same legend the printed lesson carries in its page footer: the tag of
+// every question type the lesson uses, with the type's name in its colour.
+// Nothing for a lesson with no questions, as in print.
+function Legend({ doc }) {
+  const { t } = useTranslation("lesson");
+  const types = questionLegendFor(doc);
+  if (!types.length) return null;
+  return (
+    <aside className="s2c-legend" aria-label={t("lessonView.legendLabel")}>
+      <dl>
+        {types.map((type) => (
+          <div key={type.key}>
+            <dt>{type.tag}</dt>
+            <dd className="s2c-label" style={{ "--s2c-label": type.color }}>
+              {type.legend || type.label}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </aside>
   );
 }
 
@@ -567,6 +664,9 @@ export function lessonPlainText(doc) {
       } else if (block.type === "vakt") {
         const activity = vaktText(block);
         if (activity) parts.push(activity);
+      } else if (block.type === "heading") {
+        const heading = headingText(block);
+        if (heading) parts.push(heading);
       }
     }
   }

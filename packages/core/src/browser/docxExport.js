@@ -60,14 +60,29 @@ import {
 } from "../lessonLayout.js";
 import {
   ANSWER_GAP,
-  QUESTION_LEGEND,
+  BESIDES_LABEL,
+  BESIDES_LINE_STYLE_ID,
+  BESIDES_LINE_STYLE_NAME,
+  QUESTION_TAG_GAP,
+  QUESTION_TAG_STYLE_ID,
+  QUESTION_TAG_STYLE_NAME,
   QUESTION_TYPE_LIST,
+  THREE_BOARD_MARK,
+  besidesAnswers,
+  isThreeBoard,
   questionAnswerText,
+  questionBesides,
+  questionLegendFor,
   questionLegendText,
   questionMeta,
   questionStyleId,
   questionStyleName,
 } from "../questions.js";
+import {
+  HEADING_STYLE_ID,
+  HEADING_STYLE_NAME,
+  headingText,
+} from "../heading.js";
 import {
   SPELLING_COLOR,
   SPELLING_LABEL,
@@ -91,6 +106,12 @@ export { DOCX_MAX_IMAGE_WIDTH };
 
 // Body text size, in docx half-points (28 = 14pt).
 const BODY_SIZE = 28;
+// The type tag in front of a prompt: smaller than the body and grey, so it
+// reads as a mark rather than as the first word of the question. Grey rather
+// than the type's colour because the tag exists for the reader who can't see
+// the colour; it has to stand on its own.
+const TAG_SIZE = 20;
+const QUESTION_TAG_COLOR = "555555";
 
 const ALIGNMENT_MAP = {
   left: AlignmentType.LEFT,
@@ -278,9 +299,10 @@ async function imageBlockParagraphs(block, embedded) {
   return paragraphs;
 }
 
-// One question: the prompt in its type's colour, then the answer in black on the
-// same line. Consecutive questions sit directly under one another, so the run of
-// them reads as a block of colour-coded lines rather than a list of headings.
+// One question: its type's tag, the prompt in its type's colour, then the
+// answer in black on the same line. Consecutive questions sit directly under
+// one another, so the run of them reads as a block of colour-coded lines rather
+// than a list of headings.
 function questionBlockParagraphs(block) {
   const meta = questionMeta(block.questionType);
   const answer = questionAnswerText(block);
@@ -288,7 +310,22 @@ function questionBlockParagraphs(block) {
     .map((s) => (s.text || "").trim())
     .filter(Boolean);
 
+  // The three-board mark rides in the tag run, so it reads as part of the
+  // marking rather than as the first words of the prompt, and so the importer
+  // finds it in the tag span rather than in the prompt it reads back.
+  const tag = isThreeBoard(block)
+    ? `${meta.tag} ${THREE_BOARD_MARK}${QUESTION_TAG_GAP}`
+    : `${meta.tag}${QUESTION_TAG_GAP}`;
   const children = [
+    // The tag is the marking that survives a grey photocopy. Its own style
+    // keeps it out of the prompt span the importer reads the question off.
+    new TextRun({
+      text: tag,
+      style: QUESTION_TAG_STYLE_ID,
+      color: QUESTION_TAG_COLOR,
+      bold: true,
+      size: TAG_SIZE,
+    }),
     // The named character style is what carries the type through mammoth to the
     // PDF and the importer; the explicit colour is what Word itself renders.
     new TextRun({
@@ -316,6 +353,38 @@ function questionBlockParagraphs(block) {
       children,
     }),
   ];
+
+  // The Besides line under a three-board question: 'Besides "rocks"' in the
+  // question's colour, then the other accepted answers in black, indented
+  // under the question it follows up. Its own paragraph style is what lets the
+  // importer attach it to that question instead of reading a new one. The
+  // label run carries the question's character style as well as its colour,
+  // because mammoth drops run colours: the style is what gets the PDF to
+  // colour the label alone and leave the answers after it in the body colour,
+  // as Word prints them.
+  const besides = questionBesides(block);
+  if (besides != null) {
+    paragraphs.push(
+      new Paragraph({
+        style: BESIDES_LINE_STYLE_ID,
+        spacing: { after: 20 },
+        indent: { left: 360 },
+        children: [
+          new TextRun({
+            text: `${BESIDES_LABEL} "${besides}"`,
+            style: questionStyleId(meta.key),
+            color: hex(meta.color),
+            size: BODY_SIZE,
+          }),
+          new TextRun({
+            text: `${ANSWER_GAP}${besidesAnswers(block).join(ANSWER_GAP)}`,
+            size: BODY_SIZE,
+            color: "000000",
+          }),
+        ],
+      }),
+    );
+  }
 
   // Working-out for a number question, when the author recorded any. The scanned
   // layout has no separate steps line, so these stay indented and out of the way
@@ -445,6 +514,23 @@ async function sectionParagraphs(section, embedded, notes) {
       paragraphs.push(...spellingBlockParagraphs(block));
     } else if (block.type === "vakt") {
       paragraphs.push(...(await vaktBlockParagraphs(block, embedded)));
+    } else if (block.type === "heading" && headingText(block)) {
+      // A heading inside the section, bold with a little air above it. Its
+      // own paragraph style rather than a Word heading level, since the
+      // importer reads those as section breaks.
+      paragraphs.push(
+        new Paragraph({
+          style: HEADING_STYLE_ID,
+          spacing: { before: 120, after: 40 },
+          children: [
+            new TextRun({
+              text: headingText(block),
+              bold: true,
+              size: BODY_SIZE,
+            }),
+          ],
+        }),
+      );
     }
   }
   return paragraphs;
@@ -482,10 +568,10 @@ function titleParagraphs(doc, meta) {
   return paragraphs;
 }
 
-// The page footer: the copyright line, then the legend naming every question
-// type in its own colour. The legend is what makes the colour coding above it
-// readable, so it repeats on every page.
-function pageFooter(meta) {
+// The page footer: the copyright line, then the legend naming each question
+// type the lesson uses in its own colour (questionLegendFor). The legend is
+// what makes the colour coding above it readable, so it repeats on every page.
+function pageFooter(meta, legendTypes) {
   const children = [];
 
   const copyright = lessonCopyright(meta);
@@ -500,7 +586,7 @@ function pageFooter(meta) {
   }
 
   const legend = [];
-  QUESTION_LEGEND.forEach((type, i) => {
+  legendTypes.forEach((type, i) => {
     if (i > 0) {
       legend.push(
         new TextRun({ text: LEGEND_SEPARATOR, size: 16, color: "555555" }),
@@ -518,9 +604,11 @@ function pageFooter(meta) {
       }),
     );
   });
-  children.push(
-    new Paragraph({ alignment: AlignmentType.CENTER, children: legend }),
-  );
+  if (legend.length) {
+    children.push(
+      new Paragraph({ alignment: AlignmentType.CENTER, children: legend }),
+    );
+  }
 
   return new Footer({ children });
 }
@@ -549,6 +637,13 @@ function colourCharacterStyles() {
       quickFormat: false,
       run: { color: hex(type.color), italics: Boolean(type.italic) },
     })),
+    {
+      id: QUESTION_TAG_STYLE_ID,
+      name: QUESTION_TAG_STYLE_NAME,
+      basedOn: "DefaultParagraphFont",
+      quickFormat: false,
+      run: { color: QUESTION_TAG_COLOR, bold: true, size: TAG_SIZE },
+    },
     {
       id: VAKT_STYLE_ID,
       name: VAKT_STYLE_NAME,
@@ -626,6 +721,18 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
           quickFormat: false,
         },
         {
+          id: BESIDES_LINE_STYLE_ID,
+          name: BESIDES_LINE_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
+          id: HEADING_STYLE_ID,
+          name: HEADING_STYLE_NAME,
+          basedOn: "Normal",
+          quickFormat: false,
+        },
+        {
           id: CAPTION_STYLE_ID,
           name: CAPTION_STYLE_NAME,
           basedOn: "Normal",
@@ -660,7 +767,7 @@ export async function buildDocument(doc, meta = {}, embedded = undefined) {
           },
         },
         headers: { default: pageHeader() },
-        footers: { default: pageFooter(meta) },
+        footers: { default: pageFooter(meta, questionLegendFor(doc)) },
         children,
       },
     ],

@@ -73,13 +73,17 @@ the lesson open in a second window to see what the question is looking for.
 - It's **off every time interactive mode opens**. It isn't remembered, so a
   speller's own run-through never starts with the answers on screen.
 - The button only appears when the lesson has at least one answer to show.
-- What's shown depends on the question type. A single answer, number answer or
-  background knowledge question shows its answer, and a number question shows
-  its working steps too. A multiple answers question shows every accepted
-  answer. Open ended, paraphrase and would you rather questions have no set
+- What's shown depends on the question type. A known, math or prior
+  knowledge question shows its answer, and a math question shows its working
+  steps too. A semi-open question shows every accepted answer. Broad open,
+  paraphrase and would you rather questions have no set
   answer, and say so ("This question has no set answer.") rather than leaving a
-  gap.
-- A **suggested answers** question labels its answers as suggestions:
+  gap. So does a tight open with no examples.
+- A **semi-open** question with a Besides line shows the line under
+  the question ('Besides "rocks"'); the reveal still lists every accepted
+  answer.
+- A **suggested answers** question, and a **tight open** with examples, label
+  their answers as suggestions:
   "Examples, not the only right answers. Anything that fits the topic counts."
   Whoever is looking at them is usually deciding whether the speller's answer
   fits, and for this type that's genuinely their call.

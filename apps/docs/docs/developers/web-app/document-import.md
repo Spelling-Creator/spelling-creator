@@ -68,12 +68,15 @@ rather than dropped, because they are the sign that the section needs the
 model (below).
 
 The **question type** is derived, never read: "Would you rather" is `wyr`, "in
-your own words" is `paraphrase`, no answer is `open`, several answers are
-`multiple` (or `multiple_open` when one of them is not in the passage), a
-numeric answer is `number`, and a lone answer is `single` when it is in the
-passage and `background` when it is not. That is the one place the import can
-be wrong in a way the author cannot see at a glance, which is why the message
-after importing says to check the types.
+your own words" is `paraphrase`, no answer is an open question, sorted into
+`tight_open` or `broad_open` by its wording (`resolveOpenType`), several
+answers are `multiple` (or `multiple_open` when one of them is not in the
+passage), a numeric answer is `number`, and a lone answer is `single` when it
+is in the passage and `background` when it is not. That is the one place the
+import can be wrong in a way the author cannot see at a glance, which is why
+the message after importing says to check the types. The on-device model was
+trained before tight and broad opens were separate types, so its `open` is
+sorted the same way.
 
 ## How well it does
 

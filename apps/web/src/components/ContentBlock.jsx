@@ -49,7 +49,26 @@ import {
 } from "@spelling-creator/core/imageCredit";
 import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
-import { isOrangeType, questionMeta } from "@spelling-creator/core/questions";
+import {
+  THREE_BOARD_MARK,
+  isOrangeType,
+  questionBesides,
+  questionMeta,
+} from "@spelling-creator/core/questions";
+import { Toggle } from "./ui/toggle.jsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select.jsx";
+
+// The types that edit a list of answers: the two semi-open types, whose list
+// is a key (exhaustive or suggested, never empty), and a tight open, whose
+// list is a few optional examples and may be empty.
+const listsAnswers = (questionType) =>
+  isOrangeType(questionType) || questionType === "tight_open";
 import { SPELLING_COLOR } from "@spelling-creator/core/spelling";
 import {
   VAKT_COLOR,
@@ -175,6 +194,12 @@ function ContentBlock({
         onReplaceFile={onReplaceImageFile}
         onReplaceSearch={onReplaceImageSearch}
       />
+    );
+  }
+
+  if (block.type === "heading") {
+    return (
+      <HeadingBlock block={block} onChange={onChange} controls={controls} />
     );
   }
 
@@ -1044,13 +1069,15 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
             </Field>
           )}
 
-          {isOrangeType(block.questionType) && (
+          {listsAnswers(block.questionType) && (
             <div className="mt-3 flex flex-col gap-2">
               {answers.map((ans, i) => (
                 <div key={ans.id} className="flex items-center gap-1">
                   <LiveInput
                     placeholder={t(
-                      "contentBlock.question.answerPlaceholderMultiple",
+                      block.questionType === "tight_open"
+                        ? "contentBlock.question.answerPlaceholderExample"
+                        : "contentBlock.question.answerPlaceholderMultiple",
                       { number: i + 1 },
                     )}
                     value={ans.text}
@@ -1060,7 +1087,10 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
                   <IconActionButton
                     tooltip={t("contentBlock.question.removeAnswer")}
                     onClick={() => removeAnswer(ans.id)}
-                    disabled={answers.length <= 1}
+                    // A key needs at least one row; examples are optional.
+                    disabled={
+                      block.questionType !== "tight_open" && answers.length <= 1
+                    }
                   >
                     <Trash2Icon />
                   </IconActionButton>
@@ -1075,18 +1105,27 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
                   className={TOUCH_SM_BUTTON}
                 >
                   <PlusIcon data-icon="inline-start" />
-                  {t("contentBlock.question.addAnswer")}
+                  {t(
+                    block.questionType === "tight_open"
+                      ? "contentBlock.question.addExampleAnswer"
+                      : "contentBlock.question.addAnswer",
+                  )}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                {/* The two types take the same rows and mean different things by
-                    them, so the help text under them is what says which. */}
+                {/* The three types take the same rows and mean different things
+                    by them, so the help text under them is what says which. */}
                 {t(
                   block.questionType === "multiple_open"
                     ? "contentBlock.question.suggestedAnswersHelp"
-                    : "contentBlock.question.answersHelp",
+                    : block.questionType === "tight_open"
+                      ? "contentBlock.question.exampleAnswersHelp"
+                      : "contentBlock.question.answersHelp",
                 )}
               </p>
+              {block.questionType === "multiple" && (
+                <ThreeBoardControls block={block} onChange={onChange} />
+              )}
             </div>
           )}
 
@@ -1107,6 +1146,104 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
         </div>
         {controls}
       </div>
+    </div>
+  );
+}
+
+// A heading inside the section: one line of text and nothing else. Drawn in
+// the body colour rather than a colour of its own, since it marks nothing a
+// legend would need to explain.
+function HeadingBlock({ block, onChange, controls }) {
+  const { t } = useTranslation("editorSections");
+  return (
+    <div className="rounded-md border border-border bg-card p-4 text-card-foreground">
+      <div className={BLOCK_LAYOUT}>
+        <div className="min-w-0 grow">
+          <Badge variant="secondary" className="mb-3">
+            {t("contentBlock.heading.badge")}
+          </Badge>
+          <Field>
+            <FieldLabel htmlFor={`${block.id}-heading`}>
+              {t("contentBlock.heading.label")}
+            </FieldLabel>
+            <LiveInput
+              id={`${block.id}-heading`}
+              placeholder={t("contentBlock.heading.placeholder")}
+              value={block.text || ""}
+              onCommit={(text) => onChange({ ...block, text })}
+              data-collab-field={`block:${block.id}:text`}
+              className="font-semibold"
+            />
+          </Field>
+        </div>
+        {controls}
+      </div>
+    </div>
+  );
+}
+
+// The three-board mark and the Besides line, on a multiple-answers question
+// only (see questions.js). The Besides picker offers the question's own
+// answers, since the line names one of them and asks for another; an answer
+// edited or removed after it was picked leaves the picker showing "None",
+// which is also what prints.
+function ThreeBoardControls({ block, onChange }) {
+  const { t } = useTranslation("editorSections");
+  const answers = (block.answers || [])
+    .map((a) => (a.text || "").trim())
+    .filter(Boolean);
+  const besides = questionBesides(block);
+  const NONE = "__none__";
+
+  return (
+    <div className="mt-1 flex flex-wrap items-end gap-3">
+      <Field className="w-auto">
+        <FieldLabel>{t("contentBlock.question.threeBoard")}</FieldLabel>
+        <Toggle
+          size="sm"
+          variant="outline"
+          pressed={block.threeBoard === true}
+          onPressedChange={(pressed) =>
+            onChange({ ...block, threeBoard: pressed ? true : undefined })
+          }
+          aria-label={t("contentBlock.question.threeBoard")}
+        >
+          {THREE_BOARD_MARK}
+        </Toggle>
+        <FieldDescription>
+          {t("contentBlock.question.threeBoardHelp")}
+        </FieldDescription>
+      </Field>
+      <Field className="w-auto min-w-48">
+        <FieldLabel htmlFor={`${block.id}-besides`}>
+          {t("contentBlock.question.besidesLabel")}
+        </FieldLabel>
+        <Select
+          value={besides ?? NONE}
+          onValueChange={(value) =>
+            onChange({ ...block, besides: value === NONE ? undefined : value })
+          }
+        >
+          <SelectTrigger id={`${block.id}-besides`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>
+              {t("contentBlock.question.besidesNone")}
+            </SelectItem>
+            {answers.map((text) => (
+              <SelectItem key={text} value={text}>
+                {text}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldDescription>
+          {t("contentBlock.question.besidesHelp", {
+            answer: besides ?? answers[0] ?? "...",
+          })}
+        </FieldDescription>
+      </Field>
     </div>
   );
 }

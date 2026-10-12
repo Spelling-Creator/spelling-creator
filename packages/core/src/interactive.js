@@ -27,6 +27,7 @@
 
 import { imageCaptionParts } from "./imageCredit.js";
 import { textBlockPlain } from "./lessonText.js";
+import { headingText } from "./heading.js";
 import { vaktText } from "./vakt.js";
 
 // Block types that make up a section's material, in the order the document has
@@ -36,7 +37,13 @@ import { vaktText } from "./vakt.js";
 // break is something whoever is running the lesson does with the speller, not
 // something the speller answers, so it belongs with the section's material and
 // must not be counted by the progress bar.
-const CONTENT_BLOCK_TYPES = new Set(["text", "image", "spelling", "vakt"]);
+const CONTENT_BLOCK_TYPES = new Set([
+  "text",
+  "image",
+  "spelling",
+  "vakt",
+  "heading",
+]);
 
 /** The longest single typed answer we accept. Long enough for an essay-style
  * open-ended response, short enough that a submission can't be a payload. */
@@ -192,6 +199,9 @@ export function stepSpeechText(step) {
       // the label is a marker for the eye and a read-out URL is unusable.
       const text = vaktText(block);
       if (text) lines.push(text);
+    } else if (block.type === "heading") {
+      const text = headingText(block);
+      if (text) lines.push(text);
     }
   }
 
@@ -233,15 +243,19 @@ export function questionAnswer(block) {
       .filter(Boolean);
 
   switch (block.questionType) {
+    // A tight open's examples are suggestions in the same sense a loose
+    // orange question's are: a reveal shows them as what would count, never
+    // as the only right answers.
     case "multiple":
-    case "multiple_open": {
+    case "multiple_open":
+    case "tight_open": {
       const answers = texts(block.answers);
       if (!answers.length) return null;
       return {
         answer: "",
         answers,
         steps: [],
-        suggested: block.questionType === "multiple_open",
+        suggested: block.questionType !== "multiple",
       };
     }
     case "number": {

@@ -17,7 +17,7 @@ the remote endpoint) get the same set.
 | `validate_lesson`       | Check lesson content against the authoring standard, saving nothing.                                                                                                                          |
 | `check_facts`           | Compare numbers, dates and named facts (a capital, a discoverer) with Wikidata, the Smithsonian and Wikipedia before they go into a lesson. See [Fact checking](../web-app/fact-checking.md). |
 | `create_lesson`         | Build and save a new lesson (draft by default; `published: true` to share).                                                                                                                   |
-| `create_lesson_file`    | Build an importable lesson file offline, with no account or network.                                                                                                                          |
+| `create_lesson_file`    | Build an importable lesson file offline, with no account or network, as the app's own file or (`format: "oslf"`) an Open Spelling Lesson Format file.                                         |
 | `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                                                                                                                 |
 | `update_lesson`         | Replace a lesson's whole title/content (author only).                                                                                                                                         |
 | `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                                                                                                                  |
@@ -419,10 +419,10 @@ property list and matching live in `packages/core/src/factCheck.js`).
 The authoring standard lives in `apps/mcp/src/standards.md` and opens by calling itself a
 set of defaults the assistant should drop when the user asks for something different. It is
 the app's own house style for a lesson, not a description of how Spelling must be done:
-practices vary between practitioners, and some conventions in it come from one particular
-source. The idea of "semi-open" questions, for example, follows the S2C guidebook (see the
-comment in `packages/core/src/questions.js`); other practitioners organize questions
-differently. The colors themselves and the lesson shape are the app's own choices.
+practices vary between practitioners. The question types follow the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
+a method-neutral vocabulary for lessons; the colors and the lesson shape are the app's own
+choices.
 
 By default, the assistant builds **6 sections**, each one an optional image, 2 text
 paragraphs, 4 spelling words, and 15 questions in a fixed order, covering
@@ -460,14 +460,22 @@ A lesson is **sections** of **blocks**. Block types:
   - `number` takes `answer` (numeric), plus optional `steps` (array of worked-solution steps, in order)
   - `single` takes `answer` (one text answer)
   - `multiple` takes `answers` (array of accepted answers: the items of a list the passage
-    states explicitly, with the prompt quoting that sentence with the list blanked out)
+    states explicitly, with the prompt quoting that sentence with the list blanked out).
+    Optionally `threeBoard: true` (printed "(3B)") and `besides`, one of its own answers,
+    which prints a 'Besides "..."' follow-up line under the question; a `besides` that isn't
+    one of the answers is refused by `buildDoc`
   - `multiple_open` takes `answers` (array of **suggested** answers for the looser semi-open
     question: a synonym, a definition, anything bounded by the topic. The key is a guide,
     not a match target: the speller need not produce one of them, and the answers are held
     neither to the passage nor to a list)
   - `paraphrase` is a free response restating the passage in the speller's own words
     (no answer field; just the `prompt`)
-  - `open` is a free response (no answer field; just the `prompt`)
+  - `tight_open` is an easy one-word answer from the speller's own world (no answer key;
+    `answers` may hold a few examples, which print after "e.g.")
+  - `broad_open` is the speller's own reasoning, opinion or imagination in a sentence (no
+    answer field; just the `prompt`)
+  - `open` is accepted for lessons written before tight and broad opens were separate; an
+    assistant never writes a new one
   - `wyr` is a "Would you rather… or…?" choice between two options, opinion only
     (no answer field; just the `prompt`)
   - `background` takes `answer` (needs prior knowledge)
@@ -487,6 +495,10 @@ jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pair
   and off by default**: only add them when the user asks. When they do, a section gets one
   and it goes **last**, after that section's questions. See
   [VAKT activities](../web-app/vakt-activities.md).
+- **`heading`**: a short heading inside the section:
+  `{ "type": "heading", "text": "WOULD YOU RATHER" }`. It prints in bold where it sits.
+  It is not a section (sections never print) and not a question; the standard puts one in
+  front of a run of `wyr` questions, and otherwise a section needs none.
 
 ## Formatting and footnotes
 
@@ -522,6 +534,23 @@ list at the end of the lesson. `update_lesson` keeps the lesson's existing sourc
 `sources` is left out. Assistants are told to cite only sources the user gave them or
 that they have actually checked. See
 [Formatting and footnotes](../web-app/formatting-and-footnotes.md).
+
+## Lesson files in two formats
+
+`create_lesson_file` and `get_lesson` take an optional `format`. The default,
+`"spelling-creator"`, is the app's own lesson file (`buildLessonFile`), which the editor
+imports without loss. `"oslf"` returns the lesson as an
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+file instead (`toOslf` in `packages/core/src/oslf.js`, see
+[the export pipeline](../web-app/export-pipeline.md#the-open-spelling-lesson-format)),
+with a `filename` ending in `.oslf.json`, for tools that aren't this app. A stored picture
+becomes its public address on the hub (`<apiUrl>/images/<hash>`), the only place its bytes
+can be fetched from by whatever opens the file. The editor's **Import JSON or OSLF** button
+reads either file. The format requires an answer on a known, prior-knowledge, math or
+semi-open question, so a lesson with one of those blank (which `skipValidation` lets through)
+can't be handed over as OSLF: the tool returns an error naming the question instead. Both
+file names come from `lessonFileName` and `oslfFileName` in core, so the two formats name a
+lesson the same way.
 
 ## Placing an image
 

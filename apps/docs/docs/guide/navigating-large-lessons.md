@@ -23,7 +23,7 @@ of the section, so the pinned strip takes as little of the screen as possible.
 ## Questions are numbered
 
 Every question shows its place in its section next to its type, as `Q1`, `Q2`
-and so on. Ten "Open ended" questions in a row would otherwise look the same,
+and so on. Ten "Tight open" questions in a row would otherwise look the same,
 so the number is what lets you find the one you were working on again. The
 numbers start over in each section, and they only appear in the editor: they
 aren't added to the lesson or printed.

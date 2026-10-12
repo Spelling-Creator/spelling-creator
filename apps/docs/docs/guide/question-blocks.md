@@ -11,38 +11,75 @@ scan a lesson and see its questions at a glance.
 
 ## The types are defaults, not rules
 
-The eight types and their colors are the app's defaults. The idea of
-"semi-open" questions (the two amber types below) comes from the S2C guidebook
-published for Spelling to Communicate. Spelling practices differ,
-and plenty of practitioners ask questions their own way, so use the types as
-they suit you. The editor doesn't require a set number of each or any
-particular order. The [lesson checks](./lesson-checks.md) do follow the app's
-lesson standard (for example, they expect a **Single answer** question's answer
-to appear word for word in the passage), so expect them to flag lessons that
-use the types differently.
+The types take their names and meanings from the
+[Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+(OSLF), an open vocabulary for Spelling lessons that isn't tied to any one
+method and that anyone can comment on. The format has eight question types;
+the app's two amber types are its one semi-open type with either a complete
+answer key or a suggested one, and the **Open ended** type is the app's own,
+left over from before tight and broad opens were separate. The colors are the
+app's defaults.
+Spelling practices differ, and plenty of practitioners ask questions their own
+way, so use the types as they suit you. The editor doesn't require a set
+number of each or any particular order. The [lesson checks](./lesson-checks.md)
+do follow the app's lesson standard (for example, they expect a **Single
+answer** question's answer to appear word for word in the passage), so expect
+them to flag lessons that use the types differently.
 
-| Type                     | Color           | What it's for                                                                    |
-| ------------------------ | --------------- | -------------------------------------------------------------------------------- |
-| **Number answer**        | purple          | The answer is a number. You can add the steps to work it out.                    |
-| **Single answer**        | green           | One typed answer, usually a word from the passage.                               |
-| **Multiple answers**     | amber           | Several accepted answers; any one of them is right.                              |
-| **Suggested answers**    | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right. |
-| **Paraphrase**           | brown           | Restate the passage in their own words. No stored answer.                        |
-| **Open ended**           | pink            | A free written response. No stored answer.                                       |
-| **Would you rather**     | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.        |
-| **Background knowledge** | blue            | A question that needs knowledge from outside the passage, with its answer.       |
+| Type                  | Tag | Color           | What it's for                                                                                            |
+| --------------------- | --- | --------------- | -------------------------------------------------------------------------------------------------------- |
+| **Math**              | M   | purple          | The answer is a number. You can add the steps to work it out.                                            |
+| **Known**             | K   | green           | One answer, stated in the passage.                                                                       |
+| **Semi-open**         | SO  | amber           | Several accepted answers, usually a list in the passage; any one of them is right.                       |
+| **Suggested answers** | SO  | amber, _italic_ | A few answers that would count. They're a guide, and other answers can be right.                         |
+| **Paraphrase**        | P   | brown           | Restate the passage in their own words. No stored answer.                                                |
+| **Tight open**        | TO  | pink            | A quick one word answer from the speller's own world. No answer key, though you can list a few examples. |
+| **Broad open**        | BO  | pink            | Their own reasoning, opinion or imagination, often in a sentence. No stored answer.                      |
+| **Would you rather**  | WYR | grape           | A "Would you rather... or...?" choice. Opinion only, so no stored answer.                                |
+| **Prior knowledge**   | PK  | blue            | A question that needs knowledge from outside the passage, with its answer.                               |
 
-**Multiple answers** used to be a burnt orange. It's amber now because the
+The tags are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+defaults: K for a known answer, PK for prior knowledge, M for math, SO for
+semi-open, TO for a tight open, BO for a broad open, P for paraphrase, WYR for
+would you rather. The names are the format's too. Lessons made before the app
+followed it called these types Single answer, Number answer, Multiple answers
+and Background knowledge; nothing in those lessons changes, only what the
+editor calls the type.
+
+## Tight and broad opens
+
+Both are open questions with no single right answer, and both print in pink.
+What separates them is how much they ask of the speller:
+
+- A **Tight open** names an everyday category and wants one word, fast:
+  "Name something that gives off light", "Name a color of a crayon". The answer
+  comes from the speller's own life, not from the passage. You can add a few
+  **examples** of what would count; they print after "e.g." and are not an
+  answer key.
+- A **Broad open** asks what the speller thinks: "Why do you think people
+  built lighthouses?", "If you designed one, what would you paint on it?". It
+  usually takes a sentence or more.
+
+"In your own words, explain..." is neither. It asks the speller to retell the
+passage, which is a **Paraphrase** question.
+
+Lessons saved before the two were separate have an **Open ended** question
+type (tag O) instead. Those questions still work everywhere; the editor just
+no longer offers the type for new questions. To sort an old one, change its
+type to Tight open or Broad open. The lesson checks read an old open question
+as whichever kind its wording suggests.
+
+**Semi-open** used to be a burnt orange. It's amber now because the
 orange sat too close to **Paraphrase**'s brown, and on paper the color is
 nearly all there is to tell a question's type by.
 
 ## The two amber types
 
-**Multiple answers** and **Suggested answers** are one family, the
-_semi-open_ questions, which is why they share a color. The difference is what
-the list of answers means:
+**Semi-open** and **Suggested answers** are one family, which is why they
+share a color and the SO tag. The difference is what the list of answers
+means:
 
-- **Multiple answers**: the list is the **complete set** of accepted answers,
+- **Semi-open**: the list is the **complete set** of accepted answers,
   usually a list the passage states outright. The speller only needs to give
   one of them.
 - **Suggested answers**: the list is a **suggestion**. The question is bounded
@@ -58,15 +95,38 @@ guide.
 In the editor every question has a label naming its type, so there's no italic
 there. The help text under the answer rows also says which kind it is.
 
+## Three-board questions
+
+A **Semi-open** question has two extras, both off unless you turn them
+on:
+
+- **Three-board (3B)** marks the question for the three boards. It prints
+  "(3B)" after the tag, in front of the question, and changes nothing else.
+- A **Besides line** is a follow-up printed under the question. Pick one of
+  the question's own answers and the line reads 'Besides "rocks"' followed by
+  the other accepted answers, asking the speller for one of those. If you
+  later change or remove the answer you picked, the picker goes back to
+  **None** and no line prints.
+
+Both are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+`threeBoard` and `besides`. What the three-board mark asks of the speller is
+one of the format's open questions, so the app records and prints it without
+defining it further.
+
 ## Would you rather
 
 A **Would you rather** question offers the speller a choice between two
 options: "Would you rather watch an opera or a movie?". It's about opinion,
-not understanding the passage, so like **Paraphrase** and **Open ended** it has
+not understanding the passage, so like **Paraphrase** and **Broad open** it has
 no stored answer. It prints in grape, and the wording itself ("Would you
 rather...") makes the type clear even if the color is hard to tell on paper.
-The legend at the foot of each page shortens it to **W.Y.R.** so all eight
-types fit on one line.
+The legend at the foot of each page shortens it to **W.Y.R.** so a lesson that
+uses every type still fits on one line. The legend only lists the types a
+lesson uses, so it only appears there when the lesson has one.
+
+Lessons often ask several of these in a row under a heading. **Heading** in
+the section toolbar adds one: a short line, such as "WOULD YOU RATHER", that
+prints in bold where you put it. It's part of the section, not a new one.
 
 ## Question numbers
 
@@ -78,19 +138,27 @@ appear in the editor; they aren't added to the lesson or printed.
 
 ## How questions print
 
-A question prints as its **question in its type's color, followed by its answer
-in black on the same line**. There are no labels or brackets: the color (and
-the italic on **Suggested answers**) is what shows the type. The legend at the
-foot of every page names each type in its color (see
-[Exporting & printing](./exporting.md)).
+A question prints as **a short tag, then the question in its type's color,
+followed by its answer in black on the same line**. The tag is one to three
+letters in small gray type: K, PK, M, SO, TO, BO, P or WYR (see the table
+above), or O on an **Open ended** question from before tight and broad opens
+were separate.
+It's there so the type can still be told on a gray photocopy or by a reader
+who can't tell the colors apart; the color (and the italic on **Suggested
+answers**) does the same job for everyone else. The legend at the foot of
+every page lists each tag with its type's name, in that type's color (see
+[Exporting & printing](./exporting.md)). The lesson page shows the same tags
+on screen, with the same legend under the lesson, and hovering a tag names
+its type.
 
 A question without an answer, and the types with no stored answer
-(**Paraphrase**, **Open ended** and **Would you rather**), print as the question
-alone.
+(**Paraphrase**, **Broad open** and **Would you rather**), print as the question
+alone. A **Tight open** prints alone too unless you gave it examples, which
+follow "e.g.".
 
 ## Steps for number questions
 
-A **Number answer** question can also have a list of **steps**, the stages of
+A **Math** question can also have a list of **steps**, the stages of
 working out the answer. Use **Add step** to add one and the remove button
 beside a step to take it away. Steps are optional, so the list starts empty.
 They print as an indented numbered list under the question, and they're kept

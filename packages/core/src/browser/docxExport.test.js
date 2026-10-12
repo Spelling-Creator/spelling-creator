@@ -261,3 +261,113 @@ describe("formatted text, footnotes and sources", () => {
     expect(out).not.toContain("footnote");
   });
 });
+
+describe("headings", () => {
+  // A heading inside a section prints in its own paragraph style, which the
+  // importer reads back as a heading block and never as a section break.
+  it("prints a heading block in bold, in the heading style", async () => {
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const { headingStyleMap } = await import("../heading.js");
+    const buffer = await Packer.toBuffer(
+      await buildDocument(
+        lesson([
+          { id: "h1", type: "heading", text: "WOULD YOU RATHER" },
+          { id: "b1", type: "text", text: "Next" },
+        ]),
+      ),
+    );
+    const { value: out } = await mammoth.convertToHtml(
+      { buffer },
+      { styleMap: headingStyleMap() },
+    );
+    expect(out).toContain(
+      '<p class="s2c-heading"><strong>WOULD YOU RATHER</strong></p><p>Next</p>',
+    );
+  });
+});
+
+describe("questions", () => {
+  // Read back with the same style map the PDF path and the importer use, so
+  // the tag's own span and the prompt's are both visible.
+  async function html(doc) {
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const { questionStyleMap, questionTagStyleMap } =
+      await import("../questions.js");
+    const buffer = await Packer.toBuffer(await buildDocument(doc));
+    const { value } = await mammoth.convertToHtml(
+      { buffer },
+      { styleMap: [...questionStyleMap(), ...questionTagStyleMap()] },
+    );
+    return value;
+  }
+
+  // The tag is the marking a reader has when the colour is gone. It sits in a
+  // span of its own in front of the prompt span, so the importer, which reads
+  // the prompt off the question span and the answer off what follows it, is
+  // never handed the tag as part of either.
+  it("prints each question's type tag in its own span before the prompt", async () => {
+    const out = await html(
+      lesson([
+        {
+          id: "q1",
+          type: "question",
+          questionType: "single",
+          prompt: "Which island?",
+          answer: "PHAROS",
+        },
+      ]),
+    );
+    expect(out).toMatch(
+      /<span class="s2c-q-tag"><strong>K\s+<\/strong><\/span><span class="s2c-q-single">Which island\?<\/span>\s+PHAROS/,
+    );
+  });
+
+  // The three-board mark rides in the tag run, and the Besides line is a
+  // paragraph of its own under the question, in its own style, so the importer
+  // can attach it to the question rather than read a second one.
+  it("prints the three-board mark in the tag and a Besides line underneath", async () => {
+    const { besidesStyleMap } = await import("../questions.js");
+    const { Packer } = await import("docx");
+    const { default: mammoth } = await import("mammoth");
+    const { questionStyleMap, questionTagStyleMap } =
+      await import("../questions.js");
+    const buffer = await Packer.toBuffer(
+      await buildDocument(
+        lesson([
+          {
+            id: "q1",
+            type: "question",
+            questionType: "multiple",
+            prompt: "Ships avoided ______. Name one.",
+            answers: [
+              { id: "a1", text: "ROCKS" },
+              { id: "a2", text: "REEFS" },
+              { id: "a3", text: "SANDBARS" },
+            ],
+            threeBoard: true,
+            besides: "ROCKS",
+          },
+        ]),
+      ),
+    );
+    const { value: out } = await mammoth.convertToHtml(
+      { buffer },
+      {
+        styleMap: [
+          ...questionStyleMap(),
+          ...questionTagStyleMap(),
+          ...besidesStyleMap(),
+        ],
+      },
+    );
+    expect(out).toMatch(
+      /<span class="s2c-q-tag"><strong>SO \(3B\)\s+<\/strong><\/span><span class="s2c-q-multiple">Ships avoided/,
+    );
+    // The label rides in the question's style so the PDF colours it alone.
+    expect(out).toMatch(
+      /<p class="s2c-besides-line"><span class="s2c-q-multiple">Besides "ROCKS"<\/span>\s+REEFS\s+SANDBARS<\/p>/,
+    );
+  });
+});

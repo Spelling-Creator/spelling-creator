@@ -48,6 +48,7 @@
     "./git/refs": "./src/git/refs.js",
     "./git/remote": "./src/git/remote.js",
     "./git/repo": "./src/git/repo.js",
+    "./heading": "./src/heading.js",
     "./id": "./src/id.js",
     "./image": "./src/image.js",
     "./imageCredit": "./src/imageCredit.js",
@@ -80,6 +81,7 @@
     "./translationLanguages": "./src/translationLanguages.js",
     "./username": "./src/username.js",
     "./users": "./src/users.js",
+    "./oslf": "./src/oslf.js",
     "./vakt": "./src/vakt.js",
     "./wikidata": "./src/wikidata.js",
     "./wikidataMedia": "./src/wikidataMedia.js",
@@ -104,6 +106,7 @@
     "yjs": "^13.6.32"
   },
   "devDependencies": {
+    "ajv": "^8.20.0",
     "vitest": "~3.2.7"
   }
 }

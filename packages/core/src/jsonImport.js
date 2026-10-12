@@ -4,12 +4,17 @@
 // the lesson-file envelope { format, version, doc } or a bare { title, sections }
 // doc, ensure every section/block/word/answer has a stable id, drop anything we
 // don't recognise, and reject files that aren't structured as a lesson.
+//
+// An Open Spelling Lesson Format file (oslf.js) comes through the same door:
+// it is turned into a bare doc first, then normalised like one.
 
 import { AGE_RANGES } from "./ageRanges.js";
+import { headingText } from "./heading.js";
 import { newId } from "./id.js";
-import { QUESTION_TYPES } from "./questions.js";
+import { QUESTION_TYPES, questionBesides } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
+import { OslfImportError, fromOslf, isOslfFile } from "./oslf.js";
 import { isSafeLink } from "./richText.js";
 import {
   normalizeTextContent,
@@ -66,13 +71,23 @@ export async function importJsonFile(file) {
   return normalizeLessonFile(parsed);
 }
 
-// Accept either the lesson-file envelope { format, version, doc } or a bare doc
-// { title, sections }, then normalise and validate it.
+// Accept the lesson-file envelope { format, version, doc }, a bare doc
+// { title, sections }, or an Open Spelling Lesson Format file (oslf.js),
+// then normalise and validate it.
 export function normalizeLessonFile(parsed) {
   if (!parsed || typeof parsed !== "object") {
     throw new JsonImportError(
       "This file isn't a lesson: expected a JSON object.",
     );
+  }
+  if (isOslfFile(parsed)) {
+    try {
+      return normalizeDoc(fromOslf(parsed));
+    } catch (err) {
+      if (err instanceof OslfImportError)
+        throw new JsonImportError(err.message);
+      throw err;
+    }
   }
   // A wrong but explicit format marker is a clear, actionable error.
   if (parsed.format && parsed.format !== LESSON_FILE_FORMAT) {
@@ -188,6 +203,12 @@ function normalizeBlock(block) {
     case "vakt":
       return normalizeVakt(block);
 
+    // A heading with nothing in it is a blank line nobody meant to keep.
+    case "heading": {
+      const text = headingText(block);
+      return text ? { id: keepId(block.id), type: "heading", text } : null;
+    }
+
     case "image": {
       // Preserve image blocks verbatim (binary ref / src / dimensions) and just
       // ensure the editor's required framing fields exist.
@@ -287,10 +308,27 @@ function normalizeQuestion(block) {
         .map(normalizeTextItem)
         .filter(Boolean);
       if (answers.length === 0) answers.push({ id: newId(), text: "" });
+      const out = { ...base, answers };
+      // The three-board mark and the Besides line, on the tight type only. A
+      // Besides line naming an answer the list doesn't have is dropped rather
+      // than carried: it would print nothing and confuse the editor's picker.
+      if (block.questionType === "multiple") {
+        if (block.threeBoard === true) out.threeBoard = true;
+        const besides = questionBesides({ ...out, besides: block.besides });
+        if (besides != null) out.besides = besides;
+      }
+      return out;
+    }
+    // A tight open's examples are optional, so an empty list stays empty.
+    case "tight_open": {
+      const answers = (Array.isArray(block.answers) ? block.answers : [])
+        .map(normalizeTextItem)
+        .filter(Boolean);
       return { ...base, answers };
     }
     // Free written responses: no stored answer, so the base block is complete.
     case "paraphrase":
+    case "broad_open":
     case "open":
     case "wyr":
       return base;
