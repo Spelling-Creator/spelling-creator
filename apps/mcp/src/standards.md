@@ -214,7 +214,7 @@ A tight open has NO answer key. It may carry two or three one-word EXAMPLES of w
 1 PARAPHRASE: the speller restates the section's passage, or part of it, in their own words ("In
 your own words, explain why..." / "In your own words, describe..." / "Summarize how ..."). Its job
 is comprehension of the passage itself rather than opinion about it, which is why it prints in its
-own colour and is never written as a broad open. It carries no answer, answers, or exampleAnswer
+own color and is never written as a broad open. It carries no answer, answers, or exampleAnswer
 field, just the "prompt".
 
 ### 14-15 · `broad_open` (pink)

@@ -300,7 +300,7 @@ const sectionSchema = z.object({
       "The blocks in this section, in order. By default a section is: an optional image " +
         "block first (see the image tool note above), then TWO text paragraphs (ALL-CAPS " +
         "words = the harder learning vocabulary, kept separate from the spelling list, and " +
-        'one explicit "X, Y, and Z" list planted for each `multiple` question to retrieve — ' +
+        'one explicit "X, Y, and Z" list planted for each `multiple` question to retrieve: ' +
         "TWO by default, one fewer for every orange slot given to a `multiple_open` question, " +
         "which retrieves nothing), " +
         "then a spelling block of 4 words (6-9 letters, thematically related but NOT drawn " +
@@ -312,7 +312,7 @@ const sectionSchema = z.object({
         "answers), 1 paraphrase (the passage retold in the speller's words), 2 broad_open " +
         "(full-sentence answers of the speller's own). Any wyr questions the user asks for " +
         "go between the tight opens and the paraphrase. Every section ends " +
-        "with its own questions — do not collect them into a separate quiz section at the end.",
+        "with its own questions, so do not collect them into a separate quiz section at the end.",
     ),
 });
 

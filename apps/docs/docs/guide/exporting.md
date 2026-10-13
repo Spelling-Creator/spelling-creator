@@ -81,8 +81,9 @@ Three things to know:
 - Pictures are referred to by their address on the hub, so a picture in a
   lesson that has never been saved to the cloud won't show for whoever opens
   the file elsewhere.
-- An old **Open ended** question is written as a tight open or a broad open,
-  whichever its wording suggests.
+- An old **Open ended** question is written as a tight open, a paraphrase or
+  a broad open, whichever its wording suggests, the same way the lesson
+  checks read it.
 
 **Import JSON or OSLF** reads an OSLF file too, whoever made it. A question of
 a kind this app doesn't have comes in as an Open ended question with its

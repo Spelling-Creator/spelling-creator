@@ -66,8 +66,9 @@ passage, which is a **Paraphrase** question.
 Lessons saved before the two were separate have an **Open ended** question
 type (tag O) instead. Those questions still work everywhere; the editor just
 no longer offers the type for new questions. To sort an old one, change its
-type to Tight open or Broad open. The lesson checks read an old open question
-as whichever kind its wording suggests.
+type to Tight open, Paraphrase or Broad open. The lesson checks read an old
+open question as whichever kind its wording suggests, and one that asks the
+speller to retell the passage counts as the Paraphrase.
 
 **Semi-open** used to be a burnt orange. It's amber now because the
 orange sat too close to **Paraphrase**'s brown, and on paper the color is

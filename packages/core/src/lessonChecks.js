@@ -65,12 +65,6 @@ const QUESTION_ORDER = [
 const TIGHT_OPENS = 4;
 const BROAD_OPENS = 2;
 const WYR_SLOT = QUESTION_ORDER.indexOf("paraphrase");
-
-// A legacy `open` question worded as a retelling of the passage takes the
-// paraphrase slot, the way one worded as an opinion takes a broad open's (see
-// resolveOpenType). Only the shape check reads an open this way: the type
-// itself stays what the lesson stored.
-const PARAPHRASE_STEM = /in your own words|summari[sz]e\b|retell\b/i;
 const ORANGE_MIN_ANSWERS = 2;
 const ORANGE_MAX_ANSWERS = 4;
 
@@ -994,27 +988,26 @@ export function validateLesson(doc) {
       // compared with the two folded together and the ordering between them left
       // to W_ORANGE_ORDER below. A legacy `open` question, which never said
       // which kind it was, is read as the kind its wording suggests (a
-      // retelling of the passage as the paraphrase, an opinion as a broad
-      // open, a quick category as a tight open), so a lesson saved before the
-      // split is held to the order it was written to.
-      const slot = (block) => {
-        const type = block.questionType;
-        if (ORANGE_TYPES.has(type)) return ORANGE_TIGHT;
-        if (type === "open" && PARAPHRASE_STEM.test(String(block.prompt || "")))
-          return "paraphrase";
-        return resolveOpenType(block);
-      };
+      // quick category as a tight open, a retelling of the passage as the
+      // paraphrase, an opinion as a broad open; see resolveOpenType), so a
+      // lesson saved before the split is held to the order it was written
+      // to. The type itself stays what the lesson stored.
+      const slot = (block) =>
+        ORANGE_TYPES.has(block.questionType)
+          ? ORANGE_TIGHT
+          : resolveOpenType(block);
       // W.Y.R. questions have a slot of their own, between the tight opens
       // and the paraphrase, and any number may sit there, so one in its place
       // is left out of the comparison. One anywhere else counts against the
-      // shape like any other question.
+      // shape like any other question. `slotAt` maps each compared slot back
+      // to its question's place in the section.
       const slots = [];
-      const slotQuestions = [];
-      for (const q of ctx.questions) {
-        if (q.questionType === "wyr" && slots.length === WYR_SLOT) continue;
+      const slotAt = [];
+      ctx.questions.forEach((q, i) => {
+        if (q.questionType === "wyr" && slots.length === WYR_SLOT) return;
         slots.push(slot(q));
-        slotQuestions.push(q);
-      }
+        slotAt.push(i);
+      });
       if (slots.join(",") !== QUESTION_ORDER.join(",")) {
         // The order as written, with each legacy open followed by the kind it
         // was read as: that reading is what the shape above counted, and it is
@@ -1029,9 +1022,7 @@ export function validateLesson(doc) {
         // points at its last question.
         const firstOff = slots.findIndex((s, i) => s !== QUESTION_ORDER[i]);
         const at =
-          firstOff === -1
-            ? ctx.questions.length - 1
-            : ctx.questions.indexOf(slotQuestions[firstOff]);
+          firstOff === -1 ? ctx.questions.length - 1 : slotAt[firstOff];
         warn(
           "W_QUESTION_SHAPE",
           ctx.id,

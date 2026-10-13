@@ -44,7 +44,9 @@ export const OSLF_VERSION = "0.1";
 export const OSLF_EXTENSION = ".oslf.json";
 
 // The app's type keys and the format's ids, both ways. `open` is sorted by
-// wording on the way out (resolveOpenType), so it has no entry of its own.
+// wording on the way out (resolveOpenType, the same reading the lesson
+// checks use, so a lesson that passes them still does once it comes back),
+// so it has no entry of its own.
 const TYPE_TO_OSLF = {
   single: "known",
   background: "prior-knowledge",

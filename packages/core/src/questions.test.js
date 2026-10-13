@@ -103,7 +103,7 @@ describe("questionAnswerText", () => {
     expect(
       resolveOpenType(open("Why do you think the dam was built there?")),
     ).toBe("broad_open");
-    expect(resolveOpenType(open("In your own words, explain why."))).toBe(
+    expect(resolveOpenType(open("Explain why you think so."))).toBe(
       "broad_open",
     );
     expect(
@@ -116,6 +116,36 @@ describe("questionAnswerText", () => {
       resolveOpenType({ questionType: "broad_open", prompt: "Name a cat." }),
     ).toBe("broad_open");
     expect(resolveOpenType({ questionType: "single" })).toBe("single");
+  });
+
+  // A retelling of the passage is the paraphrase, which the old lessons asked
+  // as `open` too, unless the prompt opens with a tight stem.
+  it("reads a legacy open as the paraphrase when it asks for a retelling", () => {
+    const open = (prompt) => ({ questionType: "open", prompt });
+    expect(resolveOpenType(open("In your own words, explain why."))).toBe(
+      "paraphrase",
+    );
+    expect(resolveOpenType(open("Summarize how the canyon formed."))).toBe(
+      "paraphrase",
+    );
+    expect(
+      resolveOpenType(open("Give one word to summarize the passage.")),
+    ).toBe("tight_open");
+    // Asking for the speller's own view is an opinion, whatever the stem.
+    expect(
+      resolveOpenType(
+        open("In your own words, explain why you prefer rivers."),
+      ),
+    ).toBe("broad_open");
+    expect(
+      resolveOpenType(open("Summarize what you think the builders wanted.")),
+    ).toBe("broad_open");
+    expect(
+      resolveOpenType({
+        questionType: "broad_open",
+        prompt: "In your own words, explain why.",
+      }),
+    ).toBe("broad_open");
   });
 
   it("prints nothing for an unanswered question", () => {
