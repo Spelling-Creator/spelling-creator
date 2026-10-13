@@ -175,8 +175,6 @@ function footnoteRun(footnote, notes) {
 }
 
 // Pauses and speech hints are for read-aloud, so a pause prints nothing and a
-// hinted run prints as its text.
-// Pauses and speech hints are for read-aloud, so a pause prints nothing and a
 // hinted run prints as its text. A formula set on its own line becomes a
 // centered paragraph of its own, splitting the paragraph it sits in.
 function textBlockDocxParagraphs(block, notes, formulas, embedded) {

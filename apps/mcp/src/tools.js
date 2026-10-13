@@ -109,7 +109,8 @@ const blockSchema = z
           "sentence; {asciimath display: ...} sets it on a line of its own; a {spoken: 60 over 5 is 12} " +
           "straight after one gives the words read-aloud says for it, only where the automatic reading " +
           "would be awkward. Formulas are for math and science lessons, never for a plain number or price " +
-          "in prose ($2.50 stays as it is). Braces inside a formula must balance.\n\n" +
+          "in prose ($2.50 stays as it is). Braces inside a formula must balance; for the rare one whose " +
+          "don't, write {tex escaped: ...} and put a backslash before each brace and backslash.\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
           'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
           "or footnotes here.\n\n" +

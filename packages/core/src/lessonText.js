@@ -61,7 +61,7 @@
 // outside the editor (an imported file, the MCP server, a document written by
 // an older client), and the renderers draw only what survives it. Content is
 // rendered as React elements and docx runs, never as HTML, so there is no
-// markup to sanitise; the normaliser is what decides which shapes exist at all.
+// markup to sanitize; the normalizer is what decides which shapes exist at all.
 //
 // A footnote is a numbered note at the foot of the lesson. It can cite one of
 // the lesson's sources (`sourceId`, with an optional `locator` such as
@@ -173,7 +173,7 @@ export function normalizeSpokenText(value) {
     else runs.push(text);
   };
   // Spaces are kept, even at a run's edges: they are what keep the words of
-  // neighbouring runs apart. Only a line break has no place in spoken text.
+  // neighboring runs apart. Only a line break has no place in spoken text.
   const spokenLine = (text) =>
     typeof text === "string"
       ? text.replace(/[\r\n]+/g, " ").slice(0, SPOKEN_LIMIT)
@@ -326,10 +326,10 @@ function P() {
  * a document at all.
  *
  * Drops every node and mark outside the schema (keeping the words inside
- * them), merges neighbouring runs that carry the same marks, and stores marks
+ * them), merges neighboring runs that carry the same marks, and stores marks
  * in a fixed order. That last part matters for version history: a block's git
  * blob is a hash of its JSON, so two spellings of the same formatting must
- * normalise to the same bytes or every save would look like an edit.
+ * normalize to the same bytes or every save would look like an edit.
  * @param {unknown} value
  * @returns {object|null}
  */
@@ -390,7 +390,7 @@ export function textBlockContent(block) {
   return normalizeTextContent(block?.content) ?? textToContent(block?.text);
 }
 
-// The paragraphs of a document as arrays of normalised inline nodes, with each
+// The paragraphs of a document as arrays of normalized inline nodes, with each
 // text run's formatting marks as an array of names and its speech hint (or
 // null) as `speech`.
 function inlineParagraphs(content) {
@@ -648,7 +648,7 @@ export function isPlainContent(content) {
  * The lesson with every citation of one source taken out of its text blocks.
  * A footnote that also carries a note keeps the note; one that only cited the
  * source goes. Blocks with nothing to change are returned as they were, so
- * memoised cards stay memoised.
+ * memoized cards stay memoized.
  * @param {object} doc
  * @param {string} sourceId
  * @returns {object}
@@ -767,7 +767,10 @@ export function textBlockFormattedSpans(block) {
 //
 // A formula runs to the brace that balances its opening one, and nothing
 // inside it is an escape, since TeX is full of both braces and backslashes.
-// Its braces therefore have to balance, which in TeX they do.
+// The rare formula whose braces don't balance (TeX's `\left\{ x \right.`)
+// is written `{tex escaped: \left\\\{ x \right.}` instead: with `escaped`
+// after the notation, a backslash makes the next character literal, as it
+// does in text.
 //
 // One line is one paragraph. A backslash makes the next character literal, so
 // \* is an asterisk. contentToMarkup escapes whatever needs it, so text read
@@ -854,10 +857,16 @@ function speechToMarkup(text, speech) {
   return `[${words}]{${body}}`;
 }
 
-// The formula's source goes in as it is (see the note on braces above). Its
-// spoken words, if any, follow in their own braces, flattened to words.
+// The formula's source goes in as it is (see the note on braces above), or,
+// when its braces don't balance (a TeX `\left\{ ... \right.`), with
+// `escaped` after the notation and a backslash before each brace and
+// backslash. Its spoken words, if any, follow in their own braces, flattened
+// to words.
 function formulaToMarkup({ format, source, display, spoken }) {
-  let out = `{${format}${display ? " display" : ""}: ${source}}`;
+  const escaped = balancingBrace(`${source}}`, 0) !== source.length;
+  const flags = `${display ? " display" : ""}${escaped ? " escaped" : ""}`;
+  const body = escaped ? source.replace(/[\\{}]/g, (ch) => `\\${ch}`) : source;
+  let out = `{${format}${flags}: ${body}}`;
   const words = spokenWordsOf(spoken);
   if (words) out += `{spoken: ${words.replace(/[\\}]/g, (ch) => `\\${ch}`)}}`;
   return out;
@@ -1096,7 +1105,7 @@ function balancingBrace(line, from) {
   return -1;
 }
 
-const FORMULA_HEAD = /^\s*(asciimath|tex)(\s+display)?\s*:/i;
+const FORMULA_HEAD = /^\s*(asciimath|tex)((?:\s+(?:display|escaped))*)\s*:/i;
 
 // A formula span starting at the `{` at `at`, with its spoken words if a
 // `{spoken: ...}` follows it straight away: { attrs, end } where `end` is the
@@ -1104,14 +1113,19 @@ const FORMULA_HEAD = /^\s*(asciimath|tex)(\s+display)?\s*:/i;
 function readFormula(line, at) {
   const head = FORMULA_HEAD.exec(line.slice(at + 1, at + 40));
   if (!head) return null;
-  const close = balancingBrace(line, at + 1);
+  const flags = head[2].toLowerCase().split(/\s+/);
+  const escaped = flags.includes("escaped");
+  const close = escaped
+    ? closingBrace(line, at + 1)
+    : balancingBrace(line, at + 1);
   if (close === -1) return null;
-  const source = line.slice(at + 1 + head[0].length, close).trim();
+  const raw = line.slice(at + 1 + head[0].length, close);
+  const source = (escaped ? unescape(raw) : raw).trim();
   if (!source) return null;
   const attrs = {
     format: head[1].toLowerCase(),
     source,
-    display: Boolean(head[2]),
+    display: flags.includes("display"),
     spoken: null,
   };
   let end = close + 1;
@@ -1119,7 +1133,9 @@ function readFormula(line, at) {
   if (spoken) {
     const spokenClose = closingBrace(line, end + spoken[0].length);
     if (spokenClose !== -1) {
-      attrs.spoken = unescape(line.slice(end + spoken[0].length, spokenClose));
+      attrs.spoken = unescape(
+        line.slice(end + spoken[0].length, spokenClose),
+      ).trim();
       end = spokenClose + 1;
     }
   }

@@ -539,8 +539,7 @@
   text-align: center;
   margin: 0.5em 0;
 }
-.lesson-formula[data-status="loading"] .lesson-formula-view,
-.lesson-formula[data-status="failed"] .lesson-formula-view {
+.lesson-formula-source {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.95em;
 }

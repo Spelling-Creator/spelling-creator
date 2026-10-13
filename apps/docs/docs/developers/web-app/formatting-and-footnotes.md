@@ -342,7 +342,9 @@ Read-aloud hints borrow Pandoc's bracketed spans: `[FRESNEL]{ipa: freɪˈnɛl}`,
 `{tex: \frac{60}{5} = 12}`, with `display` after the notation for a line of
 its own and a `{spoken: ...}` straight after it for its read-aloud words; it
 runs to the brace that balances its opening one, with no escapes inside (TeX
-is full of braces and backslashes), so its braces have to balance. A `{` in
+is full of braces and backslashes), so its braces have to balance; one whose
+braces don't is written with `escaped` after the notation and a backslash
+before each brace and backslash, which `contentToMarkup` does itself. A `{` in
 plain text is escaped as `\{`, so text read out of a lesson can be written
 straight back (`contentToMarkup` and `markupToContent` in `lessonText.js`). See
 [Lesson validation](../mcp-server/lesson-validation.md) and [Tools](../mcp-server/tools.md).

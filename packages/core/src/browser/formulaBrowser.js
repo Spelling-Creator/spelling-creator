@@ -135,7 +135,9 @@ export async function formulaImage(formula) {
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(width * IMAGE_SCALE);
     canvas.height = Math.ceil(height * IMAGE_SCALE);
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The formula's picture couldn't be drawn.");
+    context.drawImage(img, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((resolve, reject) => {
       canvas.toBlob(
         (result) =>

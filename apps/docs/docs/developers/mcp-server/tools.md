@@ -528,7 +528,10 @@ as written, and the braces say how to read them aloud (see
 or braces that don't make one of these forms are read as the characters themselves.
 
 A formula runs to the brace that balances its opening one, and nothing inside it is an
-escape, so its braces must balance (in TeX they do).
+escape, so its braces must balance (in TeX they do). The rare formula whose braces don't
+balance, such as TeX's `\left\{ x \right.`, is written with `escaped` after the notation,
+and then a backslash makes the next character literal: `{tex escaped: \left\\\{ x \right.}`.
+`get_lesson` writes it that way itself when it has to.
 
 A backslash makes the next character literal (`\*` for an asterisk, `\{` for a brace). An unpaired `*` or
 an unclosed `^[` is read as the characters themselves, so prose that happens to hold an

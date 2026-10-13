@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   chunkSpeech,
+  hasFormulaSpeech,
   normalizeSpokenText,
   speechLines,
   speechText,
@@ -9,6 +10,7 @@ import {
   spokenForBrowser,
   spokenWords,
   textBlockSpeech,
+  withFormulaSpeech,
 } from "./speech.js";
 
 const block = (...paragraphs) => ({
@@ -154,5 +156,70 @@ describe("chunkSpeech", () => {
   it("drops lines with nothing to say", () => {
     expect(speechLines(["", "  ", ["x"]])).toEqual([["  "], ["x"]]);
     expect(chunkSpeech(["", "  "])).toEqual([]);
+  });
+});
+
+describe("formulas in spoken text", () => {
+  const formula = { format: "asciimath", source: "3/4" };
+  const block = (spoken) => ({
+    type: "text",
+    content: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Then " },
+            { type: "math", attrs: { ...formula, spoken } },
+            { type: "text", text: " of them." },
+          ],
+        },
+      ],
+    },
+  });
+
+  it("says the author's words where there are any, else a formula run", () => {
+    expect(textBlockSpeech(block("three quarters"))).toEqual([
+      ["Then three quarters of them."],
+    ]);
+    expect(textBlockSpeech(block(null))).toEqual([
+      ["Then ", { text: "3/4", formula }, " of them."],
+    ]);
+    // A formula run survives normalizing again.
+    expect(normalizeSpokenText(["a ", { text: "3/4", formula }])).toEqual([
+      "a ",
+      { text: "3/4", formula },
+    ]);
+  });
+
+  it("is read as its source by a voice that gets the run as it is", () => {
+    expect(spokenForBrowser(["Then ", { text: "3/4", formula }, "."])).toBe(
+      "Then 3/4.",
+    );
+  });
+
+  it("has its words made once per formula, and keeps the source when that fails", async () => {
+    const chunks = chunkSpeech([
+      ["Then ", { text: "3/4", formula }, " and ", { text: "3/4", formula }],
+      [{ text: "x^2", formula: { format: "tex", source: "x^2" } }],
+    ]);
+    expect(hasFormulaSpeech(chunks)).toBe(true);
+    const asked = [];
+    const said = await withFormulaSpeech(chunks, async ({ source }) => {
+      asked.push(source);
+      if (source === "x^2") throw new Error("no");
+      return "three quarters";
+    });
+    expect(asked).toEqual(["3/4", "x^2"]);
+    expect(said[0].runs).toEqual([
+      "Then ",
+      { text: "3/4", alias: "three quarters" },
+      " and ",
+      { text: "3/4", alias: "three quarters" },
+    ]);
+    expect(said[1].runs).toEqual([
+      { text: "x^2", formula: { format: "tex", source: "x^2" } },
+    ]);
+    expect(hasFormulaSpeech(chunkSpeech("no math here"))).toBe(false);
   });
 });

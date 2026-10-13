@@ -87,6 +87,10 @@ export function layoutImageFigures(html, embedded) {
   return html.replace(
     /<p>\s*(<img\b[^>]*>)\s*<\/p>(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?/g,
     (match, imgTag, firstTrailing, secondTrailing) => {
+      // A formula in a sentence that happens to be the whole paragraph is
+      // not a lesson picture: it has no entry in `embedded`, and keeps the
+      // size inlineImages gave it. (A display formula does have an entry.)
+      if (/\salt="formula:[^"|]*\|inline\|/.test(imgTag)) return match;
       const picture = embedded[index++];
       if (!picture) return match;
 

@@ -144,13 +144,11 @@ removed, and one that also had a note keeps the note.
   formula.
 - **Everywhere else** (the lesson page, Preview, Word and PDF), read-aloud fixes
   and pauses don't show: the words appear as you wrote them.
-- **Translation** translates a paragraph's words; a formula in a translated
-  paragraph shows as it was typed, not typeset. See
-  [Translation](./translation.md).
 - **Translation** translates each paragraph's words and the footnote notes. A
-  translated paragraph loses its formatting, and its footnote numbers move to
-  the end of the paragraph. Sources aren't translated, since titles, authors and
-  publishers are names. See [Translation](./translation.md).
+  translated paragraph loses its formatting, its footnote numbers move to the
+  end of the paragraph, and a formula in it shows as it was typed, not
+  typeset. Sources aren't translated, since titles, authors and publishers are
+  names. See [Translation](./translation.md).
 
 If two people edit the same text block at exactly the same moment during
 [live collaboration](./live-collaboration.md), the later change wins. Editing

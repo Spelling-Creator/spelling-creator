@@ -8,6 +8,8 @@ import {
   lessonFootnotes,
   markupSourceIds,
   markupToContent,
+  normalizeFormula,
+  normalizeSpokenText,
   normalizeTextContent,
   removeSourceCitations,
   textBlockContent,
@@ -694,5 +696,167 @@ describe("speech markup", () => {
       "Braces \\{like} these, **[odd \\] word]{say: a \\} b \\\\ c}{pause: long}**[x]\\{spell}",
     );
     expect(markupToContent(markup)).toEqual(content);
+  });
+});
+
+describe("formulas", () => {
+  const math = (attrs) => ({ type: "math", attrs });
+
+  it("cleans a formula, keeps a notation it doesn't know, and drops one with no source", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          math({
+            format: " TeX ",
+            source: " x^2 \n",
+            display: true,
+            spoken: "  ",
+          }),
+          math({ format: "mathml", source: "<mi>x</mi>" }),
+          math({ format: "tex", source: "" }),
+          math({
+            source: "3/4",
+            spoken: [
+              "three ",
+              { text: "quarters", ipa: "ˈkwɔːtəz" },
+              { pause: "short" },
+            ],
+          }),
+        ),
+      ),
+    );
+    expect(content.content[0].content).toEqual([
+      math({ format: "tex", source: "x^2", display: true, spoken: null }),
+      math({
+        format: "mathml",
+        source: "<mi>x</mi>",
+        display: false,
+        spoken: null,
+      }),
+      math({
+        format: "asciimath",
+        source: "3/4",
+        display: false,
+        spoken: [
+          "three ",
+          { text: "quarters", ipa: "ˈkwɔːtəz" },
+          { pause: "short" },
+        ],
+      }),
+    ]);
+  });
+
+  it("reads as its source in plain text, and as a run for renderers", () => {
+    const block = {
+      type: "text",
+      content: doc(
+        para(
+          text("Then "),
+          math({ format: "asciimath", source: "3/4" }),
+          text("."),
+        ),
+      ),
+    };
+    expect(textBlockPlain(block)).toBe("Then 3/4.");
+    expect(textBlockParagraphs(block)[0][1]).toEqual({
+      type: "math",
+      format: "asciimath",
+      source: "3/4",
+      display: false,
+      spoken: null,
+    });
+    expect(isPlainContent(block.content)).toBe(false);
+  });
+
+  it("keeps only words as spoken text", () => {
+    expect(normalizeSpokenText("  ")).toBe("  ");
+    expect(normalizeSpokenText([{ pause: "short" }])).toEqual([
+      { pause: "short" },
+    ]);
+    expect(normalizeSpokenText([{ emphasis: "strong" }])).toBe(null);
+    expect(normalizeSpokenText("a\nb")).toBe("a b");
+    expect(
+      normalizeFormula({ source: "x", spoken: [{ pause: "long" }] }).spoken,
+    ).toEqual([{ pause: "long" }]);
+  });
+});
+
+describe("formula markup", () => {
+  it("parses both notations, display, spoken words and TeX's braces", () => {
+    const content = markupToContent(
+      "See {asciimath: 120 xx 3 = 360} and {tex display: \\frac{60}{5} = 12}{spoken: 60 over 5, \\} is 12}.",
+    );
+    expect(content.content[0].content).toEqual([
+      { type: "text", text: "See " },
+      {
+        type: "math",
+        attrs: {
+          format: "asciimath",
+          source: "120 xx 3 = 360",
+          display: false,
+          spoken: null,
+        },
+      },
+      { type: "text", text: " and " },
+      {
+        type: "math",
+        attrs: {
+          format: "tex",
+          source: "\\frac{60}{5} = 12",
+          display: true,
+          spoken: "60 over 5, } is 12",
+        },
+      },
+      { type: "text", text: "." },
+    ]);
+  });
+
+  it("reads braces that aren't a formula as text", () => {
+    for (const line of [
+      "{tex: }",
+      "{tex: x",
+      "{tex display}",
+      "{math: x}",
+      "x {} y",
+    ]) {
+      expect(textBlockPlain({ content: markupToContent(line) })).toBe(line);
+    }
+  });
+
+  it("round-trips a formula, its spoken words, and one whose braces don't balance", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          {
+            type: "math",
+            attrs: {
+              format: "tex",
+              source: "\\left\\{ x \\right.",
+              display: false,
+            },
+          },
+          text(" and "),
+          {
+            type: "math",
+            attrs: {
+              format: "asciimath",
+              source: "3/4",
+              display: true,
+              spoken: ["three ", { text: "quarters", ipa: "ˈkwɔːtəz" }],
+            },
+          },
+          text(" {not math}"),
+        ),
+      ),
+    );
+    const markup = contentToMarkup(content);
+    expect(markup).toBe(
+      "{tex escaped: \\\\left\\\\\\{ x \\\\right.} and {asciimath display: 3/4}{spoken: three quarters} \\{not math}",
+    );
+    const back = markupToContent(markup);
+    // The spoken words come back as words: the markup holds no hints.
+    expect(back.content[0].content[2].attrs.spoken).toBe("three quarters");
+    expect(back.content[0].content[0]).toEqual(content.content[0].content[0]);
+    expect(textBlockPlain({ content: back })).toBe(textBlockPlain({ content }));
   });
 });

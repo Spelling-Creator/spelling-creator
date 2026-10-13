@@ -10,7 +10,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useEditorState } from "@tiptap/react";
 import { Sigma } from "lucide-react";
-import { FORMULA_FORMATS } from "@spelling-creator/core/lessonText";
+import {
+  FORMULA_FORMATS,
+  spokenWordsOf,
+} from "@spelling-creator/core/lessonText";
 import { Toggle } from "../ui/toggle.jsx";
 import { Button } from "../ui/button.jsx";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.jsx";
@@ -22,14 +25,6 @@ import Formula from "../Formula.jsx";
 
 const PLACEHOLDERS = { asciimath: "120 xx 3 = 360", tex: "\\frac{60}{5} = 12" };
 
-function spokenWords(spoken) {
-  if (typeof spoken === "string") return spoken;
-  if (!Array.isArray(spoken)) return "";
-  return spoken
-    .map((run) => (typeof run === "string" ? run : run?.text || ""))
-    .join("");
-}
-
 function FormulaForm({ initial, editing, onSave, onRemove }) {
   const { t } = useTranslation("editorSections");
   const [format, setFormat] = useState(
@@ -37,7 +32,11 @@ function FormulaForm({ initial, editing, onSave, onRemove }) {
   );
   const [source, setSource] = useState(initial?.source || "");
   const [display, setDisplay] = useState(Boolean(initial?.display));
-  const [spoken, setSpoken] = useState(spokenWords(initial?.spoken));
+  // The field shows the spoken text's words. Stored spoken text can carry
+  // read-aloud hints and pauses (from an OSLF file), which the words alone
+  // can't hold, so it is kept as it was unless the words are changed.
+  const initialWords = spokenWordsOf(initial?.spoken);
+  const [spoken, setSpoken] = useState(initialWords);
   const trimmed = source.trim();
 
   return (
@@ -50,7 +49,10 @@ function FormulaForm({ initial, editing, onSave, onRemove }) {
           format,
           source: trimmed,
           display,
-          spoken: spoken.trim() || null,
+          spoken:
+            spoken.trim() === initialWords.trim()
+              ? (initial?.spoken ?? null)
+              : spoken.trim() || null,
         });
       }}
     >

@@ -577,3 +577,110 @@ describe("read-aloud hints", () => {
     ]);
   });
 });
+
+describe("formulas", () => {
+  const lesson = {
+    title: "Lenses",
+    sections: [
+      {
+        name: "Lights",
+        blocks: [
+          {
+            id: "t1",
+            type: "text",
+            content: markupToContent(
+              "Then {asciimath: 120 xx 3 = 360} and {tex display: \\frac{60}{5} = 12}{spoken: 60 over 5 is 12}.",
+            ),
+          },
+        ],
+      },
+    ],
+  };
+
+  it("writes a formula as the format's math run, with display and spoken only where set", () => {
+    const file = toOslf(lesson);
+    expect(validate(file)).toBe(true);
+    expect(file.sections[0].blocks[0].paragraphs).toEqual([
+      [
+        "Then ",
+        { math: { format: "asciimath", source: "120 xx 3 = 360" } },
+        " and ",
+        {
+          math: {
+            format: "tex",
+            source: "\\frac{60}{5} = 12",
+            display: true,
+            spoken: "60 over 5 is 12",
+          },
+        },
+        ".",
+      ],
+    ]);
+  });
+
+  it("reads a math run back as the node it was, spoken runs and all", () => {
+    expect(fromOslf(toOslf(lesson)).sections[0].blocks[0].content).toEqual(
+      lesson.sections[0].blocks[0].content,
+    );
+    const back = fromOslf({
+      oslf: OSLF_VERSION,
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            {
+              type: "passage",
+              paragraphs: [
+                [
+                  {
+                    math: {
+                      format: "asciimath",
+                      source: "3/4",
+                      spoken: [
+                        "three ",
+                        { text: "quarters", ipa: "ˈkwɔːtəz" },
+                        { pause: "short" },
+                      ],
+                    },
+                  },
+                ],
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(back.sections[0].blocks[0].content.content[0].content).toEqual([
+      {
+        type: "math",
+        attrs: {
+          format: "asciimath",
+          source: "3/4",
+          display: false,
+          spoken: [
+            "three ",
+            { text: "quarters", ipa: "ˈkwɔːtəz" },
+            { pause: "short" },
+          ],
+        },
+      },
+    ]);
+  });
+
+  it("gives a plain text run no speech mark", () => {
+    const back = fromOslf({
+      oslf: OSLF_VERSION,
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            { type: "passage", paragraphs: [[{ text: "bold", bold: true }]] },
+          ],
+        },
+      ],
+    });
+    expect(
+      back.sections[0].blocks[0].content.content[0].content[0].marks,
+    ).toEqual([{ type: "bold" }]);
+  });
+});

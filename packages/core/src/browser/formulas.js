@@ -75,7 +75,16 @@ export function loadFormulas() {
 export async function renderLessonFormulas(doc, { images = false } = {}) {
   const wanted = lessonFormulas(doc);
   if (!wanted.size) return null;
-  const { renderFormula, formulaImage } = await loadFormulas();
+  let engine;
+  try {
+    engine = await loadFormulas();
+  } catch (err) {
+    // No MathJax (offline, a chunk gone after a deploy): the file is still
+    // made, with every formula as its source.
+    console.warn("MathJax couldn't load; formulas are written as text.", err);
+    return null;
+  }
+  const { renderFormula, formulaImage } = engine;
   const out = new Map();
   for (const [key, formula] of wanted) {
     try {

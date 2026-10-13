@@ -48,7 +48,14 @@ export default function Formula({
   const reader = useRef(null);
 
   useEffect(() => {
-    if (status !== "ready" || !holder.current) return;
+    if (!holder.current) return;
+    if (status !== "ready") {
+      // A render on its way, or none: what the last formula left here goes,
+      // so it isn't shown beside the new one's source.
+      holder.current.replaceChildren();
+      reader.current?.replaceChildren();
+      return;
+    }
     node.setAttribute("aria-hidden", "true");
     // MathJax marks where a long inline formula may wrap with elements that
     // hold a space. Text in the typeset formula would count toward the
@@ -72,10 +79,11 @@ export default function Formula({
       data-status={status}
       title={source}
     >
-      {/* The typeset formula, or the source until there is one. */}
-      <span ref={holder} className="lesson-formula-view">
-        {ready ? null : source}
-      </span>
+      {/* The typeset formula, put here by the effect and by nothing else,
+          so React never has to reconcile what MathJax built. */}
+      <span ref={holder} className="lesson-formula-view" />
+      {/* The source, until there is a typeset formula. */}
+      {ready ? null : <span className="lesson-formula-source">{source}</span>}
       {/* The source behind the SVG, once there is an SVG: until then the
           visible source is the text, and it must not be there twice. */}
       {assistive === "source" ? (

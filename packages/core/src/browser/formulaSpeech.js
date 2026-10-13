@@ -37,9 +37,15 @@ export async function createFormulaSpeech({ loadLocale, locale = "en" }) {
     custom: loadLocale,
   };
   // Read by the engine as it loads, before setupEngine can be called, so the
-  // first rule file it reaches for already goes through the loader.
+  // first rule file it reaches for already goes through the loader. Taken
+  // down again once the engine has it: nothing else on the page needs it.
   globalThis.SREfeature = feature;
-  const sre = await import("speech-rule-engine/js/common/system.js");
+  let sre;
+  try {
+    sre = await import("speech-rule-engine/js/common/system.js");
+  } finally {
+    delete globalThis.SREfeature;
+  }
   await sre.setupEngine(feature);
   await sre.engineReady();
   return {
