@@ -129,11 +129,12 @@ export const fixCommand: CommandModule<object, FixArgs> = {
       const { doc: fixedDoc, fixed, errors, warnings } = fixLesson(doc);
       report = { file, source, notes, errors, warnings, fixed };
       // Rewriting the file that was read is the point of `fix` on a .json
-      // lesson, so that case needs no --force; a different output does, and
-      // so does writing a lesson file over the document it came from.
-      const target =
-        out ?? (source === "json" ? file : defaultOutputPath(file));
-      const inPlace = source === "json" && resolve(target) === resolve(file);
+      // lesson (or an .oslf.xml one), so that case needs no --force; a
+      // different output does, and so does writing a lesson file over the
+      // document it came from.
+      const lessonFile = source === "json" || source === "xml";
+      const target = out ?? (lessonFile ? file : defaultOutputPath(file));
+      const inPlace = lessonFile && resolve(target) === resolve(file);
       // A lesson with nothing to fix is left exactly as it was.
       const rewrite = !(inPlace && fixed.length === 0);
       // Compared against the lesson as read, not as fixed: a fix moving a

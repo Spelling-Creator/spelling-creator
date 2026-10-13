@@ -14,6 +14,7 @@ lesson needs at least one section before it can be exported.
 | **Export DOCX**         | A Word document, downloaded to your device.                                                            |
 | **Export JSON**         | A lesson file you can open again later with **Import JSON or OSLF**, with nothing lost.                |
 | **Export OSLF**         | The lesson as an Open Spelling Lesson Format file, for tools that aren't Spelling Creator (see below). |
+| **Export OSLF (XML)**   | The same Open Spelling Lesson Format file, written as XML, for tools that prefer XML.                  |
 | **Export PDF**          | A PDF, downloaded to your device, laid out the same as the Word document.                              |
 | **Print**               | Your browser's print dialog, with that same PDF ready to print. Nothing is downloaded (see below).     |
 | **Save to Google Docs** | The lesson as an editable Google Doc in your Google Drive.                                             |
@@ -92,7 +93,11 @@ Three things to know:
   a broad open, whichever its wording suggests, the same way the lesson
   checks read it.
 
-**Import JSON or OSLF** reads an OSLF file too, whoever made it. A question of
+OSLF can also be written as XML. **Export OSLF (XML)** gives the same lesson
+as `something.oslf.xml`, holding exactly what the `.oslf.json` file does, for a
+tool that works with XML rather than JSON.
+
+**Import JSON or OSLF** reads an OSLF file too, as JSON or XML, whoever made it. A question of
 a kind this app doesn't have comes in as an Open ended question with its
 wording, so nothing is lost; a picture given as a file beside the lesson
 (rather than an address) is left out.

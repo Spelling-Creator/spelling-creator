@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lesson xmlns="urn:oslf:lesson" version="0.1" language="en" license="BSD-3-Clause" age-range="14-16 years">
+  <title>Lighthouses</title>
+  <source id="lighthouse">
+    <title>Lighthouse</title>
+    <publisher>Wikipedia</publisher>
+    <url>https://en.wikipedia.org/wiki/Lighthouse</url>
+  </source>
+  <source id="fresnel-lens">
+    <title>Fresnel lens</title>
+    <publisher>Wikipedia</publisher>
+    <url>https://en.wikipedia.org/wiki/Fresnel_lens</url>
+  </source>
+  <section id="first-lighthouses">
+    <title>The First Lighthouses</title>
+    <image src="media/pharos-illustration.png" size="large" align="center">
+      <alt>A drawing of a tall stone tower on an island, with a fire burning at the top.</alt>
+      <caption>An artist's idea of the lighthouse at Pharos.</caption>
+      <credit author="Example Author" license="CC0-1.0"/>
+    </image>
+    <passage>
+      <p>Long before electric lights, sailors looked for fires burning on hills and towers to find their way into port. More than 2,200 years ago, the city of Alexandria in Egypt built a towering lighthouse on the island of PHAROS, just outside its harbor.</p>
+      <p>At night, a fire at the top warned ships away from dangerous rocks, reefs and sandbars. The tower was so famous that it was counted among the Seven WONDERS of the Ancient World. EARTHQUAKES damaged it over many centuries, and by the 1400s it lay in ruins. Its name lives on: the word for lighthouse is <i>phare</i> in French and <i>faro</i> in Italian and Spanish.<note source="lighthouse"/></p>
+    </passage>
+    <spelling>
+      <word>BEACON</word>
+      <word>HARBOR</word>
+      <word>ANCIENT</word>
+    </spelling>
+    <question type="known" id="q-pharos">
+      <prompt>Alexandria's lighthouse stood on the island of ______.</prompt>
+      <answer>PHAROS</answer>
+    </question>
+    <question type="known">
+      <prompt>It was counted among the Seven ______ of the Ancient World.</prompt>
+      <answer>WONDERS</answer>
+    </question>
+    <question type="prior-knowledge">
+      <prompt>On which continent is Egypt?</prompt>
+      <answer>AFRICA</answer>
+    </question>
+    <question type="math">
+      <prompt>A keeper climbed the 120 steps to the lamp 3 times each night. How many steps was that each night?</prompt>
+      <answer>360</answer>
+      <step>Multiply the steps by the climbs: <m format="asciimath"><source>120 xx 3 = 360</source></m></step>
+    </question>
+    <question type="semi-open" besides="ROCKS">
+      <prompt>A fire at the top warned ships away from dangerous ______. Name one thing the ships had to avoid.</prompt>
+      <answer>ROCKS</answer>
+      <answer>REEFS</answer>
+      <answer>SANDBARS</answer>
+    </question>
+    <question type="tight-open">
+      <prompt>Name something that gives off light.</prompt>
+    </question>
+    <heading>WOULD YOU RATHER</heading>
+    <question type="would-you-rather">
+      <prompt>Would you rather keep a lighthouse on a lonely island or in a busy harbor?</prompt>
+    </question>
+    <question type="paraphrase">
+      <prompt>In your own words, explain why the lighthouse at Pharos was built.</prompt>
+    </question>
+    <question type="broad-open">
+      <prompt>Why do you think people went to the trouble of building lighthouses, long before electric lights existed?</prompt>
+    </question>
+    <vakt>
+      <text>Stand up and turn slowly in a full circle, like the beam of a lighthouse sweeping across the sea.</text>
+    </vakt>
+  </section>
+  <section id="telling-lights-apart">
+    <title>Telling Lights Apart</title>
+    <passage>
+      <p>In 1822, the French scientist Augustin <phoneme alphabet="ipa" ph="freɪˈnɛl">FRESNEL</phoneme> described a new kind of lens.<note source="fresnel-lens"/> Rings of glass PRISMS gather the light from a lamp and bend it into one strong beam, so a lighthouse can be seen much farther out to sea.</p>
+      <p>Every lighthouse along a coast flashes its own pattern of light, so sailors can tell one from another in the dark. By day, many towers are painted in stripes, bands or checks for the same reason.</p>
+    </passage>
+    <spelling>
+      <word>SIGNAL</word>
+      <word>PATTERN</word>
+      <word>COASTLINE</word>
+    </spelling>
+    <question type="known">
+      <prompt>The new lens used rings of glass ______.</prompt>
+      <answer>PRISMS</answer>
+    </question>
+    <question type="prior-knowledge">
+      <prompt>What do we call the person who looked after a lighthouse?</prompt>
+      <answer>KEEPER</answer>
+      <answer>LIGHTHOUSE KEEPER</answer>
+    </question>
+    <question type="math">
+      <prompt>Augustin Fresnel described his new lens in the year ______.</prompt>
+      <answer>1822</answer>
+    </question>
+    <question type="math">
+      <prompt>A light flashes once every 5 seconds. How many times does it flash in one minute?</prompt>
+      <answer>12</answer>
+      <step>There are 60 seconds in a minute.</step>
+      <step><m format="tex" display="true"><source>\frac{60}{5} = 12</source><spoken>60 divided by 5<break strength="medium"/>is 12</spoken></m></step>
+    </question>
+    <question type="semi-open" three-board="true">
+      <prompt>By day, many towers are painted in ______. Name one of the patterns.</prompt>
+      <answer>STRIPES</answer>
+      <answer>BANDS</answer>
+      <answer>CHECKS</answer>
+    </question>
+    <question type="semi-open" answer-key="suggested">
+      <prompt>Give a word that means the same as <i>beam</i>.</prompt>
+      <answer>RAY</answer>
+      <answer>SHAFT</answer>
+    </question>
+    <question type="tight-open" answer-key="suggested">
+      <prompt>Name something made of glass.</prompt>
+      <answer>WINDOW</answer>
+      <answer>BOTTLE</answer>
+      <answer>MIRROR</answer>
+    </question>
+    <question type="broad-open">
+      <prompt>If you designed a lighthouse, what pattern would you paint on it, and why?</prompt>
+    </question>
+  </section>
+</lesson>

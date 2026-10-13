@@ -83,6 +83,7 @@
     "./username": "./src/username.js",
     "./users": "./src/users.js",
     "./oslf": "./src/oslf.js",
+    "./oslfXml": "./src/oslfXml.js",
     "./vakt": "./src/vakt.js",
     "./wikidata": "./src/wikidata.js",
     "./wikidataMedia": "./src/wikidataMedia.js",
@@ -98,6 +99,7 @@
     "@isomorphic-git/lightning-fs": "^4.7.0",
     "@spelling-creator/spellophone": "^0.2.1",
     "@supabase/supabase-js": "^2.112.3",
+    "@xmldom/xmldom": "^0.9.12",
     "docx": "^9.0.3",
     "dompurify": "^3.4.13",
     "fuse.js": "^7.5.0",
@@ -108,6 +110,7 @@
   },
   "devDependencies": {
     "ajv": "^8.20.0",
-    "vitest": "~3.2.7"
+    "vitest": "~3.2.7",
+    "xmllint-wasm": "^5.3.0"
   }
 }

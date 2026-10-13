@@ -17,8 +17,10 @@
 // Everything written out is a .json lesson file, so a converted or fixed
 // lesson opens in the editor and round-trips from there, unless the output
 // path ends in .oslf.json, which writes the Open Spelling Lesson Format
-// (core's oslf.js) for tools that aren't this app. An .oslf.json file reads
-// through the same door as a .json one, since core's jsonImport knows both.
+// (core's oslf.js) for tools that aren't this app, or .oslf.xml, which writes
+// the format's XML form (core's oslfXml.js). An .oslf.json file reads through
+// the same door as a .json one, since core's jsonImport knows both; an .xml
+// file is read as the XML form into the same OSLF file first.
 
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -40,18 +42,29 @@ import { buildLessonFile } from "@spelling-creator/core/lessonFile";
 import {
   OSLF_EXTENSION,
   OslfExportError,
+  OslfImportError,
   isOslfFile,
   toOslf,
 } from "@spelling-creator/core/oslf";
+import {
+  OSLF_XML_EXTENSION,
+  fromOslfXml,
+  toOslfXml,
+} from "@spelling-creator/core/oslfXml";
 
 import type { LessonDoc } from "./types.ts";
 
-/** Whether a path names an Open Spelling Lesson Format file. */
+/** Whether a path names an Open Spelling Lesson Format file, as JSON or XML. */
 export function isOslfPath(path: string): boolean {
-  return path.toLowerCase().endsWith(OSLF_EXTENSION);
+  return path.toLowerCase().endsWith(OSLF_EXTENSION) || isOslfXmlPath(path);
 }
 
-export type LessonSource = "json" | "docx" | "text";
+/** Whether a path names an OSLF file in the format's XML form. */
+export function isOslfXmlPath(path: string): boolean {
+  return path.toLowerCase().endsWith(OSLF_XML_EXTENSION);
+}
+
+export type LessonSource = "json" | "xml" | "docx" | "text";
 
 export interface ReadLesson {
   doc: LessonDoc;
@@ -76,6 +89,9 @@ export class LessonReadError extends Error {
 export function sourceOf(path: string): LessonSource {
   const ext = extname(path).toLowerCase();
   if (ext === ".json") return "json";
+  // Only by the format's own extension, so a lesson rewritten in place is
+  // written back as the XML it was.
+  if (isOslfXmlPath(path)) return "xml";
   if (ext === ".docx") return "docx";
   return "text";
 }
@@ -92,9 +108,10 @@ export async function readLesson(path: string): Promise<ReadLesson> {
   }
 
   const hash = hashOf(bytes);
-  if (source === "json") {
+  if (source === "json" || source === "xml") {
+    const text = bytes.toString("utf8");
     return {
-      ...lessonFromJson(bytes.toString("utf8")),
+      ...(source === "xml" ? lessonFromXml(text) : lessonFromJson(text)),
       source,
       notes: [],
       hash,
@@ -123,6 +140,21 @@ function lessonFromJson(text: string): { doc: LessonDoc; raw: unknown } {
     return { doc: normalizeLessonFile(raw), raw };
   } catch (err) {
     if (err instanceof JsonImportError) throw new LessonReadError(err.message);
+    throw err;
+  }
+}
+
+// An OSLF lesson in its XML form, read into the OSLF file first, so `raw` is
+// that file, the same as for an .oslf.json.
+function lessonFromXml(text: string): { doc: LessonDoc; raw: unknown } {
+  let raw: unknown;
+  try {
+    raw = fromOslfXml(text);
+    return { doc: normalizeLessonFile(raw), raw };
+  } catch (err) {
+    if (err instanceof OslfImportError || err instanceof JsonImportError) {
+      throw new LessonReadError(err.message);
+    }
     throw err;
   }
 }
@@ -355,7 +387,9 @@ export async function writeLesson(
   { force = false, unchangedSince }: WriteOptions = {},
 ): Promise<void> {
   const file = isOslfPath(path) ? oslfFile(path, doc) : buildLessonFile(doc);
-  const contents = `${JSON.stringify(file, null, 2)}\n`;
+  const contents = isOslfXmlPath(path)
+    ? toOslfXml(file)
+    : `${JSON.stringify(file, null, 2)}\n`;
   try {
     if (force) {
       await replaceFile(path, contents, unchangedSince);

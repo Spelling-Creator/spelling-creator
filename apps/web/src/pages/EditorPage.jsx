@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Trans, useTranslation } from "react-i18next";
 import {
   BracesIcon,
+  CodeXmlIcon,
   ClipboardPasteIcon,
   ChevronDownIcon,
   ChevronsDownUpIcon,
@@ -128,11 +129,13 @@ import {
 import { convertDocImages } from "@spelling-creator/core/browser/imageRef";
 import { ensureImagesUploaded } from "@spelling-creator/core/imagesClient";
 // exportJson is a Blob and an <a> — no heavy dependency, so it stays static.
+// (exportOslfXml loads its XML writer itself, on first use.)
 // The docx/PDF/import pipeline is not: it loads on demand through
 // lib/exports/load.js. See the comment in lib/exports/engine.js.
 import {
   exportJson,
   exportOslf,
+  exportOslfXml,
 } from "@spelling-creator/core/browser/jsonExport";
 import { importJsonFile } from "@spelling-creator/core/jsonImport";
 import { loadExportEngine } from "../lib/exports/load.js";
@@ -1464,7 +1467,7 @@ export default function EditorPage() {
 
   /**
    * Export the open lesson from the Export menu.
-   * @param {"docx" | "json" | "oslf" | "pdf" | "print"} kind which file to
+   * @param {"docx" | "json" | "oslf" | "oslfXml" | "pdf" | "print"} kind which file to
    *   download, or 'print' to open the print dialog on the PDF (which
    *   downloads it instead where the browser can't).
    */
@@ -1491,6 +1494,12 @@ export default function EditorPage() {
       } else if (kind === "oslf") {
         exportOslf(doc);
         notify({ severity: "success", message: t("messages.oslfDownloaded") });
+      } else if (kind === "oslfXml") {
+        await exportOslfXml(doc);
+        notify({
+          severity: "success",
+          message: t("messages.oslfXmlDownloaded"),
+        });
       } else if (kind === "pdf") {
         const { exportPdf } = await loadExportEngine();
         await exportPdf(doc, meta);
@@ -2504,6 +2513,7 @@ export default function EditorPage() {
     busy === "docx" ||
     busy === "json" ||
     busy === "oslf" ||
+    busy === "oslfXml" ||
     busy === "pdf" ||
     busy === "print" ||
     busy === "gdocs";
@@ -2692,6 +2702,13 @@ export default function EditorPage() {
               {t("header.exportOslf")}
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => handleExport("oslfXml")}
+              disabled={busy !== null}
+            >
+              <CodeXmlIcon />
+              {t("header.exportOslfXml")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={() => handleExport("pdf")}
               disabled={busy !== null}
             >
@@ -2864,6 +2881,15 @@ export default function EditorPage() {
                   <span>{t("header.exportOslf")}</span>
                   <span className="text-xs text-muted-foreground">
                     {t("header.exportOslfHint")}
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("oslfXml")}>
+                <CodeXmlIcon />
+                <div className="flex flex-col">
+                  <span>{t("header.exportOslfXml")}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("header.exportOslfXmlHint")}
                   </span>
                 </div>
               </DropdownMenuItem>
@@ -3497,7 +3523,7 @@ export default function EditorPage() {
       <input
         ref={jsonInputRef}
         type="file"
-        accept=".json,application/json"
+        accept=".json,.xml,application/json,application/xml"
         hidden
         onChange={handleImportJsonFile}
       />

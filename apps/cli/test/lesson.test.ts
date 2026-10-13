@@ -35,6 +35,7 @@ const TYPED = join(fixtures, "domestic-cats.txt");
 
 test("sourceOf picks a reader by extension", () => {
   assert.equal(sourceOf("a.json"), "json");
+  assert.equal(sourceOf("a.oslf.xml"), "xml");
   assert.equal(sourceOf("a.DOCX"), "docx");
   assert.equal(sourceOf("a.txt"), "text");
   assert.equal(sourceOf("a.md"), "text");
@@ -176,6 +177,47 @@ test("an OSLF path writes the format, and a blank answer the format needs is a f
     assert.deepEqual(await readdir(dir), ["lesson.oslf.json"]);
   });
 });
+
+test("an .oslf.xml path writes the format's XML form, which reads back as the same lesson", async () => {
+  const { doc } = await readLesson(join(fixtures, "bold-passage.json"));
+  await withTempDir(async (dir) => {
+    const path = join(dir, "lesson.oslf.xml");
+    await writeLesson(path, doc);
+    const xml = await readFile(path, "utf8");
+    assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>\n<lesson /);
+    assert.match(xml, /<title>Domestic Cats<\/title>/);
+
+    const back = await readLesson(path);
+    assert.equal(back.source, "xml");
+    const viaJson = join(dir, "lesson.oslf.json");
+    await writeLesson(viaJson, doc);
+    const fromJson = await readLesson(viaJson);
+    assert.deepEqual(stripIds(back.doc), stripIds(fromJson.doc));
+    // Read as OSLF, so a rewrite in place can't be said to drop anything.
+    assert.deepEqual(droppedFields(back.raw, back.doc), []);
+  });
+});
+
+test("an .oslf.xml that isn't a lesson is a failed read, with a reason", async () => {
+  await withTempDir(async (dir) => {
+    const path = join(dir, "broken.oslf.xml");
+    await writeFile(path, "<lesson><title>Unclosed");
+    await assert.rejects(readLesson(path), /isn't valid XML/);
+  });
+});
+
+// Ids are made fresh on every import, so two reads of one lesson differ there.
+function stripIds(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripIds);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => key !== "id")
+        .map(([key, v]) => [key, stripIds(v)]),
+    );
+  }
+  return value;
+}
 
 test("a write is refused when the file changed after it was read", async () => {
   await withTempDir(async (dir) => {

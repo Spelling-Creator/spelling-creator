@@ -157,7 +157,9 @@ only through another module.
   speech                spoken text: what read-aloud says for a text block, and chunking it for a voice
   lessonSearch          fully client-side hub search (Fuse.js)
   lessonFile            the .json lesson-file envelope (shared with the importer + MCP)
-  jsonImport            parse + validate a .json lesson file back into the lesson model
+  jsonImport            parse + validate a .json lesson file (or an OSLF one, JSON or XML) back into the lesson model
+  oslf                  the lesson as an Open Spelling Lesson Format file, and back
+  oslfXml               the OSLF file in the format's XML form, and back (loaded on demand)
   documentImport        import from text that was never a lesson file (pasted, .txt, hand-written Word)
   documentImportModel   the prompt and reply handling for the on-device model behind Import from text
   lessonBuild           build the editor's doc from the MCP server's LLM-friendly lesson input
