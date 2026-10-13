@@ -38,12 +38,13 @@ standards:
   Harder vocabulary in the passage is written in CAPITALS.
 - **4 spelling words** per section, each 6 to 9 letters long, related to the topic but
   different from the capitalized vocabulary.
-- **15 questions** per section, in a set order: 3 green (one fact from the passage), 2
-  purple (a number from the passage, then a word problem with worked steps), 2 orange
-  (semi-open questions), 1 blue (background knowledge the passage doesn't give), and 7
-  pink open questions (4 tight opens with quick one-word answers from everyday life, then
-  3 broad opens that invite a full sentence of the speller's own thinking). See
-  [Question blocks](../question-blocks.md) for what each color means.
+- **15 questions** per section, in a set order: 3 green (one fact from the passage), 1
+  blue (prior knowledge the passage doesn't give), 2 purple (a number from the passage,
+  then a word problem with worked steps), 2 orange (semi-open questions), 4 pink tight
+  opens (quick one-word answers from everyday life), 1 brown paraphrase (the passage
+  retold in the speller's own words), then 2 pink broad opens that invite a full sentence
+  of the speller's own thinking. See [Question blocks](../question-blocks.md) for what
+  each color means.
 - No [VAKT activities](../vakt-activities.md), "Would you rather" questions, sources or
   footnotes unless you ask for them.
 

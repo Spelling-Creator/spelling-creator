@@ -279,9 +279,10 @@ export function isOrangeType(questionType) {
   return ORANGE_TYPE_KEYS.includes(questionType);
 }
 
-// The order the printed footer legend lists the types in: recall first, opening
-// out to free response last, which is the Open Spelling Lesson Format's default
-// legend order. This is a reading order for the legend only; the editor's type
+// The order the printed footer legend lists the types in: the order a section
+// asks them, each asking a little more of the speller than the one before,
+// which is the order the Open Spelling Lesson Format lists its types in and
+// asks a legend to keep. This is a reading order for the legend only; the editor's type
 // picker keeps QUESTION_TYPES' own order. The legacy open type comes last,
 // since it only appears under lessons saved before the split.
 export const QUESTION_LEGEND = [

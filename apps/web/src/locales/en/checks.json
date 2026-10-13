@@ -206,7 +206,7 @@
     "E_UNKNOWN_SOURCE": "A footnote cites \"@{{sourceId}}\", which isn't one of this lesson's sources. Add the source, or fix the footnote.",
     "W_SECTION_COUNT_one": "This lesson has {{count}} section. The usual length is {{expected}}.",
     "W_SECTION_COUNT_other": "This lesson has {{count}} sections. The usual length is {{expected}}.",
-    "W_QUESTION_SHAPE": "The questions aren't in the usual order: 3 known, 2 math, 2 semi-open or suggested answers, 1 prior knowledge, 4 tight open, then 3 broad open (a paraphrase can take one of those). A tight open takes a quick one word answer (\"Name something found in a hospital\"); a broad open asks for the speller's own thinking in a sentence (\"Why do you think...?\").",
+    "W_QUESTION_SHAPE": "The questions aren't in the usual order: 3 known, 1 prior knowledge, 2 math, 2 semi-open or suggested answers, 4 tight open, 1 paraphrase, then 2 broad open. Any would you rather questions go between the tight opens and the paraphrase and aren't counted. A tight open takes a quick one word answer (\"Name something found in a hospital\"); a paraphrase retells the passage (\"In your own words, explain...\"); a broad open asks for the speller's own thinking in a sentence (\"Why do you think...?\").",
     "W_NO_QUESTION": "This section has no questions yet.",
     "W_ORANGE_MULTIWORD": "Question {{question}}: \"{{answer}}\" is more than one word. The speller has to spell every word on the letterboard.",
     "W_ORANGE_ANSWER_COUNT_one": "Question {{question}} accepts {{count}} answer. Aim for {{min}} to {{max}}, so the speller has a real choice.",

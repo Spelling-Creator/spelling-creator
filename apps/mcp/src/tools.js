@@ -145,9 +145,9 @@ const blockSchema = z
           "still be right, make it a tight open or ask for a fact the passage states outright. A section's 4 " +
           "TIGHT OPENS are open-ended but answerable in ONE WORD from the speller's own everyday world, and " +
           "crucially EASY, with no hard thinking, nothing abstract, and no reference to the lesson " +
-          '("Name a color of a crayon", "Name something found in a hospital"). Its 3 BROAD OPENS invite a full ' +
+          '("Name a color of a crayon", "Name something found in a hospital"). Its 2 BROAD OPENS invite a full ' +
           'sentence of the speller\'s own thinking ("Why do you think...?", "...Defend your answer.", "If you ' +
-          'could..."). "In your own words, explain..." is a paraphrase question, not a broad open.',
+          'could..."). "In your own words, explain..." is the section\'s one paraphrase question, not a broad open.',
       ),
     prompt: z
       .string()
@@ -305,12 +305,13 @@ const sectionSchema = z.object({
         "which retrieves nothing), " +
         "then a spelling block of 4 words (6-9 letters, thematically related but NOT drawn " +
         "from the passage's ALL-CAPS vocabulary), then 15 question blocks about THIS " +
-        "section's content, in this fixed order: 3 single, 1 number (fill-in-the-blank), " +
-        "1 number (word problem, with steps), 2 orange (default: 2 multiple, one per " +
-        "planted list, 2-4 single-word answers each — a multiple_open may take either " +
-        "slot, tighter question first), 1 background, 4 tight_open (easy everyday " +
-        "one-word answers), 3 broad_open (full-sentence answers of the speller's own; a " +
-        "paraphrase may take the first of these slots). Every section ends " +
+        "section's content, in this fixed order: 3 single, 1 background, 1 number " +
+        "(fill-in-the-blank), 1 number (word problem, with steps), 2 orange (default: 2 " +
+        "multiple, one per planted list, 2-4 single-word answers each; a multiple_open may " +
+        "take either slot, tighter question first), 4 tight_open (easy everyday one-word " +
+        "answers), 1 paraphrase (the passage retold in the speller's words), 2 broad_open " +
+        "(full-sentence answers of the speller's own). Any wyr questions the user asks for " +
+        "go between the tight opens and the paraphrase. Every section ends " +
         "with its own questions — do not collect them into a separate quiz section at the end.",
     ),
 });
