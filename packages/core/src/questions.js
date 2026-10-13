@@ -162,25 +162,40 @@ export function isOpenType(questionType) {
   return OPEN_TYPE_KEYS.includes(questionType);
 }
 
-// Telling a tight open from a broad one by its wording, for a legacy `open`
-// question that never said which it was. Word count alone misclassifies short
-// broad opens ("In your own words, explain why."), so the stems get the first
-// say. A prompt that opens "Name a..." or "Give one..." is a tight open
-// whatever follows ("Name something you should bring camping" wants one
-// word, "should" or not), so the tight stem, anchored at the start, is
-// checked before the broad stems, which match anywhere. Only ever a guess,
-// which is why a stored question's own type always wins (resolveOpenType)
-// and why the menus ask the author to choose.
-const BROAD_STEM =
-  /in your own words|defend your (answer|thinking|choice)|explain your (thinking|answer|reasoning|choice)|explain why|explain how|why do you think|how do you think|what do you think|do you think|describe (how|why|what)|if you (could|were)|what (would|could|might|does it take)|would you (want|have|volunteer)|should\b/i;
+// Sorting a legacy `open` question, which never said what kind it was, by its
+// wording. Lessons written before the split asked all seven pink questions as
+// `open`, the retelling among them, so the wording can name any of three
+// types: a tight open, the paraphrase or a broad open. Word count alone
+// misclassifies short broad opens ("Explain why you think so."), so the stems
+// get the first say, in this order:
+//
+//   1. A prompt that opens "Name a..." or "Give one..." is a tight open
+//      whatever follows ("Name something you should bring camping", "Give one
+//      word to summarize the passage" both want one word). The tight stem is
+//      anchored at the start; the others match anywhere, so it goes first.
+//   2. A retelling of the passage ("In your own words, explain...",
+//      "Summarize...") is the paraphrase, unless it asks for the speller's
+//      own view: "In your own words, explain why you prefer rivers" wants an
+//      opinion, not the passage back, so it is a broad open.
+//   3. A prompt asking for the speller's own thinking is a broad open.
+//
+// Only ever a guess, which is why a stored question's own type always wins
+// and why the menus ask the author to choose. The checks, the OSLF export and
+// document import all read an old question through resolveOpenType, so they
+// agree on what it is.
 const TIGHT_STEM =
   /^\s*(name|give)\s+(a|an|one|some|something|someone|a kind|a type|a place|a way|a synonym|a word)\b/i;
+const PARAPHRASE_STEM = /in your own words|summari[sz]e\b|retell\b/i;
+const OPINION_CUE =
+  /\byou (prefer|think|feel|believe|like|love|want|would|wish|enjoy|choose|pick)\b|\byour (opinion|favorite|view|choice)\b/i;
+const BROAD_STEM =
+  /defend your (answer|thinking|choice)|explain your (thinking|answer|reasoning|choice)|explain why|explain how|why do you think|how do you think|what do you think|do you think|describe (how|why|what)|if you (could|were)|what (would|could|might|does it take)|would you (want|have|volunteer)|should\b/i;
 const TIGHT_OPEN_MAX_WORDS = 12;
 
 /**
- * Which kind of open question a block is: its own type for a tight or broad
- * open, and for a legacy `open` block the kind its wording reads as. Anything
- * else comes back as it is.
+ * The type a question reads as: its own type for anything but a legacy
+ * `open` block, and for one of those the type its wording reads as (a tight
+ * open, the paraphrase or a broad open).
  * @param {{ questionType?: string, prompt?: string }} block
  * @returns {string}
  */
@@ -188,6 +203,9 @@ export function resolveOpenType(block) {
   if (block?.questionType !== "open") return block?.questionType;
   const prompt = String(block.prompt || "");
   if (TIGHT_STEM.test(prompt)) return "tight_open";
+  if (PARAPHRASE_STEM.test(prompt)) {
+    return OPINION_CUE.test(prompt) ? "broad_open" : "paraphrase";
+  }
   if (BROAD_STEM.test(prompt)) return "broad_open";
   const words = prompt.trim().split(/\s+/).filter(Boolean).length;
   return words > TIGHT_OPEN_MAX_WORDS ? "broad_open" : "tight_open";
@@ -279,9 +297,10 @@ export function isOrangeType(questionType) {
   return ORANGE_TYPE_KEYS.includes(questionType);
 }
 
-// The order the printed footer legend lists the types in: recall first, opening
-// out to free response last, which is the Open Spelling Lesson Format's default
-// legend order. This is a reading order for the legend only; the editor's type
+// The order the printed footer legend lists the types in: the order a section
+// asks them, each asking a little more of the speller than the one before,
+// which is the order the Open Spelling Lesson Format lists its types in and
+// asks a legend to keep. This is a reading order for the legend only; the editor's type
 // picker keeps QUESTION_TYPES' own order. The legacy open type comes last,
 // since it only appears under lessons saved before the split.
 export const QUESTION_LEGEND = [

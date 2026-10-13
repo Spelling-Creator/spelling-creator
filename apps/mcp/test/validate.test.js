@@ -164,12 +164,17 @@ const TIGHT_OPENS = [
   "Name an animal you might see at a zoo.",
 ];
 
+// A paraphrase, then two broad opens, as the default order asks. All three
+// carry the legacy `open` type and are sorted by wording.
 const EXTENDED_OPENS = [
   "In your own words, explain what is happening here.",
   "Which part surprised you most? Defend your answer.",
   "Would you want to see this in person? Explain your thinking.",
 ];
 
+// The default section order (see QUESTION_ORDER in lessonChecks.js): 3 green,
+// 1 blue, 2 purple, 2 orange, then the 7 pink above. The tests below address
+// questions by index in this order.
 function sectionInput(spec) {
   return {
     name: spec.name,
@@ -182,6 +187,12 @@ function sectionInput(spec) {
         prompt: `Green ${i + 1}?`,
         answer,
       })),
+      {
+        type: "question",
+        questionType: "background",
+        prompt: "What do you already know?",
+        answer: spec.background,
+      },
       {
         type: "question",
         questionType: "number",
@@ -204,12 +215,6 @@ function sectionInput(spec) {
         prompt: `The passage lists three of them — ______. Name one (${i + 1}).`,
         answers,
       })),
-      {
-        type: "question",
-        questionType: "background",
-        prompt: "What do you already know?",
-        answer: spec.background,
-      },
       ...TIGHT_OPENS.map((prompt) => ({
         type: "question",
         questionType: "open",
@@ -308,7 +313,7 @@ test("whole-word matching: a green answer hiding inside a longer word is not gro
 
 test("a paraphrased orange answer is rejected with the paraphrase message", () => {
   const { errors } = check((input) => {
-    question(input, 5, 5).answers = ["molten", "pumice"]; // text says INCANDESCENT
+    question(input, 5, 6).answers = ["molten", "pumice"]; // text says INCANDESCENT
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_PARAPHRASED"]);
   assert.match(errors[0].message, /do not paraphrase/i);
@@ -317,7 +322,7 @@ test("a paraphrased orange answer is rejected with the paraphrase message", () =
 
 test("a multi-word orange answer that isn't in the passage warns and errors separately", () => {
   const { errors, warnings } = check((input) => {
-    question(input, 0, 5).answers = ["moving with the seasons", "silt"];
+    question(input, 0, 6).answers = ["moving with the seasons", "silt"];
   });
   assert.deepEqual(codes(errors), ["E_GROUNDING_MULTIPLE"]);
   assert.match(errors[0].message, /Match the passage's own wording/);
@@ -326,7 +331,7 @@ test("a multi-word orange answer that isn't in the passage warns and errors sepa
 
 test("an orange prompt that hands over its own answers is rejected", () => {
   const { errors } = check((input) => {
-    question(input, 0, 5).prompt =
+    question(input, 0, 6).prompt =
       "The river carries boulder, cobble, and silt. Name one.";
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_ANSWER_IN_PROMPT"]);
@@ -339,7 +344,7 @@ test("a prompt naming another question's answer is rejected", () => {
   // section's fill-in prompt then said "…cats reached Britain around the year
   // ___". The speller reads the answer off the neighbouring prompt.
   const { errors } = check((input) => {
-    question(input, 0, 3).prompt = "The delta is ___ kilometres wide.";
+    question(input, 0, 4).prompt = "The delta is ___ kilometres wide.";
   });
   assert.deepEqual(codes(errors), ["E_ANSWER_REVEALED_CROSS"]);
   assert.match(errors[0].message, /"delta" \(the answer to question 3\)/);
@@ -376,7 +381,7 @@ test("orange answers that never appear together as a list are rejected", () => {
   const { errors } = check((input) => {
     input.sections[2].blocks[0].text +=
       " Beyond the last dune lies the Pacific Ocean.";
-    question(input, 2, 5).answers = ["pacific", "ocean"];
+    question(input, 2, 6).answers = ["pacific", "ocean"];
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_NOT_A_LIST"]);
   assert.match(errors[0].message, /not together as one list/);
@@ -388,7 +393,7 @@ test("accepting only part of the passage's list is rejected", () => {
   // the question accepts two, naming the third — having read exactly what they
   // were told to read — marks them wrong.
   const { errors } = check((input) => {
-    question(input, 0, 5).answers = ["boulder", "cobble"];
+    question(input, 0, 6).answers = ["boulder", "cobble"];
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_PARTIAL_LIST"]);
   assert.match(errors[0].message, /runs on past/);
@@ -402,7 +407,7 @@ test("accepting only part of the passage's list is rejected", () => {
       "boulder, cobble, and silt",
       "boulder, cobble and silt",
     );
-    question(input, 0, 5).answers = ["boulder", "cobble"];
+    question(input, 0, 6).answers = ["boulder", "cobble"];
   });
   assert.deepEqual(codes(noOxford.errors), ["E_ORANGE_PARTIAL_LIST"]);
 });
@@ -417,7 +422,7 @@ test("a list is still partial when its sentence carries on past the last item", 
           "boulder, cobble, and silt, each size dropped where the flow can no longer lift it",
           `boulder, cobble, and ${rest}`,
         );
-      question(input, 0, 5).answers = ["boulder", "cobble"];
+      question(input, 0, 6).answers = ["boulder", "cobble"];
     }).errors;
 
   for (const [rest, next] of [
@@ -433,7 +438,7 @@ test("a list is still partial when its sentence carries on past the last item", 
   const plural = check((input) => {
     input.sections[0].blocks[0].text +=
       " The bank held cats, dogs, and rabbits in the long grass.";
-    question(input, 0, 5).answers = ["cats", "dogs"];
+    question(input, 0, 6).answers = ["cats", "dogs"];
   });
   assert.deepEqual(codes(plural.errors), ["E_ORANGE_PARTIAL_LIST"]);
   assert.match(plural.errors[0].message, /goes on to "rabbits"/);
@@ -460,7 +465,7 @@ test("a repeated conjunction doesn't hide the rest of the list", () => {
   const { errors } = check((input) => {
     input.sections[0].blocks[0].text +=
       " The bank held cats and dogs and rabbits.";
-    question(input, 0, 5).answers = ["cats", "dogs"];
+    question(input, 0, 6).answers = ["cats", "dogs"];
   });
   assert.deepEqual(codes(errors), ["E_ORANGE_PARTIAL_LIST"]);
   assert.match(errors[0].message, /"rabbits"/);
@@ -468,7 +473,7 @@ test("a repeated conjunction doesn't hide the rest of the list", () => {
   const whole = check((input) => {
     input.sections[0].blocks[0].text +=
       " The bank held cats and dogs and rabbits.";
-    question(input, 0, 5).answers = ["cats", "dogs", "rabbits"];
+    question(input, 0, 6).answers = ["cats", "dogs", "rabbits"];
   });
   assert.deepEqual(codes(whole.errors), []);
 });
@@ -488,7 +493,7 @@ test("a clause coordinated onto a finished list is not another item", () => {
   const afterPair = check((input) => {
     input.sections[0].blocks[0].text +=
       " The wind carries dust and grit and never lets up.";
-    question(input, 0, 5).answers = ["dust", "grit"];
+    question(input, 0, 6).answers = ["dust", "grit"];
   });
   assert.deepEqual(codes(afterPair.errors), []);
 
@@ -537,7 +542,7 @@ test("an orange prompt with no blanked-out list warns without blocking", () => {
   // Two orange questions per section, so "Name one." doesn't say which list. It
   // is a warning because a prompt can name its list without a literal blank.
   const { errors, warnings } = check((input) => {
-    question(input, 0, 5).prompt = "Name one.";
+    question(input, 0, 6).prompt = "Name one.";
   });
   assert.deepEqual(codes(errors), []);
   assert.deepEqual(codes(warnings), ["W_ORANGE_NO_BLANK"]);
@@ -548,7 +553,7 @@ test("a list needs its items adjacent, not merely in the same sentence", () => {
   const separated = check((input) => {
     input.sections[2].blocks[0].text +=
       " The survey used a scale called the VEI, the Volcanic Explosivity Index.";
-    question(input, 2, 5).answers = ["scale", "index"];
+    question(input, 2, 6).answers = ["scale", "index"];
   });
   assert.deepEqual(codes(separated.errors), ["E_ORANGE_NOT_A_LIST"]);
 
@@ -557,14 +562,14 @@ test("a list needs its items adjacent, not merely in the same sentence", () => {
   const pair = check((input) => {
     input.sections[2].blocks[0].text +=
       " The wind arrives carrying dust and grit.";
-    question(input, 2, 5).answers = ["dust", "grit"];
+    question(input, 2, 6).answers = ["dust", "grit"];
   });
   assert.deepEqual(codes(pair.errors), []);
 });
 
 test("an orange question outside 2-4 answers warns without blocking", () => {
   const { errors, warnings } = check((input) => {
-    question(input, 0, 5).answers = ["boulder"];
+    question(input, 0, 6).answers = ["boulder"];
   });
   assert.deepEqual(codes(errors), []);
   assert.deepEqual(codes(warnings), ["W_ORANGE_ANSWER_COUNT"]);
@@ -581,7 +586,7 @@ test("an orange question outside 2-4 answers warns without blocking", () => {
 // Turn a section's second orange question into the loose kind, which is where
 // the standard puts it when a section has one.
 function looseOrange(input, sectionIndex, { prompt, answers }) {
-  const block = question(input, sectionIndex, 6);
+  const block = question(input, sectionIndex, 7);
   block.questionType = "multiple_open";
   block.prompt = prompt;
   block.answers = answers;
@@ -683,7 +688,7 @@ test("either orange type fills an orange slot, but the tight one goes first", ()
   // The same two questions the other way round: still a valid section, still
   // 15 questions in the right slots, but asked loose-then-tight.
   const inverted = check((input) => {
-    const [tight, loose] = [question(input, 0, 5), question(input, 0, 6)];
+    const [tight, loose] = [question(input, 0, 6), question(input, 0, 7)];
     loose.questionType = "multiple_open";
     loose.prompt = "Give a synonym for 'flowing'.";
     loose.answers = ["streaming"];
@@ -733,18 +738,35 @@ test("a W.Y.R. question carrying an answer is rejected from the raw input", () =
   assert.match(findings[0].message, /`answer`/);
 });
 
-test("a well-formed W.Y.R. question only trips the section-shape warning", () => {
-  // It isn't part of the default 15-question shape, so W_QUESTION_SHAPE is
-  // expected. The point is that nothing rejects it and nothing else fires.
+test("W.Y.R. questions between the tight opens and the paraphrase leave the shape alone", () => {
+  // They aren't counted in the 15, and that slot is theirs, so any number
+  // there is clean. Nothing rejects them and nothing else fires.
+  const wyr = (prompt) => ({ type: "question", questionType: "wyr", prompt });
   const { errors, warnings } = check((input) => {
-    input.sections[0].blocks.splice(-3, 0, {
+    input.sections[0].blocks.splice(
+      -3,
+      0,
+      wyr("Would you rather climb a mountain or sail a sea?"),
+      wyr("Would you rather wade a river or cross a bridge?"),
+    );
+  });
+  assert.deepEqual(codes(errors), []);
+  assert.deepEqual(codes(warnings), []);
+});
+
+test("a W.Y.R. question anywhere else is out of order", () => {
+  const { warnings } = check((input) => {
+    input.sections[0].blocks.splice(-1, 0, {
       type: "question",
       questionType: "wyr",
       prompt: "Would you rather climb a mountain or sail a sea?",
     });
   });
-  assert.deepEqual(codes(errors), []);
   assert.deepEqual(codes(warnings), ["W_QUESTION_SHAPE"]);
+  const shape = warnings[0];
+  assert.match(shape.message, /between the tight opens and the paraphrase/);
+  // It points at the W.Y.R. question itself, the 15th of 16.
+  assert.equal(shape.params.question, 15);
 });
 
 test("a W.Y.R. prompt that doesn't read as a choice warns", () => {
@@ -810,13 +832,13 @@ test("a W.Y.R. prompt naming a green answer warns instead of erroring", () => {
 
 test("the fill-in-the-blank number must be in the passage; the word problem need not be", () => {
   const stray = check((input) => {
-    question(input, 0, 3).answer = 41; // no steps, so it is the fill-in-the-blank
+    question(input, 0, 4).answer = 41; // no steps, so it is the fill-in-the-blank
   });
   assert.deepEqual(codes(stray.errors), ["E_GROUNDING_NUMBER_FILL"]);
 
   // The word problem's answer is computed, so it is never expected in the text.
   const computed = check((input) => {
-    question(input, 0, 4).answer = 41;
+    question(input, 0, 5).answer = 41;
   });
   assert.deepEqual(codes(computed.errors), []);
 });
@@ -827,15 +849,15 @@ test("thousands separators don't cause a false grounding failure", () => {
       "7 kilometres",
       "1,450 kilometres",
     );
-    question(input, 0, 3).answer = 1450;
-    question(input, 0, 4).answer = 351; // keep numeric answers distinct
+    question(input, 0, 4).answer = 1450;
+    question(input, 0, 5).answer = 351; // keep numeric answers distinct
   });
   assert.deepEqual(codes(errors), []);
 });
 
 test("a background answer sitting in the passage is rejected", () => {
   const { errors } = check((input) => {
-    question(input, 0, 7).answer = "delta";
+    question(input, 0, 3).answer = "delta";
   });
   // Also collides with the green answer, which is its own defect.
   assert.ok(codes(errors).includes("E_BACKGROUND_IN_TEXT"));
@@ -901,13 +923,13 @@ test("one answer word answers one question, at any length and across sections", 
   const shortWord = check((input) => {
     // "ash" is a green answer in section 6; reusing it as an orange option
     // anywhere is the defect the old 6-letter rule let through.
-    question(input, 5, 5).answers = ["ash", "pumice"];
+    question(input, 5, 6).answers = ["ash", "pumice"];
   });
   assert.ok(codes(shortWord.errors).includes("E_ANSWER_WORD_REUSED"));
 
   const acrossSections = check((input) => {
     input.sections[3].blocks[0].text += " A boulder sits in the stream.";
-    question(input, 3, 5).answers = ["boulder", "moss"]; // boulder is section 1's
+    question(input, 3, 6).answers = ["boulder", "moss"]; // boulder is section 1's
   });
   assert.ok(codes(acrossSections.errors).includes("E_ANSWER_WORD_REUSED"));
 });
@@ -936,7 +958,7 @@ test("distinct whole answers sharing a theme word are allowed", () => {
 
 test("two questions resolving to the same number is rejected", () => {
   const { errors } = check((input) => {
-    question(input, 2, 4).answer = 350; // section 1's word problem already lands there
+    question(input, 2, 5).answer = 350; // section 1's word problem already lands there
   });
   assert.deepEqual(codes(errors), ["E_NUMBER_DUPLICATE"]);
   assert.match(errors[0].message, /section 1 and section 3/);
@@ -946,7 +968,7 @@ test("two questions in the same section sharing a number say so plainly", () => 
   const { errors } = check((input) => {
     // Both purple questions land on 7, which is also the fill-in-the-blank's
     // value — "section 1 and section 1" would leave the author hunting.
-    question(input, 0, 4).answer = 7;
+    question(input, 0, 5).answer = 7;
   });
   assert.deepEqual(codes(errors), ["E_NUMBER_DUPLICATE"]);
   assert.match(errors[0].message, /both in section 1/);
@@ -1081,7 +1103,7 @@ test("shape deviations warn rather than block", () => {
   assert.ok(codes(reordered.warnings).includes("W_QUESTION_SHAPE"));
 
   const noSteps = check((input) => {
-    delete question(input, 0, 4).steps;
+    delete question(input, 0, 5).steps;
   });
   assert.ok(codes(noSteps.warnings).includes("W_NUMBER_NO_STEPS"));
 
@@ -1093,9 +1115,10 @@ test("shape deviations warn rather than block", () => {
 
 // The fixture's pink questions carry the legacy `open` type, as every lesson
 // written before tight and broad opens were separate does. They are sorted by
-// wording, so the 4 + 3 order is still held, and a broad open in a tight slot
-// is a shape warning like any other.
-test("legacy open questions are held to 4 tight + 3 broad by their wording", () => {
+// wording (a retelling of the passage as the paraphrase), so the 4 + 1 + 2
+// order is still held, and a paraphrase in a tight slot is a shape warning
+// like any other.
+test("legacy open questions are held to the pink order by their wording", () => {
   const { errors, warnings } = check((input) => {
     question(input, 0, 8).prompt =
       "In your own words, explain how this forms over many centuries.";
@@ -1104,7 +1127,7 @@ test("legacy open questions are held to 4 tight + 3 broad by their wording", () 
   assert.deepEqual(codes(warnings), ["W_QUESTION_SHAPE"]);
 });
 
-test("explicit tight and broad opens fill the pink slots, and a paraphrase a broad one", () => {
+test("explicit tight opens, a paraphrase and broad opens fill the pink slots", () => {
   const { errors, warnings } = check((input) => {
     for (let i = 8; i < 12; i += 1)
       question(input, 0, i).questionType = "tight_open";

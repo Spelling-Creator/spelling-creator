@@ -39,27 +39,32 @@ export const SPELLING_WORDS_PER_SECTION = 4;
 export const SPELLING_MIN_LETTERS = 6;
 export const SPELLING_MAX_LETTERS = 9;
 
-// The fixed per-section question order: 3 green, 2 purple, 2 orange, 1 blue,
-// then 7 pink (4 tight opens followed by 3 broad opens).
+// The fixed per-section question order, which is the order the Open Spelling
+// Lesson Format lists its types in (each asks a little more of the speller
+// than the one before): 3 green, 1 blue, 2 purple, 2 orange, then 4 tight
+// opens, 1 paraphrase and 2 broad opens. Any number of W.Y.R. questions may
+// sit between the tight opens and the paraphrase (WYR_SLOT); they are
+// optional, so the fifteen count none.
 const QUESTION_ORDER = [
   "single",
   "single",
   "single",
-  "number",
-  "number",
-  "multiple",
-  "multiple",
   "background",
+  "number",
+  "number",
+  "multiple",
+  "multiple",
   "tight_open",
   "tight_open",
   "tight_open",
   "tight_open",
-  "broad_open",
+  "paraphrase",
   "broad_open",
   "broad_open",
 ];
 const TIGHT_OPENS = 4;
-const BROAD_OPENS = 3;
+const BROAD_OPENS = 2;
+const WYR_SLOT = QUESTION_ORDER.indexOf("paraphrase");
 const ORANGE_MIN_ANSWERS = 2;
 const ORANGE_MAX_ANSWERS = 4;
 
@@ -981,45 +986,59 @@ export function validateLesson(doc) {
       // Either orange type satisfies an orange slot (the standard asks for two
       // semi-open questions there, not for one of each), so the shapes are
       // compared with the two folded together and the ordering between them left
-      // to W_ORANGE_ORDER below. A paraphrase may stand in for a broad open
-      // (standards.md), and a legacy `open` question, which never said which
-      // kind it was, is read as the kind its wording suggests, so a lesson
-      // saved before the split is held to the same 4 tight + 3 broad order it
-      // was written to.
-      const slot = (block) => {
-        const type = block.questionType;
-        if (ORANGE_TYPES.has(type)) return ORANGE_TIGHT;
-        if (type === "paraphrase") return "broad_open";
-        return resolveOpenType(block);
-      };
-      const slots = ctx.questions.map(slot);
+      // to W_ORANGE_ORDER below. A legacy `open` question, which never said
+      // which kind it was, is read as the kind its wording suggests (a
+      // quick category as a tight open, a retelling of the passage as the
+      // paraphrase, an opinion as a broad open; see resolveOpenType), so a
+      // lesson saved before the split is held to the order it was written
+      // to. The type itself stays what the lesson stored.
+      const slot = (block) =>
+        ORANGE_TYPES.has(block.questionType)
+          ? ORANGE_TIGHT
+          : resolveOpenType(block);
+      // W.Y.R. questions have a slot of their own, between the tight opens
+      // and the paraphrase, and any number may sit there, so one in its place
+      // is left out of the comparison. One anywhere else counts against the
+      // shape like any other question. `slotAt` maps each compared slot back
+      // to its question's place in the section.
+      const slots = [];
+      const slotAt = [];
+      ctx.questions.forEach((q, i) => {
+        if (q.questionType === "wyr" && slots.length === WYR_SLOT) return;
+        slots.push(slot(q));
+        slotAt.push(i);
+      });
       if (slots.join(",") !== QUESTION_ORDER.join(",")) {
         // The order as written, with each legacy open followed by the kind it
         // was read as: that reading is what the shape above counted, and it is
         // the one thing the author can't see from the types alone.
         const shape = ctx.questions.map((q) =>
           q.questionType === "open"
-            ? `open (read as ${resolveOpenType(q)})`
+            ? `open (read as ${slot(q)})`
             : q.questionType,
         );
         // The finding points at the first question out of place, which is
         // where the order starts going wrong; a section that is only short
         // points at its last question.
         const firstOff = slots.findIndex((s, i) => s !== QUESTION_ORDER[i]);
-        const at = firstOff === -1 ? ctx.questions.length - 1 : firstOff;
+        const at =
+          firstOff === -1 ? ctx.questions.length - 1 : slotAt[firstOff];
         warn(
           "W_QUESTION_SHAPE",
           ctx.id,
           ctx.number,
           `${ctx.label} has ${shape.length} question(s) in the order ${shape.join(", ")}. ` +
             `The default is ${QUESTION_ORDER.length}, in this order: ${QUESTION_ORDER.join(", ")} ` +
-            `(3 green, 2 purple, 2 orange, 1 blue, then ${TIGHT_OPENS} tight opens and ${BROAD_OPENS} broad opens). ` +
+            `(3 green, 1 blue, 2 purple, 2 orange, then ${TIGHT_OPENS} tight opens, 1 paraphrase and ` +
+            `${BROAD_OPENS} broad opens). ` +
             "Either orange type counts towards an orange slot: `multiple` for a list the passage states, " +
-            "`multiple_open` for the looser end. A `paraphrase` may take a broad open's slot. A legacy " +
-            "`open` question counts as the kind its wording reads as; give it its type to settle it. The first " +
-            `${TIGHT_OPENS} pink questions are tight opens (easy one-word answers from the speller's own ` +
-            `world: "Name something found in a hospital"); the last ${BROAD_OPENS} are broad opens inviting ` +
-            'a full sentence of their own reasoning or opinion ("Why do you think...?", "...Defend your answer.").',
+            "`multiple_open` for the looser end. Any number of `wyr` questions may sit between the tight " +
+            "opens and the paraphrase; they aren't counted. A legacy `open` question counts as the kind its " +
+            `wording reads as; give it its type to settle it. The ${TIGHT_OPENS} tight opens take easy ` +
+            'one-word answers from the speller\'s own world ("Name something found in a hospital"); the ' +
+            'paraphrase retells the passage ("In your own words, explain..."); the last ' +
+            `${BROAD_OPENS} are broad opens inviting a full sentence of their own reasoning or opinion ` +
+            '("Why do you think...?", "...Defend your answer.").',
           {
             blockId: ctx.questions[at]?.id,
             params: { count: shape.length, question: at + 1 },

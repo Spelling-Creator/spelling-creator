@@ -69,7 +69,7 @@ model (below).
 
 The **question type** is derived, never read: "Would you rather" is `wyr`, "in
 your own words" is `paraphrase`, no answer is an open question, sorted into
-`tight_open` or `broad_open` by its wording (`resolveOpenType`), several
+`tight_open`, `paraphrase` or `broad_open` by its wording (`resolveOpenType`), several
 answers are `multiple` (or `multiple_open` when one of them is not in the
 passage), a numeric answer is `number`, and a lone answer is `single` when it
 is in the passage and `background` when it is not. That is the one place the

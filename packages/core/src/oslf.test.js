@@ -173,6 +173,40 @@ describe("toOslf", () => {
     expect("answers" in questions[6]).toBe(false);
   });
 
+  // An old lesson asked every pink question as `open`, the retelling among
+  // them. The export reads each the way the lesson checks do, so a lesson
+  // that passes the shape check still passes it after a round trip.
+  it("writes a legacy open as the type the lesson checks read it as", () => {
+    const legacy = (id, prompt) => question(id, "open", { prompt });
+    const file = toOslf({
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            legacy("o1", "Name something made of glass."),
+            legacy("o2", "In your own words, explain why it was built."),
+            legacy("o3", "In your own words, explain why you prefer towers."),
+            legacy("o4", "Why do you think people built lighthouses?"),
+          ],
+        },
+      ],
+    });
+    expect(validate(file)).toBe(true);
+    expect(file.sections[0].blocks.map((b) => b.questionType)).toEqual([
+      "tight-open",
+      "paraphrase",
+      "broad-open",
+      "broad-open",
+    ]);
+    const back = fromOslf(file).sections[0].blocks;
+    expect(back.map((b) => b.questionType)).toEqual([
+      "tight_open",
+      "paraphrase",
+      "broad_open",
+      "broad_open",
+    ]);
+  });
+
   it("writes rich text as runs and notes, and plain paragraphs as strings", () => {
     const file = toOslf(DOC, { imageSrc });
     const passage = file.sections[0].blocks.find((b) => b.type === "passage");

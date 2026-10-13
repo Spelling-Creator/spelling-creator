@@ -125,12 +125,16 @@ you can ignore those too: they never block anything.
 **The usual lesson shape** (all suggestions)
 
 - Six sections.
-- In each section: 3 **Known**, 2 **Math**, 2 **Semi-open** or **Suggested
-  answers**, 1 **Prior knowledge**, 4 **Tight open**, then 3 **Broad open** (a
-  **Paraphrase** can stand in for one). An
-  **Open ended** question from an older lesson counts as whichever kind its
-  wording suggests, and the suggestion says which kind that was. It points at
-  the first question that is out of place.
+- In each section: 3 **Known**, 1 **Prior knowledge**, 2 **Math**, 2
+  **Semi-open** or **Suggested answers**, 4 **Tight open**, 1 **Paraphrase**,
+  then 2 **Broad open**. This is the order the
+  [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
+  lists its types in, each asking a little more of the speller than the one
+  before. **Would you rather** questions aren't counted; any number can sit
+  between the tight opens and the paraphrase. An **Open ended** question from
+  an older lesson counts as whichever kind its wording suggests, and the
+  suggestion says which kind that was. It points at the first question that
+  is out of place.
 - One of the two number questions is a word problem with worked steps.
 - The VAKT activity comes at the end of the section.
 - A section with no questions yet.

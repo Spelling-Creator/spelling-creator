@@ -60,8 +60,15 @@ stored lesson. Stored blocks are never rewritten on load, for the reason
 `imageCredit.js` gives (it would show as an edit in version history and
 broadcast to a live session), so `resolveOpenType(block)` is how the checks,
 the text importer and the file export decide which kind a legacy question is:
-its own type for a tight or broad open, and for `open` the kind its wording
-reads as (`BROAD_STEM`, `TIGHT_STEM`, then word count).
+its own type for anything else, and for `open` the type its wording reads as.
+The stems are tried in order: `TIGHT_STEM` ("Name a...", "Give one...")
+makes a tight open whatever follows, `PARAPHRASE_STEM` ("In your own
+words...", "Summarize...") makes the paraphrase, or a broad open when
+`OPINION_CUE` finds the prompt asking for the speller's own view ("...why you
+prefer rivers"), `BROAD_STEM` makes a broad open, and word count settles the
+rest. Because
+the checks and the export share this one reading, a lesson that passes the
+shape check still passes it after an OSLF round trip.
 
 The two amber types are the _semi-open_ questions (`ORANGE_TYPE_KEYS`,
 `isOrangeType`). Treating them as one family, colored alike, is the app's
