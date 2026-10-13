@@ -1493,11 +1493,11 @@ export default function EditorPage() {
         // 'print' opens the print dialog on the PDF; the browser's own dialog
         // is the feedback, so only the download fallback needs a message.
         const { printPdf } = await loadExportEngine();
-        if ((await printPdf(doc, meta)) === "downloaded") {
-          notify({
-            severity: "info",
-            message: t("messages.pdfDownloadedToPrint"),
-          });
+        const result = await printPdf(doc, meta);
+        if (result === "unsupported") {
+          notify({ severity: "info", message: t("messages.printUnsupported") });
+        } else if (result === "failed") {
+          notify({ severity: "warning", message: t("messages.printFailed") });
         }
       }
     } catch (err) {
@@ -2495,7 +2495,12 @@ export default function EditorPage() {
       : t("labels.saveAsDraft");
 
   const exportBusy =
-    busy === "docx" || busy === "json" || busy === "pdf" || busy === "gdocs";
+    busy === "docx" ||
+    busy === "json" ||
+    busy === "oslf" ||
+    busy === "pdf" ||
+    busy === "print" ||
+    busy === "gdocs";
 
   // Header icon-only triggers (help, the import menu, the mobile overflow
   // menu). These used to be drawn from --primary-foreground because the app bar

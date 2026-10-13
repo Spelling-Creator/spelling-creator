@@ -35,6 +35,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   FileDownIcon,
+  FileTextIcon,
   GitForkIcon,
   PencilIcon,
   PlayIcon,
@@ -294,8 +295,11 @@ export default function LessonLayout() {
         // The browser's print dialog is feedback enough; only the download
         // fallback needs a message.
         const { printPdf } = await loadExportEngine();
-        if ((await printPdf(lesson.doc, meta)) === "downloaded") {
-          toast(t("lessonPage.pdfDownloadedToPrint"));
+        const result = await printPdf(lesson.doc, meta);
+        if (result === "unsupported") {
+          toast(t("lessonPage.printUnsupported"));
+        } else if (result === "failed") {
+          toast(t("lessonPage.printFailed"));
         }
       }
     } catch (err) {
@@ -533,7 +537,7 @@ export default function LessonLayout() {
                   onClick={() => handleExport("docx")}
                   disabled={Boolean(busy)}
                 >
-                  {busy === "docx" ? <Spinner /> : <FileDownIcon />}
+                  {busy === "docx" ? <Spinner /> : <FileTextIcon />}
                   {t("lessonPage.downloadWord")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={forkLesson} disabled={Boolean(busy)}>

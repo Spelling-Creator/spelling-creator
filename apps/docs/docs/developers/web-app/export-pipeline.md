@@ -230,29 +230,33 @@ numbers and footer come out the same as in the download. `printPdf` renders the
 PDF exactly as `exportPdf` does, then loads the blob into a hidden same-origin
 `<iframe>` and calls `print()` on the frame's window once it loads; the
 browser's PDF viewer opens the print dialog for that file. It resolves to
-`"printed"` or `"downloaded"`, and the callers show a message only for the
-second.
+`"printed"`, `"unsupported"` (the browser can't print a PDF from the page) or
+`"failed"` (it should have, but didn't). The PDF is downloaded in the last two,
+and the callers say which happened.
 
 - The frame is 0 by 0 and `visibility: hidden`, not `display: none`, which
-  never starts the PDF viewer. It stays in the page after `print()` returns,
-  because Chrome opens the dialog after that and removing the frame first
-  cancels the print. The next print removes it and revokes its URL.
+  never starts the PDF viewer.
+- `print()` goes out on the frame's `load`, before the viewer has read the
+  file. That's fine: Chrome and Firefox both hold the preview until the PDF is
+  ready, however large it is.
+- The frame can't be removed when `print()` returns: Chrome builds its preview
+  after that, and removing the frame then cancels the print. Firefox prints
+  from its own copy and doesn't mind. So the frame and its blob URL go on the
+  reader's next `pointerdown` or `keydown` in the page (or the next print).
+  The dialog is modal, so input only reaches the page once it has closed, and
+  leaving the page takes a click too. Firefox's frame is cross-origin, so
+  listening for `afterprint` on it isn't an option.
 - It needs `navigator.pdfViewerEnabled`. Without a viewer, loading the blob into
   a frame would download it instead, and `print()` would print an empty frame.
-- Safari is sent to the download too. Its viewer does print the PDF from the
-  frame, but zooms into the first page and crops it (seen in Safari 26, with a
-  0 by 0 frame, an A4-sized one and a 2-second wait alike).
-- If the frame doesn't load within 15 seconds, or `print()` throws, the PDF is
-  downloaded instead.
+- Apple's WebKit (`navigator.vendor` starting with "Apple") is sent to the
+  download too. Safari's viewer does print the PDF from the frame, but zooms
+  into the first page and crops it, however the frame is sized and however
+  long it waits. Every iOS browser is WebKit and reports the same vendor.
+  Recheck this when Safari changes.
+- If the frame doesn't load within 15 seconds, or `print()` throws, the result
+  is `"failed"` and the PDF is downloaded.
 - Firefox's pdf.js frame counts as cross-origin to the page, but `print()` on it
-  is allowed and works. Playwright's bundled Firefox turns pdf.js off
-  (`pdfjs.disabled`), so in tests it takes the download path unless that pref
-  is set back to `false`; Playwright's WebKit has no print dialog at all.
-
-Last checked by hand in Chrome, Chromium, Firefox (with pdf.js), Safari 26
-and Playwright's WebKit: the dialog in Chrome and Firefox shows the PDF with
-its footer, a second print after cancelling the first works, and the
-download path behaves in the rest.
+  is allowed and works.
 
 ## The Open Spelling Lesson Format
 

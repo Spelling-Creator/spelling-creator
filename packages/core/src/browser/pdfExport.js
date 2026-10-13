@@ -444,16 +444,35 @@ export async function exportPdf(doc, meta = {}) {
 }
 
 // The frame the last print went through. It can't be removed as soon as
-// print() returns: in Chrome the dialog opens after print() has already
-// returned, and taking the frame away first cancels the print. So it stays in
-// the page until the next print replaces it.
+// print() returns: Chrome builds its preview after that, and taking the frame
+// away first cancels the print. It goes on the reader's next click or key
+// press in the page instead. The print dialog is modal in Chrome and Firefox,
+// so input can only reach the page once it has closed, and leaving the page
+// takes a click too.
 let printFrame = null;
+let stopWaitingForInput = null;
 
 function clearPrintFrame() {
+  stopWaitingForInput?.();
+  stopWaitingForInput = null;
   if (!printFrame) return;
   URL.revokeObjectURL(printFrame.src);
   printFrame.remove();
   printFrame = null;
+}
+
+const INPUT_EVENTS = ["pointerdown", "keydown"];
+
+function clearPrintFrameOnNextInput() {
+  const onInput = () => clearPrintFrame();
+  for (const type of INPUT_EVENTS) {
+    window.addEventListener(type, onInput, { capture: true });
+  }
+  stopWaitingForInput = () => {
+    for (const type of INPUT_EVENTS) {
+      window.removeEventListener(type, onInput, { capture: true });
+    }
+  };
 }
 
 // How long to wait for the browser's PDF viewer to load the file before giving
@@ -478,13 +497,19 @@ function printBlob(blob) {
       reject(new Error("The PDF viewer didn't load in time."));
     }, PRINT_LOAD_TIMEOUT);
 
+    // print() goes out as soon as the frame loads, before the viewer has read
+    // the file. That's safe: Chrome and Firefox both hold the dialog's preview
+    // until the PDF is ready, however large it is.
     frame.addEventListener(
       "load",
       () => {
         clearTimeout(timer);
+        // No focus() on the frame first: print() on its window prints the
+        // PDF either way, and leaving focus in the page is what lets a key
+        // press there clear the frame afterward.
         try {
-          frame.contentWindow.focus();
           frame.contentWindow.print();
+          clearPrintFrameOnNextInput();
           resolve();
         } catch (err) {
           clearPrintFrame();
@@ -502,35 +527,41 @@ function printBlob(blob) {
 
 // Whether this browser can print a PDF straight from a page. It needs a
 // built-in PDF viewer (without one, loading the file into a frame would
-// download it instead). Safari has one, and printing from the frame does pick
-// the PDF, but it zooms into the first page and crops it (Safari 26), however
-// the frame is sized and however long it waits. A downloaded PDF opened in
-// Preview prints properly, so Safari gets that instead.
+// download it instead), and it can't be Apple's WebKit. Safari's viewer does
+// print the PDF from the frame, but zooms into the first page and crops it,
+// however the frame is sized and however long it waits. A
+// downloaded PDF opened in Preview prints properly, so Safari gets that.
+// Every browser on iOS is WebKit underneath and reports Apple as its vendor
+// too, so they all take the download. Recheck this when Safari changes.
 function canPrintPdfInPlace() {
-  if (!navigator.pdfViewerEnabled) return false;
-  const ua = navigator.userAgent;
-  const isSafari = /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua);
-  return !isSafari;
+  return (
+    Boolean(navigator.pdfViewerEnabled) && !navigator.vendor.startsWith("Apple")
+  );
 }
 
 /**
  * Render the lesson to a PDF and open the browser's print dialog on it. Where
- * the browser can't print a PDF from the page, the PDF is downloaded instead.
+ * that can't happen, the PDF is downloaded instead.
  * @param {object} doc
  * @param {{author?: string, published?: string|number|Date}} [meta]
  *   the by-line and copyright metadata (see buildDocument).
- * @returns {Promise<"printed" | "downloaded">} which of the two happened.
+ * @returns {Promise<"printed" | "unsupported" | "failed">} "printed" when the
+ *   dialog opened; "unsupported" when this browser can't print a PDF from the
+ *   page, and "failed" when it should have but the viewer didn't load in time
+ *   or print() threw. The PDF was downloaded in both of those.
  */
 export async function printPdf(doc, meta = {}) {
   const pdf = await renderPdf(doc, meta);
+  let result = "unsupported";
   if (canPrintPdfInPlace()) {
     try {
       await printBlob(pdf.output("blob"));
       return "printed";
     } catch (err) {
       console.warn("Printing the PDF in place failed, downloading it.", err);
+      result = "failed";
     }
   }
   pdf.save(safeFileName(doc.title));
-  return "downloaded";
+  return result;
 }

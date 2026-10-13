@@ -17,6 +17,7 @@ import { Link as RouterLink } from "react-router-dom";
 import {
   CalendarIcon,
   FileDownIcon,
+  FileTextIcon,
   GitForkIcon,
   LayersIcon,
   PrinterIcon,
@@ -163,7 +164,7 @@ export default function LessonOverview() {
               {busy === "docx" ? (
                 <Spinner data-icon="inline-start" />
               ) : (
-                <FileDownIcon data-icon="inline-start" />
+                <FileTextIcon data-icon="inline-start" />
               )}
               {t("lessonPage.downloadWord")}
             </Button>
