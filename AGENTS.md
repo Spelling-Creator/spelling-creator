@@ -8,7 +8,7 @@ It also has an MCP server; and its `package.json` and `manifest.json` version sh
 
 ## Verifying in a Browser
 
-If you have it installed, use the Playwright MCP for this. If not, use the Playwright CLI instead (see `playwright-cli --help`).
+If you have it installed, use the Playwright MCP for this. If not, use the Playwright CLI instead (see skills). You can use the CLI over the MCP if you need to use a browser other than the one that is configured.
 
 ## Searching the Codebase
 
