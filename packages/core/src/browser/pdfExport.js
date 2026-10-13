@@ -353,9 +353,13 @@ function safeFileName(title) {
   return `${base || "lesson"}.pdf`;
 }
 
-// Build the docx, convert to HTML (mammoth), then render to a PDF (html2pdf.js).
-// Resolves to the finished jsPDF document, which the two entry points below
-// either save or print.
+/**
+ * Build the docx, convert to HTML (mammoth), then render to a PDF (html2pdf.js).
+ * @param {object} doc
+ * @param {{author?: string, published?: string|number|Date}} meta
+ * @returns {Promise<import("jspdf").jsPDF>} the finished document, which the
+ *   two entry points below either save or print.
+ */
 async function renderPdf(doc, meta) {
   // docToHtml builds the docx, converts it to HTML via mammoth and re-applies
   // each image's picked size + alignment, so the PDF mirrors the docx output.
@@ -452,6 +456,7 @@ export async function exportPdf(doc, meta = {}) {
 let printFrame = null;
 let stopWaitingForInput = null;
 
+/** Remove the print frame, revoke its PDF's URL and stop waiting for input. */
 function clearPrintFrame() {
   stopWaitingForInput?.();
   stopWaitingForInput = null;
@@ -463,6 +468,7 @@ function clearPrintFrame() {
 
 const INPUT_EVENTS = ["pointerdown", "keydown"];
 
+/** Clear the print frame on the next click or key press anywhere in the page. */
 function clearPrintFrameOnNextInput() {
   const onInput = () => clearPrintFrame();
   for (const type of INPUT_EVENTS) {
@@ -479,8 +485,13 @@ function clearPrintFrameOnNextInput() {
 // up and downloading it instead.
 const PRINT_LOAD_TIMEOUT = 15000;
 
-// Load the PDF into a hidden frame and open the print dialog on it, so what
-// prints is the PDF itself, page numbers and footer included.
+/**
+ * Load the PDF into a hidden frame and open the print dialog on it, so what
+ * prints is the PDF itself, page numbers and footer included.
+ * @param {Blob} blob the PDF.
+ * @returns {Promise<void>} resolves once print() has been called; rejects if
+ *   the frame doesn't load in time or print() throws.
+ */
 function printBlob(blob) {
   clearPrintFrame();
   return new Promise((resolve, reject) => {
@@ -525,14 +536,17 @@ function printBlob(blob) {
   });
 }
 
-// Whether this browser can print a PDF straight from a page. It needs a
-// built-in PDF viewer (without one, loading the file into a frame would
-// download it instead), and it can't be Apple's WebKit. Safari's viewer does
-// print the PDF from the frame, but zooms into the first page and crops it,
-// however the frame is sized and however long it waits. A
-// downloaded PDF opened in Preview prints properly, so Safari gets that.
-// Every browser on iOS is WebKit underneath and reports Apple as its vendor
-// too, so they all take the download. Recheck this when Safari changes.
+/**
+ * Whether this browser can print a PDF straight from a page. It needs a
+ * built-in PDF viewer (without one, loading the file into a frame would
+ * download it instead), and it can't be Apple's WebKit. Safari's viewer does
+ * print the PDF from the frame, but zooms into the first page and crops it,
+ * however the frame is sized and however long it waits. A downloaded PDF
+ * opened in Preview prints properly, so Safari gets that. Every browser on
+ * iOS is WebKit underneath and reports Apple as its vendor too, so they all
+ * take the download. Recheck this when Safari changes.
+ * @returns {boolean}
+ */
 function canPrintPdfInPlace() {
   return (
     Boolean(navigator.pdfViewerEnabled) && !navigator.vendor.startsWith("Apple")

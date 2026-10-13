@@ -273,9 +273,12 @@ export default function LessonLayout() {
     );
   };
 
-  // Export the lesson document, through the same pipeline the editor uses.
-  // 'docx' downloads a Word file, 'pdf' downloads a PDF, and 'print' opens the
-  // print dialog on that PDF (or downloads it where the browser can't).
+  /**
+   * Export the lesson document, through the same pipeline the editor uses.
+   * @param {"docx" | "pdf" | "print"} kind 'docx' downloads a Word file, 'pdf'
+   *   downloads a PDF, and 'print' opens the print dialog on that PDF (or
+   *   downloads it where the browser can't).
+   */
   const handleExport = async (kind) => {
     if (!lesson) return;
     setBusy(kind);

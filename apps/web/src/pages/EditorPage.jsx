@@ -1462,6 +1462,12 @@ export default function EditorPage() {
     setDialogOpen(false);
   };
 
+  /**
+   * Export the open lesson from the Export menu.
+   * @param {"docx" | "json" | "oslf" | "pdf" | "print"} kind which file to
+   *   download, or 'print' to open the print dialog on the PDF (which
+   *   downloads it instead where the browser can't).
+   */
   const handleExport = async (kind) => {
     if (doc.sections.length === 0) {
       notify({
