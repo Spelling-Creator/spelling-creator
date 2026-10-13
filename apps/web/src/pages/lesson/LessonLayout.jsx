@@ -35,6 +35,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   FileDownIcon,
+  FileTextIcon,
   GitForkIcon,
   PencilIcon,
   PlayIcon,
@@ -272,8 +273,12 @@ export default function LessonLayout() {
     );
   };
 
-  // Export the lesson document — same pipeline the editor uses. 'docx' downloads
-  // a Word file; 'pdf' opens the print dialog to save as PDF.
+  /**
+   * Export the lesson document, through the same pipeline the editor uses.
+   * @param {"docx" | "pdf" | "print"} kind 'docx' downloads a Word file, 'pdf'
+   *   downloads a PDF, and 'print' opens the print dialog on that PDF (or
+   *   downloads it where the browser can't).
+   */
   const handleExport = async (kind) => {
     if (!lesson) return;
     setBusy(kind);
@@ -285,10 +290,20 @@ export default function LessonLayout() {
         const { exportDocx } = await loadExportEngine();
         await exportDocx(lesson.doc, meta);
         toast(t("lessonPage.wordDownloaded"));
-      } else {
+      } else if (kind === "pdf") {
         const { exportPdf } = await loadExportEngine();
         await exportPdf(lesson.doc, meta);
-        toast(t("lessonPage.pdfGenerated"));
+        toast(t("lessonPage.pdfDownloaded"));
+      } else {
+        // The browser's print dialog is feedback enough; only the download
+        // fallback needs a message.
+        const { printPdf } = await loadExportEngine();
+        const result = await printPdf(lesson.doc, meta);
+        if (result === "unsupported") {
+          toast(t("lessonPage.printUnsupported"));
+        } else if (result === "failed") {
+          toast(t("lessonPage.printFailed"));
+        }
       }
     } catch (err) {
       toast(t("lessonPage.exportFailed", { error: err.message || err }));
@@ -508,17 +523,24 @@ export default function LessonLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
+                  onClick={() => handleExport("print")}
+                  disabled={Boolean(busy)}
+                >
+                  {busy === "print" ? <Spinner /> : <PrinterIcon />}
+                  {t("lessonPage.print")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => handleExport("pdf")}
                   disabled={Boolean(busy)}
                 >
-                  {busy === "pdf" ? <Spinner /> : <PrinterIcon />}
-                  {t("lessonPage.printPdf")}
+                  {busy === "pdf" ? <Spinner /> : <FileDownIcon />}
+                  {t("lessonPage.downloadPdf")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleExport("docx")}
                   disabled={Boolean(busy)}
                 >
-                  {busy === "docx" ? <Spinner /> : <FileDownIcon />}
+                  {busy === "docx" ? <Spinner /> : <FileTextIcon />}
                   {t("lessonPage.downloadWord")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={forkLesson} disabled={Boolean(busy)}>

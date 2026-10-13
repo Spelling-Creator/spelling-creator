@@ -67,7 +67,7 @@ After that, it opens and works offline whether or not you installed it.
 - Writing and editing lessons: adding, moving and deleting sections and blocks
 - Pictures you've already added to a lesson
 - Version history: browsing earlier versions and restoring one
-- **Export DOCX** and **Print PDF**
+- **Export DOCX**, **Export PDF** and **Print**
 - Pictures in published lessons you've looked at before
 
 **Needs internet:**

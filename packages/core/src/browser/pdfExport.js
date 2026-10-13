@@ -356,10 +356,11 @@ function safeFileName(title) {
 /**
  * Build the docx, convert to HTML (mammoth), then render to a PDF (html2pdf.js).
  * @param {object} doc
- * @param {{author?: string, published?: string|number|Date}} [meta]
- *   the by-line and copyright metadata — see buildDocument.
+ * @param {{author?: string, published?: string|number|Date}} meta
+ * @returns {Promise<import("jspdf").jsPDF>} the finished document, which the
+ *   two entry points below either save or print.
  */
-export async function exportPdf(doc, meta = {}) {
+async function renderPdf(doc, meta) {
   // docToHtml builds the docx, converts it to HTML via mammoth and re-applies
   // each image's picked size + alignment, so the PDF mirrors the docx output.
   const html = await docToHtml(doc, meta);
@@ -400,7 +401,7 @@ export async function exportPdf(doc, meta = {}) {
   window.document.body.appendChild(offscreen);
 
   try {
-    await html2pdf()
+    const pdf = await html2pdf()
       .set({
         // Pixel units (not mm) on purpose. html2pdf places page breaks using a
         // page height it derives by rounding mm→px (floor(277mm) = 1046px), but
@@ -413,7 +414,6 @@ export async function exportPdf(doc, meta = {}) {
         // computations use the identical integer inner height (1047px), so the
         // break positions and the slice positions line up exactly.
         margin: [MARGIN, MARGIN, FOOTER_MARGIN, MARGIN],
-        filename: safeFileName(doc.title),
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
         jsPDF: {
@@ -424,14 +424,158 @@ export async function exportPdf(doc, meta = {}) {
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
       .from(container)
-      // The page number and footer are drawn straight onto the finished pages:
-      // they repeat on every one, so they can't come from the flowed HTML, and
-      // the docx's own header/footer never reach mammoth.
       .toPdf()
-      .get("pdf")
-      .then((pdf) => drawPageFurniture(pdf, meta, questionLegendFor(doc)))
-      .save();
+      .get("pdf");
+    // The page number and footer are drawn straight onto the finished pages:
+    // they repeat on every one, so they can't come from the flowed HTML, and
+    // the docx's own header/footer never reach mammoth.
+    drawPageFurniture(pdf, meta, questionLegendFor(doc));
+    return pdf;
   } finally {
     window.document.body.removeChild(offscreen);
   }
+}
+
+/**
+ * Render the lesson to a PDF and download it.
+ * @param {object} doc
+ * @param {{author?: string, published?: string|number|Date}} [meta]
+ *   the by-line and copyright metadata (see buildDocument).
+ */
+export async function exportPdf(doc, meta = {}) {
+  const pdf = await renderPdf(doc, meta);
+  pdf.save(safeFileName(doc.title));
+}
+
+// The frame the last print went through. It can't be removed as soon as
+// print() returns: Chrome builds its preview after that, and taking the frame
+// away first cancels the print. It goes on the reader's next click or key
+// press in the page instead. The print dialog is modal in Chrome and Firefox,
+// so input can only reach the page once it has closed, and leaving the page
+// takes a click too.
+let printFrame = null;
+let stopWaitingForInput = null;
+
+/** Remove the print frame, revoke its PDF's URL and stop waiting for input. */
+function clearPrintFrame() {
+  stopWaitingForInput?.();
+  stopWaitingForInput = null;
+  if (!printFrame) return;
+  URL.revokeObjectURL(printFrame.src);
+  printFrame.remove();
+  printFrame = null;
+}
+
+const INPUT_EVENTS = ["pointerdown", "keydown"];
+
+/** Clear the print frame on the next click or key press anywhere in the page. */
+function clearPrintFrameOnNextInput() {
+  const onInput = () => clearPrintFrame();
+  for (const type of INPUT_EVENTS) {
+    window.addEventListener(type, onInput, { capture: true });
+  }
+  stopWaitingForInput = () => {
+    for (const type of INPUT_EVENTS) {
+      window.removeEventListener(type, onInput, { capture: true });
+    }
+  };
+}
+
+// How long to wait for the browser's PDF viewer to load the file before giving
+// up and downloading it instead.
+const PRINT_LOAD_TIMEOUT = 15000;
+
+/**
+ * Load the PDF into a hidden frame and open the print dialog on it, so what
+ * prints is the PDF itself, page numbers and footer included.
+ * @param {Blob} blob the PDF.
+ * @returns {Promise<void>} resolves once print() has been called; rejects if
+ *   the frame doesn't load in time or print() throws.
+ */
+function printBlob(blob) {
+  clearPrintFrame();
+  return new Promise((resolve, reject) => {
+    const frame = window.document.createElement("iframe");
+    // Hidden but still laid out. A display:none frame never starts the PDF
+    // viewer, so there would be nothing to print.
+    frame.style.cssText =
+      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+
+    const timer = setTimeout(() => {
+      clearPrintFrame();
+      reject(new Error("The PDF viewer didn't load in time."));
+    }, PRINT_LOAD_TIMEOUT);
+
+    // print() goes out as soon as the frame loads, before the viewer has read
+    // the file. That's safe: Chrome and Firefox both hold the dialog's preview
+    // until the PDF is ready, however large it is.
+    frame.addEventListener(
+      "load",
+      () => {
+        clearTimeout(timer);
+        // No focus() on the frame first: print() on its window prints the
+        // PDF either way, and leaving focus in the page is what lets a key
+        // press there clear the frame afterward.
+        try {
+          frame.contentWindow.print();
+          clearPrintFrameOnNextInput();
+          resolve();
+        } catch (err) {
+          clearPrintFrame();
+          reject(err);
+        }
+      },
+      { once: true },
+    );
+
+    frame.src = URL.createObjectURL(blob);
+    printFrame = frame;
+    window.document.body.appendChild(frame);
+  });
+}
+
+/**
+ * Whether this browser can print a PDF straight from a page. It needs a
+ * built-in PDF viewer (without one, loading the file into a frame would
+ * download it instead), and it can't be Apple's WebKit. Safari's viewer does
+ * print the PDF from the frame, but zooms into the first page and crops it,
+ * however the frame is sized and however long it waits. A downloaded PDF
+ * opened in Preview prints properly, so Safari gets that. Every browser on
+ * iOS is WebKit underneath and reports Apple as its vendor too, so they all
+ * take the download. Recheck this when Safari changes.
+ * @returns {boolean}
+ */
+function canPrintPdfInPlace() {
+  return (
+    Boolean(navigator.pdfViewerEnabled) && !navigator.vendor.startsWith("Apple")
+  );
+}
+
+/**
+ * Render the lesson to a PDF and open the browser's print dialog on it. Where
+ * that can't happen, the PDF is downloaded instead.
+ * @param {object} doc
+ * @param {{author?: string, published?: string|number|Date}} [meta]
+ *   the by-line and copyright metadata (see buildDocument).
+ * @returns {Promise<"printed" | "unsupported" | "failed">} "printed" when the
+ *   dialog opened; "unsupported" when this browser can't print a PDF from the
+ *   page, and "failed" when it should have but the viewer didn't load in time
+ *   or print() threw. The PDF was downloaded in both of those.
+ */
+export async function printPdf(doc, meta = {}) {
+  const pdf = await renderPdf(doc, meta);
+  let result = "unsupported";
+  if (canPrintPdfInPlace()) {
+    try {
+      await printBlob(pdf.output("blob"));
+      return "printed";
+    } catch (err) {
+      console.warn("Printing the PDF in place failed, downloading it.", err);
+      result = "failed";
+    }
+  }
+  pdf.save(safeFileName(doc.title));
+  return result;
 }

@@ -20,7 +20,7 @@ export { importDocxFile } from "@spelling-creator/core/browser/docxImport";
 // Reading a hand-written Word file as plain text for the document import also
 // goes through mammoth, so it rides in this chunk too.
 export { documentFileText } from "@spelling-creator/core/browser/documentText";
-export { exportPdf } from "@spelling-creator/core/browser/pdfExport";
+export { exportPdf, printPdf } from "@spelling-creator/core/browser/pdfExport";
 // Saving to Drive uploads a .docx, so it builds one the same way — it belongs
 // in this chunk rather than dragging `docx` back into the eager graph on its own.
 export { saveToGoogleDrive } from "@spelling-creator/core/browser/googleDrive";

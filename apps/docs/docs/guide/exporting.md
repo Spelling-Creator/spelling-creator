@@ -4,8 +4,8 @@ title: Exporting & printing
 
 # Exporting & printing
 
-When a lesson is ready, you can download it as a Word document, download a PDF
-to print, or save it to Google Docs. In the editor these are all in the
+When a lesson is ready, you can print it, download it as a Word document or a
+PDF, or save it to Google Docs. In the editor these are all in the
 **Export** menu at the top (on a phone, in the **Lesson actions** menu). A
 lesson needs at least one section before it can be exported.
 
@@ -14,11 +14,18 @@ lesson needs at least one section before it can be exported.
 | **Export DOCX**         | A Word document, downloaded to your device.                                                            |
 | **Export JSON**         | A lesson file you can open again later with **Import JSON or OSLF**, with nothing lost.                |
 | **Export OSLF**         | The lesson as an Open Spelling Lesson Format file, for tools that aren't Spelling Creator (see below). |
-| **Print PDF**           | A PDF, downloaded to your device, laid out the same as the Word document. Open it to print it.         |
+| **Export PDF**          | A PDF, downloaded to your device, laid out the same as the Word document.                              |
+| **Print**               | Your browser's print dialog, with that same PDF ready to print. Nothing is downloaded (see below).     |
 | **Save to Google Docs** | The lesson as an editable Google Doc in your Google Drive.                                             |
 
-A published lesson's page on the hub has **Print PDF** and **Download Word**
-buttons too, so anyone reading it can print it.
+A published lesson's page on the hub has **Print**, **Download PDF** and
+**Download Word** buttons too, so anyone reading it can print it.
+
+**Print** takes a few seconds to make the PDF before the print dialog opens.
+It works this way in Chrome, Edge and Firefox. Safari can't print a PDF
+properly from inside a page (it cuts off the first page), so there **Print**
+downloads the PDF instead and tells you so; open it and print it from Preview.
+The same happens in any browser set to download PDFs rather than show them.
 
 To check how a lesson looks before exporting, press **Preview** in the editor.
 It shows the lesson exactly as a reader sees it on screen, in the app's light
@@ -126,7 +133,7 @@ you're using hasn't been set up for it.
 
 ## Working offline
 
-Export DOCX, Export JSON and Print PDF all work without a connection once the
+Export DOCX, Export JSON, Export PDF and Print all work without a connection once the
 app has loaded (see [Install & offline use](./install-and-offline.md)). Save to
 Google Docs needs a connection.
 

@@ -10,10 +10,11 @@ For how to use this, see [Exporting & printing](../../guide/exporting.md) and
 1. The lesson state (`{ title, sections: [{ name, blocks: [...] }] }`) is turned
    into a `docx` `Document` in `@spelling-creator/core/browser/docxExport`.
 2. **DOCX export** packs that document to a Blob and downloads it.
-3. **PDF print** (`@spelling-creator/core/browser/pdfExport`) packs the same
+3. **PDF** (`@spelling-creator/core/browser/pdfExport`) packs the same
    document, converts it to HTML with `mammoth`, applies print styles, and
    renders it to PDF with `html2pdf.js`. Using one shared document builder keeps
-   the two outputs in sync.
+   the two outputs in sync. `exportPdf` downloads the result and `printPdf`
+   opens the print dialog on it (see [Printing](#printing)).
 4. **Import** (`browser/docxImport`) is the same machinery in the other
    direction (`mammoth` again, this time reading a user's file).
 5. **Save to Google Docs** (`browser/googleDrive`) uploads the very same
@@ -221,6 +222,41 @@ The page number and the footer are drawn straight onto the finished PDF pages
 with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,
 and mammoth converts only the document body, never the docx's own header and
 footer.
+
+## Printing
+
+**Print** prints the finished PDF itself rather than the page, so the page
+numbers and footer come out the same as in the download. `printPdf` renders the
+PDF exactly as `exportPdf` does, then loads the blob into a hidden same-origin
+`<iframe>` and calls `print()` on the frame's window once it loads; the
+browser's PDF viewer opens the print dialog for that file. It resolves to
+`"printed"`, `"unsupported"` (the browser can't print a PDF from the page) or
+`"failed"` (it should have, but didn't). The PDF is downloaded in the last two,
+and the callers say which happened.
+
+- The frame is 0 by 0 and `visibility: hidden`, not `display: none`, which
+  never starts the PDF viewer.
+- `print()` goes out on the frame's `load`, before the viewer has read the
+  file. That's fine: Chrome and Firefox both hold the preview until the PDF is
+  ready, however large it is.
+- The frame can't be removed when `print()` returns: Chrome builds its preview
+  after that, and removing the frame then cancels the print. Firefox prints
+  from its own copy and doesn't mind. So the frame and its blob URL go on the
+  reader's next `pointerdown` or `keydown` in the page (or the next print).
+  The dialog is modal, so input only reaches the page once it has closed, and
+  leaving the page takes a click too. Firefox's frame is cross-origin, so
+  listening for `afterprint` on it isn't an option.
+- It needs `navigator.pdfViewerEnabled`. Without a viewer, loading the blob into
+  a frame would download it instead, and `print()` would print an empty frame.
+- Apple's WebKit (`navigator.vendor` starting with "Apple") is sent to the
+  download too. Safari's viewer does print the PDF from the frame, but zooms
+  into the first page and crops it, however the frame is sized and however
+  long it waits. Every iOS browser is WebKit and reports the same vendor.
+  Recheck this when Safari changes.
+- If the frame doesn't load within 15 seconds, or `print()` throws, the result
+  is `"failed"` and the PDF is downloaded.
+- Firefox's pdf.js frame counts as cross-origin to the page, but `print()` on it
+  is allowed and works.
 
 ## The Open Spelling Lesson Format
 

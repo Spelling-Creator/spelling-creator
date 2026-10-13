@@ -17,6 +17,7 @@ import {
   DownloadIcon,
   EllipsisVerticalIcon,
   EyeIcon,
+  FileDownIcon,
   FileTextIcon,
   FileUpIcon,
   GitBranchIcon,
@@ -1461,6 +1462,12 @@ export default function EditorPage() {
     setDialogOpen(false);
   };
 
+  /**
+   * Export the open lesson from the Export menu.
+   * @param {"docx" | "json" | "oslf" | "pdf" | "print"} kind which file to
+   *   download, or 'print' to open the print dialog on the PDF (which
+   *   downloads it instead where the browser can't).
+   */
   const handleExport = async (kind) => {
     if (doc.sections.length === 0) {
       notify({
@@ -1484,13 +1491,20 @@ export default function EditorPage() {
       } else if (kind === "oslf") {
         exportOslf(doc);
         notify({ severity: "success", message: t("messages.oslfDownloaded") });
-      } else {
+      } else if (kind === "pdf") {
         const { exportPdf } = await loadExportEngine();
         await exportPdf(doc, meta);
-        notify({
-          severity: "success",
-          message: t("messages.pdfGenerated"),
-        });
+        notify({ severity: "success", message: t("messages.pdfDownloaded") });
+      } else {
+        // 'print' opens the print dialog on the PDF; the browser's own dialog
+        // is the feedback, so only the download fallback needs a message.
+        const { printPdf } = await loadExportEngine();
+        const result = await printPdf(doc, meta);
+        if (result === "unsupported") {
+          notify({ severity: "info", message: t("messages.printUnsupported") });
+        } else if (result === "failed") {
+          notify({ severity: "warning", message: t("messages.printFailed") });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -2487,7 +2501,12 @@ export default function EditorPage() {
       : t("labels.saveAsDraft");
 
   const exportBusy =
-    busy === "docx" || busy === "json" || busy === "pdf" || busy === "gdocs";
+    busy === "docx" ||
+    busy === "json" ||
+    busy === "oslf" ||
+    busy === "pdf" ||
+    busy === "print" ||
+    busy === "gdocs";
 
   // Header icon-only triggers (help, the import menu, the mobile overflow
   // menu). These used to be drawn from --primary-foreground because the app bar
@@ -2676,8 +2695,15 @@ export default function EditorPage() {
               onClick={() => handleExport("pdf")}
               disabled={busy !== null}
             >
+              <FileDownIcon />
+              {t("header.exportPdf")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleExport("print")}
+              disabled={busy !== null}
+            >
               <PrinterIcon />
-              {t("header.printPdf")}
+              {t("header.print")}
             </DropdownMenuItem>
             {hasGoogleDrive() && (
               <DropdownMenuItem
@@ -2842,8 +2868,12 @@ export default function EditorPage() {
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                <FileDownIcon />
+                {t("header.exportPdf")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("print")}>
                 <PrinterIcon />
-                {t("header.printPdf")}
+                {t("header.print")}
               </DropdownMenuItem>
               {hasGoogleDrive() && (
                 <DropdownMenuItem onClick={handleSaveToGoogle}>
