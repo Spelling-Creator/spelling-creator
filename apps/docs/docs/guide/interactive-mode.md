@@ -197,6 +197,12 @@ With it on:
 - **Voice settings** chooses a **Voice** and a **Pace**, from 0.7x to 1.5x
   normal speed.
 
+Words the lesson's author gave a read-aloud fix (a pronunciation, other words
+to say, or spelling out) are read that way, and its pauses are kept. See
+[Fixing how words are read aloud](./formatting-and-footnotes.md#fixing-how-words-are-read-aloud).
+The browser's own voices can't follow a pronunciation written in IPA, so they
+read those words as written; a natural voice follows every fix.
+
 A question's answer is never spoken, even with the answers showing. Reading
 aloud is often the speller's setting, and speaking the answer as the question
 appears would give it away. Showing it on screen is a deliberate choice;

@@ -60,6 +60,24 @@ describe("formatting fixes", () => {
     expect(fixed.sections[0].blocks[1]).toBe(doc.sections[0].blocks[1]);
   });
 
+  it("leaves read-aloud hints where they are", () => {
+    const doc = {
+      title: "T",
+      sections: [
+        section("s1", [
+          text(
+            "t1",
+            "**[Fresnel]{ipa: freɪˈnɛl}** and [Arago]{ipa: aʁaɡo}{pause} met.",
+          ),
+        ]),
+      ],
+    };
+    const fixed = fixes(doc, "W_FORMAT_BOLD");
+    expect(textBlockMarkup(fixed.sections[0].blocks[0])).toBe(
+      "[Fresnel]{ipa: freɪˈnɛl} and [Arago]{ipa: aʁaɡo}{pause} met.",
+    );
+  });
+
   it("removes underlining", () => {
     const doc = {
       title: "T",

@@ -495,3 +495,29 @@
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
+
+/* Read-aloud hints. They change how words are said, not how they look, so the
+   editor marks them lightly and nothing else draws them. A pause's label comes
+   from its data-label through CSS, so it is never part of the text. */
+.lesson-speech {
+  text-decoration: underline dotted
+    color-mix(in oklab, var(--primary) 70%, transparent);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.lesson-pause {
+  margin: 0 1px;
+  padding: 0 4px;
+  border-radius: 0.25em;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.75em;
+  cursor: pointer;
+}
+.lesson-pause::after {
+  content: attr(data-label);
+}
+.lesson-pause.ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}

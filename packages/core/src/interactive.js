@@ -26,7 +26,7 @@
 // submission is.
 
 import { imageCaptionParts } from "./imageCredit.js";
-import { textBlockPlain } from "./lessonText.js";
+import { speechText, textBlockSpeech } from "./speech.js";
 import { headingText } from "./heading.js";
 import { vaktText } from "./vakt.js";
 
@@ -157,9 +157,11 @@ export function isInteractivePlayable(doc) {
 }
 
 /**
- * The prose of one step, flattened for text-to-speech (see the web app's
- * useSpeech hook). Reading order matches what's on screen: the section name
- * first, then each block's words.
+ * What one step says, for text-to-speech (see the web app's useSpeech hook):
+ * lines of spoken text (see speech.js), one idea per line. Reading order
+ * matches what's on screen: the section name first, then each block's words. A
+ * text block's lines carry its pronunciations, substitutions, spell-outs and
+ * pauses; everything else is plain words.
  *
  * Deliberately excluded: a question's *answer*. Interactive mode can show the
  * author's answer on screen when whoever is presenting turns the reveal on (see
@@ -168,23 +170,22 @@ export function isInteractivePlayable(doc) {
  * question appears would give it away to the one person meant to work it out.
  *
  * @param {object} step  A step from buildInteractiveSteps.
- * @returns {string} Plain text, one utterance per line.
+ * @returns {Array<string | import("./speech.js").SpokenRun[]>}
  */
-export function stepSpeechText(step) {
-  if (!step) return "";
+export function stepSpeech(step) {
+  if (!step) return [];
   const lines = [];
   if (step.sectionName) lines.push(step.sectionName);
 
   if (step.kind === "question") {
     const prompt = (step.block?.prompt || "").trim();
     if (prompt) lines.push(prompt);
-    return lines.join("\n");
+    return lines;
   }
 
   for (const block of step.blocks || []) {
     if (block.type === "text") {
-      const text = textBlockPlain(block).trim();
-      if (text) lines.push(text);
+      lines.push(...textBlockSpeech(block));
     } else if (block.type === "image") {
       // The caption, never the credit: a license read out mid-lesson is noise.
       const { caption } = imageCaptionParts(block);
@@ -205,7 +206,17 @@ export function stepSpeechText(step) {
     }
   }
 
-  return lines.join("\n");
+  return lines;
+}
+
+/**
+ * What one step says, as it would read on a screen: plain text, one utterance
+ * per line, with each hint's words as written.
+ * @param {object} step  A step from buildInteractiveSteps.
+ * @returns {string}
+ */
+export function stepSpeechText(step) {
+  return speechText(stepSpeech(step));
 }
 
 /**

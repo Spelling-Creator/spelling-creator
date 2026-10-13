@@ -28,7 +28,21 @@
 // The schema is deliberately small. Three marks (bold, italic, underline), one
 // kind of block (the paragraph) and one inline node (the footnote). Lessons are
 // read aloud and printed; headings, lists and links would be layout, and
-// sections already carry the structure. normalizeTextContent enforces this on
+// sections already carry the structure.
+//
+// Two more things exist only for read-aloud, and print as nothing of their own:
+//
+//   the speech mark   { type: "speech", attrs: { ipa } }, or { alias } or
+//                     { sayAs: "characters" }: how the words it covers are
+//                     said (in IPA, as other words, or one letter at a time).
+//                     They still show and print as written.
+//   the pause node    { type: "pause", attrs: { length: "short" | "long" } }:
+//                     a pause in read-aloud, which displays as nothing.
+//
+// They are the Open Spelling Lesson Format's pronunciation, substitution,
+// spell-out and pause (a small subset of SSML), stored the tiptap way. A text
+// run carries at most one speech hint, so the mark holds exactly one of the
+// three. speech.js turns them into what the voices are given. normalizeTextContent enforces this on
 // anything that arrives from outside the editor (an imported file, the MCP
 // server, a document written by an older client), and the renderers draw only
 // what survives it. Content is rendered as React elements and docx runs, never
@@ -93,6 +107,35 @@ export function normalizeFootnote(attrs) {
   return { sourceId, locator, note };
 }
 
+/** How long a pause can be: about a comma's worth, or clearly longer. */
+export const PAUSE_LENGTHS = ["short", "long"];
+
+/** The one way a run can be spelled out: a character at a time. */
+export const SAY_AS_CHARACTERS = "characters";
+
+const IPA_LIMIT = 200;
+const ALIAS_LIMIT = 500;
+
+/**
+ * A speech hint in its exact stored shape, or null when it says nothing.
+ * Exactly one of `ipa`, `alias` and `sayAs` survives, in that order of
+ * preference. IPA is often copied with the slashes or brackets dictionaries
+ * put around it, which are not sounds, so they are dropped.
+ * @param {unknown} attrs
+ * @returns {{ ipa: string }|{ alias: string }|{ sayAs: "characters" }|null}
+ */
+export function normalizeSpeechHint(attrs) {
+  if (!isObject(attrs)) return null;
+  const ipa = oneLine(attrs.ipa, IPA_LIMIT)
+    .replace(/^[/[]+|[/\]]+$/g, "")
+    .trim();
+  if (ipa) return { ipa };
+  const alias = oneLine(attrs.alias, ALIAS_LIMIT);
+  if (alias) return { alias };
+  if (attrs.sayAs === SAY_AS_CHARACTERS) return { sayAs: SAY_AS_CHARACTERS };
+  return null;
+}
+
 function marksOf(node) {
   if (!Array.isArray(node?.marks)) return [];
   const present = new Set(
@@ -101,8 +144,19 @@ function marksOf(node) {
   return TEXT_MARKS.filter((mark) => present.has(mark));
 }
 
+// The speech hint a text node's marks carry, or null.
+function speechOf(node) {
+  if (!Array.isArray(node?.marks)) return null;
+  const mark = node.marks.find((m) => isObject(m) && m.type === "speech");
+  return mark ? normalizeSpeechHint(mark.attrs) : null;
+}
+
 function sameMarks(a, b) {
   return a.length === b.length && a.every((mark, i) => mark === b[i]);
+}
+
+function sameSpeech(a, b) {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
 // Flatten an inline node (or an unknown wrapper around some) into the inline
@@ -114,17 +168,30 @@ function collectInline(node, out, depth = 0) {
       typeof node.text === "string" ? node.text.replace(/[\r\n]+/g, " ") : "";
     if (!text) return;
     const marks = marksOf(node);
+    const speech = speechOf(node);
     const last = out[out.length - 1];
-    if (last && last.type === "text" && sameMarks(last.marks, marks)) {
+    if (
+      last &&
+      last.type === "text" &&
+      sameMarks(last.marks, marks) &&
+      sameSpeech(last.speech, speech)
+    ) {
       last.text += text;
     } else {
-      out.push({ type: "text", text, marks });
+      out.push({ type: "text", text, marks, speech });
     }
     return;
   }
   if (node.type === "footnote") {
     const attrs = normalizeFootnote(node.attrs);
     if (attrs) out.push({ type: "footnote", attrs });
+    return;
+  }
+  if (node.type === "pause") {
+    const length = PAUSE_LENGTHS.includes(node.attrs?.length)
+      ? node.attrs.length
+      : "short";
+    out.push({ type: "pause", attrs: { length } });
     return;
   }
   if (node.type === "hardBreak") {
@@ -136,7 +203,7 @@ function collectInline(node, out, depth = 0) {
   }
 }
 
-const INLINE_TYPES = new Set(["text", "footnote", "hardBreak"]);
+const INLINE_TYPES = new Set(["text", "footnote", "pause", "hardBreak"]);
 
 // Every paragraph inside a block-level node. A heading or a list item pasted in
 // from somewhere else becomes the paragraph its words were in.
@@ -183,22 +250,20 @@ export function normalizeTextContent(value) {
   };
 }
 
-// Marks are omitted from a run that has none, the way tiptap writes them.
+// Marks are omitted from a run that has none, the way tiptap writes them. The
+// speech mark comes after the formatting marks.
 function storedParagraph(paragraph) {
   if (!paragraph.content) return paragraph;
   return {
     type: "paragraph",
-    content: paragraph.content.map((node) =>
-      node.type === "text" && node.marks.length === 0
-        ? { type: "text", text: node.text }
-        : node.type === "text"
-          ? {
-              type: "text",
-              text: node.text,
-              marks: node.marks.map((type) => ({ type })),
-            }
-          : node,
-    ),
+    content: paragraph.content.map((node) => {
+      if (node.type !== "text") return node;
+      const marks = node.marks.map((type) => ({ type }));
+      if (node.speech) marks.push({ type: "speech", attrs: node.speech });
+      return marks.length
+        ? { type: "text", text: node.text, marks }
+        : { type: "text", text: node.text };
+    }),
   };
 }
 
@@ -231,12 +296,15 @@ export function textBlockContent(block) {
 }
 
 // The paragraphs of a document as arrays of normalised inline nodes, with each
-// text run's marks as an array of names.
+// text run's formatting marks as an array of names and its speech hint (or
+// null) as `speech`.
 function inlineParagraphs(content) {
   const doc = normalizeTextContent(content) ?? textToContent("");
   return doc.content.map((paragraph) =>
     (paragraph.content || []).map((node) =>
-      node.type === "text" ? { ...node, marks: marksOf(node) } : node,
+      node.type === "text"
+        ? { ...node, marks: marksOf(node), speech: speechOf(node) }
+        : node,
     ),
   );
 }
@@ -283,26 +351,36 @@ export function textBlockHasContent(block) {
 
 /**
  * A text block's paragraphs as runs a renderer can draw directly:
- *   { type: "text", text, bold, italic, underline }
+ *   { type: "text", text, bold, italic, underline, speech }
  *   { type: "footnote", sourceId, locator, note, index }
+ *   { type: "pause", length }
  * `index` counts footnotes within the block, from 0, in reading order.
+ * `speech` is the run's speech hint, present only when it has one (see
+ * normalizeSpeechHint). Renderers that show or print
+ * the lesson draw the text and ignore `speech` and pauses, which only
+ * read-aloud uses.
  * @param {object} block
  * @returns {Array<Array<object>>}
  */
 export function textBlockParagraphs(block) {
   let index = 0;
   return inlineParagraphs(textBlockContent(block)).map((inline) =>
-    inline.map((node) =>
-      node.type === "text"
-        ? {
-            type: "text",
-            text: node.text,
-            bold: node.marks.includes("bold"),
-            italic: node.marks.includes("italic"),
-            underline: node.marks.includes("underline"),
-          }
-        : { type: "footnote", ...node.attrs, index: index++ },
-    ),
+    inline.map((node) => {
+      if (node.type === "text") {
+        return {
+          type: "text",
+          text: node.text,
+          bold: node.marks.includes("bold"),
+          italic: node.marks.includes("italic"),
+          underline: node.marks.includes("underline"),
+          ...(node.speech ? { speech: node.speech } : {}),
+        };
+      }
+      if (node.type === "pause") {
+        return { type: "pause", length: node.attrs.length };
+      }
+      return { type: "footnote", ...node.attrs, index: index++ };
+    }),
   );
 }
 
@@ -454,7 +532,9 @@ export function withTextBlockDocument(block, content) {
  */
 export function isPlainContent(content) {
   return inlineParagraphs(content).every((inline) =>
-    inline.every((node) => node.type === "text" && node.marks.length === 0),
+    inline.every(
+      (node) => node.type === "text" && node.marks.length === 0 && !node.speech,
+    ),
   );
 }
 
@@ -566,6 +646,14 @@ export function textBlockFormattedSpans(block) {
 //   ^[@sourceId, p. 12]             with a locator
 //   ^[@sourceId, p. 12 | A note.]   with a locator and a note
 //   ^[@sourceId | A note.]          with a note
+//   [FRESNEL]{ipa: freɪˈnɛl}        said as the IPA gives it
+//   [WWF]{say: World Wide Fund}     said as other words
+//   [REEF]{spell}                   said one letter at a time
+//   {pause}   {pause: long}         a short or long pause in read-aloud
+//
+// The read-aloud forms borrow Pandoc's bracketed spans: the words in square
+// brackets show and print as they are, and the braces right after them say
+// how to read them.
 //
 // One line is one paragraph. A backslash makes the next character literal, so
 // \* is an asterisk. contentToMarkup escapes whatever needs it, so text read
@@ -607,6 +695,11 @@ function paragraphToMarkup(inline) {
       out += footnoteToMarkup(node.attrs);
       continue;
     }
+    // A pause sits wherever it falls, inside formatting or not.
+    if (node.type === "pause") {
+      out += node.attrs.length === "long" ? "{pause: long}" : "{pause}";
+      continue;
+    }
     close(node.marks);
     for (const mark of node.marks) {
       if (!open.includes(mark)) {
@@ -614,7 +707,9 @@ function paragraphToMarkup(inline) {
         open.push(mark);
       }
     }
-    out += escapeText(node.text);
+    out += node.speech
+      ? speechToMarkup(node.text, node.speech)
+      : escapeText(node.text);
   }
   close([]);
   return out;
@@ -625,7 +720,19 @@ function escapeText(text) {
     .replace(/\\/g, "\\\\")
     .replace(/\*/g, "\\*")
     .replace(/\^\[/g, "\\^[")
+    .replace(/\{/g, "\\{")
     .replace(/<(\/?u>)/gi, "\\<$1");
+}
+
+function speechToMarkup(text, speech) {
+  const words = text.replace(/[\\\]]/g, (ch) => `\\${ch}`);
+  const value = (v) => v.replace(/[\\}]/g, (ch) => `\\${ch}`);
+  const body = speech.ipa
+    ? `ipa: ${value(speech.ipa)}`
+    : speech.alias
+      ? `say: ${value(speech.alias)}`
+      : "spell";
+  return `[${words}]{${body}}`;
 }
 
 function escapeNote(text) {
@@ -678,6 +785,17 @@ function parseParagraph(line) {
       });
     } else if (token.kind === "footnote") {
       content.push({ type: "footnote", attrs: token.attrs });
+    } else if (token.kind === "speech") {
+      content.push({
+        type: "text",
+        text: token.text,
+        marks: [
+          ...[...marks].map((type) => ({ type })),
+          { type: "speech", attrs: token.speech },
+        ],
+      });
+    } else if (token.kind === "pause") {
+      content.push({ type: "pause", attrs: { length: token.length } });
     } else if (token.kind === "u-open") {
       marks.add("underline");
     } else if (token.kind === "u-close") {
@@ -714,6 +832,30 @@ function tokenize(line) {
           attrs: parseFootnoteBody(line.slice(i + 2, end)),
           raw: line.slice(i, end + 1),
         });
+        i = end + 1;
+        continue;
+      }
+    }
+    if (ch === "[") {
+      const end = closingBracket(line, i + 1);
+      const braceEnd =
+        end !== -1 && line[end + 1] === "{" ? closingBrace(line, end + 2) : -1;
+      const speech =
+        braceEnd !== -1 ? parseSpeechBody(line.slice(end + 2, braceEnd)) : null;
+      const words = end !== -1 ? unescape(line.slice(i + 1, end)) : "";
+      if (speech && words.trim()) {
+        flush();
+        tokens.push({ kind: "speech", text: words, speech });
+        i = braceEnd + 1;
+        continue;
+      }
+    }
+    if (ch === "{") {
+      const end = closingBrace(line, i + 1);
+      const length = end !== -1 ? parsePauseBody(line.slice(i + 1, end)) : null;
+      if (length) {
+        flush();
+        tokens.push({ kind: "pause", length });
         i = end + 1;
         continue;
       }
@@ -766,6 +908,35 @@ function closingBracket(line, from) {
     }
   }
   return -1;
+}
+
+// The index of the `}` closing a brace opened just before `from`, or -1.
+function closingBrace(line, from) {
+  for (let i = from; i < line.length; i++) {
+    if (line[i] === "\\") i += 1;
+    else if (line[i] === "}") return i;
+  }
+  return -1;
+}
+
+// What follows a bracketed span: `ipa: ...`, `say: ...` or `spell`. Anything
+// else means the brackets and braces were just text.
+function parseSpeechBody(body) {
+  const match = /^\s*(ipa|say|spell)\s*(?::(.*))?$/is.exec(body);
+  if (!match) return null;
+  const key = match[1].toLowerCase();
+  const value = unescape(match[2] ?? "").trim();
+  if (key === "spell") {
+    return value ? null : { sayAs: SAY_AS_CHARACTERS };
+  }
+  return normalizeSpeechHint(key === "ipa" ? { ipa: value } : { alias: value });
+}
+
+// `pause`, `pause: short` or `pause: long`, as a length, or null.
+function parsePauseBody(body) {
+  const match = /^\s*pause\s*(?::\s*(short|long)\s*)?$/i.exec(body);
+  if (!match) return null;
+  return (match[1] || "short").toLowerCase();
 }
 
 // Turn markers that have no partner back into the characters they were written

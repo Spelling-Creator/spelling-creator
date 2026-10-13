@@ -9,10 +9,12 @@
 //      into IPA, the same phonemizer Kokoro was trained against.
 //   3. The model turns the IPA, plus a voice's style vector, into 24 kHz audio.
 //
-// Steps 1 and 2 follow kokoro.js (github.com/hexgrad/kokoro, Apache-2.0), the
-// reference JavaScript port, so what the model hears matches what it expects.
-// That package itself is not used: it pins transformers.js 3, which would put
-// a second ONNX runtime in the bundle next to the one the app already has.
+// Steps 1 and 2, and the lesson's pronunciations, substitutions, spell-outs and
+// pauses, are in readAloudText.js. They follow kokoro.js
+// (github.com/hexgrad/kokoro, Apache-2.0), the reference JavaScript port, so
+// what the model hears matches what it expects. That package itself is not
+// used: it pins transformers.js 3, which would put a second ONNX runtime in the
+// bundle next to the one the app already has.
 //
 // This module is HEAVY: transformers.js and an ONNX runtime on top of a model
 // download of 92 to 326 MB, depending on the dtype. Nothing may static-import
@@ -33,6 +35,7 @@ import espeakManifestUrl from "@spelling-creator/spellophone/espeak-ng-data/mani
 import espeakCoreUrl from "@spelling-creator/spellophone/espeak-ng-data/core.bin.gz?url";
 import espeakEnglishUrl from "@spelling-creator/spellophone/espeak-ng-data/en_dict.gz?url";
 import { createDownloadProgress } from "./downloadProgress.js";
+import { phonemize, phonemizeSpoken } from "./readAloudText.js";
 import {
   DEFAULT_VOICE,
   MODEL_ID,
@@ -88,152 +91,6 @@ function loadEspeak() {
     });
   }
   return espeakPromise;
-}
-
-/**
- * Spell out what espeak-ng would otherwise read badly or not at all. A port of
- * kokoro.js's normalize_text, minus the handling for CJK punctuation, which an
- * English voice never sees.
- * @param {string} text
- * @returns {string}
- */
-export function normalizeText(text) {
-  return (
-    text
-      // Quotes and brackets. Brackets become guillemets, which Kokoro's
-      // vocabulary has and reads as a parenthetical.
-      .replace(/[‘’]/g, "'")
-      .replace(/[“”]/g, '"')
-      .replace(/\(/g, "«")
-      .replace(/\)/g, "»")
-      // Whitespace.
-      .replace(/[^\S \n]/g, " ")
-      .replace(/ {2,}/g, " ")
-      .replace(/(?<=\n) +(?=\n)/g, "")
-      // Abbreviations.
-      .replace(/\bD[Rr]\.(?= [A-Z])/g, "Doctor")
-      .replace(/\b(?:Mr\.|MR\.(?= [A-Z]))/g, "Mister")
-      .replace(/\b(?:Ms\.|MS\.(?= [A-Z]))/g, "Miss")
-      .replace(/\b(?:Mrs\.|MRS\.(?= [A-Z]))/g, "Mrs")
-      .replace(/\betc\.(?! [A-Z])/gi, "etc")
-      // Numbers, times, years and money.
-      .replace(
-        /\d*\.\d+|\b\d{4}s?\b|(?<!:)\b(?:[1-9]|1[0-2]):[0-5]\d\b(?!:)/g,
-        splitNumber,
-      )
-      .replace(/(?<=\d),(?=\d)/g, "")
-      .replace(
-        /[$£]\d+(?:\.\d+)?(?: hundred| thousand| (?:[bm]|tr)illion)*\b|[$£]\d+\.\d\d?\b/gi,
-        flipMoney,
-      )
-      .replace(/\d*\.\d+/g, pointNumber)
-      .replace(/(?<=\d)-(?=\d)/g, " to ")
-      .replace(/(?<=\d)S/g, " S")
-      // Possessives after a capital, so "CAT'S" isn't read as letters.
-      .replace(/(?<=[BCDFGHJ-NP-TV-Z])'?s\b/g, "'S")
-      .replace(/(?<=X')S\b/g, "s")
-      // Dotted initials ("U.S.") read as letters, not as sentence ends.
-      .replace(/(?:[A-Za-z]\.){2,} [a-z]/g, (m) => m.replace(/\./g, "-"))
-      .replace(/(?<=[A-Z])\.(?=[A-Z])/gi, "-")
-      .trim()
-  );
-}
-
-function splitNumber(match) {
-  if (match.includes(".")) return match;
-  if (match.includes(":")) {
-    const [h, m] = match.split(":").map(Number);
-    if (m === 0) return `${h} o'clock`;
-    if (m < 10) return `${h} oh ${m}`;
-    return `${h} ${m}`;
-  }
-  const year = parseInt(match.slice(0, 4), 10);
-  if (year < 1100 || year % 1000 < 10) return match;
-  const left = match.slice(0, 2);
-  const right = parseInt(match.slice(2, 4), 10);
-  const suffix = match.endsWith("s") ? "s" : "";
-  if (year % 1000 >= 100 && year % 1000 <= 999) {
-    if (right === 0) return `${left} hundred${suffix}`;
-    if (right < 10) return `${left} oh ${right}${suffix}`;
-  }
-  return `${left} ${right}${suffix}`;
-}
-
-function flipMoney(match) {
-  const bill = match[0] === "$" ? "dollar" : "pound";
-  const amount = match.slice(1);
-  if (Number.isNaN(Number(amount))) return `${amount} ${bill}s`;
-  if (!match.includes(".")) {
-    return `${amount} ${bill}${amount === "1" ? "" : "s"}`;
-  }
-  const [b, c] = amount.split(".");
-  const d = parseInt(c.padEnd(2, "0"), 10);
-  const coins =
-    match[0] === "$"
-      ? d === 1
-        ? "cent"
-        : "cents"
-      : d === 1
-        ? "penny"
-        : "pence";
-  return `${b} ${bill}${b === "1" ? "" : "s"} and ${d} ${coins}`;
-}
-
-function pointNumber(match) {
-  const [a, b] = match.split(".");
-  return `${a} point ${b.split("").join(" ")}`;
-}
-
-// espeak-ng drops punctuation, but Kokoro uses it for pauses and intonation,
-// so the text is cut at punctuation, only the words between go to espeak-ng,
-// and the punctuation is put back between them unchanged. The long dash (code
-// point 2014) is built from its number so the source doesn't carry one.
-const PUNCTUATION_MARKS = `;:,.!?¡¿${String.fromCharCode(0x2014)}…"«»“”`;
-const PUNCTUATION_RUN = new RegExp(
-  String.raw`(\s*[${PUNCTUATION_MARKS}(){}[\]]+\s*)+`,
-  "g",
-);
-// A lone "z" left before punctuation or a space belongs to the word before.
-const STRAY_Z = new RegExp(` z(?=[${PUNCTUATION_MARKS} ]|$)`, "g");
-
-/**
- * Text to the IPA string Kokoro takes.
- * @param {object} espeak  A Spellophone instance.
- * @param {string} text
- * @param {"a"|"b"} accent  American or British, from the voice id.
- * @returns {string}
- */
-function phonemize(espeak, text, accent) {
-  const normalized = normalizeText(text);
-  const voice = accent === "b" ? "en-gb" : "en-us";
-  let ipa = "";
-  let last = 0;
-  const speakWords = (words) => {
-    if (!words) return;
-    ipa += espeak.phonemes(words, { voice }).split("\n").join(" ");
-  };
-  for (const match of normalized.matchAll(PUNCTUATION_RUN)) {
-    speakWords(normalized.slice(last, match.index));
-    ipa += match[0];
-    last = match.index + match[0].length;
-  }
-  speakWords(normalized.slice(last));
-
-  // kokoro.js's corrections to espeak-ng's output, toward the phoneme set the
-  // model was trained on.
-  ipa = ipa
-    .replace(/kəkˈoːɹoʊ/g, "kˈoʊkəɹoʊ")
-    .replace(/kəkˈɔːɹəʊ/g, "kˈəʊkəɹəʊ")
-    .replace(/ʲ/g, "j")
-    .replace(/r/g, "ɹ")
-    .replace(/x/g, "k")
-    .replace(/ɬ/g, "l")
-    .replace(/(?<=[a-zɹː])(?=hˈʌndɹɪd)/g, " ")
-    .replace(STRAY_Z, "z");
-  if (accent === "a") {
-    ipa = ipa.replace(/(?<=nˈaɪn)ti(?!ː)/g, "di");
-  }
-  return ipa.trim();
 }
 
 const voiceCache = new Map();
@@ -328,12 +185,16 @@ export async function loadReadAloud({
 
   /**
    * Text to IPA, exposed separately so its cost can be measured on its own.
-   * @param {string} text
+   * @param {string | import("../speech.js").SpokenRun[]} text  Plain words, or
+   *   spoken text with its hints and pauses.
    * @param {object} [options]
    * @param {string} [options.voice]
    */
   function toPhonemes(text, { voice = DEFAULT_VOICE } = {}) {
-    return phonemize(espeak, text, voice[0] === "b" ? "b" : "a");
+    const accent = voice[0] === "b" ? "b" : "a";
+    return typeof text === "string"
+      ? phonemize(espeak, text, accent)
+      : phonemizeSpoken(espeak, text, accent);
   }
 
   /**
@@ -371,8 +232,8 @@ export async function loadReadAloud({
   }
 
   /**
-   * Text to audio, for one chunk of speech (see the web app's chunkForSpeech).
-   * @param {string} text
+   * Text to audio, for one chunk of speech (see chunkSpeech in core/speech.js).
+   * @param {string | import("../speech.js").SpokenRun[]} text
    * @param {object} [options]
    * @param {string} [options.voice]
    * @param {number} [options.speed]

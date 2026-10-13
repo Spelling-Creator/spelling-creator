@@ -8,10 +8,13 @@
 // server render a lesson page: there is no sanitiser waiting for a DOM.
 
 // One run of a text block. Footnotes are handed to `renderFootnote`, which
-// decides whether and how to mark them (interactive mode leaves them out).
+// decides whether and how to mark them (interactive mode leaves them out). A
+// pause and a run's speech hint are for read-aloud only, so a pause draws
+// nothing and a hinted run draws as its text.
 export function TextRuns({ runs, renderFootnote = () => null }) {
   return runs.map((run, i) => {
     if (run.type === "footnote") return renderFootnote(run, i);
+    if (run.type !== "text") return null;
     let node = run.text;
     if (run.underline) node = <u>{node}</u>;
     if (run.italic) node = <em>{node}</em>;

@@ -504,3 +504,76 @@ describe("the file's name and marker", () => {
     );
   });
 });
+
+describe("read-aloud hints", () => {
+  const hinted = {
+    title: "Lenses",
+    sections: [
+      {
+        name: "Telling Lights Apart",
+        blocks: [
+          {
+            id: "t1",
+            type: "text",
+            content: markupToContent(
+              "Augustin *[Fresnel]{ipa: freɪˈnɛl}* worked with the [WWF]{say: World Wide Fund}.{pause: long}Spell [REEF]{spell}{pause}now.",
+            ),
+          },
+        ],
+      },
+    ],
+  };
+
+  it("writes pronunciations, substitutions, spell-outs and pauses as the format's runs", () => {
+    const file = toOslf(hinted);
+    expect(validate(file)).toBe(true);
+    expect(file.sections[0].blocks[0].paragraphs).toEqual([
+      [
+        "Augustin ",
+        { text: "Fresnel", italic: true, ipa: "freɪˈnɛl" },
+        " worked with the ",
+        { text: "WWF", alias: "World Wide Fund" },
+        ".",
+        { pause: "long" },
+        "Spell ",
+        { text: "REEF", sayAs: "characters" },
+        { pause: "short" },
+        "now.",
+      ],
+    ]);
+  });
+
+  it("reads them back as they were", () => {
+    const back = fromOslf(toOslf(hinted));
+    expect(back.sections[0].blocks[0].content).toEqual(
+      hinted.sections[0].blocks[0].content,
+    );
+  });
+
+  it("reads math working given as rich text as its words", () => {
+    const back = fromOslf({
+      oslf: OSLF_VERSION,
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            {
+              type: "question",
+              questionType: "math",
+              prompt: "How many?",
+              answers: ["12"],
+              working: [
+                "There are 60 seconds.",
+                ["Then ", { text: "sixty", ipa: "ˈsɪksti" }, " over 5."],
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(back.sections[0].blocks[0].steps).toEqual([
+      "There are 60 seconds.",
+      "Then sixty over 5.",
+    ]);
+  });
+});

@@ -50,6 +50,20 @@ asks. Never bold or underline for emphasis, never format a whole phrase or sente
 an ALL-CAPS word, and don't reach for formatting to make a passage feel lively. Most sections
 need none at all.
 
+## Read-aloud
+
+Lessons are read aloud to the speller, by the app's voice or a screen reader. Where the voice
+would say something wrong, a text block can fix it without changing what shows on the page:
+
+- `[FRESNEL]{ipa: freɪˈnɛl}` says the word the way the IPA gives it
+- `[WWF]{say: World Wide Fund for Nature}` says other words instead
+- `[REEF]{spell}` reads the word one letter at a time
+- `{pause}` and `{pause: long}` add a silent pause
+
+Use them for names, places and abbreviations the voice is likely to get wrong, or when the user
+asks. Punctuation already makes natural pauses, so add a pause only where pacing really needs it.
+Most passages need none of these.
+
 ## Sources and footnotes
 
 A lesson can list its `sources` (books, articles, websites), which print as a Sources list at the

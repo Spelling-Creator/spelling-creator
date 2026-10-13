@@ -487,3 +487,212 @@ describe("footnote parts for the Word export", () => {
     );
   });
 });
+
+describe("speech hints and pauses", () => {
+  const speech = (t, attrs, marks = []) => ({
+    type: "text",
+    text: t,
+    marks: [...marks.map((type) => ({ type })), { type: "speech", attrs }],
+  });
+  const pause = (length) => ({ type: "pause", attrs: { length } });
+
+  it("keeps one hint per run, cleans it, and stores it after the formatting", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          speech("Fresnel", { ipa: " /freɪˈnɛl/ ", alias: "ignored" }, [
+            "italic",
+          ]),
+          speech("WWF", { alias: "World Wide Fund\nfor Nature" }),
+          speech("REEF", { sayAs: "characters" }),
+          speech("plain", { sayAs: "words" }),
+        ),
+      ),
+    );
+    expect(content.content[0].content).toEqual([
+      {
+        type: "text",
+        text: "Fresnel",
+        marks: [
+          { type: "italic" },
+          { type: "speech", attrs: { ipa: "freɪˈnɛl" } },
+        ],
+      },
+      {
+        type: "text",
+        text: "WWF",
+        marks: [
+          { type: "speech", attrs: { alias: "World Wide Fund for Nature" } },
+        ],
+      },
+      {
+        type: "text",
+        text: "REEF",
+        marks: [{ type: "speech", attrs: { sayAs: "characters" } }],
+      },
+      { type: "text", text: "plain" },
+    ]);
+  });
+
+  it("merges neighbouring runs only when their hints match too", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          speech("Fres", { ipa: "freɪˈnɛl" }),
+          speech("nel", { ipa: "freɪˈnɛl" }),
+          speech("lens", { ipa: "lɛnz" }),
+        ),
+      ),
+    );
+    expect(content.content[0].content.map((n) => n.text)).toEqual([
+      "Fresnel",
+      "lens",
+    ]);
+  });
+
+  it("keeps pauses, defaulting an unknown length to short", () => {
+    const content = normalizeTextContent(
+      doc(para(text("One"), pause("long"), text("two"), pause("forever"))),
+    );
+    expect(content.content[0].content).toEqual([
+      { type: "text", text: "One" },
+      pause("long"),
+      { type: "text", text: "two" },
+      pause("short"),
+    ]);
+  });
+
+  it("hands renderers the hint and the pause, and leaves them out of plain text", () => {
+    const block = {
+      type: "text",
+      content: doc(
+        para(text("Augustin "), speech("Fresnel", { ipa: "freɪˈnɛl" })),
+        para(text("Wait"), pause("short"), text(" here.")),
+      ),
+    };
+    expect(textBlockParagraphs(block)).toEqual([
+      [
+        {
+          type: "text",
+          text: "Augustin ",
+          bold: false,
+          italic: false,
+          underline: false,
+        },
+        {
+          type: "text",
+          text: "Fresnel",
+          bold: false,
+          italic: false,
+          underline: false,
+          speech: { ipa: "freɪˈnɛl" },
+        },
+      ],
+      [
+        {
+          type: "text",
+          text: "Wait",
+          bold: false,
+          italic: false,
+          underline: false,
+        },
+        { type: "pause", length: "short" },
+        {
+          type: "text",
+          text: " here.",
+          bold: false,
+          italic: false,
+          underline: false,
+        },
+      ],
+    ]);
+    expect(textBlockPlain(block)).toBe("Augustin Fresnel\nWait here.");
+  });
+
+  it("is not plain content, so a whole-block writer keeps the document", () => {
+    const hinted = doc(para(speech("WWF", { alias: "World Wide Fund" })));
+    const paused = doc(para(text("A"), pause("short")));
+    expect(isPlainContent(hinted)).toBe(false);
+    expect(isPlainContent(paused)).toBe(false);
+    const stored = withTextBlockContent({ id: "b", type: "text" }, paused);
+    expect(stored.text).toBeUndefined();
+    expect(stored.content).toEqual(normalizeTextContent(paused));
+  });
+
+  it("does not count as formatting", () => {
+    const block = {
+      type: "text",
+      content: doc(para(speech("Fresnel", { ipa: "freɪˈnɛl" }), text(" lens"))),
+    };
+    expect(textBlockFormattedSpans(block).spans).toEqual([]);
+  });
+});
+
+describe("speech markup", () => {
+  it("parses every hint and both pauses", () => {
+    const content = markupToContent(
+      "[Fresnel]{ipa: freɪˈnɛl} and *[WWF]{say: World Wide Fund}*{pause}[REEF]{spell}{pause: long}",
+    );
+    expect(content.content[0].content).toEqual([
+      {
+        type: "text",
+        text: "Fresnel",
+        marks: [{ type: "speech", attrs: { ipa: "freɪˈnɛl" } }],
+      },
+      { type: "text", text: " and " },
+      {
+        type: "text",
+        text: "WWF",
+        marks: [
+          { type: "italic" },
+          { type: "speech", attrs: { alias: "World Wide Fund" } },
+        ],
+      },
+      { type: "pause", attrs: { length: "short" } },
+      {
+        type: "text",
+        text: "REEF",
+        marks: [{ type: "speech", attrs: { sayAs: "characters" } }],
+      },
+      { type: "pause", attrs: { length: "long" } },
+    ]);
+  });
+
+  it("reads brackets and braces that aren't a hint as text", () => {
+    for (const line of [
+      "see [1] and {this}",
+      "[empty]{ipa: }",
+      "[word]{spell: out}",
+      "[word] {say: x}",
+      "{pause: forever}",
+      "[]{spell}",
+    ]) {
+      expect(textBlockPlain({ content: markupToContent(line) })).toBe(line);
+    }
+  });
+
+  it("round-trips hints, pauses and the characters they use", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          text("Braces {like} these, "),
+          {
+            type: "text",
+            text: "odd ] word",
+            marks: [
+              { type: "bold" },
+              { type: "speech", attrs: { alias: "a } b \\ c" } },
+            ],
+          },
+          { type: "pause", attrs: { length: "long" } },
+          text("[x]{spell}"),
+        ),
+      ),
+    );
+    const markup = contentToMarkup(content);
+    expect(markup).toBe(
+      "Braces \\{like} these, **[odd \\] word]{say: a \\} b \\\\ c}{pause: long}**[x]\\{spell}",
+    );
+    expect(markupToContent(markup)).toEqual(content);
+  });
+});

@@ -8,8 +8,8 @@ For how to use this, see
 [Formatting, footnotes & sources](../../guide/formatting-and-footnotes.md).
 
 Lesson text blocks can carry a little formatting (bold, italic, underline, the
-`TEXT_MARKS` in `lessonText.js`), footnotes, and citations of the lesson's
-sources. A source is written once, in the lesson's Sources list, and a footnote
+`TEXT_MARKS` in `lessonText.js`), footnotes, citations of the lesson's sources,
+and read-aloud hints and pauses (see [Read-aloud hints](#read-aloud-hints)). A source is written once, in the lesson's Sources list, and a footnote
 anywhere in the text can cite it. Every footnote is numbered in reading order
 across the whole lesson, and the lesson closes with a Notes list and a Sources
 list.
@@ -31,6 +31,9 @@ one that also had a note, as a plain note.
 | `apps/web/src/components/editor/LessonTextToolbar.jsx` | Its toolbar and the footnote form.                           |
 | `apps/web/src/components/editor/SourcesPanel.jsx`      | The Sources card.                                            |
 | `apps/web/src/lib/footnoteExtension.js`                | The tiptap footnote node.                                    |
+| `apps/web/src/lib/speechExtensions.js`                 | The tiptap speech mark and pause node.                       |
+| `apps/web/src/components/editor/ReadAloudControls.jsx` | The Read aloud button and its form.                          |
+| `@spelling-creator/core/speech`                        | Text blocks as spoken text, and chunking it for a voice.     |
 | `apps/web/src/components/TextRuns.jsx`                 | Draws runs and citations as React elements.                  |
 
 A text block holds its words in one of two shapes:
@@ -106,13 +109,57 @@ but a checked `href`. And lesson content is rendered by walking the JSON into
 React elements and docx runs, so there is never any markup to inject.
 `normalizeTextContent` is the boundary instead: anything that arrives from
 outside the editor (an imported file, the MCP server, a document written by an
-older client) is reduced to paragraphs, three marks and the footnote node, and
-the renderers only ever draw what survives it. It also stores marks in a fixed
+older client) is reduced to paragraphs, three marks, the speech mark, the
+footnote node and the pause node, and the renderers only ever draw what
+survives it. It also stores marks in a fixed
 order and merges neighboring runs, so the same formatting always hashes to the
 same git blob.
 
 A source's link is only ever made into a link after `isSafeLink` accepts it
 (http, https or mailto), the same rule VAKT links follow.
+
+## Read-aloud hints
+
+A text block can say how its words are read aloud without changing how they
+show. These are the [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)'s
+four read-aloud controls, a small subset of SSML:
+
+| Hint          | Stored as                                             | SSML                                   |
+| ------------- | ----------------------------------------------------- | -------------------------------------- |
+| Pronunciation | speech mark `{ ipa: "freɪˈnɛl" }`                     | `<phoneme alphabet="ipa" ph="...">`    |
+| Substitution  | speech mark `{ alias: "World Wide Fund for Nature" }` | `<sub alias="...">`                    |
+| Spell-out     | speech mark `{ sayAs: "characters" }`                 | `<say-as interpret-as="characters">`   |
+| Pause         | inline node `{ type: "pause", attrs: { length } }`    | `<break strength="medium">` / `strong` |
+
+```json
+{
+  "type": "text",
+  "text": "Fresnel",
+  "marks": [
+    { "type": "italic" },
+    { "type": "speech", "attrs": { "ipa": "freɪˈnɛl" } }
+  ]
+}
+```
+
+A run carries at most one hint, so `normalizeSpeechHint` keeps exactly one of
+the three (an IPA first, then an alias), and drops the slashes or brackets a
+pronunciation copied from a dictionary comes with. The speech mark is stored
+after the formatting marks, and two neighboring runs merge only when their
+hints match too. A pause's `length` is `short` or `long`.
+
+The hints are not formatting. `textBlockFormattedSpans`, the lesson checks and
+the formatting quick fixes ignore them, and a run that only carries a hint
+isn't counted as formatted. Every renderer that shows or prints a lesson (the
+lesson page, Preview, interactive mode, Word, PDF) draws a hinted run as its
+text and a pause as nothing. In the editor, a hint is a dotted underline with a
+tooltip, and a pause a small labelled chip whose label comes from CSS
+(`.lesson-pause`), so it adds no characters to the text the collaboration
+cursors count.
+
+Read-aloud is the only reader. `textBlockSpeech` in `@spelling-creator/core/speech`
+turns a block into spoken text, one line per paragraph, and
+[interactive mode](./interactive-mode.md#reading-aloud) hands that to the voices.
 
 ## Numbering
 
@@ -152,13 +199,15 @@ Heading` and `S2C Source Entry`; the footnote locator and note are the
   too, so a text paragraph that happens to start in italics isn't taken for the
   caption of the picture above it, and so do image
   [credits](./images.md), so they come back as credits.
+- **Word import.** Read-aloud hints and pauses have no place in a Word
+  document, so a Word round trip loses them.
 - **JSON import and export.** Lossless. Citations of a source the file doesn't
   list are dropped on import (keeping any note), since they would print as
   "Source no longer listed." (`MISSING_SOURCE_TEXT`). A footnote citing a source that is in the list but
   not filled in yet names it "Untitled source" (`UNTITLED_SOURCE_TEXT`).
 - **Interactive mode.** Formatting shows, footnote markers don't. That screen is
   what the speller reads, and a number with nowhere to lead is clutter there. The
-  read-aloud voice reads the plain words.
+  read-aloud voice reads the words with their hints and pauses.
 - **Translation.** Each paragraph's plain words translate as one segment, so a
   translated paragraph loses its formatting and keeps its footnote markers at
   its end. Footnote notes translate. Citations and the Sources list don't: an
@@ -192,5 +241,10 @@ same field of the same source, yours stands.
 ## The MCP server
 
 Assistants write text blocks as a small markup and are told to leave text plain
-unless a convention needs formatting. Heavy formatting is rejected on save. See
+unless a convention needs formatting. Heavy formatting is rejected on save.
+Read-aloud hints borrow Pandoc's bracketed spans: `[FRESNEL]{ipa: freɪˈnɛl}`,
+`[WWF]{say: World Wide Fund for Nature}`, `[REEF]{spell}`, and `{pause}` or
+`{pause: long}`. A `{` in plain text is escaped as `\{`, so text read out of a
+lesson can be written straight back (`contentToMarkup` and `markupToContent`
+in `lessonText.js`). See
 [Lesson validation](../mcp-server/lesson-validation.md) and [Tools](../mcp-server/tools.md).

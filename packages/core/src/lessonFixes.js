@@ -59,9 +59,12 @@ function updateBlock(doc, blockId, fn) {
 // A content document with `marks` taken off the formatted spans `pick` chooses.
 // A span is grouped the way textBlockFormattedSpans groups one (a run of
 // formatted text with nothing plain inside it), so a fix lines up exactly with
-// the finding it answers.
+// the finding it answers. A speech hint is a mark too, but not formatting, so
+// it neither makes a run formatted nor comes off with the formatting.
 function withoutMarks(content, marks, pick) {
   let changed = false;
+  const formatting = (node) =>
+    (node.marks || []).filter((m) => TEXT_MARKS.includes(m.type));
   const paragraphs = content.content.map((paragraph) => {
     if (!paragraph.content) return paragraph;
     const nodes = paragraph.content.map((node) => ({ ...node }));
@@ -85,7 +88,7 @@ function withoutMarks(content, marks, pick) {
     };
     for (const node of nodes) {
       if (node.type !== "text") continue;
-      if (!node.marks?.length) {
+      if (!formatting(node).length) {
         finish();
         continue;
       }

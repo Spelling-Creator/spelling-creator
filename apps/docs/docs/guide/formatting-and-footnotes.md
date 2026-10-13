@@ -18,6 +18,7 @@ lesson ends with a **Notes** list and a **Sources** list.
 | Footnotes that cite a source, with a page         | Pictures or other media inside a text block     |
 | Footnotes with a note of your own                 | Footnotes in question, picture or VAKT blocks   |
 | A footnote that does both (a citation and a note) | Formatting in any block other than a text block |
+| How words are read aloud, and pauses              | Read-aloud fixes outside a text block           |
 
 The set is small on purpose. A lesson is read aloud to a speller and printed
 for whoever is running it, ALL CAPS already marks the spelling words, and
@@ -26,8 +27,9 @@ book titles and scientific names, and footnotes for sources.
 
 ## Formatting text
 
-Each text block has a small toolbar with **Bold**, **Italic**, **Underline**
-and **Footnote**. Select some words and press a button to format them.
+Each text block has a small toolbar with **Bold**, **Italic**, **Underline**,
+**Footnote** and **Read aloud**. Select some words and press a button to format
+them.
 
 ## Adding a footnote
 
@@ -42,6 +44,37 @@ and **Footnote**. Select some words and press a button to format them.
 
 Footnotes show in the text as small numbers. Click one to open it again, where
 you can change it and press **Save**, or press **Remove footnote**.
+
+## Fixing how words are read aloud
+
+Lessons are read aloud in [interactive mode](./interactive-mode.md), and the
+voice sometimes gets a name, a place or an abbreviation wrong. The **Read
+aloud** button on the toolbar fixes that without changing what the lesson
+shows or prints.
+
+Select the words, press **Read aloud**, and choose how to read them:
+
+- **Pronounce** gives the pronunciation in the International Phonetic Alphabet
+  (IPA), the alphabet dictionaries use for sounds, such as `freɪˈnɛl` for
+  "Fresnel". You can paste it straight from a dictionary, slashes and all.
+- **Say instead** gives other words to say, such as "World Wide Fund for
+  Nature" for "WWF".
+- **Spell out** reads the words one letter at a time: R, E, E, F.
+
+Press **Save**. Words with a fix get a dotted underline in the editor, and
+holding the pointer over them shows what they're read as. To change or remove
+one, put the cursor in it and press **Read aloud** again.
+
+To add a pause, put the cursor where it goes, press **Read aloud**, and choose
+**Short** (about as long as a comma) or **Long** under **Add a pause**. A pause
+shows in the editor as a small "pause" label and is silent and invisible
+everywhere else. Click it to make it longer or shorter, or to remove it.
+Punctuation already makes natural pauses, so most passages need none.
+
+Which voice is reading matters for one of these. The natural voice follows all
+of them. The browser's own voice says the words you gave instead and spells
+words out, but it can't follow an IPA pronunciation, so it reads those words as
+written.
 
 ## The Sources card
 
@@ -67,10 +100,15 @@ removed, and one that also had a note keeps the note.
   list above the Sources list instead. See [Exporting & printing](./exporting.md).
 - **Importing a Word document** this app exported brings back the formatting,
   the footnotes (with their sources and pages) and the Sources list. Footnotes
-  from other Word documents come back as notes.
-- **Lesson files (JSON)** keep everything.
+  from other Word documents come back as notes. Read-aloud fixes and pauses
+  aren't part of a Word document, so they don't come back.
+- **Lesson files (JSON and OSLF)** keep everything, read-aloud fixes and pauses
+  included.
 - **Interactive mode** shows the formatting but not the footnote numbers, since
-  that screen is what the speller reads. Reading aloud reads just the words.
+  that screen is what the speller reads. Reading aloud reads the words, with
+  their read-aloud fixes and pauses.
+- **Everywhere else** (the lesson page, Preview, Word and PDF), read-aloud fixes
+  and pauses don't show: the words appear as you wrote them.
 - **Translation** translates each paragraph's words and the footnote notes. A
   translated paragraph loses its formatting, and its footnote numbers move to
   the end of the paragraph. Sources aren't translated, since titles, authors and

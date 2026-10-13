@@ -294,8 +294,10 @@ reading one that something else wrote.
   `steps` are `working`, `threeBoard` and `besides` are themselves, and a
   text block's paragraphs become the format's rich text (strings for plain
   paragraphs, runs with `bold`/`italic`/`underline` and `note` entries
-  otherwise). Prompts, captions and headings are plain strings here and rich
-  text there, so they come back as their words.
+  otherwise). A run's [read-aloud hint](./formatting-and-footnotes.md#read-aloud-hints)
+  is its `ipa`, `alias` or `sayAs`, and a pause is a `{ "pause": "short" }` or
+  `"long"` run, both ways. Prompts, captions, headings and math working are
+  plain strings here and rich text there, so they come back as their words.
 - `oslf.schema.json` beside the module is the format's lesson schema, copied
   from the 0.1 draft so `oslf.test.js` can hold `toOslf`'s output to it with
   `ajv` (a dev dependency only; nothing at runtime validates). Update the copy

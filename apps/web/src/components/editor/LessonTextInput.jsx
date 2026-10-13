@@ -1,8 +1,9 @@
-// The editor for a lesson text block: tiptap, with bold, italics, underlining
-// and footnotes, and nothing else.
+// The editor for a lesson text block: tiptap, with bold, italics, underlining,
+// footnotes and read-aloud hints and pauses, and nothing else.
 //
 // The schema matches what @spelling-creator/core/lessonText stores and every
-// renderer draws: paragraphs of text runs, three marks, one footnote node.
+// renderer draws: paragraphs of text runs, three marks, one footnote node, and
+// the speech mark and pause node that only read-aloud uses.
 // Headings, lists, links, code and line breaks inside a paragraph are switched
 // off, so pasting them in leaves only their words.
 //
@@ -31,6 +32,7 @@ import {
 } from "@spelling-creator/core/lessonText";
 import { cn } from "../../lib/utils.js";
 import { Footnote } from "../../lib/footnoteExtension.js";
+import { Pause, SpeechHint } from "../../lib/speechExtensions.js";
 import { useLessonSources } from "../../lib/lessonSources.jsx";
 import LessonTextToolbar from "./LessonTextToolbar.jsx";
 
@@ -63,6 +65,7 @@ export default function LessonTextInput({
   const { t } = useTranslation("editorSections");
   const { starts } = useLessonSources();
   const [footnoteOpen, setFootnoteOpen] = useState(false);
+  const [readAloudOpen, setReadAloudOpen] = useState(false);
 
   // The latest block and callback, for the commit that fires after a pause.
   const latest = useRef({ block, onChange });
@@ -97,6 +100,22 @@ export default function LessonTextInput({
       Placeholder.configure({ placeholder }),
       Footnote.configure({
         HTMLAttributes: { title: t("contentBlock.text.footnoteMarkerTitle") },
+      }),
+      SpeechHint.configure({
+        describe: (attrs) =>
+          attrs.ipa
+            ? t("contentBlock.readAloud.describeIpa", { ipa: attrs.ipa })
+            : attrs.alias
+              ? t("contentBlock.readAloud.describeAlias", {
+                  alias: attrs.alias,
+                })
+              : t("contentBlock.readAloud.describeSpell"),
+      }),
+      Pause.configure({
+        label: (length) =>
+          length === "long"
+            ? t("contentBlock.readAloud.longPauseChip")
+            : t("contentBlock.readAloud.shortPauseChip"),
       }),
     ],
     [placeholder, t],
@@ -135,9 +154,11 @@ export default function LessonTextInput({
           "aria-label": t("contentBlock.text.ariaLabel"),
           ...(collabField ? { "data-collab-field": collabField } : {}),
         },
-        // Clicking a footnote selects it; open its form straight away.
+        // Clicking a footnote or a pause selects it; open its form straight
+        // away.
         handleClickOn: (_view, _pos, node) => {
           if (node.type.name === "footnote") setFootnoteOpen(true);
+          if (node.type.name === "pause") setReadAloudOpen(true);
           return false;
         },
       },
@@ -204,6 +225,8 @@ export default function LessonTextInput({
           editor={editor}
           footnoteOpen={footnoteOpen}
           onFootnoteOpenChange={setFootnoteOpen}
+          readAloudOpen={readAloudOpen}
+          onReadAloudOpenChange={setReadAloudOpen}
         />
       )}
       <EditorContent editor={editor} />

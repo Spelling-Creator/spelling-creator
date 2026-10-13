@@ -172,26 +172,30 @@ function footnoteRun(footnote, notes) {
   return new FootnoteReferenceRun(id);
 }
 
+// Pauses and speech hints are for read-aloud, so a pause prints nothing and a
+// hinted run prints as its text.
 function textBlockDocxParagraphs(block, notes) {
-  return textBlockParagraphs(block).map(
-    (runs) =>
-      new Paragraph({
-        spacing: { after: 120 },
-        children: runs.length
-          ? runs.map((run) =>
-              run.type === "footnote"
-                ? footnoteRun(run, notes)
-                : new TextRun({
-                    text: run.text,
-                    bold: run.bold,
-                    italics: run.italic,
-                    underline: run.underline ? {} : undefined,
-                    size: BODY_SIZE,
-                  }),
-            )
-          : [new TextRun({ text: "", size: BODY_SIZE })],
-      }),
-  );
+  return textBlockParagraphs(block)
+    .map((paragraph) => paragraph.filter((run) => run.type !== "pause"))
+    .map(
+      (runs) =>
+        new Paragraph({
+          spacing: { after: 120 },
+          children: runs.length
+            ? runs.map((run) =>
+                run.type === "footnote"
+                  ? footnoteRun(run, notes)
+                  : new TextRun({
+                      text: run.text,
+                      bold: run.bold,
+                      italics: run.italic,
+                      underline: run.underline ? {} : undefined,
+                      size: BODY_SIZE,
+                    }),
+              )
+            : [new TextRun({ text: "", size: BODY_SIZE })],
+        }),
+    );
 }
 
 // The Sources list that closes the lesson, when it has any.

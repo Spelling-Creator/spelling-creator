@@ -76,6 +76,7 @@
     "./questions": "./src/questions.js",
     "./richText": "./src/richText.js",
     "./sources": "./src/sources.js",
+    "./speech": "./src/speech.js",
     "./spelling": "./src/spelling.js",
     "./spellingWords": "./src/spellingWords.js",
     "./translationLanguages": "./src/translationLanguages.js",

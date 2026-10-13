@@ -249,10 +249,14 @@ function passageOf(block) {
   const paragraphs = (content?.content || []).map((paragraph) => {
     const runs = [];
     for (const node of paragraph.content || []) {
-      if (node.type === "text") {
+      if (node.type === "pause") {
+        runs.push({ pause: node.attrs?.length === "long" ? "long" : "short" });
+      } else if (node.type === "text") {
         const marks = new Set((node.marks || []).map((m) => m.type));
+        const speech = (node.marks || []).find((m) => m.type === "speech");
+        marks.delete("speech");
         const text = oneLine(node.text);
-        if (!marks.size) {
+        if (!marks.size && !speech) {
           // Adjacent plain runs join, so a paragraph with no formatting is
           // one string.
           if (typeof runs[runs.length - 1] === "string") {
@@ -266,6 +270,8 @@ function passageOf(block) {
         if (marks.has("bold")) run.bold = true;
         if (marks.has("italic")) run.italic = true;
         if (marks.has("underline")) run.underline = true;
+        // The stored mark already holds exactly one of the format's three.
+        if (speech) Object.assign(run, speech.attrs);
         runs.push(run);
       } else if (node.type === "footnote") {
         const note = {};
@@ -493,7 +499,12 @@ function paragraphFromOslf(paragraph) {
       if (run.bold) marks.push({ type: "bold" });
       if (run.italic) marks.push({ type: "italic" });
       if (run.underline) marks.push({ type: "underline" });
+      // normalizeTextContent keeps the first of ipa, alias and sayAs.
+      const { ipa, alias, sayAs } = run;
+      marks.push({ type: "speech", attrs: { ipa, alias, sayAs } });
       if (run.text) content.push({ type: "text", text: run.text, marks });
+    } else if (run && typeof run === "object" && run.pause) {
+      content.push({ type: "pause", attrs: { length: run.pause } });
     } else if (run && typeof run === "object" && run.note) {
       const note = run.note;
       content.push({
@@ -573,9 +584,9 @@ function questionFromOslf(block) {
         ...base,
         questionType: type,
         answer: answers[0] ?? "",
-        steps: (Array.isArray(block.working) ? block.working : []).filter(
-          (s) => typeof s === "string",
-        ),
+        steps: (Array.isArray(block.working) ? block.working : [])
+          .map(richTextPlain)
+          .filter(Boolean),
       };
     case "multiple": {
       if (suggested) return { ...base, questionType: "multiple_open", answers };

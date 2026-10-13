@@ -90,7 +90,7 @@ import {
   hasRevealableAnswers,
   questionAnswer,
   revealedAnswers,
-  stepSpeechText,
+  stepSpeech,
 } from "@spelling-creator/core/interactive";
 import {
   clearInteractiveProgress,
@@ -1004,7 +1004,7 @@ export default function InteractiveLesson({
     if (!open || !speech.enabled || phase !== "running" || !step) return;
     if (spokenKey === step.key) return;
     setSpokenKey(step.key);
-    speech.speak(stepSpeechText(step));
+    speech.speak(stepSpeech(step));
   }, [open, phase, speech, step, spokenKey]);
 
   // With a natural voice, make the start of the next step while this one plays,
@@ -1017,7 +1017,7 @@ export default function InteractiveLesson({
   const voiceStatus = speech.voiceLoad?.status;
   useEffect(() => {
     if (!open || !speech.enabled || phase !== "running" || !nextStep) return;
-    prepare(stepSpeechText(nextStep));
+    prepare(stepSpeech(nextStep));
   }, [open, speech.enabled, phase, nextStep, prepare, voiceStatus]);
 
   // Nothing should still be talking once it's closed.
@@ -1218,7 +1218,7 @@ export default function InteractiveLesson({
             )}
             <SpeechControls
               speech={speech}
-              onReplay={() => step && speech.speak(stepSpeechText(step))}
+              onReplay={() => step && speech.speak(stepSpeech(step))}
             />
             <Tooltip>
               <TooltipTrigger asChild>
