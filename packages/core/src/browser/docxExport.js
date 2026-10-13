@@ -29,6 +29,8 @@ import {
   FootnoteReferenceRun,
 } from "docx";
 import { footnoteParts, textBlockParagraphs } from "../lessonText.js";
+import { formulaToDocx } from "./formulaDocx.js";
+import { formulaKey, renderLessonFormulas } from "./formulas.js";
 import { lessonSources, sourceEntryParts, sourcesById } from "../sources.js";
 import { fitWithin, imageSizeScale } from "../image.js";
 import { imageCaptionParts } from "../imageCredit.js";
@@ -172,26 +174,107 @@ function footnoteRun(footnote, notes) {
   return new FootnoteReferenceRun(id);
 }
 
-function textBlockDocxParagraphs(block, notes) {
-  return textBlockParagraphs(block).map(
-    (runs) =>
-      new Paragraph({
-        spacing: { after: 120 },
-        children: runs.length
-          ? runs.map((run) =>
-              run.type === "footnote"
-                ? footnoteRun(run, notes)
-                : new TextRun({
-                    text: run.text,
-                    bold: run.bold,
-                    italics: run.italic,
-                    underline: run.underline ? {} : undefined,
-                    size: BODY_SIZE,
-                  }),
-            )
-          : [new TextRun({ text: "", size: BODY_SIZE })],
-      }),
-  );
+// Pauses and speech hints are for read-aloud, so a pause prints nothing and a
+// hinted run prints as its text. A formula set on its own line becomes a
+// centered paragraph of its own, splitting the paragraph it sits in.
+function textBlockDocxParagraphs(block, notes, formulas, embedded) {
+  const out = [];
+  for (const paragraph of textBlockParagraphs(block)) {
+    let children = [];
+    let written = 0;
+    const flush = () => {
+      out.push(
+        new Paragraph({
+          spacing: { after: 120 },
+          children: children.length
+            ? children
+            : [new TextRun({ text: "", size: BODY_SIZE })],
+        }),
+      );
+      written += 1;
+      children = [];
+    };
+    for (const run of paragraph) {
+      if (run.type === "pause") continue;
+      if (run.type === "footnote") {
+        children.push(footnoteRun(run, notes));
+      } else if (run.type === "math") {
+        const child = formulaChild(run, formulas, embedded);
+        if (!run.display) {
+          children.push(child);
+          continue;
+        }
+        if (children.length) flush();
+        out.push(
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 60, after: 120 },
+            children: [child],
+          }),
+        );
+        written += 1;
+      } else {
+        children.push(
+          new TextRun({
+            text: run.text,
+            bold: run.bold,
+            italics: run.italic,
+            underline: run.underline ? {} : undefined,
+            size: BODY_SIZE,
+          }),
+        );
+      }
+    }
+    // The words after a display formula, or the paragraph itself when it had
+    // nothing else (an empty paragraph keeps its line, as it always has).
+    if (children.length || !written) flush();
+  }
+  return out;
+}
+
+// Alt text marks a formula's picture in the PDF path's docx, so the HTML
+// mammoth makes of it can be given the picture's size (see pdfExport.js).
+const FORMULA_ALT_PREFIX = "formula:";
+
+/**
+ * The formula key a picture's alt text carries, or null for any other
+ * picture.
+ * @param {string | undefined} altText
+ * @returns {string | null}
+ */
+export function formulaImageKey(altText) {
+  return typeof altText === "string" && altText.startsWith(FORMULA_ALT_PREFIX)
+    ? altText.slice(FORMULA_ALT_PREFIX.length)
+    : null;
+}
+
+// What a formula is in the document: a Word equation built from its MathML,
+// a picture of it where the file is bound for the PDF (mammoth, which the PDF
+// path converts the docx with, drops equations), or its source as text when
+// it wasn't rendered (no MathJax, or a formula MathJax couldn't make sense of).
+function formulaChild(run, formulas, embedded) {
+  const key = formulaKey(run);
+  const rendered = formulas?.rendered.get(key);
+  if (!rendered) return new TextRun({ text: run.source, size: BODY_SIZE });
+  if (formulas.as === "image" && rendered.png) {
+    const { bytes, width, height } = rendered.png;
+    // A picture on a line of its own is framed like a lesson picture by the
+    // PDF path, so it needs an entry there (see imageBlockParagraphs).
+    if (run.display) {
+      embedded?.push({ width, align: "center", caption: "", credit: "" });
+    }
+    return new ImageRun({
+      type: "png",
+      data: bytes,
+      transformation: { width, height },
+      altText: {
+        title: "Formula",
+        name: "formula",
+        description: `${FORMULA_ALT_PREFIX}${key}`,
+      },
+    });
+  }
+  return formulaToDocx(rendered.root);
 }
 
 // The Sources list that closes the lesson, when it has any.
@@ -501,11 +584,13 @@ async function vaktBlockParagraphs(block, embedded) {
 
 // A section's blocks, with no heading of its own. Section names are an
 // organising device inside the editor; a printed lesson runs straight through.
-async function sectionParagraphs(section, embedded, notes) {
+async function sectionParagraphs(section, embedded, notes, formulas) {
   const paragraphs = [];
   for (const block of section.blocks) {
     if (block.type === "text") {
-      paragraphs.push(...textBlockDocxParagraphs(block, notes));
+      paragraphs.push(
+        ...textBlockDocxParagraphs(block, notes, formulas, embedded),
+      );
     } else if (block.type === "image" && (block.image || block.src)) {
       paragraphs.push(...(await imageBlockParagraphs(block, embedded)));
     } else if (block.type === "question") {
@@ -686,13 +771,29 @@ function colourCharacterStyles() {
  *   ends up carrying appends its framing, in document order, so the converted
  *   HTML's `<img>` tags can be matched to them one for one. See pdfExport.js.
  *   Omit it (the DOCX download does) and nothing is collected.
+ * @param {object} [options]
+ * @param {Map<string, object> | null} [options.formulas]  The lesson's
+ *   formulas, rendered (renderLessonFormulas in formulas.js). Without it a
+ *   formula prints as its source.
+ * @param {"equation" | "image"} [options.formulasAs]  A Word equation (the
+ *   default), or a picture of the formula, for the PDF path, whose docx goes
+ *   through mammoth, which drops equations. Pictures need `formulas` rendered
+ *   with `images`.
  */
-export async function buildDocument(doc, meta = {}, embedded = undefined) {
+export async function buildDocument(
+  doc,
+  meta = {},
+  embedded = undefined,
+  { formulas = null, formulasAs = "equation" } = {},
+) {
   const children = titleParagraphs(doc, meta);
   const notes = createNotes(doc);
+  const rendered = formulas ? { rendered: formulas, as: formulasAs } : null;
 
   for (const section of doc.sections) {
-    children.push(...(await sectionParagraphs(section, embedded, notes)));
+    children.push(
+      ...(await sectionParagraphs(section, embedded, notes, rendered)),
+    );
   }
   children.push(...sourcesParagraphs(doc));
 
@@ -788,7 +889,9 @@ function safeFileName(title) {
  * @param {{author?: string, published?: string|number|Date}} [meta]
  */
 export async function exportDocx(doc, meta = {}) {
-  const document = await buildDocument(doc, meta);
+  // Null for a lesson without formulas, so MathJax never loads for one.
+  const formulas = await renderLessonFormulas(doc);
+  const document = await buildDocument(doc, meta, undefined, { formulas });
   const blob = await Packer.toBlob(document);
   triggerDownload(blob, safeFileName(doc.title));
 }

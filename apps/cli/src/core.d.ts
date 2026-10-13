@@ -106,4 +106,14 @@ declare module "@spelling-creator/core/oslf" {
   ): unknown;
   /** An OSLF file as a bare lesson doc, before normalizing. */
   export function fromOslf(file: unknown): LessonDoc;
+  /** Thrown by fromOslf, and by fromOslfXml, for a file this can't read. */
+  export class OslfImportError extends Error {}
+}
+
+declare module "@spelling-creator/core/oslfXml" {
+  export const OSLF_XML_EXTENSION: string;
+  /** An OSLF file (what toOslf writes) in the format's XML form. */
+  export function toOslfXml(file: unknown): string;
+  /** An OSLF lesson's XML form as the OSLF file, for fromOslf to read. */
+  export function fromOslfXml(text: string): unknown;
 }

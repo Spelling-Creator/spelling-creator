@@ -97,7 +97,20 @@ const blockSchema = z
           "lesson's `sources` by its id, ^[@id, p. 12] adds a page or section, and ^[@id, p. 12 | A note.] " +
           "adds a note too. Put the marker straight after the word or sentence it belongs to. Cite only " +
           "sources the user gave you or that you have actually checked, never invented ones, and keep " +
-          "free-text notes rare. A backslash makes a character literal (\\* for an asterisk).\n\n" +
+          "free-text notes rare. A backslash makes a character literal (\\* for an asterisk, \\{ for a " +
+          "brace).\n\n" +
+          "READ-ALOUD: the app's practice mode reads lessons aloud, and a few words can be fixed for its " +
+          "voice without changing how they show: [FRESNEL]{ipa: freɪˈnɛl} gives a pronunciation in IPA, " +
+          "[WWF]{say: World Wide Fund for Nature} says other words instead, [REEF]{spell} reads a word " +
+          "letter by letter, and {pause} or {pause: long} adds a silent pause. These change only the " +
+          "app's voice, not what a screen reader says. Use them only where the voice would get a name, a " +
+          "place or an abbreviation wrong, or when the user asks. Most passages need none.\n\n" +
+          "FORMULAS: {asciimath: 120 xx 3 = 360} or {tex: \\frac{60}{5} = 12} puts a typeset formula in the " +
+          "sentence; {asciimath display: ...} sets it on a line of its own; a {spoken: 60 over 5 is 12} " +
+          "straight after one gives the words read-aloud says for it, only where the automatic reading " +
+          "would be awkward. Formulas are for math and science lessons, never for a plain number or price " +
+          "in prose ($2.50 stays as it is). Braces inside a formula must balance; for the rare one whose " +
+          "don't, write {tex escaped: ...} and put a backslash before each brace and backslash.\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
           'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
           "or footnotes here.\n\n" +
@@ -2068,7 +2081,9 @@ export function registerTools(server, ctx) {
         "Fetch one lesson including its full content document — use this to read a lesson before editing it, or to " +
         "study an existing lesson's structure as a template.\n\n" +
         "Text blocks come back as the same markup you write them in (**bold**, *italic*, <u>underline</u>, " +
-        "^[footnotes]), with literal asterisks escaped, so a block can be passed straight back to replace_block or " +
+        "^[footnotes], [read-aloud]{hints}, {pause} and {asciimath: formulas}), with literal asterisks and " +
+        "braces escaped, so a block " +
+        "can be passed straight back to replace_block or " +
         "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.\n\n" +
         'Pass `format: "oslf"` to get the lesson as an Open Spelling Lesson Format file instead (`lessonFile`, ' +
         "with a `filename` to save it under), for a tool that isn't Spelling Creator.",

@@ -223,6 +223,20 @@ with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,
 and mammoth converts only the document body, never the docx's own header and
 footer.
 
+### Formulas
+
+A formula in a text block is a Word equation in the docx (OMML, built from the
+MathML MathJax parses the formula into; `formulaDocx.js`) and a picture in the
+PDF, since mammoth drops equations. The exports render every formula with
+MathJax first (`renderLessonFormulas` in `core/browser/formulas.js`, which
+loads nothing for a lesson without one) and pass the result to
+`buildDocument`; the PDF path asks for them as pictures (`formulasAs:
+"image"`) and gives each `<img>` mammoth makes its size by the formula's alt
+text. A formula on a line of its own is a centered paragraph, and in the PDF a
+figure like a lesson picture. Details in
+[Formulas](./formatting-and-footnotes.md#formulas). The Word importer doesn't
+read equations back, so a Word round trip loses them.
+
 ## Printing
 
 **Print** prints the finished PDF itself rather than the page, so the page
@@ -294,8 +308,38 @@ reading one that something else wrote.
   `steps` are `working`, `threeBoard` and `besides` are themselves, and a
   text block's paragraphs become the format's rich text (strings for plain
   paragraphs, runs with `bold`/`italic`/`underline` and `note` entries
-  otherwise). Prompts, captions and headings are plain strings here and rich
-  text there, so they come back as their words.
+  otherwise). A run's [read-aloud hint](./formatting-and-footnotes.md#read-aloud-hints)
+  is its `ipa`, `alias` or `sayAs`, and a pause is a `{ "pause": "short" }` or
+  `"long"` run, both ways. Prompts, captions, headings and math working are
+  plain strings here and rich text there, so they come back as their words.
+
+### The XML form
+
+OSLF also has an XML serialization (XML-FORMAT.md in the format's repository).
+`packages/core/src/oslfXml.js` converts between the two forms of the _file_,
+never the lesson: `toOslfXml(file)` writes what `toOslf` made, and
+`fromOslfXml(text)` gives what `fromOslf` reads. So the mapping from the app's
+lesson to the format stays in `oslf.js` alone, and an XML lesson goes through
+exactly the same import as a JSON one.
+
+- **Export OSLF (XML)** (`exportOslfXml` in `browser/jsonExport.js`) writes
+  `<title>.oslf.xml`. **Import JSON or OSLF** accepts `.xml` too
+  (`importOslfXml` in `jsonImport.js`). The CLI reads and writes
+  `.oslf.xml`. Both directions load `oslfXml.js` with a dynamic `import()`, so
+  the XML parser isn't in the editor's bundle until someone uses it.
+- Rich text is written on one line inside its element, since reading collapses
+  each run of whitespace to one space and trims an element's edges, as the
+  format says. Marks nest `<b>`, `<i>`, `<u>`, then the read-aloud hint
+  innermost (`<phoneme>`, `<sub>` or `<say-as>`); a pause is `<break
+strength="medium"/>` (short) or `"strong"` (long). Reading accepts the marks
+  in any nesting, and keeps the words of an element it doesn't know.
+- Parsing is `@xmldom/xmldom`, which never resolves external entities or
+  fetches anything. A file with a DOCTYPE is refused anyway, as the format
+  requires, since that is how XML reaches for local files and the network.
+- `oslf.xsd` beside the module is the format's XSD, copied like the JSON
+  schema. `oslfXml.test.js` holds the writer's output to it with `xmllint-wasm`
+  (a dev dependency), and checks the format's example lesson
+  (`oslf-examples/`, both forms) converts each way into the other exactly.
 - `oslf.schema.json` beside the module is the format's lesson schema, copied
   from the 0.1 draft so `oslf.test.js` can hold `toOslf`'s output to it with
   `ajv` (a dev dependency only; nothing at runtime validates). Update the copy

@@ -50,6 +50,32 @@ asks. Never bold or underline for emphasis, never format a whole phrase or sente
 an ALL-CAPS word, and don't reach for formatting to make a passage feel lively. Most sections
 need none at all.
 
+## Read-aloud
+
+The app's practice mode reads lessons aloud to the speller. Where its voice would say something
+wrong, a text block can fix it without changing what shows on the page:
+
+- `[FRESNEL]{ipa: freɪˈnɛl}` says the word the way the IPA gives it
+- `[WWF]{say: World Wide Fund for Nature}` says other words instead
+- `[REEF]{spell}` reads the word one letter at a time
+- `{pause}` and `{pause: long}` add a silent pause
+
+These only change what the app's own voice says. A screen reader reads the words as they show on
+the page, so don't rely on a hint to fix how one pronounces a word. Use them for names, places and
+abbreviations the voice is likely to get wrong, or when the user asks. Punctuation already makes natural pauses, so add a pause only where pacing really needs it.
+Most passages need none of these.
+
+## Formulas
+
+A math or science passage can carry a typeset formula, written in AsciiMath (`{asciimath: 120 xx 3
+= 360}`, `{asciimath: sqrt(81) = 9}`) or LaTeX (`{tex: \frac{60}{5} = 12}`). Put `display` after the
+notation (`{tex display: ...}`) to set it on a line of its own. Formulas are read aloud
+automatically; where that reading would be awkward, add the words to say straight after it:
+`{asciimath: 3/4}{spoken: three quarters}`.
+
+A formula is for math, not for a number in prose: "360 steps" and "$2.50" stay as plain text. The
+speller spells the answer, so a question's answer is plain text too, never a formula.
+
 ## Sources and footnotes
 
 A lesson can list its `sources` (books, articles, websites), which print as a Sources list at the

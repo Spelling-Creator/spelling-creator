@@ -29,11 +29,23 @@ export function exportJson(doc) {
 // so one that was never uploaded (a draft kept on this device) won't show
 // for whoever opens the file elsewhere.
 export function exportOslf(doc) {
-  const file = toOslf(doc, {
+  const json = JSON.stringify(oslfOf(doc), null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  triggerDownload(blob, oslfFileName(doc.title));
+}
+
+// The same file in the format's XML form. The XML writer is only loaded when
+// someone asks for one.
+export async function exportOslfXml(doc) {
+  const file = oslfOf(doc);
+  const { oslfXmlFileName, toOslfXml } = await import("../oslfXml.js");
+  const blob = new Blob([toOslfXml(file)], { type: "application/xml" });
+  triggerDownload(blob, oslfXmlFileName(doc.title));
+}
+
+function oslfOf(doc) {
+  return toOslf(doc, {
     imageSrc: (block) =>
       block.image?.hash ? imagePublicUrl(block.image.hash) : null,
   });
-  const json = JSON.stringify(file, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  triggerDownload(blob, oslfFileName(doc.title));
 }

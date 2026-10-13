@@ -169,6 +169,63 @@
       "insert": "Add footnote",
       "update": "Save",
       "remove": "Remove footnote"
+    },
+    "readAloud": {
+      "button": "How this is read aloud",
+      "buttonShort": "Read aloud",
+      "hintLabel": "Read the selected words",
+      "kinds": {
+        "ipa": "Pronounce",
+        "alias": "Say instead",
+        "spell": "Spell out"
+      },
+      "ipaLabel": "Pronunciation",
+      "ipaHelp": "In the IPA, the alphabet dictionaries use for sounds. The words still show as you wrote them.",
+      "aliasLabel": "Words to say",
+      "aliasPlaceholder": "World Wide Fund for Nature",
+      "aliasHelp": "Read aloud in place of the selected words, which still show as written.",
+      "spellHelp": "The selected words are read one letter at a time, like R, E, E, F.",
+      "selectFirst": "Select a word to change how it is said, or add a pause below.",
+      "addHint": "Save",
+      "update": "Save",
+      "removeHint": "Remove",
+      "addPause": "Add a pause",
+      "pauseHelp": "A pause is silent in read-aloud and doesn't show in the lesson.",
+      "pauseLength": "Pause length",
+      "short": "Short",
+      "long": "Long",
+      "removePause": "Remove pause",
+      "shortPauseChip": "pause",
+      "longPauseChip": "long pause",
+      "describeIpa": "Read aloud as /{{ipa}}/",
+      "describeAlias": "Read aloud as \"{{alias}}\"",
+      "describeSpell": "Read aloud one letter at a time"
+    },
+    "formula": {
+      "addButton": "Add a formula",
+      "addButtonShort": "Formula",
+      "editButton": "Edit this formula",
+      "editButtonShort": "Edit formula",
+      "formatLabel": "Written in",
+      "formats": {
+        "asciimath": "AsciiMath",
+        "tex": "LaTeX"
+      },
+      "sourceLabel": "Formula",
+      "help": {
+        "asciimath": "Type it the way you would in a message: 2 xx 8 for times, 48 -: 6 for divided by, 3/4 for a fraction, 10^6 for a power, sqrt(81) for a root.",
+        "tex": "LaTeX math, without the dollar signs: 2 \\times 8, 48 \\div 6, \\frac{3}{4}, 10^6, \\sqrt{81}."
+      },
+      "previewEmpty": "The formula shows here as you type it.",
+      "placementLabel": "Place it",
+      "inline": "In the sentence",
+      "display": "On its own line",
+      "spokenLabel": "Read aloud as (optional)",
+      "spokenPlaceholder": "three quarters of the fans",
+      "spokenHelp": "Formulas are read aloud automatically. Give the words to say instead if that reading is awkward.",
+      "insert": "Add formula",
+      "update": "Save",
+      "remove": "Remove formula"
     }
   },
   "sources": {

@@ -28,12 +28,40 @@
 // The schema is deliberately small. Three marks (bold, italic, underline), one
 // kind of block (the paragraph) and one inline node (the footnote). Lessons are
 // read aloud and printed; headings, lists and links would be layout, and
-// sections already carry the structure. normalizeTextContent enforces this on
-// anything that arrives from outside the editor (an imported file, the MCP
-// server, a document written by an older client), and the renderers draw only
-// what survives it. Content is rendered as React elements and docx runs, never
-// as HTML, so there is no markup to sanitise; the normaliser is what decides
-// which shapes exist at all.
+// sections already carry the structure.
+//
+// Two more things exist only for read-aloud, and print as nothing of their own:
+//
+//   the speech mark   { type: "speech", attrs: { ipa } }, or { alias } or
+//                     { sayAs: "characters" }: how the words it covers are
+//                     said (in IPA, as other words, or one letter at a time).
+//                     They still show and print as written.
+//   the pause node    { type: "pause", attrs: { length: "short" | "long" } }:
+//                     a pause in read-aloud, which displays as nothing.
+//
+// They are the Open Spelling Lesson Format's pronunciation, substitution,
+// spell-out and pause (a small subset of SSML), stored the tiptap way. A text
+// run carries at most one speech hint, so the mark holds exactly one of the
+// three. speech.js turns them into what the voices are given.
+//
+// And one inline node holds a formula:
+//
+//   the math node     { type: "math", attrs: { format, source, display, spoken } }
+//                     `source` is the formula as the author wrote it, in the
+//                     notation `format` names ("asciimath" or "tex"); `display`
+//                     puts it on a line of its own; `spoken` is what read-aloud
+//                     says for it, when the speech made from it isn't right.
+//
+// That is the format's math run. A formula is rendered by MathJax (the web
+// app's Formula component, and the Word export), and read aloud from the
+// MathML MathJax makes of it (speech.js); as plain text it is its source,
+// which is also what shows wherever MathJax can't run.
+//
+// normalizeTextContent enforces all of this on anything that arrives from
+// outside the editor (an imported file, the MCP server, a document written by
+// an older client), and the renderers draw only what survives it. Content is
+// rendered as React elements and docx runs, never as HTML, so there is no
+// markup to sanitize; the normalizer is what decides which shapes exist at all.
 //
 // A footnote is a numbered note at the foot of the lesson. It can cite one of
 // the lesson's sources (`sourceId`, with an optional `locator` such as
@@ -93,6 +121,105 @@ export function normalizeFootnote(attrs) {
   return { sourceId, locator, note };
 }
 
+/** How long a pause can be: about a comma's worth, or clearly longer. */
+export const PAUSE_LENGTHS = ["short", "long"];
+
+/** The one way a run can be spelled out: a character at a time. */
+export const SAY_AS_CHARACTERS = "characters";
+
+const IPA_LIMIT = 200;
+const ALIAS_LIMIT = 500;
+
+/**
+ * A speech hint in its exact stored shape, or null when it says nothing.
+ * Exactly one of `ipa`, `alias` and `sayAs` survives, in that order of
+ * preference. IPA is often copied with the slashes or brackets dictionaries
+ * put around it, which are not sounds, so they are dropped.
+ * @param {unknown} attrs
+ * @returns {{ ipa: string }|{ alias: string }|{ sayAs: "characters" }|null}
+ */
+export function normalizeSpeechHint(attrs) {
+  if (!isObject(attrs)) return null;
+  const ipa = oneLine(attrs.ipa, IPA_LIMIT)
+    .replace(/^[/[]+|[/\]]+$/g, "")
+    .trim();
+  if (ipa) return { ipa };
+  const alias = oneLine(attrs.alias, ALIAS_LIMIT);
+  if (alias) return { alias };
+  if (attrs.sayAs === SAY_AS_CHARACTERS) return { sayAs: SAY_AS_CHARACTERS };
+  return null;
+}
+
+/** The notations a formula can be written in, as the format names them. */
+export const FORMULA_FORMATS = ["asciimath", "tex"];
+
+const FORMULA_LIMIT = 2000;
+const SPOKEN_LIMIT = 1000;
+
+/**
+ * Spoken text (what read-aloud says for something) in its stored shape: a
+ * plain string, or a list of runs that are strings, text runs with one speech
+ * hint, and pauses. A run object with none of those is said as its text, as
+ * the format asks, and dropped without any. Returns null for nothing to say.
+ * @param {unknown} value
+ * @returns {string | Array<string | object> | null}
+ */
+export function normalizeSpokenText(value) {
+  const runs = [];
+  const pushWords = (text) => {
+    if (!text) return;
+    if (typeof runs[runs.length - 1] === "string")
+      runs[runs.length - 1] += text;
+    else runs.push(text);
+  };
+  // Spaces are kept, even at a run's edges: they are what keep the words of
+  // neighboring runs apart. Only a line break has no place in spoken text.
+  const spokenLine = (text) =>
+    typeof text === "string"
+      ? text.replace(/[\r\n]+/g, " ").slice(0, SPOKEN_LIMIT)
+      : "";
+  for (const run of Array.isArray(value) ? value : [value]) {
+    if (typeof run === "string") {
+      pushWords(spokenLine(run));
+    } else if (isObject(run) && PAUSE_LENGTHS.includes(run.pause)) {
+      runs.push({ pause: run.pause });
+    } else if (isObject(run) && typeof run.text === "string") {
+      const text = spokenLine(run.text);
+      if (!text) continue;
+      const hint = normalizeSpeechHint(run);
+      if (hint) runs.push({ text, ...hint });
+      else pushWords(text);
+    }
+  }
+  if (!runs.length) return null;
+  return runs.length === 1 && typeof runs[0] === "string" ? runs[0] : runs;
+}
+
+/**
+ * A formula's attributes in their exact stored shape, or null when there is
+ * no formula (no source). A format this version doesn't know is kept, as the
+ * format asks, so the formula survives a save; renderers show its source.
+ * @param {unknown} attrs
+ * @returns {{ format: string, source: string, display: boolean, spoken: string | object[] | null }|null}
+ */
+export function normalizeFormula(attrs) {
+  if (!isObject(attrs)) return null;
+  const source = oneLine(attrs.source, FORMULA_LIMIT);
+  if (!source) return null;
+  const format =
+    typeof attrs.format === "string" && attrs.format.trim()
+      ? attrs.format.trim().toLowerCase().slice(0, 32)
+      : FORMULA_FORMATS[0];
+  const spoken = normalizeSpokenText(attrs.spoken);
+  return {
+    format,
+    source,
+    display: attrs.display === true,
+    // Only words count as something to say in place of the formula.
+    spoken: typeof spoken === "string" && !spoken.trim() ? null : spoken,
+  };
+}
+
 function marksOf(node) {
   if (!Array.isArray(node?.marks)) return [];
   const present = new Set(
@@ -101,8 +228,19 @@ function marksOf(node) {
   return TEXT_MARKS.filter((mark) => present.has(mark));
 }
 
+// The speech hint a text node's marks carry, or null.
+function speechOf(node) {
+  if (!Array.isArray(node?.marks)) return null;
+  const mark = node.marks.find((m) => isObject(m) && m.type === "speech");
+  return mark ? normalizeSpeechHint(mark.attrs) : null;
+}
+
 function sameMarks(a, b) {
   return a.length === b.length && a.every((mark, i) => mark === b[i]);
+}
+
+function sameSpeech(a, b) {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
 // Flatten an inline node (or an unknown wrapper around some) into the inline
@@ -114,17 +252,35 @@ function collectInline(node, out, depth = 0) {
       typeof node.text === "string" ? node.text.replace(/[\r\n]+/g, " ") : "";
     if (!text) return;
     const marks = marksOf(node);
+    const speech = speechOf(node);
     const last = out[out.length - 1];
-    if (last && last.type === "text" && sameMarks(last.marks, marks)) {
+    if (
+      last &&
+      last.type === "text" &&
+      sameMarks(last.marks, marks) &&
+      sameSpeech(last.speech, speech)
+    ) {
       last.text += text;
     } else {
-      out.push({ type: "text", text, marks });
+      out.push({ type: "text", text, marks, speech });
     }
     return;
   }
   if (node.type === "footnote") {
     const attrs = normalizeFootnote(node.attrs);
     if (attrs) out.push({ type: "footnote", attrs });
+    return;
+  }
+  if (node.type === "pause") {
+    const length = PAUSE_LENGTHS.includes(node.attrs?.length)
+      ? node.attrs.length
+      : "short";
+    out.push({ type: "pause", attrs: { length } });
+    return;
+  }
+  if (node.type === "math") {
+    const attrs = normalizeFormula(node.attrs);
+    if (attrs) out.push({ type: "math", attrs });
     return;
   }
   if (node.type === "hardBreak") {
@@ -136,7 +292,13 @@ function collectInline(node, out, depth = 0) {
   }
 }
 
-const INLINE_TYPES = new Set(["text", "footnote", "hardBreak"]);
+const INLINE_TYPES = new Set([
+  "text",
+  "footnote",
+  "pause",
+  "math",
+  "hardBreak",
+]);
 
 // Every paragraph inside a block-level node. A heading or a list item pasted in
 // from somewhere else becomes the paragraph its words were in.
@@ -164,10 +326,10 @@ function P() {
  * a document at all.
  *
  * Drops every node and mark outside the schema (keeping the words inside
- * them), merges neighbouring runs that carry the same marks, and stores marks
+ * them), merges neighboring runs that carry the same marks, and stores marks
  * in a fixed order. That last part matters for version history: a block's git
  * blob is a hash of its JSON, so two spellings of the same formatting must
- * normalise to the same bytes or every save would look like an edit.
+ * normalize to the same bytes or every save would look like an edit.
  * @param {unknown} value
  * @returns {object|null}
  */
@@ -183,22 +345,20 @@ export function normalizeTextContent(value) {
   };
 }
 
-// Marks are omitted from a run that has none, the way tiptap writes them.
+// Marks are omitted from a run that has none, the way tiptap writes them. The
+// speech mark comes after the formatting marks.
 function storedParagraph(paragraph) {
   if (!paragraph.content) return paragraph;
   return {
     type: "paragraph",
-    content: paragraph.content.map((node) =>
-      node.type === "text" && node.marks.length === 0
-        ? { type: "text", text: node.text }
-        : node.type === "text"
-          ? {
-              type: "text",
-              text: node.text,
-              marks: node.marks.map((type) => ({ type })),
-            }
-          : node,
-    ),
+    content: paragraph.content.map((node) => {
+      if (node.type !== "text") return node;
+      const marks = node.marks.map((type) => ({ type }));
+      if (node.speech) marks.push({ type: "speech", attrs: node.speech });
+      return marks.length
+        ? { type: "text", text: node.text, marks }
+        : { type: "text", text: node.text };
+    }),
   };
 }
 
@@ -230,21 +390,31 @@ export function textBlockContent(block) {
   return normalizeTextContent(block?.content) ?? textToContent(block?.text);
 }
 
-// The paragraphs of a document as arrays of normalised inline nodes, with each
-// text run's marks as an array of names.
+// The paragraphs of a document as arrays of normalized inline nodes, with each
+// text run's formatting marks as an array of names and its speech hint (or
+// null) as `speech`.
 function inlineParagraphs(content) {
   const doc = normalizeTextContent(content) ?? textToContent("");
   return doc.content.map((paragraph) =>
     (paragraph.content || []).map((node) =>
-      node.type === "text" ? { ...node, marks: marksOf(node) } : node,
+      node.type === "text"
+        ? { ...node, marks: marksOf(node), speech: speechOf(node) }
+        : node,
     ),
   );
 }
 
+// A formula reads as its source in plain text: what the format says to show
+// where it can't be rendered, and what a check or a search can match.
 function paragraphPlain(inline) {
   return inline
-    .filter((node) => node.type === "text")
-    .map((node) => node.text)
+    .map((node) =>
+      node.type === "text"
+        ? node.text
+        : node.type === "math"
+          ? node.attrs.source
+          : "",
+    )
     .join("");
 }
 
@@ -283,26 +453,40 @@ export function textBlockHasContent(block) {
 
 /**
  * A text block's paragraphs as runs a renderer can draw directly:
- *   { type: "text", text, bold, italic, underline }
+ *   { type: "text", text, bold, italic, underline, speech }
  *   { type: "footnote", sourceId, locator, note, index }
+ *   { type: "pause", length }
+ *   { type: "math", format, source, display, spoken }
  * `index` counts footnotes within the block, from 0, in reading order.
+ * `speech` is the run's speech hint, present only when it has one (see
+ * normalizeSpeechHint). Renderers that show or print
+ * the lesson draw the text and ignore `speech` and pauses, which only
+ * read-aloud uses, and draw a formula with MathJax (or as its source).
  * @param {object} block
  * @returns {Array<Array<object>>}
  */
 export function textBlockParagraphs(block) {
   let index = 0;
   return inlineParagraphs(textBlockContent(block)).map((inline) =>
-    inline.map((node) =>
-      node.type === "text"
-        ? {
-            type: "text",
-            text: node.text,
-            bold: node.marks.includes("bold"),
-            italic: node.marks.includes("italic"),
-            underline: node.marks.includes("underline"),
-          }
-        : { type: "footnote", ...node.attrs, index: index++ },
-    ),
+    inline.map((node) => {
+      if (node.type === "text") {
+        return {
+          type: "text",
+          text: node.text,
+          bold: node.marks.includes("bold"),
+          italic: node.marks.includes("italic"),
+          underline: node.marks.includes("underline"),
+          ...(node.speech ? { speech: node.speech } : {}),
+        };
+      }
+      if (node.type === "pause") {
+        return { type: "pause", length: node.attrs.length };
+      }
+      if (node.type === "math") {
+        return { type: "math", ...node.attrs };
+      }
+      return { type: "footnote", ...node.attrs, index: index++ };
+    }),
   );
 }
 
@@ -454,7 +638,9 @@ export function withTextBlockDocument(block, content) {
  */
 export function isPlainContent(content) {
   return inlineParagraphs(content).every((inline) =>
-    inline.every((node) => node.type === "text" && node.marks.length === 0),
+    inline.every(
+      (node) => node.type === "text" && node.marks.length === 0 && !node.speech,
+    ),
   );
 }
 
@@ -462,7 +648,7 @@ export function isPlainContent(content) {
  * The lesson with every citation of one source taken out of its text blocks.
  * A footnote that also carries a note keeps the note; one that only cited the
  * source goes. Blocks with nothing to change are returned as they were, so
- * memoised cards stay memoised.
+ * memoized cards stay memoized.
  * @param {object} doc
  * @param {string} sourceId
  * @returns {object}
@@ -566,6 +752,25 @@ export function textBlockFormattedSpans(block) {
 //   ^[@sourceId, p. 12]             with a locator
 //   ^[@sourceId, p. 12 | A note.]   with a locator and a note
 //   ^[@sourceId | A note.]          with a note
+//   [FRESNEL]{ipa: freɪˈnɛl}        said as the IPA gives it
+//   [WWF]{say: World Wide Fund}     said as other words
+//   [REEF]{spell}                   said one letter at a time
+//   {pause}   {pause: long}         a short or long pause in read-aloud
+//   {asciimath: 120 xx 3 = 360}     a formula, in AsciiMath
+//   {tex: \frac{60}{5} = 12}        a formula, in LaTeX
+//   {tex display: ...}              on a line of its own
+//   {tex: ...}{spoken: ...}         with the words read-aloud says for it
+//
+// The read-aloud forms borrow Pandoc's bracketed spans: the words in square
+// brackets show and print as they are, and the braces right after them say
+// how to read them.
+//
+// A formula runs to the brace that balances its opening one, and nothing
+// inside it is an escape, since TeX is full of both braces and backslashes.
+// The rare formula whose braces don't balance (TeX's `\left\{ x \right.`)
+// is written `{tex escaped: \left\\\{ x \right.}` instead: with `escaped`
+// after the notation, a backslash makes the next character literal, as it
+// does in text.
 //
 // One line is one paragraph. A backslash makes the next character literal, so
 // \* is an asterisk. contentToMarkup escapes whatever needs it, so text read
@@ -607,6 +812,16 @@ function paragraphToMarkup(inline) {
       out += footnoteToMarkup(node.attrs);
       continue;
     }
+    // A pause sits wherever it falls, inside formatting or not.
+    if (node.type === "pause") {
+      out += node.attrs.length === "long" ? "{pause: long}" : "{pause}";
+      continue;
+    }
+    if (node.type === "math") {
+      close([]);
+      out += formulaToMarkup(node.attrs);
+      continue;
+    }
     close(node.marks);
     for (const mark of node.marks) {
       if (!open.includes(mark)) {
@@ -614,7 +829,9 @@ function paragraphToMarkup(inline) {
         open.push(mark);
       }
     }
-    out += escapeText(node.text);
+    out += node.speech
+      ? speechToMarkup(node.text, node.speech)
+      : escapeText(node.text);
   }
   close([]);
   return out;
@@ -625,7 +842,47 @@ function escapeText(text) {
     .replace(/\\/g, "\\\\")
     .replace(/\*/g, "\\*")
     .replace(/\^\[/g, "\\^[")
+    .replace(/\{/g, "\\{")
     .replace(/<(\/?u>)/gi, "\\<$1");
+}
+
+function speechToMarkup(text, speech) {
+  const words = text.replace(/[\\\]]/g, (ch) => `\\${ch}`);
+  const value = (v) => v.replace(/[\\}]/g, (ch) => `\\${ch}`);
+  const body = speech.ipa
+    ? `ipa: ${value(speech.ipa)}`
+    : speech.alias
+      ? `say: ${value(speech.alias)}`
+      : "spell";
+  return `[${words}]{${body}}`;
+}
+
+// The formula's source goes in as it is (see the note on braces above), or,
+// when its braces don't balance (a TeX `\left\{ ... \right.`), with
+// `escaped` after the notation and a backslash before each brace and
+// backslash. Its spoken words, if any, follow in their own braces, flattened
+// to words.
+function formulaToMarkup({ format, source, display, spoken }) {
+  const escaped = balancingBrace(`${source}}`, 0) !== source.length;
+  const flags = `${display ? " display" : ""}${escaped ? " escaped" : ""}`;
+  const body = escaped ? source.replace(/[\\{}]/g, (ch) => `\\${ch}`) : source;
+  let out = `{${format}${flags}: ${body}}`;
+  const words = spokenWordsOf(spoken);
+  if (words) out += `{spoken: ${words.replace(/[\\}]/g, (ch) => `\\${ch}`)}}`;
+  return out;
+}
+
+/**
+ * Spoken text as it reads: its words, each run's text, nothing for a pause.
+ * @param {string | Array<string | object> | null | undefined} spoken
+ * @returns {string}
+ */
+export function spokenWordsOf(spoken) {
+  if (typeof spoken === "string") return spoken;
+  if (!Array.isArray(spoken)) return "";
+  return spoken
+    .map((run) => (typeof run === "string" ? run : run?.text || ""))
+    .join("");
 }
 
 function escapeNote(text) {
@@ -678,6 +935,19 @@ function parseParagraph(line) {
       });
     } else if (token.kind === "footnote") {
       content.push({ type: "footnote", attrs: token.attrs });
+    } else if (token.kind === "speech") {
+      content.push({
+        type: "text",
+        text: token.text,
+        marks: [
+          ...[...marks].map((type) => ({ type })),
+          { type: "speech", attrs: token.speech },
+        ],
+      });
+    } else if (token.kind === "pause") {
+      content.push({ type: "pause", attrs: { length: token.length } });
+    } else if (token.kind === "formula") {
+      content.push({ type: "math", attrs: token.attrs });
     } else if (token.kind === "u-open") {
       marks.add("underline");
     } else if (token.kind === "u-close") {
@@ -714,6 +984,37 @@ function tokenize(line) {
           attrs: parseFootnoteBody(line.slice(i + 2, end)),
           raw: line.slice(i, end + 1),
         });
+        i = end + 1;
+        continue;
+      }
+    }
+    if (ch === "[") {
+      const end = closingBracket(line, i + 1);
+      const braceEnd =
+        end !== -1 && line[end + 1] === "{" ? closingBrace(line, end + 2) : -1;
+      const speech =
+        braceEnd !== -1 ? parseSpeechBody(line.slice(end + 2, braceEnd)) : null;
+      const words = end !== -1 ? unescape(line.slice(i + 1, end)) : "";
+      if (speech && words.trim()) {
+        flush();
+        tokens.push({ kind: "speech", text: words, speech });
+        i = braceEnd + 1;
+        continue;
+      }
+    }
+    if (ch === "{") {
+      const formula = readFormula(line, i);
+      if (formula) {
+        flush();
+        tokens.push({ kind: "formula", attrs: formula.attrs });
+        i = formula.end;
+        continue;
+      }
+      const end = closingBrace(line, i + 1);
+      const length = end !== -1 ? parsePauseBody(line.slice(i + 1, end)) : null;
+      if (length) {
+        flush();
+        tokens.push({ kind: "pause", length });
         i = end + 1;
         continue;
       }
@@ -766,6 +1067,87 @@ function closingBracket(line, from) {
     }
   }
   return -1;
+}
+
+// The index of the `}` closing a brace opened just before `from`, or -1.
+function closingBrace(line, from) {
+  for (let i = from; i < line.length; i++) {
+    if (line[i] === "\\") i += 1;
+    else if (line[i] === "}") return i;
+  }
+  return -1;
+}
+
+// What follows a bracketed span: `ipa: ...`, `say: ...` or `spell`. Anything
+// else means the brackets and braces were just text.
+function parseSpeechBody(body) {
+  const match = /^\s*(ipa|say|spell)\s*(?::(.*))?$/is.exec(body);
+  if (!match) return null;
+  const key = match[1].toLowerCase();
+  const value = unescape(match[2] ?? "").trim();
+  if (key === "spell") {
+    return value ? null : { sayAs: SAY_AS_CHARACTERS };
+  }
+  return normalizeSpeechHint(key === "ipa" ? { ipa: value } : { alias: value });
+}
+
+// The index of the `}` that balances a brace opened just before `from`, with
+// no escapes (TeX inside), or -1.
+function balancingBrace(line, from) {
+  let depth = 0;
+  for (let i = from; i < line.length; i++) {
+    if (line[i] === "{") depth += 1;
+    else if (line[i] === "}") {
+      if (depth === 0) return i;
+      depth -= 1;
+    }
+  }
+  return -1;
+}
+
+const FORMULA_HEAD = /^\s*(asciimath|tex)((?:\s+(?:display|escaped))*)\s*:/i;
+
+// A formula span starting at the `{` at `at`, with its spoken words if a
+// `{spoken: ...}` follows it straight away: { attrs, end } where `end` is the
+// index after the last brace, or null when this isn't a formula.
+function readFormula(line, at) {
+  const head = FORMULA_HEAD.exec(line.slice(at + 1, at + 40));
+  if (!head) return null;
+  const flags = head[2].toLowerCase().split(/\s+/);
+  const escaped = flags.includes("escaped");
+  const close = escaped
+    ? closingBrace(line, at + 1)
+    : balancingBrace(line, at + 1);
+  if (close === -1) return null;
+  const raw = line.slice(at + 1 + head[0].length, close);
+  const source = (escaped ? unescape(raw) : raw).trim();
+  if (!source) return null;
+  const attrs = {
+    format: head[1].toLowerCase(),
+    source,
+    display: flags.includes("display"),
+    spoken: null,
+  };
+  let end = close + 1;
+  const spoken = /^\{spoken\s*:/i.exec(line.slice(end, end + 12));
+  if (spoken) {
+    const spokenClose = closingBrace(line, end + spoken[0].length);
+    if (spokenClose !== -1) {
+      attrs.spoken = unescape(
+        line.slice(end + spoken[0].length, spokenClose),
+      ).trim();
+      end = spokenClose + 1;
+    }
+  }
+  const normalized = normalizeFormula(attrs);
+  return normalized ? { attrs: normalized, end } : null;
+}
+
+// `pause`, `pause: short` or `pause: long`, as a length, or null.
+function parsePauseBody(body) {
+  const match = /^\s*pause\s*(?::\s*(short|long)\s*)?$/i.exec(body);
+  if (!match) return null;
+  return (match[1] || "short").toLowerCase();
 }
 
 // Turn markers that have no partner back into the characters they were written

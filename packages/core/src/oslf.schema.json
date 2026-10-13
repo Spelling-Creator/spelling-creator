@@ -88,8 +88,16 @@
             "text": { "$ref": "#/$defs/oneLine" },
             "bold": { "type": "boolean" },
             "italic": { "type": "boolean" },
-            "underline": { "type": "boolean" }
-          }
+            "underline": { "type": "boolean" },
+            "ipa": { "$ref": "#/$defs/oneLine", "minLength": 1 },
+            "alias": { "$ref": "#/$defs/oneLine", "minLength": 1 },
+            "sayAs": { "const": "characters" }
+          },
+          "allOf": [
+            { "not": { "required": ["ipa", "alias"] } },
+            { "not": { "required": ["ipa", "sayAs"] } },
+            { "not": { "required": ["alias", "sayAs"] } }
+          ]
         },
         {
           "type": "object",
@@ -110,8 +118,37 @@
               }
             }
           }
-        }
+        },
+        {
+          "type": "object",
+          "required": ["math"],
+          "additionalProperties": false,
+          "properties": {
+            "math": {
+              "description": "A formula. See FILE-FORMAT.md section 3.5.",
+              "type": "object",
+              "required": ["format", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "format": { "enum": ["asciimath", "tex"] },
+                "source": { "$ref": "#/$defs/oneLine", "minLength": 1 },
+                "display": { "type": "boolean" },
+                "spoken": { "$ref": "#/$defs/spokenText" }
+              }
+            }
+          }
+        },
+        { "$ref": "#/$defs/pauseRun" }
       ]
+    },
+    "pauseRun": {
+      "description": "A pause in read-aloud: 'short' is about what a comma gives, 'long' is clearly longer. In rich text it displays as nothing.",
+      "type": "object",
+      "required": ["pause"],
+      "additionalProperties": false,
+      "properties": {
+        "pause": { "enum": ["short", "long"] }
+      }
     },
     "section": {
       "type": "object",
@@ -259,6 +296,53 @@
         "extensions": { "$ref": "#/$defs/extensions" }
       }
     },
+    "spokenText": {
+      "description": "What read-aloud says: a plain string, or an array of spoken runs. See FILE-FORMAT.md section 3.5.",
+      "oneOf": [
+        { "$ref": "#/$defs/oneLine", "minLength": 1 },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/spokenRun" }
+        }
+      ]
+    },
+    "spokenRun": {
+      "oneOf": [
+        { "$ref": "#/$defs/oneLine" },
+        {
+          "description": "A pronunciation: the words in `text`, said as `ipa` gives them (International Phonetic Alphabet).",
+          "type": "object",
+          "required": ["text", "ipa"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "$ref": "#/$defs/oneLine", "minLength": 1 },
+            "ipa": { "$ref": "#/$defs/oneLine", "minLength": 1 }
+          }
+        },
+        {
+          "description": "A substitution: the run reads as `text` but is said as `alias`.",
+          "type": "object",
+          "required": ["text", "alias"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "$ref": "#/$defs/oneLine", "minLength": 1 },
+            "alias": { "$ref": "#/$defs/oneLine", "minLength": 1 }
+          }
+        },
+        {
+          "description": "A spell-out: the characters of `text`, said one by one.",
+          "type": "object",
+          "required": ["text", "sayAs"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "$ref": "#/$defs/oneLine", "minLength": 1 },
+            "sayAs": { "const": "characters" }
+          }
+        },
+        { "$ref": "#/$defs/pauseRun" }
+      ]
+    },
     "answers": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
@@ -287,7 +371,7 @@
         "answers": { "$ref": "#/$defs/answers" },
         "working": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 }
+          "items": { "$ref": "#/$defs/richText" }
         },
         "threeBoard": { "type": "boolean" },
         "besides": { "type": "string", "minLength": 1 },

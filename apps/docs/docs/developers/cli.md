@@ -88,8 +88,9 @@ author's own file:
 Reads a document and writes it as a `.json` lesson file, beside the input or
 at `--out`. An `--out` ending in `.oslf.json` writes the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
-instead, for tools that aren't this app (`fix` does the same when the lesson
-it rewrites in place is one). The CLI has no image store to resolve a stored
+instead, for tools that aren't this app, and one ending in `.oslf.xml` writes
+the format's XML form (`fix` does the same when the lesson it rewrites in
+place is one). The CLI has no image store to resolve a stored
 picture against, so a picture the lesson refers to by hash alone is left out
 of an OSLF file; one carrying a data URL is kept. The format requires an
 answer on a known, prior-knowledge, math or semi-open question, so a lesson
@@ -137,6 +138,7 @@ and the MCP server work from. A file that couldn't be read or written has
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.json`            | The app's own lesson file, through core's `jsonImport`. Lossless, and the envelope or a bare `{ title, sections }` doc are both accepted.                                                                                             |
 | `.oslf.json`       | An [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format) file, through the same `jsonImport` (core's `oslf.js` turns it into a lesson first). Pictures given as relative files are left out. |
+| `.oslf.xml`        | The same format in its XML form, read into the format's JSON object by core's `oslfXml.js` and then as an `.oslf.json`. A file with a DOCTYPE is refused, as the format requires.                                                     |
 | `.docx`            | The document's text, extracted with mammoth, then read by the rules parser below.                                                                                                                                                     |
 | `.txt`, `.md`, any | The file as text, read by the rules parser in `packages/core/src/documentImport.js`, the same one behind [Import from text](../guide/import-from-text.md): headings, passages, a spelling line, one question per line.                |
 

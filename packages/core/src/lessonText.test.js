@@ -8,6 +8,8 @@ import {
   lessonFootnotes,
   markupSourceIds,
   markupToContent,
+  normalizeFormula,
+  normalizeSpokenText,
   normalizeTextContent,
   removeSourceCitations,
   textBlockContent,
@@ -485,5 +487,376 @@ describe("footnote parts for the Word export", () => {
     expect(text({ sourceId: "empty", locator: "p. 3", note: "" })).toBe(
       `${UNTITLED_SOURCE_TEXT}, p. 3.`,
     );
+  });
+});
+
+describe("speech hints and pauses", () => {
+  const speech = (t, attrs, marks = []) => ({
+    type: "text",
+    text: t,
+    marks: [...marks.map((type) => ({ type })), { type: "speech", attrs }],
+  });
+  const pause = (length) => ({ type: "pause", attrs: { length } });
+
+  it("keeps one hint per run, cleans it, and stores it after the formatting", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          speech("Fresnel", { ipa: " /freɪˈnɛl/ ", alias: "ignored" }, [
+            "italic",
+          ]),
+          speech("WWF", { alias: "World Wide Fund\nfor Nature" }),
+          speech("REEF", { sayAs: "characters" }),
+          speech("plain", { sayAs: "words" }),
+        ),
+      ),
+    );
+    expect(content.content[0].content).toEqual([
+      {
+        type: "text",
+        text: "Fresnel",
+        marks: [
+          { type: "italic" },
+          { type: "speech", attrs: { ipa: "freɪˈnɛl" } },
+        ],
+      },
+      {
+        type: "text",
+        text: "WWF",
+        marks: [
+          { type: "speech", attrs: { alias: "World Wide Fund for Nature" } },
+        ],
+      },
+      {
+        type: "text",
+        text: "REEF",
+        marks: [{ type: "speech", attrs: { sayAs: "characters" } }],
+      },
+      { type: "text", text: "plain" },
+    ]);
+  });
+
+  it("merges neighbouring runs only when their hints match too", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          speech("Fres", { ipa: "freɪˈnɛl" }),
+          speech("nel", { ipa: "freɪˈnɛl" }),
+          speech("lens", { ipa: "lɛnz" }),
+        ),
+      ),
+    );
+    expect(content.content[0].content.map((n) => n.text)).toEqual([
+      "Fresnel",
+      "lens",
+    ]);
+  });
+
+  it("keeps pauses, defaulting an unknown length to short", () => {
+    const content = normalizeTextContent(
+      doc(para(text("One"), pause("long"), text("two"), pause("forever"))),
+    );
+    expect(content.content[0].content).toEqual([
+      { type: "text", text: "One" },
+      pause("long"),
+      { type: "text", text: "two" },
+      pause("short"),
+    ]);
+  });
+
+  it("hands renderers the hint and the pause, and leaves them out of plain text", () => {
+    const block = {
+      type: "text",
+      content: doc(
+        para(text("Augustin "), speech("Fresnel", { ipa: "freɪˈnɛl" })),
+        para(text("Wait"), pause("short"), text(" here.")),
+      ),
+    };
+    expect(textBlockParagraphs(block)).toEqual([
+      [
+        {
+          type: "text",
+          text: "Augustin ",
+          bold: false,
+          italic: false,
+          underline: false,
+        },
+        {
+          type: "text",
+          text: "Fresnel",
+          bold: false,
+          italic: false,
+          underline: false,
+          speech: { ipa: "freɪˈnɛl" },
+        },
+      ],
+      [
+        {
+          type: "text",
+          text: "Wait",
+          bold: false,
+          italic: false,
+          underline: false,
+        },
+        { type: "pause", length: "short" },
+        {
+          type: "text",
+          text: " here.",
+          bold: false,
+          italic: false,
+          underline: false,
+        },
+      ],
+    ]);
+    expect(textBlockPlain(block)).toBe("Augustin Fresnel\nWait here.");
+  });
+
+  it("is not plain content, so a whole-block writer keeps the document", () => {
+    const hinted = doc(para(speech("WWF", { alias: "World Wide Fund" })));
+    const paused = doc(para(text("A"), pause("short")));
+    expect(isPlainContent(hinted)).toBe(false);
+    expect(isPlainContent(paused)).toBe(false);
+    const stored = withTextBlockContent({ id: "b", type: "text" }, paused);
+    expect(stored.text).toBeUndefined();
+    expect(stored.content).toEqual(normalizeTextContent(paused));
+  });
+
+  it("does not count as formatting", () => {
+    const block = {
+      type: "text",
+      content: doc(para(speech("Fresnel", { ipa: "freɪˈnɛl" }), text(" lens"))),
+    };
+    expect(textBlockFormattedSpans(block).spans).toEqual([]);
+  });
+});
+
+describe("speech markup", () => {
+  it("parses every hint and both pauses", () => {
+    const content = markupToContent(
+      "[Fresnel]{ipa: freɪˈnɛl} and *[WWF]{say: World Wide Fund}*{pause}[REEF]{spell}{pause: long}",
+    );
+    expect(content.content[0].content).toEqual([
+      {
+        type: "text",
+        text: "Fresnel",
+        marks: [{ type: "speech", attrs: { ipa: "freɪˈnɛl" } }],
+      },
+      { type: "text", text: " and " },
+      {
+        type: "text",
+        text: "WWF",
+        marks: [
+          { type: "italic" },
+          { type: "speech", attrs: { alias: "World Wide Fund" } },
+        ],
+      },
+      { type: "pause", attrs: { length: "short" } },
+      {
+        type: "text",
+        text: "REEF",
+        marks: [{ type: "speech", attrs: { sayAs: "characters" } }],
+      },
+      { type: "pause", attrs: { length: "long" } },
+    ]);
+  });
+
+  it("reads brackets and braces that aren't a hint as text", () => {
+    for (const line of [
+      "see [1] and {this}",
+      "[empty]{ipa: }",
+      "[word]{spell: out}",
+      "[word] {say: x}",
+      "{pause: forever}",
+      "[]{spell}",
+    ]) {
+      expect(textBlockPlain({ content: markupToContent(line) })).toBe(line);
+    }
+  });
+
+  it("round-trips hints, pauses and the characters they use", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          text("Braces {like} these, "),
+          {
+            type: "text",
+            text: "odd ] word",
+            marks: [
+              { type: "bold" },
+              { type: "speech", attrs: { alias: "a } b \\ c" } },
+            ],
+          },
+          { type: "pause", attrs: { length: "long" } },
+          text("[x]{spell}"),
+        ),
+      ),
+    );
+    const markup = contentToMarkup(content);
+    expect(markup).toBe(
+      "Braces \\{like} these, **[odd \\] word]{say: a \\} b \\\\ c}{pause: long}**[x]\\{spell}",
+    );
+    expect(markupToContent(markup)).toEqual(content);
+  });
+});
+
+describe("formulas", () => {
+  const math = (attrs) => ({ type: "math", attrs });
+
+  it("cleans a formula, keeps a notation it doesn't know, and drops one with no source", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          math({
+            format: " TeX ",
+            source: " x^2 \n",
+            display: true,
+            spoken: "  ",
+          }),
+          math({ format: "mathml", source: "<mi>x</mi>" }),
+          math({ format: "tex", source: "" }),
+          math({
+            source: "3/4",
+            spoken: [
+              "three ",
+              { text: "quarters", ipa: "ˈkwɔːtəz" },
+              { pause: "short" },
+            ],
+          }),
+        ),
+      ),
+    );
+    expect(content.content[0].content).toEqual([
+      math({ format: "tex", source: "x^2", display: true, spoken: null }),
+      math({
+        format: "mathml",
+        source: "<mi>x</mi>",
+        display: false,
+        spoken: null,
+      }),
+      math({
+        format: "asciimath",
+        source: "3/4",
+        display: false,
+        spoken: [
+          "three ",
+          { text: "quarters", ipa: "ˈkwɔːtəz" },
+          { pause: "short" },
+        ],
+      }),
+    ]);
+  });
+
+  it("reads as its source in plain text, and as a run for renderers", () => {
+    const block = {
+      type: "text",
+      content: doc(
+        para(
+          text("Then "),
+          math({ format: "asciimath", source: "3/4" }),
+          text("."),
+        ),
+      ),
+    };
+    expect(textBlockPlain(block)).toBe("Then 3/4.");
+    expect(textBlockParagraphs(block)[0][1]).toEqual({
+      type: "math",
+      format: "asciimath",
+      source: "3/4",
+      display: false,
+      spoken: null,
+    });
+    expect(isPlainContent(block.content)).toBe(false);
+  });
+
+  it("keeps only words as spoken text", () => {
+    expect(normalizeSpokenText("  ")).toBe("  ");
+    expect(normalizeSpokenText([{ pause: "short" }])).toEqual([
+      { pause: "short" },
+    ]);
+    expect(normalizeSpokenText([{ emphasis: "strong" }])).toBe(null);
+    expect(normalizeSpokenText("a\nb")).toBe("a b");
+    expect(
+      normalizeFormula({ source: "x", spoken: [{ pause: "long" }] }).spoken,
+    ).toEqual([{ pause: "long" }]);
+  });
+});
+
+describe("formula markup", () => {
+  it("parses both notations, display, spoken words and TeX's braces", () => {
+    const content = markupToContent(
+      "See {asciimath: 120 xx 3 = 360} and {tex display: \\frac{60}{5} = 12}{spoken: 60 over 5, \\} is 12}.",
+    );
+    expect(content.content[0].content).toEqual([
+      { type: "text", text: "See " },
+      {
+        type: "math",
+        attrs: {
+          format: "asciimath",
+          source: "120 xx 3 = 360",
+          display: false,
+          spoken: null,
+        },
+      },
+      { type: "text", text: " and " },
+      {
+        type: "math",
+        attrs: {
+          format: "tex",
+          source: "\\frac{60}{5} = 12",
+          display: true,
+          spoken: "60 over 5, } is 12",
+        },
+      },
+      { type: "text", text: "." },
+    ]);
+  });
+
+  it("reads braces that aren't a formula as text", () => {
+    for (const line of [
+      "{tex: }",
+      "{tex: x",
+      "{tex display}",
+      "{math: x}",
+      "x {} y",
+    ]) {
+      expect(textBlockPlain({ content: markupToContent(line) })).toBe(line);
+    }
+  });
+
+  it("round-trips a formula, its spoken words, and one whose braces don't balance", () => {
+    const content = normalizeTextContent(
+      doc(
+        para(
+          {
+            type: "math",
+            attrs: {
+              format: "tex",
+              source: "\\left\\{ x \\right.",
+              display: false,
+            },
+          },
+          text(" and "),
+          {
+            type: "math",
+            attrs: {
+              format: "asciimath",
+              source: "3/4",
+              display: true,
+              spoken: ["three ", { text: "quarters", ipa: "ˈkwɔːtəz" }],
+            },
+          },
+          text(" {not math}"),
+        ),
+      ),
+    );
+    const markup = contentToMarkup(content);
+    expect(markup).toBe(
+      "{tex escaped: \\\\left\\\\\\{ x \\\\right.} and {asciimath display: 3/4}{spoken: three quarters} \\{not math}",
+    );
+    const back = markupToContent(markup);
+    // The spoken words come back as words: the markup holds no hints.
+    expect(back.content[0].content[2].attrs.spoken).toBe("three quarters");
+    expect(back.content[0].content[0]).toEqual(content.content[0].content[0]);
+    expect(textBlockPlain({ content: back })).toBe(textBlockPlain({ content }));
   });
 });

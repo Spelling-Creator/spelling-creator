@@ -49,8 +49,9 @@ answer belongs to which question.
 
 Text blocks keep their bold, italics and underlining, but not their footnote
 markers: this is the screen the speller reads, and a superscript number with
-nowhere on the screen to lead to is clutter there. The voice reads the plain
-words (see [Formatting, footnotes & sources](./formatting-and-footnotes.md)).
+nowhere on the screen to lead to is clutter there. The voice reads the words
+with their read-aloud hints and pauses (see
+[Formatting, footnotes & sources](./formatting-and-footnotes.md#read-aloud-hints)).
 
 Questions are numbered from 1 within each section, matching the editor's `Q7`
 numbering (see [Navigating large lessons](./navigating-large-lessons.md)).
@@ -231,10 +232,38 @@ lesson text never leaves the machine. Speech is probed for (`speechSupported`)
 rather than assumed, from an effect so server rendering and hydration agree;
 where it's missing, neither the controls nor the settings section is rendered.
 
-`stepSpeechText(step)` builds what a step says: the section name, then the
+`stepSpeech(step)` builds what a step says: the section name, then the
 prose, image captions (never their [credits](./images.md)), spelling words, a VAKT
 activity's text without its label or links, or the question prompt. A question's
 answer is deliberately never included, even with the reveal on.
+(`stepSpeechText` is the same as plain text, one line per utterance.)
+
+What it builds is spoken text, the format `@spelling-creator/core/speech`
+defines: lines of runs that are words, or a text block's
+[read-aloud hints](./formatting-and-footnotes.md#read-aloud-hints) (a
+pronunciation in IPA, words to say instead, a spell-out) and pauses. Everything
+but a text block is plain words. `chunkSpeech` cuts it into the chunks a voice
+is handed: by line, then at every long pause, then by sentence for a line too
+long to say at once, never splitting a hint. A chunk followed by a long pause
+is marked `pauseAfter`. The two kinds of voice then take it differently:
+
+- **The browser's voice** only takes text, so each chunk goes through
+  `spokenForBrowser`: an alias replaces its words, a spell-out becomes its
+  letters with commas between ("R, E, E, F"), a short pause becomes a comma, and
+  a pronunciation can't be followed, so its words are read as written. A long
+  pause is the gap between two utterances.
+- **A natural voice** speaks phonemes, so it follows every hint (see below), and
+  a long pause is 0.7 seconds of silence on the audio timeline
+  (`LONG_PAUSE_SECONDS` in `useSpeech.js`).
+
+A formula in a text block is either its author's spoken words or a formula run
+(`{ text: source, formula }`). Before a step with one is spoken, `useSpeech`
+has `withFormulaSpeech` replace each with the words the speech rule engine
+makes from the formula's MathML (`formulaWords` in `core/browser/formulas.js`;
+see [Formulas](./formatting-and-footnotes.md#formulas)), for both voices. The
+first such step loads MathJax and the engine, so it starts a moment later;
+`prepare` does the same for the step after. A lesson without formulas never
+loads them.
 
 The on/off, voice and pace preferences live in `localStorage` under
 `spelling-creator:tts-enabled`, `spelling-creator:tts-voice` and
@@ -248,8 +277,8 @@ Three platform quirks are handled between the two files. `speechPrefs.js` takes
 the one that belongs to the voice list: voices load asynchronously, announced by
 `voiceschanged`. `useSpeech.js` takes the two that belong to speaking: Chromium
 cuts off a single utterance after about 15 seconds (so text is split into chunks
-of at most 180 characters, `MAX_CHUNK`, and queued), and `cancel()` isn't
-synchronous (so a new utterance is deferred a tick after one).
+of at most 180 characters, `MAX_CHUNK` in `core/speech.js`, and queued), and
+`cancel()` isn't synchronous (so a new utterance is deferred a tick after one).
 
 ### Natural voices (Kokoro)
 
@@ -337,12 +366,18 @@ How it behaves:
 - **English only.** Like choosing an English browser voice, picking one for a
   lesson in another language reads it with English pronunciation.
 
-Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudEngine.js`
+Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudText.js`
 spells out numbers and abbreviations, turns the words into IPA with
 [Spellophone](https://spellophone.spellingcreator.org/) (our WebAssembly build of
 espeak-ng, the phonemizer Kokoro was trained against, installed from npm as
-`@spelling-creator/spellophone`), and passes that to the model. The text clean-up
-follows kokoro.js, the reference JavaScript port. That package isn't used itself
+`@spelling-creator/spellophone`), and `readAloudEngine.js` passes that to the
+model. A read-aloud hint changes what goes in: a pronunciation's IPA goes in as
+written (with the ASCII people type for IPA, such as a plain `g` or `:` for
+length, swapped for the symbols in Kokoro's vocabulary by `kokoroIpa`), an
+alias or a spell-out is turned into phonemes in place of its words, and a
+short pause is a comma, which Kokoro pauses at. `readAloudText.js` loads none of
+the model, so its tests run against the Node build of Spellophone. The text
+clean-up follows kokoro.js, the reference JavaScript port. That package isn't used itself
 because it pins transformers.js 3, which would put a second ONNX runtime in the
 bundle. Only Spellophone's English data is bundled, as hashed assets of the build
 rather than fetched from a CDN: about 860 KB with the WebAssembly. `readAloudEngine.js` is only ever
@@ -406,6 +441,8 @@ What the numbers decided:
 | `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice lists, shared with the settings page.                     |
 | `apps/web/src/components/SpeechVoiceSelect.jsx`    | The voice picker the popover and the settings page share.                                      |
 | `packages/core/src/browser/readAloud.js`           | The device check for natural voices, the cache check, and the door to their engine.            |
-| `packages/core/src/browser/readAloudEngine.js`     | Kokoro: text clean-up, espeak-ng phonemes, the model.                                          |
+| `packages/core/src/speech.js`                      | Spoken text: a text block's hints and pauses, chunking, plain text for the browser's voice.    |
+| `packages/core/src/browser/readAloudText.js`       | Kokoro's input: text clean-up, espeak-ng phonemes, read-aloud hints.                           |
+| `packages/core/src/browser/readAloudEngine.js`     | Kokoro: the model, made from the phonemes readAloudText.js gives.                              |
 | `packages/core/src/browser/readAloudVoices.js`     | The model id and pin, and the Kokoro voices on offer, listable without loading the engine.     |
 | `apps/web/bench/read-aloud.html`                   | The dev-only timing page for Kokoro.                                                           |

@@ -1,0 +1,298 @@
+diff --git a/cjs/input/asciimath/legacy/MathJax.js b/cjs/input/asciimath/legacy/MathJax.js
+index 853b0a0e958af6473cec4f847d62ca92f3e65075..91939e04d22ca200d162b7356eae71c8db85ccdf 100644
+--- a/cjs/input/asciimath/legacy/MathJax.js
++++ b/cjs/input/asciimath/legacy/MathJax.js
+@@ -19,7 +19,8 @@ exports.MathJax = MathJax;
+     return obj;
+   };
+   var CONSTRUCTOR = function () {
+-    return function () {return arguments.callee.Init.call(this,arguments)};
++    var fn = function () {return fn.Init.call(this,arguments,fn)};
++    return fn;
+   };
+ 
+   BASE.Object = OBJECT({
+@@ -37,10 +38,10 @@ exports.MathJax = MathJax;
+       return obj;
+     },
+   
+-    Init: function (args) {
++    Init: function (args,fn) {
+       var obj = this;
+       if (args.length === 1 && args[0] === PROTO) {return obj}
+-      if (!(obj instanceof args.callee)) {obj = new args.callee(PROTO)}
++      if (!(obj instanceof fn)) {obj = new fn(PROTO)}
+       return obj.Init.apply(obj,args) || obj;
+     },
+     
+@@ -65,7 +66,7 @@ exports.MathJax = MathJax;
+   
+     prototype: {
+       Init: function () {},
+-      SUPER: function (fn) {return fn.callee.SUPER},
++      SUPER: function (fn) {return fn.SUPER},
+       can: function (method) {return typeof(this[method]) === "function"},
+       has: function (property) {return typeof(this[property]) !== "undefined"},
+       isa: function (obj) {return (obj instanceof Object) && (this instanceof obj)}
+@@ -177,7 +178,7 @@ exports.MathJax = MathJax;
+   //  Create a callback from an associative array
+   //
+   var CALLBACK = function (data) {
+-    var cb = function () {return arguments.callee.execute.apply(arguments.callee,arguments)};
++    var cb = function () {return cb.execute.apply(cb,arguments)};
+     for (var id in CALLBACK.prototype) {
+       if (CALLBACK.prototype.hasOwnProperty(id)) {
+         if (typeof(data[id]) !== 'undefined') {cb[id] = data[id]}
+diff --git a/cjs/input/asciimath/legacy/jax/element/JSON.js b/cjs/input/asciimath/legacy/jax/element/JSON.js
+index d158bbf304e019056e4d1f052e817401ed4604ab..4ed15175842ce827e3dd7cd9cba7ae7aef7459ff 100644
+--- a/cjs/input/asciimath/legacy/jax/element/JSON.js
++++ b/cjs/input/asciimath/legacy/jax/element/JSON.js
+@@ -56,8 +56,8 @@
+   });
+   
+   MML.msubsup.Augment({
+-    toJSON: function () {
+-      var json = this.SUPER(arguments).toJSON.call(this);
++    toJSON: function toJSON() {
++      var json = this.SUPER(toJSON).toJSON.call(this);
+       if (this.data[this.sub] == null) {
+         json.type = "msup";
+         json.children.splice(1,1);
+@@ -71,8 +71,8 @@
+   });
+   
+   MML.munderover.Augment({
+-    toJSON: function () {
+-      var json = this.SUPER(arguments).toJSON.call(this);
++    toJSON: function toJSON() {
++      var json = this.SUPER(toJSON).toJSON.call(this);
+       if (this.data[this.munder] == null) {
+         json.type = "mover";
+         json.children.splice(1,1);
+@@ -86,8 +86,8 @@
+   });
+   
+   MML.TeXAtom.Augment({
+-    toJSON: function () {
+-      var json = this.SUPER(arguments).toJSON.call(this);
++    toJSON: function toJSON() {
++      var json = this.SUPER(toJSON).toJSON.call(this);
+       json.type = "mrow";
+       json.TeXAtom = MML.TEXCLASSNAMES[this.Get("texClass")];
+       return json;
+diff --git a/cjs/input/asciimath/legacy/jax/element/mml/jax.js b/cjs/input/asciimath/legacy/jax/element/mml/jax.js
+index 96fb9186febc05458cfa93739ba62da5d08cac40..074a347cd4347c74c0bf82668168a2e2a10ca955 100644
+--- a/cjs/input/asciimath/legacy/jax/element/mml/jax.js
++++ b/cjs/input/asciimath/legacy/jax/element/mml/jax.js
+@@ -813,9 +813,9 @@ MathJax.ElementJax.mml.Augment({
+       if (!(this.isEmbellished()) || typeof(this.core) === "undefined") {return this}
+       return this.data[this.core].CoreMO();
+     },
+-    toString: function () {
++    toString: function toString() {
+       if (this.inferred) {return '[' + this.data.join(',') + ']'}
+-      return this.SUPER(arguments).toString.call(this);
++      return this.SUPER(toString).toString.call(this);
+     },
+     setTeXclass: function (prev) {
+       var i, m = this.data.length;
+@@ -1196,12 +1196,12 @@ MathJax.ElementJax.mml.Augment({
+       }
+     },
+     linebreakContainer: true,
+-    Append: function () {
++    Append: function Append() {
+       for (var i = 0, m = arguments.length; i < m; i++) {
+         if (!((arguments[i] instanceof MML.mtr) ||
+               (arguments[i] instanceof MML.mlabeledtr))) {arguments[i] = MML.mtr(arguments[i])}
+       }
+-      this.SUPER(arguments).Append.apply(this,arguments);
++      this.SUPER(Append).Append.apply(this,arguments);
+     },
+     setTeXclass: MML.mbase.setSeparateTeXclasses
+   });
+@@ -1221,11 +1221,11 @@ MathJax.ElementJax.mml.Augment({
+       mtable: {rowalign: true, columnalign: true, groupalign: true}
+     },
+     linebreakContainer: true,
+-    Append: function () {
++    Append: function Append() {
+       for (var i = 0, m = arguments.length; i < m; i++) {
+         if (!(arguments[i] instanceof MML.mtd)) {arguments[i] = MML.mtd(arguments[i])}
+       }
+-      this.SUPER(arguments).Append.apply(this,arguments);
++      this.SUPER(Append).Append.apply(this,arguments);
+     },
+     setTeXclass: MML.mbase.setSeparateTeXclasses
+   });
+@@ -1420,9 +1420,9 @@ MathJax.ElementJax.mml.Augment({
+   
+   MML.xml = MML.mbase.Subclass({
+     type: "xml",
+-    Init: function () {
++    Init: function Init() {
+       this.div = document.createElement("div");
+-      return this.SUPER(arguments).Init.apply(this,arguments);
++      return this.SUPER(Init).Init.apply(this,arguments);
+     },
+     Append: function () {
+       for (var i = 0, m = arguments.length; i < m; i++) {
+diff --git a/cjs/input/asciimath/legacy/shim.js b/cjs/input/asciimath/legacy/shim.js
+index 3b228bb9e340e0997ffadfd900584a31ad586fe0..ea15a514802eb58e5eca846c247a79bae3fc1064 100644
+--- a/cjs/input/asciimath/legacy/shim.js
++++ b/cjs/input/asciimath/legacy/shim.js
+@@ -1,4 +1,4 @@
+-MathJax = Object.assign(global.MathJax || {}, require("./MathJax.js").MathJax);
++globalThis.MathJax = Object.assign(globalThis.MathJax || {}, require("./MathJax.js").MathJax);
+ 
+ //
+ //  Load component-based configuration, if any
+diff --git a/mjs/input/asciimath/legacy/MathJax.js b/mjs/input/asciimath/legacy/MathJax.js
+index 853b0a0e958af6473cec4f847d62ca92f3e65075..91939e04d22ca200d162b7356eae71c8db85ccdf 100644
+--- a/mjs/input/asciimath/legacy/MathJax.js
++++ b/mjs/input/asciimath/legacy/MathJax.js
+@@ -19,7 +19,8 @@ exports.MathJax = MathJax;
+     return obj;
+   };
+   var CONSTRUCTOR = function () {
+-    return function () {return arguments.callee.Init.call(this,arguments)};
++    var fn = function () {return fn.Init.call(this,arguments,fn)};
++    return fn;
+   };
+ 
+   BASE.Object = OBJECT({
+@@ -37,10 +38,10 @@ exports.MathJax = MathJax;
+       return obj;
+     },
+   
+-    Init: function (args) {
++    Init: function (args,fn) {
+       var obj = this;
+       if (args.length === 1 && args[0] === PROTO) {return obj}
+-      if (!(obj instanceof args.callee)) {obj = new args.callee(PROTO)}
++      if (!(obj instanceof fn)) {obj = new fn(PROTO)}
+       return obj.Init.apply(obj,args) || obj;
+     },
+     
+@@ -65,7 +66,7 @@ exports.MathJax = MathJax;
+   
+     prototype: {
+       Init: function () {},
+-      SUPER: function (fn) {return fn.callee.SUPER},
++      SUPER: function (fn) {return fn.SUPER},
+       can: function (method) {return typeof(this[method]) === "function"},
+       has: function (property) {return typeof(this[property]) !== "undefined"},
+       isa: function (obj) {return (obj instanceof Object) && (this instanceof obj)}
+@@ -177,7 +178,7 @@ exports.MathJax = MathJax;
+   //  Create a callback from an associative array
+   //
+   var CALLBACK = function (data) {
+-    var cb = function () {return arguments.callee.execute.apply(arguments.callee,arguments)};
++    var cb = function () {return cb.execute.apply(cb,arguments)};
+     for (var id in CALLBACK.prototype) {
+       if (CALLBACK.prototype.hasOwnProperty(id)) {
+         if (typeof(data[id]) !== 'undefined') {cb[id] = data[id]}
+diff --git a/mjs/input/asciimath/legacy/jax/element/JSON.js b/mjs/input/asciimath/legacy/jax/element/JSON.js
+index d158bbf304e019056e4d1f052e817401ed4604ab..4ed15175842ce827e3dd7cd9cba7ae7aef7459ff 100644
+--- a/mjs/input/asciimath/legacy/jax/element/JSON.js
++++ b/mjs/input/asciimath/legacy/jax/element/JSON.js
+@@ -56,8 +56,8 @@
+   });
+   
+   MML.msubsup.Augment({
+-    toJSON: function () {
+-      var json = this.SUPER(arguments).toJSON.call(this);
++    toJSON: function toJSON() {
++      var json = this.SUPER(toJSON).toJSON.call(this);
+       if (this.data[this.sub] == null) {
+         json.type = "msup";
+         json.children.splice(1,1);
+@@ -71,8 +71,8 @@
+   });
+   
+   MML.munderover.Augment({
+-    toJSON: function () {
+-      var json = this.SUPER(arguments).toJSON.call(this);
++    toJSON: function toJSON() {
++      var json = this.SUPER(toJSON).toJSON.call(this);
+       if (this.data[this.munder] == null) {
+         json.type = "mover";
+         json.children.splice(1,1);
+@@ -86,8 +86,8 @@
+   });
+   
+   MML.TeXAtom.Augment({
+-    toJSON: function () {
+-      var json = this.SUPER(arguments).toJSON.call(this);
++    toJSON: function toJSON() {
++      var json = this.SUPER(toJSON).toJSON.call(this);
+       json.type = "mrow";
+       json.TeXAtom = MML.TEXCLASSNAMES[this.Get("texClass")];
+       return json;
+diff --git a/mjs/input/asciimath/legacy/jax/element/mml/jax.js b/mjs/input/asciimath/legacy/jax/element/mml/jax.js
+index 96fb9186febc05458cfa93739ba62da5d08cac40..074a347cd4347c74c0bf82668168a2e2a10ca955 100644
+--- a/mjs/input/asciimath/legacy/jax/element/mml/jax.js
++++ b/mjs/input/asciimath/legacy/jax/element/mml/jax.js
+@@ -813,9 +813,9 @@ MathJax.ElementJax.mml.Augment({
+       if (!(this.isEmbellished()) || typeof(this.core) === "undefined") {return this}
+       return this.data[this.core].CoreMO();
+     },
+-    toString: function () {
++    toString: function toString() {
+       if (this.inferred) {return '[' + this.data.join(',') + ']'}
+-      return this.SUPER(arguments).toString.call(this);
++      return this.SUPER(toString).toString.call(this);
+     },
+     setTeXclass: function (prev) {
+       var i, m = this.data.length;
+@@ -1196,12 +1196,12 @@ MathJax.ElementJax.mml.Augment({
+       }
+     },
+     linebreakContainer: true,
+-    Append: function () {
++    Append: function Append() {
+       for (var i = 0, m = arguments.length; i < m; i++) {
+         if (!((arguments[i] instanceof MML.mtr) ||
+               (arguments[i] instanceof MML.mlabeledtr))) {arguments[i] = MML.mtr(arguments[i])}
+       }
+-      this.SUPER(arguments).Append.apply(this,arguments);
++      this.SUPER(Append).Append.apply(this,arguments);
+     },
+     setTeXclass: MML.mbase.setSeparateTeXclasses
+   });
+@@ -1221,11 +1221,11 @@ MathJax.ElementJax.mml.Augment({
+       mtable: {rowalign: true, columnalign: true, groupalign: true}
+     },
+     linebreakContainer: true,
+-    Append: function () {
++    Append: function Append() {
+       for (var i = 0, m = arguments.length; i < m; i++) {
+         if (!(arguments[i] instanceof MML.mtd)) {arguments[i] = MML.mtd(arguments[i])}
+       }
+-      this.SUPER(arguments).Append.apply(this,arguments);
++      this.SUPER(Append).Append.apply(this,arguments);
+     },
+     setTeXclass: MML.mbase.setSeparateTeXclasses
+   });
+@@ -1420,9 +1420,9 @@ MathJax.ElementJax.mml.Augment({
+   
+   MML.xml = MML.mbase.Subclass({
+     type: "xml",
+-    Init: function () {
++    Init: function Init() {
+       this.div = document.createElement("div");
+-      return this.SUPER(arguments).Init.apply(this,arguments);
++      return this.SUPER(Init).Init.apply(this,arguments);
+     },
+     Append: function () {
+       for (var i = 0, m = arguments.length; i < m; i++) {
+diff --git a/mjs/input/asciimath/legacy/shim.js b/mjs/input/asciimath/legacy/shim.js
+index 3b228bb9e340e0997ffadfd900584a31ad586fe0..ea15a514802eb58e5eca846c247a79bae3fc1064 100644
+--- a/mjs/input/asciimath/legacy/shim.js
++++ b/mjs/input/asciimath/legacy/shim.js
+@@ -1,4 +1,4 @@
+-MathJax = Object.assign(global.MathJax || {}, require("./MathJax.js").MathJax);
++globalThis.MathJax = Object.assign(globalThis.MathJax || {}, require("./MathJax.js").MathJax);
+ 
+ //
+ //  Load component-based configuration, if any

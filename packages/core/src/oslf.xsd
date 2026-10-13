@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- XML Schema for the OSLF lesson file, version 0.1 (draft).
+     See XML-FORMAT.md. This schema checks structure only: the data model
+     rules in FILE-FORMAT.md section 3 apply on top of it. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:o="urn:oslf:lesson"
+           targetNamespace="urn:oslf:lesson"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <!-- Simple types -->
+
+  <xs:simpleType name="nonEmpty">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="sourceId">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z0-9_\-]{1,64}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="questionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="known"/>
+      <xs:enumeration value="prior-knowledge"/>
+      <xs:enumeration value="math"/>
+      <xs:enumeration value="semi-open"/>
+      <xs:enumeration value="tight-open"/>
+      <xs:enumeration value="would-you-rather"/>
+      <xs:enumeration value="paraphrase"/>
+      <xs:enumeration value="broad-open"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="answerKey">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="exhaustive"/>
+      <xs:enumeration value="suggested"/>
+      <xs:enumeration value="none"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="mathFormat">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="asciimath"/>
+      <xs:enumeration value="tex"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="breakStrength">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="medium"/>
+      <xs:enumeration value="strong"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="imageSize">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="small"/>
+      <xs:enumeration value="medium"/>
+      <xs:enumeration value="large"/>
+      <xs:enumeration value="full"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="imageAlign">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="left"/>
+      <xs:enumeration value="center"/>
+      <xs:enumeration value="right"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Speech -->
+
+  <xs:complexType name="phoneme">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="alphabet" use="required" fixed="ipa" type="xs:string"/>
+        <xs:attribute name="ph" use="required" type="o:nonEmpty"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="sub">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="alias" use="required" type="o:nonEmpty"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="sayAs">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="interpret-as" use="required" fixed="characters" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="break">
+    <xs:attribute name="strength" use="required" type="o:breakStrength"/>
+  </xs:complexType>
+
+  <xs:complexType name="spokenText" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="phoneme" type="o:phoneme"/>
+      <xs:element name="sub" type="o:sub"/>
+      <xs:element name="say-as" type="o:sayAs"/>
+      <xs:element name="break" type="o:break"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <!-- Rich text -->
+
+  <xs:complexType name="markContent" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="b" type="o:markContent"/>
+      <xs:element name="i" type="o:markContent"/>
+      <xs:element name="u" type="o:markContent"/>
+      <xs:element name="phoneme" type="o:phoneme"/>
+      <xs:element name="sub" type="o:sub"/>
+      <xs:element name="say-as" type="o:sayAs"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="note">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="source" type="o:sourceId"/>
+        <xs:attribute name="locator" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="math">
+    <xs:sequence>
+      <xs:element name="source" type="o:nonEmpty"/>
+      <xs:element name="spoken" type="o:spokenText" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="format" use="required" type="o:mathFormat"/>
+    <xs:attribute name="display" type="xs:boolean"/>
+  </xs:complexType>
+
+  <xs:group name="inline">
+    <xs:choice>
+      <xs:element name="b" type="o:markContent"/>
+      <xs:element name="i" type="o:markContent"/>
+      <xs:element name="u" type="o:markContent"/>
+      <xs:element name="phoneme" type="o:phoneme"/>
+      <xs:element name="sub" type="o:sub"/>
+      <xs:element name="say-as" type="o:sayAs"/>
+      <xs:element name="note" type="o:note"/>
+      <xs:element name="m" type="o:math"/>
+      <xs:element name="break" type="o:break"/>
+    </xs:choice>
+  </xs:group>
+
+  <xs:complexType name="richText" mixed="true">
+    <xs:group ref="o:inline" minOccurs="0" maxOccurs="unbounded"/>
+  </xs:complexType>
+
+  <xs:complexType name="heading" mixed="true">
+    <xs:group ref="o:inline" minOccurs="0" maxOccurs="unbounded"/>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <!-- Blocks -->
+
+  <xs:complexType name="passage">
+    <xs:sequence>
+      <xs:element name="p" type="o:richText" maxOccurs="unbounded"/>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:complexType name="spelling">
+    <xs:sequence>
+      <xs:element name="word" type="o:nonEmpty" maxOccurs="unbounded"/>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:complexType name="credit">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="author" type="xs:string"/>
+        <xs:attribute name="license" type="xs:string"/>
+        <xs:attribute name="license-url" type="o:nonEmpty"/>
+        <xs:attribute name="source-url" type="o:nonEmpty"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="image">
+    <xs:sequence>
+      <xs:element name="alt" type="xs:string" minOccurs="0"/>
+      <xs:element name="caption" type="o:richText" minOccurs="0"/>
+      <xs:element name="credit" type="o:credit" minOccurs="0"/>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="src" use="required" type="o:nonEmpty"/>
+    <xs:attribute name="size" type="o:imageSize"/>
+    <xs:attribute name="align" type="o:imageAlign"/>
+    <xs:attribute name="width" type="xs:positiveInteger"/>
+    <xs:attribute name="height" type="xs:positiveInteger"/>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:complexType name="question">
+    <xs:sequence>
+      <xs:element name="prompt" type="o:richText"/>
+      <xs:element name="answer" type="o:nonEmpty" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="step" type="o:richText" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="type" use="required" type="o:questionType"/>
+    <xs:attribute name="answer-key" type="o:answerKey"/>
+    <xs:attribute name="three-board" type="xs:boolean"/>
+    <xs:attribute name="besides" type="o:nonEmpty"/>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:complexType name="link">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="url" use="required" type="o:nonEmpty"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="vakt">
+    <xs:sequence>
+      <xs:element name="text" type="o:nonEmpty"/>
+      <xs:element name="link" type="o:link" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="image" type="o:image" minOccurs="0"/>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <!-- Lesson -->
+
+  <xs:complexType name="person">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="url" type="o:nonEmpty"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="biblioSource">
+    <xs:sequence>
+      <xs:element name="title" type="xs:string" minOccurs="0"/>
+      <xs:element name="author" type="xs:string" minOccurs="0"/>
+      <xs:element name="publisher" type="xs:string" minOccurs="0"/>
+      <xs:element name="year" type="xs:string" minOccurs="0"/>
+      <xs:element name="url" type="o:nonEmpty" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" use="required" type="o:sourceId"/>
+  </xs:complexType>
+
+  <xs:complexType name="section">
+    <xs:sequence>
+      <xs:element name="title" type="xs:string" minOccurs="0"/>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="passage" type="o:passage"/>
+        <xs:element name="spelling" type="o:spelling"/>
+        <xs:element name="image" type="o:image"/>
+        <xs:element name="question" type="o:question"/>
+        <xs:element name="vakt" type="o:vakt"/>
+        <xs:element name="heading" type="o:heading"/>
+      </xs:choice>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="o:nonEmpty"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:element name="lesson">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="title" type="o:nonEmpty"/>
+        <xs:element name="author" type="o:person" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="profile" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:attribute name="ref" use="required" type="o:nonEmpty"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="source" type="o:biblioSource" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="section" type="o:section" maxOccurs="unbounded"/>
+        <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="0.1"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="id" type="o:nonEmpty"/>
+      <xs:attribute name="language" type="o:nonEmpty"/>
+      <xs:attribute name="license" type="o:nonEmpty"/>
+      <xs:attribute name="created" type="o:nonEmpty"/>
+      <xs:attribute name="modified" type="o:nonEmpty"/>
+      <xs:attribute name="age-range" type="xs:string"/>
+      <xs:anyAttribute namespace="##other" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

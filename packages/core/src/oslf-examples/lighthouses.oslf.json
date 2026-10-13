@@ -1,0 +1,203 @@
+{
+  "oslf": "0.1",
+  "title": "Lighthouses",
+  "language": "en",
+  "license": "BSD-3-Clause",
+  "ageRange": "14-16 years",
+  "sources": [
+    {
+      "id": "lighthouse",
+      "title": "Lighthouse",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Lighthouse"
+    },
+    {
+      "id": "fresnel-lens",
+      "title": "Fresnel lens",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Fresnel_lens"
+    }
+  ],
+  "sections": [
+    {
+      "id": "first-lighthouses",
+      "title": "The First Lighthouses",
+      "blocks": [
+        {
+          "type": "image",
+          "src": "media/pharos-illustration.png",
+          "alt": "A drawing of a tall stone tower on an island, with a fire burning at the top.",
+          "caption": "An artist's idea of the lighthouse at Pharos.",
+          "credit": { "author": "Example Author", "license": "CC0-1.0" },
+          "size": "large",
+          "align": "center"
+        },
+        {
+          "type": "passage",
+          "paragraphs": [
+            "Long before electric lights, sailors looked for fires burning on hills and towers to find their way into port. More than 2,200 years ago, the city of Alexandria in Egypt built a towering lighthouse on the island of PHAROS, just outside its harbor.",
+            [
+              "At night, a fire at the top warned ships away from dangerous rocks, reefs and sandbars. The tower was so famous that it was counted among the Seven WONDERS of the Ancient World. EARTHQUAKES damaged it over many centuries, and by the 1400s it lay in ruins. Its name lives on: the word for lighthouse is ",
+              { "text": "phare", "italic": true },
+              " in French and ",
+              { "text": "faro", "italic": true },
+              " in Italian and Spanish.",
+              { "note": { "source": "lighthouse" } }
+            ]
+          ]
+        },
+        { "type": "spelling", "words": ["BEACON", "HARBOR", "ANCIENT"] },
+        {
+          "id": "q-pharos",
+          "type": "question",
+          "questionType": "known",
+          "prompt": "Alexandria's lighthouse stood on the island of ______.",
+          "answers": ["PHAROS"]
+        },
+        {
+          "type": "question",
+          "questionType": "known",
+          "prompt": "It was counted among the Seven ______ of the Ancient World.",
+          "answers": ["WONDERS"]
+        },
+        {
+          "type": "question",
+          "questionType": "prior-knowledge",
+          "prompt": "On which continent is Egypt?",
+          "answers": ["AFRICA"]
+        },
+        {
+          "type": "question",
+          "questionType": "math",
+          "prompt": "A keeper climbed the 120 steps to the lamp 3 times each night. How many steps was that each night?",
+          "answers": ["360"],
+          "working": [
+            [
+              "Multiply the steps by the climbs: ",
+              { "math": { "format": "asciimath", "source": "120 xx 3 = 360" } }
+            ]
+          ]
+        },
+        {
+          "type": "question",
+          "questionType": "semi-open",
+          "prompt": "A fire at the top warned ships away from dangerous ______. Name one thing the ships had to avoid.",
+          "answers": ["ROCKS", "REEFS", "SANDBARS"],
+          "besides": "ROCKS"
+        },
+        {
+          "type": "question",
+          "questionType": "tight-open",
+          "prompt": "Name something that gives off light."
+        },
+        { "type": "heading", "text": "WOULD YOU RATHER" },
+        {
+          "type": "question",
+          "questionType": "would-you-rather",
+          "prompt": "Would you rather keep a lighthouse on a lonely island or in a busy harbor?"
+        },
+        {
+          "type": "question",
+          "questionType": "paraphrase",
+          "prompt": "In your own words, explain why the lighthouse at Pharos was built."
+        },
+        {
+          "type": "question",
+          "questionType": "broad-open",
+          "prompt": "Why do you think people went to the trouble of building lighthouses, long before electric lights existed?"
+        },
+        {
+          "type": "vakt",
+          "text": "Stand up and turn slowly in a full circle, like the beam of a lighthouse sweeping across the sea."
+        }
+      ]
+    },
+    {
+      "id": "telling-lights-apart",
+      "title": "Telling Lights Apart",
+      "blocks": [
+        {
+          "type": "passage",
+          "paragraphs": [
+            [
+              "In 1822, the French scientist Augustin ",
+              { "text": "FRESNEL", "ipa": "freɪˈnɛl" },
+              " described a new kind of lens.",
+              { "note": { "source": "fresnel-lens" } },
+              " Rings of glass PRISMS gather the light from a lamp and bend it into one strong beam, so a lighthouse can be seen much farther out to sea."
+            ],
+            "Every lighthouse along a coast flashes its own pattern of light, so sailors can tell one from another in the dark. By day, many towers are painted in stripes, bands or checks for the same reason."
+          ]
+        },
+        { "type": "spelling", "words": ["SIGNAL", "PATTERN", "COASTLINE"] },
+        {
+          "type": "question",
+          "questionType": "known",
+          "prompt": "The new lens used rings of glass ______.",
+          "answers": ["PRISMS"]
+        },
+        {
+          "type": "question",
+          "questionType": "prior-knowledge",
+          "prompt": "What do we call the person who looked after a lighthouse?",
+          "answers": ["KEEPER", "LIGHTHOUSE KEEPER"]
+        },
+        {
+          "type": "question",
+          "questionType": "math",
+          "prompt": "Augustin Fresnel described his new lens in the year ______.",
+          "answers": ["1822"]
+        },
+        {
+          "type": "question",
+          "questionType": "math",
+          "prompt": "A light flashes once every 5 seconds. How many times does it flash in one minute?",
+          "answers": ["12"],
+          "working": [
+            "There are 60 seconds in a minute.",
+            [
+              {
+                "math": {
+                  "format": "tex",
+                  "source": "\\frac{60}{5} = 12",
+                  "display": true,
+                  "spoken": ["60 divided by 5", { "pause": "short" }, "is 12"]
+                }
+              }
+            ]
+          ]
+        },
+        {
+          "type": "question",
+          "questionType": "semi-open",
+          "prompt": "By day, many towers are painted in ______. Name one of the patterns.",
+          "answers": ["STRIPES", "BANDS", "CHECKS"],
+          "threeBoard": true
+        },
+        {
+          "type": "question",
+          "questionType": "semi-open",
+          "answerKey": "suggested",
+          "prompt": [
+            "Give a word that means the same as ",
+            { "text": "beam", "italic": true },
+            "."
+          ],
+          "answers": ["RAY", "SHAFT"]
+        },
+        {
+          "type": "question",
+          "questionType": "tight-open",
+          "answerKey": "suggested",
+          "prompt": "Name something made of glass.",
+          "answers": ["WINDOW", "BOTTLE", "MIRROR"]
+        },
+        {
+          "type": "question",
+          "questionType": "broad-open",
+          "prompt": "If you designed a lighthouse, what pattern would you paint on it, and why?"
+        }
+      ]
+    }
+  ]
+}

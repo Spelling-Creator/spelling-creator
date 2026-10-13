@@ -6,7 +6,9 @@
 // don't recognise, and reject files that aren't structured as a lesson.
 //
 // An Open Spelling Lesson Format file (oslf.js) comes through the same door:
-// it is turned into a bare doc first, then normalised like one.
+// it is turned into a bare doc first, then normalised like one. So does the
+// format's XML form (oslfXml.js), which is read into the JSON form's object
+// first. The XML reader is only loaded when an XML file arrives.
 
 import { AGE_RANGES } from "./ageRanges.js";
 import { headingText } from "./heading.js";
@@ -41,14 +43,15 @@ export class JsonImportError extends Error {
 
 const QUESTION_KEYS = new Set(Object.keys(QUESTION_TYPES));
 
-// Read a .json File and rebuild a lesson document ready for the editor. Resolves
-// to { title, ageRange?, sources?, sections }; rejects (JsonImportError) when the file
-// isn't a usable lesson.
+// Read a .json File (or an OSLF lesson as .xml) and rebuild a lesson document
+// ready for the editor. Resolves to { title, ageRange?, sources?, sections };
+// rejects (JsonImportError) when the file isn't a usable lesson.
 export async function importJsonFile(file) {
   if (!file) throw new JsonImportError("No file was selected.");
-  if (!/\.json$/i.test(file.name || "")) {
+  const xml = /\.xml$/i.test(file.name || "");
+  if (!xml && !/\.json$/i.test(file.name || "")) {
     throw new JsonImportError(
-      'Please choose a .json lesson file, the kind you get from "Export JSON" here or from the Spelling Creator AI tool.',
+      'Please choose a .json lesson file, the kind you get from "Export JSON" here or from the Spelling Creator AI tool, or an OSLF lesson (.oslf.json or .oslf.xml).',
     );
   }
 
@@ -58,6 +61,8 @@ export async function importJsonFile(file) {
   } catch {
     throw new JsonImportError("This file couldn't be read.");
   }
+
+  if (xml) return importOslfXml(text);
 
   let parsed;
   try {
@@ -69,6 +74,24 @@ export async function importJsonFile(file) {
   }
 
   return normalizeLessonFile(parsed);
+}
+
+/**
+ * An OSLF lesson in its XML form, as a lesson document ready for the editor.
+ * Rejects (JsonImportError) when the text isn't one.
+ * @param {string} text
+ * @returns {Promise<object>}
+ */
+export async function importOslfXml(text) {
+  const { fromOslfXml } = await import("./oslfXml.js");
+  let file;
+  try {
+    file = fromOslfXml(text);
+  } catch (err) {
+    if (err instanceof OslfImportError) throw new JsonImportError(err.message);
+    throw err;
+  }
+  return normalizeLessonFile(file);
 }
 
 // Accept the lesson-file envelope { format, version, doc }, a bare doc
