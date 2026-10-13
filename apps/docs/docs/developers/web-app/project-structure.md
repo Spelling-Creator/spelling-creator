@@ -32,7 +32,7 @@ src/
     lesson/               one lesson (/hub/:id) and its tabs (see pages-and-routing.md)
       LessonLayout.jsx    owns the fetch, the identity header and every whole-lesson action; tabs read it via useLesson()
       LessonTabs.jsx      the tab bar: NavLinks to real routes, not a Tabs widget
-      LessonOverview.jsx  the document itself + the "About" rail (author, ages, fork lineage, Print PDF / Download Word / Fork)
+      LessonOverview.jsx  the document itself + the "About" rail (author, ages, fork lineage, Print / Download PDF / Download Word / Fork)
       LessonPractice.jsx  interactive mode, given a URL
       LessonDiscussion.jsx  comments + the star rating
       LessonProposals.jsx / LessonProposal.jsx  proposals from other people's forks; the detail view shows the diff and hands merging (or trying it in a variation) to the editor

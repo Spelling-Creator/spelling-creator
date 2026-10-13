@@ -28,7 +28,8 @@ Click a lesson to open its page. The page is split into tabs:
 - **History**: the lesson's saved versions.
 
 The **Lesson actions** menu (the three dots at the top of the page) has
-**Print PDF**, **Download Word** and **Fork**. On a lesson you published it also
+**Print**, **Download PDF**, **Download Word** and **Fork**. On a lesson you
+published it also
 has **Edit** and **Delete**.
 
 ## Signing in

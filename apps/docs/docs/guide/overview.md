@@ -97,7 +97,8 @@ the one about monarch butterflies was written for the videos.
 
 ## Using a lesson
 
-- **Printing and exporting.** Download a Word document, print to PDF, or save
+- **Printing and exporting.** Print the lesson, download it as a Word document
+  or a PDF, or save
   the lesson to your Google Drive as a Google Doc (see
   [Exporting & printing](./exporting.md)).
 - **Interactive mode.** Work through a published lesson on screen, one step at

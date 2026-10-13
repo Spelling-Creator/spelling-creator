@@ -65,12 +65,12 @@ lesson is shown or printed, but stays in the field so you can finish typing it.
 
 ## Exporting and importing
 
-| Where                    | What's kept                                                                                                            |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| **Export JSON** and back | Everything.                                                                                                            |
-| **Export DOCX**          | The red, the picture at its size and alignment, and the links as real links.                                           |
-| **Print PDF**            | The red, as in the Word document the PDF is made from.                                                                 |
-| **Import Word document** | The activity, its picture and its links. The picture comes back at Medium and centered, whatever it was set to before. |
+| Where                        | What's kept                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Export JSON** and back     | Everything.                                                                                                            |
+| **Export DOCX**              | The red, the picture at its size and alignment, and the links as real links.                                           |
+| **Export PDF** and **Print** | The red, as in the Word document the PDF is made from.                                                                 |
+| **Import Word document**     | The activity, its picture and its links. The picture comes back at Medium and centered, whatever it was set to before. |
 
 Word import finds activities by their "VAKT:" label, so a lesson typed by hand
 in Word with "VAKT:" lines imports too.

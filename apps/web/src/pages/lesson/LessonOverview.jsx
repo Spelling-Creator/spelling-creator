@@ -129,15 +129,29 @@ export default function LessonOverview() {
               variant="outline"
               size="sm"
               className="justify-start"
+              onClick={() => handleExport("print")}
+              disabled={Boolean(busy)}
+            >
+              {busy === "print" ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <PrinterIcon data-icon="inline-start" />
+              )}
+              {t("lessonPage.print")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="justify-start"
               onClick={() => handleExport("pdf")}
               disabled={Boolean(busy)}
             >
               {busy === "pdf" ? (
                 <Spinner data-icon="inline-start" />
               ) : (
-                <PrinterIcon data-icon="inline-start" />
+                <FileDownIcon data-icon="inline-start" />
               )}
-              {t("lessonPage.printPdf")}
+              {t("lessonPage.downloadPdf")}
             </Button>
             <Button
               variant="outline"

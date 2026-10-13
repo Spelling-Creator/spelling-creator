@@ -17,6 +17,7 @@ import {
   DownloadIcon,
   EllipsisVerticalIcon,
   EyeIcon,
+  FileDownIcon,
   FileTextIcon,
   FileUpIcon,
   GitBranchIcon,
@@ -1484,13 +1485,20 @@ export default function EditorPage() {
       } else if (kind === "oslf") {
         exportOslf(doc);
         notify({ severity: "success", message: t("messages.oslfDownloaded") });
-      } else {
+      } else if (kind === "pdf") {
         const { exportPdf } = await loadExportEngine();
         await exportPdf(doc, meta);
-        notify({
-          severity: "success",
-          message: t("messages.pdfGenerated"),
-        });
+        notify({ severity: "success", message: t("messages.pdfDownloaded") });
+      } else {
+        // 'print' opens the print dialog on the PDF; the browser's own dialog
+        // is the feedback, so only the download fallback needs a message.
+        const { printPdf } = await loadExportEngine();
+        if ((await printPdf(doc, meta)) === "downloaded") {
+          notify({
+            severity: "info",
+            message: t("messages.pdfDownloadedToPrint"),
+          });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -2676,8 +2684,15 @@ export default function EditorPage() {
               onClick={() => handleExport("pdf")}
               disabled={busy !== null}
             >
+              <FileDownIcon />
+              {t("header.exportPdf")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleExport("print")}
+              disabled={busy !== null}
+            >
               <PrinterIcon />
-              {t("header.printPdf")}
+              {t("header.print")}
             </DropdownMenuItem>
             {hasGoogleDrive() && (
               <DropdownMenuItem
@@ -2842,8 +2857,12 @@ export default function EditorPage() {
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                <FileDownIcon />
+                {t("header.exportPdf")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("print")}>
                 <PrinterIcon />
-                {t("header.printPdf")}
+                {t("header.print")}
               </DropdownMenuItem>
               {hasGoogleDrive() && (
                 <DropdownMenuItem onClick={handleSaveToGoogle}>

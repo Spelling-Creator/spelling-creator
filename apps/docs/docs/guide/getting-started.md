@@ -96,7 +96,8 @@ anything that needs attention (see [Lesson checks](./lesson-checks.md)).
 Open the **Export** menu at the top of the editor:
 
 - **Export DOCX** downloads a Word document.
-- **Print PDF** downloads a PDF, ready to print.
+- **Export PDF** downloads a PDF.
+- **Print** opens your browser's print dialog with the lesson ready to print.
 - **Save to Google Docs** puts it in your Google Drive, where available.
 
 On a phone, these are in the **Lesson actions** menu (the three dots). See

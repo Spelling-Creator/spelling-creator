@@ -111,7 +111,7 @@ these layouts.
 | `/editor/collaborate`      | **Editor**              | The [live-collaboration](./live-collaboration.md) panel, over the editor.                                                                                                                                                                                                                  |
 | `/editor/check`            | **Editor**              | The [lesson checks](./lesson-checks.md) panel (**Check lesson**), beside the editor.                                                                                                                                                                                                       |
 | `/hub`                     | **Lesson hub**          | Public gallery of published lessons (plus your own drafts), with search.                                                                                                                                                                                                                   |
-| `/hub/:id`                 | **Lesson**              | The lesson itself, with an "About" rail: author, section count, ages, published date, fork lineage, and the **Print PDF** / **Download Word** / **Fork** actions.                                                                                                                          |
+| `/hub/:id`                 | **Lesson**              | The lesson itself, with an "About" rail: author, section count, ages, published date, fork lineage, and the **Print** / **Download PDF** / **Download Word** / **Fork** actions.                                                                                                           |
 | `/hub/:id/practice`        | **Lesson (Practice)**   | [Interactive mode](./interactive-mode.md), full screen over the page.                                                                                                                                                                                                                      |
 | `/hub/:id/discussion`      | **Lesson (Discussion)** | Comments and the star rating.                                                                                                                                                                                                                                                              |
 | `/hub/:id/proposals`       | **Lesson (Proposals)**  | [Changes proposed](./pull-requests.md) from other people's forks.                                                                                                                                                                                                                          |
@@ -319,14 +319,14 @@ Each signed-out feature row shows a screenshot from `apps/web/public/home/`. The
 row draws it at 16:10 with `object-cover`, so anything in another shape gets
 cropped. Take new shots at 16:10 to avoid that.
 
-| File                 | Shows                                                                    |
-| -------------------- | ------------------------------------------------------------------------ |
-| `feature-editor.jpg` | The editor with a full lesson loaded: header, sections outline, a block  |
-| `feature-ai.jpg`     | The "Suggest text with AI" dialog (Generate with AI, then Text)          |
-| `feature-images.jpg` | The "Search images" dialog with Wikimedia Commons results for "Penguin"  |
-| `feature-hub.jpg`    | The top of the lesson hub list                                           |
-| `feature-collab.jpg` | The "Collaborate on this lesson" dialog                                  |
-| `feature-export.jpg` | Page one of a lesson's "Print PDF" export, on the app's background color |
+| File                 | Shows                                                                   |
+| -------------------- | ----------------------------------------------------------------------- |
+| `feature-editor.jpg` | The editor with a full lesson loaded: header, sections outline, a block |
+| `feature-ai.jpg`     | The "Suggest text with AI" dialog (Generate with AI, then Text)         |
+| `feature-images.jpg` | The "Search images" dialog with Wikimedia Commons results for "Penguin" |
+| `feature-hub.jpg`    | The top of the lesson hub list                                          |
+| `feature-collab.jpg` | The "Collaborate on this lesson" dialog                                 |
+| `feature-export.jpg` | Page one of a lesson's PDF export, on the app's background color        |
 
 The docs site's home page uses one more, `apps/docs/docs/public/img/screenshot.jpg`:
 the editor's main column only (the title card and the first section), without

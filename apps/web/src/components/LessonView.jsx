@@ -14,8 +14,8 @@
 // or dark, exactly like interactive mode. A lesson is something you read on
 // screen far more often than you print it, and a white sheet glaring out of a
 // dark page is the wrong default for reading. The printout still looks like a
-// printout: that's what Export DOCX and Print PDF produce (docxExport.js /
-// pdfExport.js), the only two paths that build a Word file.
+// printout: that's what the Word and PDF exports (and Print) produce
+// (docxExport.js / pdfExport.js), the only two paths that build a Word file.
 
 import { useTranslation } from "react-i18next";
 import { ArrowUpIcon } from "lucide-react";

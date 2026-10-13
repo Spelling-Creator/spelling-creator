@@ -353,13 +353,10 @@ function safeFileName(title) {
   return `${base || "lesson"}.pdf`;
 }
 
-/**
- * Build the docx, convert to HTML (mammoth), then render to a PDF (html2pdf.js).
- * @param {object} doc
- * @param {{author?: string, published?: string|number|Date}} [meta]
- *   the by-line and copyright metadata — see buildDocument.
- */
-export async function exportPdf(doc, meta = {}) {
+// Build the docx, convert to HTML (mammoth), then render to a PDF (html2pdf.js).
+// Resolves to the finished jsPDF document, which the two entry points below
+// either save or print.
+async function renderPdf(doc, meta) {
   // docToHtml builds the docx, converts it to HTML via mammoth and re-applies
   // each image's picked size + alignment, so the PDF mirrors the docx output.
   const html = await docToHtml(doc, meta);
@@ -400,7 +397,7 @@ export async function exportPdf(doc, meta = {}) {
   window.document.body.appendChild(offscreen);
 
   try {
-    await html2pdf()
+    const pdf = await html2pdf()
       .set({
         // Pixel units (not mm) on purpose. html2pdf places page breaks using a
         // page height it derives by rounding mm→px (floor(277mm) = 1046px), but
@@ -413,7 +410,6 @@ export async function exportPdf(doc, meta = {}) {
         // computations use the identical integer inner height (1047px), so the
         // break positions and the slice positions line up exactly.
         margin: [MARGIN, MARGIN, FOOTER_MARGIN, MARGIN],
-        filename: safeFileName(doc.title),
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
         jsPDF: {
@@ -424,14 +420,117 @@ export async function exportPdf(doc, meta = {}) {
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
       .from(container)
-      // The page number and footer are drawn straight onto the finished pages:
-      // they repeat on every one, so they can't come from the flowed HTML, and
-      // the docx's own header/footer never reach mammoth.
       .toPdf()
-      .get("pdf")
-      .then((pdf) => drawPageFurniture(pdf, meta, questionLegendFor(doc)))
-      .save();
+      .get("pdf");
+    // The page number and footer are drawn straight onto the finished pages:
+    // they repeat on every one, so they can't come from the flowed HTML, and
+    // the docx's own header/footer never reach mammoth.
+    drawPageFurniture(pdf, meta, questionLegendFor(doc));
+    return pdf;
   } finally {
     window.document.body.removeChild(offscreen);
   }
+}
+
+/**
+ * Render the lesson to a PDF and download it.
+ * @param {object} doc
+ * @param {{author?: string, published?: string|number|Date}} [meta]
+ *   the by-line and copyright metadata (see buildDocument).
+ */
+export async function exportPdf(doc, meta = {}) {
+  const pdf = await renderPdf(doc, meta);
+  pdf.save(safeFileName(doc.title));
+}
+
+// The frame the last print went through. It can't be removed as soon as
+// print() returns: in Chrome the dialog opens after print() has already
+// returned, and taking the frame away first cancels the print. So it stays in
+// the page until the next print replaces it.
+let printFrame = null;
+
+function clearPrintFrame() {
+  if (!printFrame) return;
+  URL.revokeObjectURL(printFrame.src);
+  printFrame.remove();
+  printFrame = null;
+}
+
+// How long to wait for the browser's PDF viewer to load the file before giving
+// up and downloading it instead.
+const PRINT_LOAD_TIMEOUT = 15000;
+
+// Load the PDF into a hidden frame and open the print dialog on it, so what
+// prints is the PDF itself, page numbers and footer included.
+function printBlob(blob) {
+  clearPrintFrame();
+  return new Promise((resolve, reject) => {
+    const frame = window.document.createElement("iframe");
+    // Hidden but still laid out. A display:none frame never starts the PDF
+    // viewer, so there would be nothing to print.
+    frame.style.cssText =
+      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+
+    const timer = setTimeout(() => {
+      clearPrintFrame();
+      reject(new Error("The PDF viewer didn't load in time."));
+    }, PRINT_LOAD_TIMEOUT);
+
+    frame.addEventListener(
+      "load",
+      () => {
+        clearTimeout(timer);
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.print();
+          resolve();
+        } catch (err) {
+          clearPrintFrame();
+          reject(err);
+        }
+      },
+      { once: true },
+    );
+
+    frame.src = URL.createObjectURL(blob);
+    printFrame = frame;
+    window.document.body.appendChild(frame);
+  });
+}
+
+// Whether this browser can print a PDF straight from a page. It needs a
+// built-in PDF viewer (without one, loading the file into a frame would
+// download it instead). Safari has one, and printing from the frame does pick
+// the PDF, but it zooms into the first page and crops it (Safari 26), however
+// the frame is sized and however long it waits. A downloaded PDF opened in
+// Preview prints properly, so Safari gets that instead.
+function canPrintPdfInPlace() {
+  if (!navigator.pdfViewerEnabled) return false;
+  const ua = navigator.userAgent;
+  const isSafari = /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\//.test(ua);
+  return !isSafari;
+}
+
+/**
+ * Render the lesson to a PDF and open the browser's print dialog on it. Where
+ * the browser can't print a PDF from the page, the PDF is downloaded instead.
+ * @param {object} doc
+ * @param {{author?: string, published?: string|number|Date}} [meta]
+ *   the by-line and copyright metadata (see buildDocument).
+ * @returns {Promise<"printed" | "downloaded">} which of the two happened.
+ */
+export async function printPdf(doc, meta = {}) {
+  const pdf = await renderPdf(doc, meta);
+  if (canPrintPdfInPlace()) {
+    try {
+      await printBlob(pdf.output("blob"));
+      return "printed";
+    } catch (err) {
+      console.warn("Printing the PDF in place failed, downloading it.", err);
+    }
+  }
+  pdf.save(safeFileName(doc.title));
+  return "downloaded";
 }
