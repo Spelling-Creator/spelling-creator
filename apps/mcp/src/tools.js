@@ -99,11 +99,12 @@ const blockSchema = z
           "sources the user gave you or that you have actually checked, never invented ones, and keep " +
           "free-text notes rare. A backslash makes a character literal (\\* for an asterisk, \\{ for a " +
           "brace).\n\n" +
-          "READ-ALOUD: lessons are read aloud, and a few words can be fixed for that without changing how " +
-          "they show: [FRESNEL]{ipa: freɪˈnɛl} gives a pronunciation in IPA, [WWF]{say: World Wide Fund " +
-          "for Nature} says other words instead, [REEF]{spell} reads a word letter by letter, and {pause} " +
-          "or {pause: long} adds a silent pause. Use them only where the voice would get a name, a place " +
-          "or an abbreviation wrong, or when the user asks. Most passages need none.\n\n" +
+          "READ-ALOUD: the app's practice mode reads lessons aloud, and a few words can be fixed for its " +
+          "voice without changing how they show: [FRESNEL]{ipa: freɪˈnɛl} gives a pronunciation in IPA, " +
+          "[WWF]{say: World Wide Fund for Nature} says other words instead, [REEF]{spell} reads a word " +
+          "letter by letter, and {pause} or {pause: long} adds a silent pause. These change only the " +
+          "app's voice, not what a screen reader says. Use them only where the voice would get a name, a " +
+          "place or an abbreviation wrong, or when the user asks. Most passages need none.\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
           'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
           "or footnotes here.\n\n" +
