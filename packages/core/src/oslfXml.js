@@ -463,8 +463,8 @@ function sameFlags(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-// Pieces into runs: whitespace collapsed across neighbouring words, trimmed
-// at the element's edges, neighbouring words with the same marks joined, and
+// Pieces into runs: whitespace collapsed across neighboring words, trimmed
+// at the element's edges, neighboring words with the same marks joined, and
 // plain words as plain strings.
 function runsFrom(pieces) {
   // The element's leading and trailing whitespace, however many pieces of
