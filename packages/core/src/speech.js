@@ -61,7 +61,7 @@ function push(runs, run) {
 /**
  * Spoken text as a list of runs this module understands, from anything that
  * claims to be spoken text (a plain string or a list of runs). A run object it
- * doesn't recognise is said as its `text` where it has one and skipped where it
+ * doesn't recognize is said as its `text` where it has one and skipped where it
  * hasn't, as the format asks.
  * @param {unknown} value
  * @returns {SpokenRun[]}

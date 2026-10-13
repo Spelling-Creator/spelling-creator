@@ -30,7 +30,7 @@ import { spellOut } from "../speech.js";
  */
 export function normalizeText(text) {
   return (
-    text
+    String(text ?? "")
       // Quotes and brackets. Brackets become guillemets, which Kokoro's
       // vocabulary has and reads as a parenthetical.
       .replace(/[‘’]/g, "'")

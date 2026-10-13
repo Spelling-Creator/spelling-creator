@@ -501,7 +501,9 @@ function paragraphFromOslf(paragraph) {
       if (run.underline) marks.push({ type: "underline" });
       // normalizeTextContent keeps the first of ipa, alias and sayAs.
       const { ipa, alias, sayAs } = run;
-      marks.push({ type: "speech", attrs: { ipa, alias, sayAs } });
+      if (ipa || alias || sayAs) {
+        marks.push({ type: "speech", attrs: { ipa, alias, sayAs } });
+      }
       if (run.text) content.push({ type: "text", text: run.text, marks });
     } else if (run && typeof run === "object" && run.pause) {
       content.push({ type: "pause", attrs: { length: run.pause } });
