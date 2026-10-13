@@ -19,6 +19,7 @@ lesson ends with a **Notes** list and a **Sources** list.
 | Footnotes with a note of your own                 | Footnotes in question, picture or VAKT blocks   |
 | A footnote that does both (a citation and a note) | Formatting in any block other than a text block |
 | How words are read aloud, and pauses              | Read-aloud fixes outside a text block           |
+| Formulas, in AsciiMath or LaTeX                   | Formulas in questions or answers                |
 
 The set is small on purpose. A lesson is read aloud to a speller and printed
 for whoever is running it, ALL CAPS already marks the spelling words, and
@@ -28,8 +29,8 @@ book titles and scientific names, and footnotes for sources.
 ## Formatting text
 
 Each text block has a small toolbar with **Bold**, **Italic**, **Underline**,
-**Footnote** and **Read aloud**. Select some words and press a button to format
-them.
+**Footnote**, **Read aloud** and **Formula**. Select some words and press a
+button to format them.
 
 ## Adding a footnote
 
@@ -76,6 +77,35 @@ of them. The browser's own voice says the words you gave instead and spells
 words out, but it can't follow an IPA pronunciation, so it reads those words as
 written.
 
+## Formulas
+
+A math or science passage can carry a typeset formula: a fraction, a power, a
+root, an equation. Put the cursor where it goes (or select the words it
+follows), press **Formula**, and write it in one of two notations:
+
+- **AsciiMath** is close to how you would type math in a message, and quick
+  to learn: `2 xx 8 = 16` for times, `48 -: 6 = 8` for divided by, `3/4` for a
+  fraction, `10^6` for a power, `sqrt(81) = 9` for a square root, `x <= 3`
+  for at most. See [asciimath.org](https://asciimath.org/) for the rest.
+- **LaTeX** is what mathematicians and most math tools use: `2 \times 8`,
+  `48 \div 6`, `\frac{3}{4}`, `10^6`, `\sqrt{81}`, `x \leq 3`. Write it without
+  the dollar signs.
+
+The formula shows below the box as you type it. Choose **In the sentence** or
+**On its own line**, and press **Add formula**. Click a formula in the text to
+change or remove it.
+
+Formulas are read aloud automatically ("60 over 5 equals 12", "x squared").
+If that reading is right but awkward to hear, fill in **Read aloud as** with
+the words to say instead.
+
+Two things to know:
+
+- A formula is for math, not for a number in prose. "360 steps" and "$2.50"
+  are plain text.
+- The speller spells the answer, so a question's answer is plain text too
+  (`360`, `3/4`), never a formula.
+
 ## The Sources card
 
 The lesson's sources are listed in the **Sources** card at the end of the
@@ -94,21 +124,29 @@ removed, and one that also had a note keeps the note.
 
 - **On the lesson page and in Preview**, formatting shows as written. Each
   footnote number links down to the Notes list, and each note links back up to
-  where it's used. The Sources list comes after the notes.
+  where it's used. The Sources list comes after the notes. Formulas are typeset
+  on the page.
 - **In Word and PDF**, formatting is kept, and footnotes become real Word
   footnotes at the foot of each page. In the PDF they're gathered into a Notes
-  list above the Sources list instead. See [Exporting & printing](./exporting.md).
+  list above the Sources list instead. A formula becomes a Word equation you
+  can edit in Word, and a picture in the PDF. See
+  [Exporting & printing](./exporting.md).
 - **Importing a Word document** this app exported brings back the formatting,
   the footnotes (with their sources and pages) and the Sources list. Footnotes
   from other Word documents come back as notes. Read-aloud fixes and pauses
-  aren't part of a Word document, so they don't come back.
-- **Lesson files (JSON and OSLF)** keep everything, read-aloud fixes and pauses
-  included.
-- **Interactive mode** shows the formatting but not the footnote numbers, since
-  that screen is what the speller reads. Reading aloud reads the words, with
-  their read-aloud fixes and pauses.
+  aren't part of a Word document, so they don't come back, and neither do
+  formulas.
+- **Lesson files (JSON and OSLF)** keep everything, read-aloud fixes, pauses and
+  formulas included.
+- **Interactive mode** shows the formatting and the formulas but not the
+  footnote numbers, since that screen is what the speller reads. Reading aloud
+  reads the words, with their read-aloud fixes and pauses, and says each
+  formula.
 - **Everywhere else** (the lesson page, Preview, Word and PDF), read-aloud fixes
   and pauses don't show: the words appear as you wrote them.
+- **Translation** translates a paragraph's words; a formula in a translated
+  paragraph shows as it was typed, not typeset. See
+  [Translation](./translation.md).
 - **Translation** translates each paragraph's words and the footnote notes. A
   translated paragraph loses its formatting, and its footnote numbers move to
   the end of the paragraph. Sources aren't translated, since titles, authors and

@@ -22,11 +22,21 @@
 //   alias instead of the text, the letters of a spelled-out word with commas
 //   between them, and the text itself for a pronunciation, which it has no way
 //   to follow.
+//
+// A formula is one more kind of run, and the one that isn't the format's: it
+// is said as its author's `spoken` words where there are any, and otherwise as
+//
+//   { text: "120 xx 3 = 360", formula: { format, source } }
+//
+// which stands in for speech that hasn't been made yet. Making it takes MathJax
+// and a speech rule engine, which nobody should load to read a lesson without
+// math, so the voices do that themselves, lazily, with withFormulaSpeech, just
+// before speaking. A voice that gets a formula run anyway says its `text`, the
+// source, as it would any run it doesn't know.
 
 import {
-  PAUSE_LENGTHS,
   SAY_AS_CHARACTERS,
-  normalizeSpeechHint,
+  normalizeSpokenText as storedSpokenText,
   textBlockParagraphs,
 } from "./lessonText.js";
 
@@ -35,6 +45,7 @@ import {
  *   | { text: string, ipa: string }
  *   | { text: string, alias: string }
  *   | { text: string, sayAs: "characters" }
+ *   | { text: string, formula: { format: string, source: string } }
  *   | { pause: "short" | "long" }} SpokenRun
  */
 
@@ -69,18 +80,32 @@ function push(runs, run) {
 export function normalizeSpokenText(value) {
   const runs = [];
   for (const run of Array.isArray(value) ? value : [value]) {
-    if (typeof run === "string") {
-      push(runs, oneLine(run));
-    } else if (isObject(run) && PAUSE_LENGTHS.includes(run.pause)) {
-      runs.push({ pause: run.pause });
-    } else if (isObject(run) && typeof run.text === "string") {
+    if (isFormulaRun(run)) {
       const text = oneLine(run.text);
-      if (!text) continue;
-      const hint = normalizeSpeechHint(run);
-      push(runs, hint ? { text, ...hint } : text);
+      if (text) runs.push({ text, formula: formulaOf(run.formula) });
+      continue;
+    }
+    // Everything else is the stored shape, which lessonText.js defines.
+    const stored = storedSpokenText(run);
+    if (stored === null) continue;
+    for (const piece of Array.isArray(stored) ? stored : [stored]) {
+      push(runs, piece);
     }
   }
   return runs;
+}
+
+function isFormulaRun(run) {
+  return (
+    isObject(run) &&
+    typeof run.text === "string" &&
+    isObject(run.formula) &&
+    typeof run.formula.source === "string"
+  );
+}
+
+function formulaOf({ format, source }) {
+  return { format: String(format ?? ""), source: oneLine(source) };
 }
 
 /**
@@ -97,7 +122,8 @@ export function spokenWords(runs) {
 
 /**
  * A text block's paragraph (one entry of textBlockParagraphs) as spoken text.
- * Footnote markers are not spoken.
+ * Footnote markers are not spoken. A formula is its author's spoken words, or
+ * a formula run for the voice to make speech from.
  * @param {Array<object>} paragraph
  * @returns {SpokenRun[]}
  */
@@ -108,9 +134,71 @@ export function paragraphSpeech(paragraph) {
       push(runs, run.speech ? { text: run.text, ...run.speech } : run.text);
     } else if (run.type === "pause") {
       runs.push({ pause: run.length });
+    } else if (run.type === "math") {
+      const words = normalizeSpokenText(run.spoken ?? []);
+      if (words.length) {
+        for (const word of words) push(runs, word);
+      } else {
+        runs.push({
+          text: run.source,
+          formula: { format: run.format, source: run.source },
+        });
+      }
     }
   }
   return runs;
+}
+
+/**
+ * The chunks with speech made for every formula run, by `speak`, which takes
+ * a run's `formula` and resolves to the words to say, or to null to leave the
+ * run as it is (the source is then read). Each distinct formula is asked
+ * about once, and a `speak` that throws leaves its formula as it is too.
+ * @template {{ runs: SpokenRun[] }} Chunk
+ * @param {Chunk[]} chunks
+ * @param {(formula: { format: string, source: string }) => Promise<string | null>} speak
+ * @returns {Promise<Chunk[]>}
+ */
+export async function withFormulaSpeech(chunks, speak) {
+  const words = new Map();
+  for (const chunk of chunks) {
+    for (const run of chunk.runs) {
+      if (!isFormulaRun(run)) continue;
+      const key = speechKey(run.formula);
+      if (!words.has(key)) {
+        words.set(
+          key,
+          Promise.resolve()
+            .then(() => speak(run.formula))
+            .catch(() => null),
+        );
+      }
+    }
+  }
+  if (!words.size) return chunks;
+  const out = [];
+  for (const chunk of chunks) {
+    const runs = [];
+    for (const run of chunk.runs) {
+      if (!isFormulaRun(run)) {
+        push(runs, run);
+        continue;
+      }
+      const said = await words.get(speechKey(run.formula));
+      push(runs, said ? { text: run.text, alias: said } : run);
+    }
+    out.push({ ...chunk, runs });
+  }
+  return out;
+}
+
+/**
+ * Whether anything in what's to be said is a formula still to be spoken.
+ * @param {Array<{ runs: SpokenRun[] }>} chunks
+ * @returns {boolean}
+ */
+export function hasFormulaSpeech(chunks) {
+  return chunks.some((chunk) => chunk.runs.some(isFormulaRun));
 }
 
 /**

@@ -105,6 +105,11 @@ const blockSchema = z
           "letter by letter, and {pause} or {pause: long} adds a silent pause. These change only the " +
           "app's voice, not what a screen reader says. Use them only where the voice would get a name, a " +
           "place or an abbreviation wrong, or when the user asks. Most passages need none.\n\n" +
+          "FORMULAS: {asciimath: 120 xx 3 = 360} or {tex: \\frac{60}{5} = 12} puts a typeset formula in the " +
+          "sentence; {asciimath display: ...} sets it on a line of its own; a {spoken: 60 over 5 is 12} " +
+          "straight after one gives the words read-aloud says for it, only where the automatic reading " +
+          "would be awkward. Formulas are for math and science lessons, never for a plain number or price " +
+          "in prose ($2.50 stays as it is). Braces inside a formula must balance.\n\n" +
           'For type "vakt": the activity itself, e.g. "Bob likes to do jumping jacks. Let\'s do 3 of those." ' +
           'Write the activity ALONE (the "VAKT:" label is added when the lesson is rendered). No formatting ' +
           "or footnotes here.\n\n" +
@@ -2075,7 +2080,8 @@ export function registerTools(server, ctx) {
         "Fetch one lesson including its full content document — use this to read a lesson before editing it, or to " +
         "study an existing lesson's structure as a template.\n\n" +
         "Text blocks come back as the same markup you write them in (**bold**, *italic*, <u>underline</u>, " +
-        "^[footnotes], [read-aloud]{hints} and {pause}), with literal asterisks and braces escaped, so a block " +
+        "^[footnotes], [read-aloud]{hints}, {pause} and {asciimath: formulas}), with literal asterisks and " +
+        "braces escaped, so a block " +
         "can be passed straight back to replace_block or " +
         "update_lesson. The lesson's `sources`, if it has any, are listed alongside its sections.\n\n" +
         'Pass `format: "oslf"` to get the lesson as an Open Spelling Lesson Format file instead (`lessonFile`, ' +

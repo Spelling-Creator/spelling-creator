@@ -9,7 +9,8 @@
 import html2pdf from "html2pdf.js";
 import mammoth from "mammoth";
 import { Packer } from "docx";
-import { buildDocument } from "./docxExport.js";
+import { buildDocument, formulaImageKey } from "./docxExport.js";
+import { renderLessonFormulas } from "./formulas.js";
 import {
   LEGEND_SEPARATOR,
   QUESTION_LINE_CLASS,
@@ -182,16 +183,46 @@ async function docToHtml(doc, meta) {
   // Filled in as the document is built, with one entry per picture that really
   // made it in — see layoutImageFigures for why "really" is load-bearing.
   const embedded = [];
-  const document = await buildDocument(doc, meta, embedded);
+  // Formulas go into this docx as pictures: mammoth drops Word equations. A
+  // display formula counts as a picture in `embedded`, since it sits alone in
+  // its paragraph the way a lesson picture does.
+  const formulas = await renderLessonFormulas(doc, { images: true });
+  const document = await buildDocument(doc, meta, embedded, {
+    formulas,
+    formulasAs: "image",
+  });
   const blob = await Packer.toBlob(document);
   const arrayBuffer = await blob.arrayBuffer();
-  // mammoth inlines images as base64 data URIs by default; layoutImageFigures then
+  // mammoth inlines images as base64 data URIs; layoutImageFigures then
   // restores each image's picked size + alignment (and its caption's placement).
   const { value: html } = await mammoth.convertToHtml(
     { arrayBuffer },
-    { styleMap: STYLE_MAP },
+    { styleMap: STYLE_MAP, convertImage: inlineImages(formulas) },
   );
   return layoutNotes(layoutImageFigures(html, embedded));
+}
+
+// mammoth's own data-URI images, plus the size of a formula's picture, which
+// mammoth doesn't carry over and which an inline formula needs to sit in its
+// sentence at the size of the words (a display one is sized by its figure).
+function inlineImages(formulas) {
+  return mammoth.images.imgElement(async (image) => {
+    const attributes = {
+      src: `data:${image.contentType};base64,${await image.read("base64")}`,
+    };
+    if (image.altText) attributes.alt = image.altText;
+    const png = formulas?.get(formulaImageKey(image.altText) ?? "")?.png;
+    if (png) {
+      // As an inline style, since PRINT_STYLES sizes every picture to its
+      // column and a style on the element wins over that. (A display
+      // formula's picture has these stripped again by layoutImageFigures,
+      // which sizes its figure instead.)
+      attributes.width = String(png.width);
+      attributes.height = String(png.height);
+      attributes.style = `width:${png.width}px;height:${png.height}px;vertical-align:middle`;
+    }
+    return attributes;
+  });
 }
 
 // Print styles applied to the mammoth-generated HTML before rendering to PDF.
@@ -238,6 +269,11 @@ const PRINT_STYLES = `
     display: block;
     width: 100%;
     height: auto;
+  }
+  /* A formula's picture in a sentence sits in the line, at the size its
+     inline style gives it (see inlineImages). */
+  .s2c-pdf-root p > img[alt^="formula:"] {
+    display: inline;
   }
   ${QUESTION_TYPE_LIST.map(
     (type) =>

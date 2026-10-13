@@ -9,7 +9,8 @@ For how to use this, see
 
 Lesson text blocks can carry a little formatting (bold, italic, underline, the
 `TEXT_MARKS` in `lessonText.js`), footnotes, citations of the lesson's sources,
-and read-aloud hints and pauses (see [Read-aloud hints](#read-aloud-hints)). A source is written once, in the lesson's Sources list, and a footnote
+read-aloud hints and pauses (see [Read-aloud hints](#read-aloud-hints)), and
+formulas (see [Formulas](#formulas)). A source is written once, in the lesson's Sources list, and a footnote
 anywhere in the text can cite it. Every footnote is numbered in reading order
 across the whole lesson, and the lesson closes with a Notes list and a Sources
 list.
@@ -34,6 +35,10 @@ one that also had a note, as a plain note.
 | `apps/web/src/lib/speechExtensions.js`                 | The tiptap speech mark and pause node.                       |
 | `apps/web/src/components/editor/ReadAloudControls.jsx` | The Read aloud button and its form.                          |
 | `@spelling-creator/core/speech`                        | Text blocks as spoken text, and chunking it for a voice.     |
+| `@spelling-creator/core/browser/formulas`              | The door to MathJax: a lesson's formulas, rendering, speech. |
+| `apps/web/src/lib/formulaExtension.js`                 | The tiptap formula node.                                     |
+| `apps/web/src/components/editor/FormulaControls.jsx`   | The Formula button and its form.                             |
+| `apps/web/src/components/Formula.jsx`                  | Draws one formula, with MathJax.                             |
 | `apps/web/src/components/TextRuns.jsx`                 | Draws runs and citations as React elements.                  |
 
 A text block holds its words in one of two shapes:
@@ -109,9 +114,9 @@ but a checked `href`. And lesson content is rendered by walking the JSON into
 React elements and docx runs, so there is never any markup to inject.
 `normalizeTextContent` is the boundary instead: anything that arrives from
 outside the editor (an imported file, the MCP server, a document written by an
-older client) is reduced to paragraphs, three marks, the speech mark, the
-footnote node and the pause node, and the renderers only ever draw what
-survives it. It also stores marks in a fixed
+older client) is reduced to paragraphs, three marks, the speech mark, and the
+footnote, pause and math nodes, and the renderers only ever draw what survives
+it. It also stores marks in a fixed
 order and merges neighboring runs, so the same formatting always hashes to the
 same git blob.
 
@@ -160,6 +165,95 @@ cursors count.
 Read-aloud is the only reader. `textBlockSpeech` in `@spelling-creator/core/speech`
 turns a block into spoken text, one line per paragraph, and
 [interactive mode](./interactive-mode.md#reading-aloud) hands that to the voices.
+
+## Formulas
+
+A formula is the format's math run, stored as an inline atom:
+
+```json
+{
+  "type": "math",
+  "attrs": {
+    "format": "asciimath",
+    "source": "120 xx 3 = 360",
+    "display": false,
+    "spoken": null
+  }
+}
+```
+
+`format` is `asciimath` or `tex` (a notation this version doesn't know is kept,
+and its source shown, as the format asks), `source` the formula as written with
+no delimiters, `display` whether it sits on a line of its own, and `spoken`
+the author's words for read-aloud (spoken text, as a string or runs), or null
+for speech made from the formula. `normalizeFormula` cleans it. As plain text
+(`textBlockPlain`, and so search, the checks and the MCP server's grounding) a
+formula is its source. `isPlainContent` is false for a block with one.
+
+### Rendering
+
+[MathJax 4](https://www.mathjax.org/) renders formulas, through its source
+package (`@mathjax/src`) rather than a prebuilt bundle, so the app loads
+exactly the TeX and AsciiMath parsers and the SVG output it uses, as one lazy
+chunk. It is heavy (about half a megabyte compressed with its font), so:
+
+- `core/browser/formulas.js` is the light door: `lessonFormulas(doc)`,
+  `loadFormulas()` (one dynamic `import()` of `formulaBrowser.js` per page),
+  `renderLessonFormulas(doc)` for the exports and `formulaWords(formula)` for
+  speech. A lesson without a formula never loads MathJax.
+- `core/browser/formulaEngine.js` makes a renderer for a MathJax DOM adaptor
+  (the browser's, or the lite one in tests): `render({ format, source,
+display })` gives the MathML tree and string and the typeset SVG as a node,
+  and `error` when the source didn't parse (MathJax's `noerrors` and
+  `noundefined` show the problem in red in place of the formula). The TeX
+  parser has only the `base` and `ams` packages, so `\href` and `\require`
+  are unknown commands: a formula can't make a link, load an extension or run
+  anything, as the format requires.
+- MathJax's AsciiMath parser is its legacy (MathJax 2) code, CommonJS that
+  reads `arguments.callee`, which throws in the strict-mode ES modules Vite
+  and Rolldown produce (MathJax's own bundles are built with webpack, which
+  keeps CommonJS sloppy). `patches/@mathjax__src@4.1.3.patch` rewrites those
+  few lines to name the functions instead; the patch applies on install
+  (`patchedDependencies` in `pnpm-workspace.yaml`) and has to be carried
+  forward when MathJax is updated.
+- `core/browser/formulaBrowser.js` is the browser wiring: the page's own
+  document, MathJax's stylesheet appended once, the font's dynamic glyph files
+  (double-struck, script and so on) as chunks of the build found by
+  `import.meta.glob`, and `formulaImage(node)`, a formula as a PNG for the
+  PDF.
+- `apps/web/src/lib/formulas.js` caches each render per page and
+  `Formula.jsx` draws it: the source as text until MathJax has it (and on the
+  server, and wherever it can't be rendered), then the SVG, put in the page as
+  the nodes MathJax built, never through innerHTML. A screen reader gets the
+  formula's MathML, visually hidden, beside the SVG; in the editor the source
+  stands there instead, because the collaboration cursors count characters
+  over the block's plain text and a formula's share of that is its source.
+
+### Speech
+
+The speech rule engine (`speech-rule-engine`, the engine behind MathJax's own
+accessibility tools) turns MathML into words: "60 over 5 equals 12", "x
+squared", "the square root of 81". `core/browser/formulaSpeech.js` loads it
+with ClearSpeak rules fed from the app's own assets (the engine's `base` and
+`en` rule files, about 100 KB compressed), never its default CDN. In spoken
+text (`core/speech.js`) a formula is its author's `spoken` words, or a
+`{ text: source, formula }` run that `withFormulaSpeech` replaces with the
+engine's words just before a step is spoken (`useSpeech.js`); a formula that
+can't be parsed is read as its source.
+
+### Word and PDF
+
+`formulaDocx.js` turns the MathML tree into the `docx` library's math
+components (fraction, superscript, subscript, radical, runs), which Word
+writes as a native equation. The exports render every formula first
+(`renderLessonFormulas`) and hand the map to `buildDocument`; without it a
+formula prints as its source. The PDF path's docx goes through mammoth, which
+drops equations, so that path asks for formulas as pictures
+(`formulasAs: "image"`): each is an `ImageRun` of the PNG `formulaImage`
+made, with alt text that names the formula so `pdfExport.js` can give the
+`<img>` mammoth makes its size. A display formula is a centered paragraph of
+its own, and in the PDF counts as a picture in the `embedded` list, since it
+sits alone in its paragraph the way a lesson picture does.
 
 ## Numbering
 
@@ -244,7 +338,11 @@ Assistants write text blocks as a small markup and are told to leave text plain
 unless a convention needs formatting. Heavy formatting is rejected on save.
 Read-aloud hints borrow Pandoc's bracketed spans: `[FRESNEL]{ipa: freɪˈnɛl}`,
 `[WWF]{say: World Wide Fund for Nature}`, `[REEF]{spell}`, and `{pause}` or
-`{pause: long}`. A `{` in plain text is escaped as `\{`, so text read out of a
-lesson can be written straight back (`contentToMarkup` and `markupToContent`
-in `lessonText.js`). See
+`{pause: long}`. A formula is `{asciimath: 120 xx 3 = 360}` or
+`{tex: \frac{60}{5} = 12}`, with `display` after the notation for a line of
+its own and a `{spoken: ...}` straight after it for its read-aloud words; it
+runs to the brace that balances its opening one, with no escapes inside (TeX
+is full of braces and backslashes), so its braces have to balance. A `{` in
+plain text is escaped as `\{`, so text read out of a lesson can be written
+straight back (`contentToMarkup` and `markupToContent` in `lessonText.js`). See
 [Lesson validation](../mcp-server/lesson-validation.md) and [Tools](../mcp-server/tools.md).

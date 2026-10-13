@@ -223,6 +223,20 @@ with jsPDF: they repeat on every page, so they cannot come from the flowed HTML,
 and mammoth converts only the document body, never the docx's own header and
 footer.
 
+### Formulas
+
+A formula in a text block is a Word equation in the docx (OMML, built from the
+MathML MathJax parses the formula into; `formulaDocx.js`) and a picture in the
+PDF, since mammoth drops equations. The exports render every formula with
+MathJax first (`renderLessonFormulas` in `core/browser/formulas.js`, which
+loads nothing for a lesson without one) and pass the result to
+`buildDocument`; the PDF path asks for them as pictures (`formulasAs:
+"image"`) and gives each `<img>` mammoth makes its size by the formula's alt
+text. A formula on a line of its own is a centered paragraph, and in the PDF a
+figure like a lesson picture. Details in
+[Formulas](./formatting-and-footnotes.md#formulas). The Word importer doesn't
+read equations back, so a Word round trip loses them.
+
 ## Printing
 
 **Print** prints the finished PDF itself rather than the page, so the page

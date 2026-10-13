@@ -11,11 +11,11 @@ lesson needs at least one section before it can be exported.
 
 | Menu item               | What you get                                                                                           |
 | ----------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Export DOCX**         | A Word document, downloaded to your device.                                                            |
+| **Export DOCX**         | A Word document, downloaded to your device. Formulas come out as Word equations.                       |
 | **Export JSON**         | A lesson file you can open again later with **Import JSON or OSLF**, with nothing lost.                |
 | **Export OSLF**         | The lesson as an Open Spelling Lesson Format file, for tools that aren't Spelling Creator (see below). |
 | **Export OSLF (XML)**   | The same Open Spelling Lesson Format file, written as XML, for tools that prefer XML.                  |
-| **Export PDF**          | A PDF, downloaded to your device, laid out the same as the Word document.                              |
+| **Export PDF**          | A PDF, downloaded to your device, laid out the same as the Word document. Formulas are pictures in it. |
 | **Print**               | Your browser's print dialog, with that same PDF ready to print. Nothing is downloaded (see below).     |
 | **Save to Google Docs** | The lesson as an editable Google Doc in your Google Drive.                                             |
 

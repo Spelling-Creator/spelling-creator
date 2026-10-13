@@ -465,7 +465,7 @@ function ResumeNotice({ onRestart }) {
 function TextBlock({ block }) {
   return textBlockParagraphs(block).map((runs, index) => (
     <p key={index} className="mb-4 text-lg leading-relaxed last:mb-0">
-      {runs.some((run) => run.type === "text") ? (
+      {runs.some((run) => run.type === "text" || run.type === "math") ? (
         <TextRuns runs={runs} />
       ) : (
         "\u00a0"

@@ -33,6 +33,7 @@ import {
 import { cn } from "../../lib/utils.js";
 import { Footnote } from "../../lib/footnoteExtension.js";
 import { Pause, SpeechHint } from "../../lib/speechExtensions.js";
+import { FormulaNode } from "../../lib/formulaExtension.js";
 import { useLessonSources } from "../../lib/lessonSources.jsx";
 import LessonTextToolbar from "./LessonTextToolbar.jsx";
 
@@ -66,6 +67,7 @@ export default function LessonTextInput({
   const { starts } = useLessonSources();
   const [footnoteOpen, setFootnoteOpen] = useState(false);
   const [readAloudOpen, setReadAloudOpen] = useState(false);
+  const [formulaOpen, setFormulaOpen] = useState(false);
 
   // The latest block and callback, for the commit that fires after a pause.
   const latest = useRef({ block, onChange });
@@ -117,6 +119,7 @@ export default function LessonTextInput({
             ? t("contentBlock.readAloud.longPauseChip")
             : t("contentBlock.readAloud.shortPauseChip"),
       }),
+      FormulaNode,
     ],
     [placeholder, t],
   );
@@ -154,11 +157,12 @@ export default function LessonTextInput({
           "aria-label": t("contentBlock.text.ariaLabel"),
           ...(collabField ? { "data-collab-field": collabField } : {}),
         },
-        // Clicking a footnote or a pause selects it; open its form straight
-        // away.
+        // Clicking a footnote, a pause or a formula selects it; open its form
+        // straight away.
         handleClickOn: (_view, _pos, node) => {
           if (node.type.name === "footnote") setFootnoteOpen(true);
           if (node.type.name === "pause") setReadAloudOpen(true);
+          if (node.type.name === "math") setFormulaOpen(true);
           return false;
         },
       },
@@ -227,6 +231,8 @@ export default function LessonTextInput({
           onFootnoteOpenChange={setFootnoteOpen}
           readAloudOpen={readAloudOpen}
           onReadAloudOpenChange={setReadAloudOpen}
+          formulaOpen={formulaOpen}
+          onFormulaOpenChange={setFormulaOpen}
         />
       )}
       <EditorContent editor={editor} />

@@ -15,6 +15,7 @@
 import { googleClientId, hasGoogleDrive } from "../config.js";
 import { Packer } from "docx";
 import { buildDocument } from "./docxExport.js";
+import { renderLessonFormulas } from "./formulas.js";
 
 // Only request access to files this app creates — the least-privileged Drive scope.
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -204,7 +205,10 @@ export async function saveToGoogleDrive(doc, meta = {}) {
   try {
     const token = await getAccessToken();
 
-    const document = await buildDocument(doc, meta);
+    // Formulas go up as Word equations, which Google Docs converts into its
+    // own. Null for a lesson without any, so MathJax doesn't load for one.
+    const formulas = await renderLessonFormulas(doc);
+    const document = await buildDocument(doc, meta, undefined, { formulas });
     const docxBlob = await Packer.toBlob(document);
 
     const metadata = {

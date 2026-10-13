@@ -21,6 +21,12 @@
 // (spokenForBrowser), so it says an alias and spells a word out but reads a
 // pronunciation as written. A long pause is silence between two chunks.
 //
+// A formula is spoken from the MathML MathJax parses it into, by a speech
+// rule engine. Both load the first time a formula is about to be read (see
+// core/browser/formulas.js), so a step with math in it starts a moment later
+// the first time, and a lesson without math never loads them. The words are
+// worked out before the step is spoken (withFormulaSpeech), for both voices.
+//
 // Two quirks of the browser's voices shape this file. (A third, voices loading
 // late, belongs to the voice list and is handled in lib/speechPrefs.js.)
 //
@@ -72,9 +78,12 @@ import {
 } from "@spelling-creator/core/browser/readAloud";
 import {
   chunkSpeech,
+  hasFormulaSpeech,
   speechKey,
   spokenForBrowser,
+  withFormulaSpeech,
 } from "@spelling-creator/core/speech";
+import { formulaWords } from "@spelling-creator/core/browser/formulas";
 import {
   naturalVoiceId,
   useNaturalVoices,
@@ -373,9 +382,22 @@ export function useSpeech() {
     if (state.busy !== null || !state.pending || !reader.current) return;
     const { script, voice, speed } = state.pending;
     state.pending = null;
-    for (const chunk of chunkSpeech(script).slice(0, PREPARED_CHUNKS)) {
-      clipFor(chunk.runs, voice, speed).catch(() => {});
+    const make = (chunks) => {
+      for (const chunk of chunks.slice(0, PREPARED_CHUNKS)) {
+        clipFor(chunk.runs, voice, speed).catch(() => {});
+      }
+    };
+    const chunks = chunkSpeech(script);
+    if (!hasFormulaSpeech(chunks)) {
+      make(chunks);
+      return;
     }
+    // A formula's words come first. If a step started being made meanwhile,
+    // this one waits for it again, unless a newer step has taken its place.
+    withFormulaSpeech(chunks, formulaWords).then((said) => {
+      if (state.busy === null) make(said);
+      else state.pending ??= { script, voice, speed };
+    });
   }, [clipFor]);
 
   const speakBrowser = useCallback(
@@ -529,8 +551,8 @@ export function useSpeech() {
   const speak = useCallback(
     (script) => {
       if (typeof window === "undefined" || !window.speechSynthesis) return;
-      const chunks = chunkSpeech(script);
-      if (chunks.length === 0) return;
+      const raw = chunkSpeech(script);
+      if (raw.length === 0) return;
 
       generation.current += 1;
       const mine = generation.current;
@@ -538,55 +560,77 @@ export function useSpeech() {
       stopClips();
       spoken.current = true;
 
-      if (naturalId && reader.current && !natural.current.brokenForVisit) {
-        speakNatural(chunks, mine, naturalId);
-        return;
-      }
-      // Not loaded yet. Go by the stored choice rather than naturalId, since
-      // the device check may not have answered yet (startLoad asks it too).
       const state = natural.current;
-      if (!naturalVoiceId(voiceURI) || state.brokenForVisit) {
-        speakBrowser(chunks, mine);
+      // Whether a natural voice is wanted, by the stored choice rather than
+      // naturalId, since the device check may not have answered yet
+      // (startLoad asks it too).
+      const wantsNatural =
+        Boolean(naturalVoiceId(voiceURI)) && !state.brokenForVisit;
+      // Web Audio is started now, while the click that asked for this step
+      // still counts, since a browser may not let it start once a wait (for
+      // the voice to load, or for a formula's words) is over. Not when the
+      // model is known not to be downloaded, where the browser's voice is
+      // going to read.
+      const startAudio = () => {
+        if (state.inCache === null || state.cached || reader.current) {
+          audio.current.context ??= new AudioContext();
+          audio.current.context.resume().catch(() => {});
+        }
+      };
+
+      const start = (chunks) => {
+        if (naturalId && reader.current && !state.brokenForVisit) {
+          speakNatural(chunks, mine, naturalId);
+          return;
+        }
+        if (!wantsNatural) {
+          speakBrowser(chunks, mine);
+          return;
+        }
+        setSpeaking(true);
+        startAudio();
+        // The wait is counted from here, so nothing before it can stretch it.
+        let timer;
+        const deadline = new Promise((resolve) => {
+          timer = setTimeout(() => resolve(false), CACHED_WAIT_MS);
+        });
+        isCached()
+          .then((cached) => {
+            // Not downloaded, or a load from the cache that already failed or
+            // ran long: the browser's voice reads at once, with one load
+            // attempt per step behind it. A download needs the device check
+            // to have passed; if it answers only now, the effect above starts
+            // it instead.
+            if (!cached || state.noWait) {
+              if (cached || naturalId) startLoad();
+              return false;
+            }
+            return Promise.race([startLoad(), deadline]).then((ready) => {
+              if (!ready) state.noWait = true;
+              return ready;
+            });
+          })
+          .then((ready) => {
+            if (generation.current !== mine) return;
+            // Read in the voice chosen now: it may have changed while waiting.
+            const chosen = naturalVoiceId(currentVoice.current);
+            if (ready && chosen) speakNatural(chunks, mine, chosen);
+            else speakBrowser(chunks, mine);
+          })
+          .finally(() => clearTimeout(timer));
+      };
+
+      if (!hasFormulaSpeech(raw)) {
+        start(raw);
         return;
       }
+      // A step with a formula waits for its words first. Speaking is shown as
+      // under way meanwhile, and Web Audio is started while the click counts.
       setSpeaking(true);
-      // Web Audio is started now, while the click that asked for this step
-      // still counts, since a browser may not let it start once the wait
-      // below is over. Not when the model is known not to be downloaded,
-      // where the browser's voice is going to read.
-      if (state.inCache === null || state.cached) {
-        audio.current.context ??= new AudioContext();
-        audio.current.context.resume().catch(() => {});
-      }
-      // The wait is counted from here, so nothing before it can stretch it.
-      let timer;
-      const deadline = new Promise((resolve) => {
-        timer = setTimeout(() => resolve(false), CACHED_WAIT_MS);
+      if (wantsNatural) startAudio();
+      withFormulaSpeech(raw, formulaWords).then((chunks) => {
+        if (generation.current === mine) start(chunks);
       });
-      isCached()
-        .then((cached) => {
-          // Not downloaded, or a load from the cache that already failed or
-          // ran long: the browser's voice reads at once, with one load
-          // attempt per step behind it. A download needs the device check
-          // to have passed; if it answers only now, the effect above starts
-          // it instead.
-          if (!cached || state.noWait) {
-            if (cached || naturalId) startLoad();
-            return false;
-          }
-          return Promise.race([startLoad(), deadline]).then((ready) => {
-            if (!ready) state.noWait = true;
-            return ready;
-          });
-        })
-        .then((ready) => {
-          if (generation.current !== mine) return;
-          // Read in the voice chosen now: it may have changed while waiting.
-          const chosen = naturalVoiceId(currentVoice.current);
-          if (ready && chosen) speakNatural(chunks, mine, chosen);
-          else speakBrowser(chunks, mine);
-        })
-        .finally(() => clearTimeout(timer));
     },
     [
       voiceURI,

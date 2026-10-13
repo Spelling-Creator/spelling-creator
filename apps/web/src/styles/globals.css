@@ -521,3 +521,38 @@
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
+
+/* Formulas (Formula.jsx). MathJax's own stylesheet sizes the SVG; these say
+   where a formula sits: in the line, or centered on a line of its own. The
+   source shows in its place until MathJax has drawn it, or where it can't. */
+.lesson-formula {
+  display: inline;
+}
+/* Tailwind's preflight makes every svg a block. An inline formula is one or
+   more SVGs in a line (MathJax cuts a long one where it may wrap), and each
+   has to sit in the text like a character. */
+.lesson-formula mjx-container > svg {
+  display: inline;
+}
+.lesson-formula[data-display] {
+  display: block;
+  text-align: center;
+  margin: 0.5em 0;
+}
+.lesson-formula[data-status="loading"] .lesson-formula-view,
+.lesson-formula[data-status="failed"] .lesson-formula-view {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.95em;
+}
+.lesson-formula-node {
+  border-radius: 0.25em;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.lesson-formula-node[data-display] {
+  display: block;
+}
+.lesson-formula-node-selected {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}

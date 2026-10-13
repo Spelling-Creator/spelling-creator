@@ -50,6 +50,8 @@ src/
       LessonTextInput.jsx a text block's tiptap editor: bold/italic/underline, footnotes and read-aloud hints, committed like LiveField (see formatting-and-footnotes.md)
       LessonTextToolbar.jsx its toolbar and the footnote form (cite a source, add a note, or both; add a new source on the spot)
       ReadAloudControls.jsx the toolbar's Read aloud button: a pronunciation, words to say instead or a spell-out for the selected words, and pauses
+      FormulaControls.jsx the toolbar's Formula button: AsciiMath or LaTeX, in the sentence or on its own line, with a live preview
+      FormulaNodeView.jsx how a formula node looks in the editor (the Formula component in a selectable wrapper)
       SourcesPanel.jsx    the lesson's Sources card at the end of the editor, with how often each source is cited
       LessonChecksSheet.jsx  the "Check lesson" panel: findings grouped by section, each a link to its block (see lesson-checks.md)
       FactCheckSection.jsx   the Check panel's fact check (see fact-checking.md)
@@ -71,7 +73,8 @@ src/
     RichTextToolbar.jsx   its shadcn ToggleGroup toolbar (bold/italic/underline/lists/link/etc.)
     RichText.jsx          renders a stored comment/bio: sanitized HTML, or plain text for pre-rich-text values
     LiveField.jsx         debounced LiveInput/LiveTextarea (commit about 200ms after typing pauses, hold off remote updates while focused)
-    TextRuns.jsx          draws a text block's formatted runs and a footnote's or source's citation as React elements (no innerHTML)
+    TextRuns.jsx          draws a text block's formatted runs (a formula through Formula.jsx) and a footnote's or source's citation as React elements (no innerHTML)
+    Formula.jsx           one formula, typeset by MathJax once it has loaded and its source until then, with MathML beside it for screen readers
     LessonView.jsx        read-only renderer for the lesson page and the editor's preview mode (blocks straight to React, lazy images, drawn in the app's theme)
     LessonTranslation.jsx the published lesson's on-device Translate action (see lesson-translation.md)
     LessonSummary.jsx     on-device AI summary card on the lesson page (hidden unless the device can run an engine)
@@ -104,6 +107,8 @@ src/
     lessonSources.jsx      LessonSourcesProvider: hands text block editors the lesson's sources and their footnote numbering
     footnoteExtension.js   the tiptap footnote node (an inline atom numbered by a CSS counter)
     speechExtensions.js    the tiptap speech mark (a read-aloud hint) and pause node (an inline atom labelled by CSS)
+    formulaExtension.js    the tiptap formula node (an inline atom drawn by FormulaNodeView)
+    formulas.js            renderFormula + useFormula: each formula rendered once per page, through core's door to MathJax
     lessonChecks.js        the lesson checks as the editor shows them (the checks themselves are in core)
     factCheck.js           fact checking as the editor shows it
     collab.js              useCollaboration hook (one WebSocket to the CollabRoom Durable Object; doc sync, cursors, chat)
@@ -152,7 +157,7 @@ only through another module.
   spelling              helpers for the explicit "spelling words" block
   vakt                  shared definitions for the VAKT block (an activity, not a question)
   ageRanges             the age ranges a lesson can be pitched at
-  lessonText            a text block's content: formatted paragraphs with footnotes, read-aloud hints and pauses
+  lessonText            a text block's content: formatted paragraphs with footnotes, read-aloud hints, pauses and formulas
   sources               a lesson's sources (doc.sources) and how text blocks cite them
   speech                spoken text: what read-aloud says for a text block, and chunking it for a voice
   lessonSearch          fully client-side hub search (Fuse.js)
@@ -241,6 +246,11 @@ the MCP server cannot reach it by accident:
   readAloud             the natural read-aloud voice (Kokoro): the device check, whether it's already downloaded, and the door to its engine
   readAloudEngine       (internal) the engine itself: Kokoro via transformers.js on WebGPU, a lazy chunk only speaking ever loads
   readAloudText         (internal) the engine's input: text cleanup, espeak-ng phonemes (Spellophone) and read-aloud hints, kept light so it tests under Node
+  formulas              formulas: which a lesson has, and the door to MathJax (rendering for the exports, words for read-aloud), a lazy chunk only a formula ever loads
+  formulaEngine         (internal) MathJax itself: AsciiMath and TeX into MathML and SVG, for any DOM adaptor
+  formulaSpeech         (internal) the speech rule engine: MathML into words, with ClearSpeak rules the caller loads
+  formulaBrowser        (internal) the browser wiring: the page's document, the font's dynamic glyph chunks, the rule files as assets, a formula as a PNG
+  formulaDocx           (internal) a formula's MathML as a Word equation (docx math components)
   readAloudVoices       (internal) the Kokoro model (id and pinned revision) and the voices on offer, readable without the engine
   downloadProgress      (internal) shared by the transformers.js engines: per-file download events summed into the one 0-1 fraction the UI shows
   git/fs                LightningFS, the IndexedDB filesystem the repos live on

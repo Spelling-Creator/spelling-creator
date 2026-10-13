@@ -200,6 +200,32 @@
       "describeIpa": "Read aloud as /{{ipa}}/",
       "describeAlias": "Read aloud as \"{{alias}}\"",
       "describeSpell": "Read aloud one letter at a time"
+    },
+    "formula": {
+      "addButton": "Add a formula",
+      "addButtonShort": "Formula",
+      "editButton": "Edit this formula",
+      "editButtonShort": "Edit formula",
+      "formatLabel": "Written in",
+      "formats": {
+        "asciimath": "AsciiMath",
+        "tex": "LaTeX"
+      },
+      "sourceLabel": "Formula",
+      "help": {
+        "asciimath": "Type it the way you would in a message: 2 xx 8 for times, 48 -: 6 for divided by, 3/4 for a fraction, 10^6 for a power, sqrt(81) for a root.",
+        "tex": "LaTeX math, without the dollar signs: 2 \\times 8, 48 \\div 6, \\frac{3}{4}, 10^6, \\sqrt{81}."
+      },
+      "previewEmpty": "The formula shows here as you type it.",
+      "placementLabel": "Place it",
+      "inline": "In the sentence",
+      "display": "On its own line",
+      "spokenLabel": "Read aloud as (optional)",
+      "spokenPlaceholder": "three quarters of the fans",
+      "spokenHelp": "Formulas are read aloud automatically. Give the words to say instead if that reading is awkward.",
+      "insert": "Add formula",
+      "update": "Save",
+      "remove": "Remove formula"
     }
   },
   "sources": {

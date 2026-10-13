@@ -1,5 +1,6 @@
 // The toolbar over a lesson text block: bold, italic, underline, the footnote
-// button, and the Read aloud button (ReadAloudControls.jsx).
+// button, the Read aloud button (ReadAloudControls.jsx) and the Formula
+// button (FormulaControls.jsx).
 //
 // The footnote button inserts a footnote after the cursor (or after the
 // selected words), or, when a footnote is selected, edits that one. A footnote
@@ -27,6 +28,7 @@ import {
 } from "../ui/select.jsx";
 import { useLessonSources } from "../../lib/lessonSources.jsx";
 import ReadAloudControls from "./ReadAloudControls.jsx";
+import FormulaControls from "./FormulaControls.jsx";
 
 // The Select's value for "this footnote cites nothing".
 const NO_SOURCE = "__none__";
@@ -261,6 +263,8 @@ export default function LessonTextToolbar({
   onFootnoteOpenChange,
   readAloudOpen,
   onReadAloudOpenChange,
+  formulaOpen,
+  onFormulaOpenChange,
 }) {
   const { t } = useTranslation("editorSections");
   const state = useEditorState({
@@ -358,6 +362,11 @@ export default function LessonTextToolbar({
         editor={editor}
         open={readAloudOpen}
         onOpenChange={onReadAloudOpenChange}
+      />
+      <FormulaControls
+        editor={editor}
+        open={formulaOpen}
+        onOpenChange={onFormulaOpenChange}
       />
     </div>
   );

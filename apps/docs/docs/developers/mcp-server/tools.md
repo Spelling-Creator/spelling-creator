@@ -505,24 +505,30 @@ jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pair
 Text blocks are written, and read back from `get_lesson`, as one string in a small
 markup. It is Markdown where Markdown has an answer:
 
-| Markup                            | Means                               |
-| --------------------------------- | ----------------------------------- |
-| `**bold**`                        | Bold                                |
-| `*italic*`                        | Italic                              |
-| `<u>underline</u>`                | Underline                           |
-| `^[A note.]`                      | A footnote with a free-text note    |
-| `^[@smith2020]`                   | A footnote citing one of `sources`  |
-| `^[@smith2020, p. 12]`            | The same, with a page or section    |
-| `^[@smith2020, p. 12 \| A note.]` | The same, with a note too           |
-| `[FRESNEL]{ipa: freɪˈnɛl}`        | Read aloud as the IPA gives it      |
-| `[WWF]{say: World Wide Fund}`     | Read aloud as other words           |
-| `[REEF]{spell}`                   | Read aloud one letter at a time     |
-| `{pause}`, `{pause: long}`        | A short or long pause in read-aloud |
+| Markup                               | Means                               |
+| ------------------------------------ | ----------------------------------- |
+| `**bold**`                           | Bold                                |
+| `*italic*`                           | Italic                              |
+| `<u>underline</u>`                   | Underline                           |
+| `^[A note.]`                         | A footnote with a free-text note    |
+| `^[@smith2020]`                      | A footnote citing one of `sources`  |
+| `^[@smith2020, p. 12]`               | The same, with a page or section    |
+| `^[@smith2020, p. 12 \| A note.]`    | The same, with a note too           |
+| `[FRESNEL]{ipa: freɪˈnɛl}`           | Read aloud as the IPA gives it      |
+| `[WWF]{say: World Wide Fund}`        | Read aloud as other words           |
+| `[REEF]{spell}`                      | Read aloud one letter at a time     |
+| `{pause}`, `{pause: long}`           | A short or long pause in read-aloud |
+| `{asciimath: 120 xx 3 = 360}`        | A typeset formula, in AsciiMath     |
+| `{tex display: \frac{60}{5}}`        | One in LaTeX, on its own line       |
+| `{tex: 3/4}{spoken: three quarters}` | With the words read-aloud says      |
 
 The read-aloud forms are Pandoc's bracketed spans: the words in brackets show and print
 as written, and the braces say how to read them aloud (see
 [Read-aloud hints](../web-app/formatting-and-footnotes.md#read-aloud-hints)). Brackets
 or braces that don't make one of these forms are read as the characters themselves.
+
+A formula runs to the brace that balances its opening one, and nothing inside it is an
+escape, so its braces must balance (in TeX they do).
 
 A backslash makes the next character literal (`\*` for an asterisk, `\{` for a brace). An unpaired `*` or
 an unclosed `^[` is read as the characters themselves, so prose that happens to hold an

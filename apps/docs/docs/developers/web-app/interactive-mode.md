@@ -256,6 +256,15 @@ is marked `pauseAfter`. The two kinds of voice then take it differently:
   a long pause is 0.7 seconds of silence on the audio timeline
   (`LONG_PAUSE_SECONDS` in `useSpeech.js`).
 
+A formula in a text block is either its author's spoken words or a formula run
+(`{ text: source, formula }`). Before a step with one is spoken, `useSpeech`
+has `withFormulaSpeech` replace each with the words the speech rule engine
+makes from the formula's MathML (`formulaWords` in `core/browser/formulas.js`;
+see [Formulas](./formatting-and-footnotes.md#formulas)), for both voices. The
+first such step loads MathJax and the engine, so it starts a moment later;
+`prepare` does the same for the step after. A lesson without formulas never
+loads them.
+
 The on/off, voice and pace preferences live in `localStorage` under
 `spelling-creator:tts-enabled`, `spelling-creator:tts-voice` and
 `spelling-creator:tts-rate`, read and written through

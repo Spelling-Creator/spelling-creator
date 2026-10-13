@@ -251,6 +251,12 @@ function passageOf(block) {
     for (const node of paragraph.content || []) {
       if (node.type === "pause") {
         runs.push({ pause: node.attrs?.length === "long" ? "long" : "short" });
+      } else if (node.type === "math") {
+        const { format, source, display, spoken } = node.attrs;
+        const math = { format, source: oneLine(source) };
+        if (display) math.display = true;
+        if (spoken) math.spoken = spoken;
+        runs.push({ math });
       } else if (node.type === "text") {
         const marks = new Set((node.marks || []).map((m) => m.type));
         const speech = (node.marks || []).find((m) => m.type === "speech");
@@ -507,6 +513,13 @@ function paragraphFromOslf(paragraph) {
       if (run.text) content.push({ type: "text", text: run.text, marks });
     } else if (run && typeof run === "object" && run.pause) {
       content.push({ type: "pause", attrs: { length: run.pause } });
+    } else if (run && typeof run === "object" && run.math) {
+      // normalizeTextContent cleans the formula (normalizeFormula).
+      const { format, source, display, spoken } = run.math;
+      content.push({
+        type: "math",
+        attrs: { format, source, display, spoken: spoken ?? null },
+      });
     } else if (run && typeof run === "object" && run.note) {
       const note = run.note;
       content.push({
@@ -525,7 +538,8 @@ function paragraphFromOslf(paragraph) {
 }
 
 // Rich text flattened to its words: a prompt, caption or heading is a plain
-// string here.
+// string here. A formula reads as its source, as the format says to show it
+// where it can't be rendered.
 function richTextPlain(value) {
   if (typeof value === "string") return value;
   if (!Array.isArray(value)) return "";
@@ -535,7 +549,9 @@ function richTextPlain(value) {
         ? run
         : run && typeof run.text === "string"
           ? run.text
-          : "",
+          : typeof run?.math?.source === "string"
+            ? run.math.source
+            : "",
     )
     .join("");
 }

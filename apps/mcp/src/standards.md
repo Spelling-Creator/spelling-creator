@@ -65,6 +65,17 @@ the page, so don't rely on a hint to fix how one pronounces a word. Use them for
 abbreviations the voice is likely to get wrong, or when the user asks. Punctuation already makes natural pauses, so add a pause only where pacing really needs it.
 Most passages need none of these.
 
+## Formulas
+
+A math or science passage can carry a typeset formula, written in AsciiMath (`{asciimath: 120 xx 3
+= 360}`, `{asciimath: sqrt(81) = 9}`) or LaTeX (`{tex: \frac{60}{5} = 12}`). Put `display` after the
+notation (`{tex display: ...}`) to set it on a line of its own. Formulas are read aloud
+automatically; where that reading would be awkward, add the words to say straight after it:
+`{asciimath: 3/4}{spoken: three quarters}`.
+
+A formula is for math, not for a number in prose: "360 steps" and "$2.50" stay as plain text. The
+speller spells the answer, so a question's answer is plain text too, never a formula.
+
 ## Sources and footnotes
 
 A lesson can list its `sources` (books, articles, websites), which print as a Sources list at the
