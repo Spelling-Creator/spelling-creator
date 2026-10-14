@@ -24,7 +24,7 @@
 // shows: interactive mode and the DOCX/PDF exports always use the lesson as
 // written.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { LanguagesIcon } from "lucide-react";
@@ -262,7 +262,12 @@ export default function TranslatableLesson({ doc, onTranslation }) {
   // translated already; "Show original" flips a finished translation back.
   const translation =
     translating || (done && !state.showOriginal) ? state.map : null;
-  useEffect(() => {
+  // A layout effect, not a plain one, so the parent learns of the change in
+  // the same commit that LessonView draws it: with useEffect, Find in lesson
+  // would be matching against the translation for a paint after "Show
+  // original" had already put the original words on the page. (React 19
+  // runs this on the server as a no-op, without the old warning.)
+  useLayoutEffect(() => {
     onTranslation?.(translation);
   }, [translation, onTranslation]);
   const lesson = (
