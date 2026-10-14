@@ -328,6 +328,102 @@ them), so one id always matches one element. A 37-screen lesson is no easier to
 move around in when you are reading it back than when you are writing it, which
 is the whole reason the preview gets an outline at all.
 
+## Find in lesson
+
+`src/components/LessonFind.jsx`, over `@spelling-creator/core/lessonFind`.
+Find-in-page (above) tells you a word is on the page; this tells you where. A
+37-screen document has ninety questions that all look alike, and the browser
+scrolling to a highlighted word in the middle of one of them doesn't say it
+was Q7 of section 3. The find names each hit by its section and its place in
+it, shows the words around the match, and goes there on a click.
+
+### The matching is lexical, on purpose
+
+`lessonFindEntries(doc)` flattens the lesson into one entry per searchable
+place: each section's name, and each block's words (a text block's
+paragraphs, a spelling list, a question's prompt with its answers and steps,
+a picture's caption but not its credit, a VAKT activity with its link
+labels, a heading). Every field is read through the text helpers
+(`textBlockPlain`, `inlineTextPlain`), so a formatted passage, a formula or
+a read-aloud hint matches by what shows on the page. Entries carry the
+section's id and index and the block's id, plus a per-section `number` for
+text blocks and questions, which is what the row label ("Paragraph 2", "Q7")
+is made from; the question numbering is the same count `SectionCard` draws.
+
+`findInLesson(doc, query, entries)` keeps the entries whose text holds every
+whitespace-separated term of the query. Matching folds case and accents on
+both sides (NFD, combining marks stripped, lowercased) and keeps a map from
+folded to original offsets, so a hit is reported as ranges in the original
+string even where folding changed a character's length (İ folds to two code
+units). There is no fuzziness and no query syntax: a lesson is a thousand
+words whose author knows the word they want, and "any part of a word, case
+and accents ignored" is what a browser's find does, which is the behavior a
+reader expects from a box called Find. The hub's search is fuzzy
+(`lessonSearch`, Fuse.js) because its field is a title someone half
+remembers; that is a different problem. Each result carries a `snippet`: a
+window of about 150 characters around the first match, started and ended on
+a word where it can be, as runs with the matches marked, which the component
+draws with `<mark>`.
+
+An on-device embedding model was considered for this and turned down. The
+text weights alone are about 175 MB per device, the capability gate would
+hide the feature from phones and from any browser without WebGPU, and a
+single lesson is too small for semantic retrieval to find anything a
+substring doesn't. If semantic search is ever wanted, the place for it is
+across the hub's lessons, not within one.
+
+### The component
+
+A popover (`Popover` from the UI kit) off a **Find in lesson** button: an
+input, a count line, and a `listbox` of hits. The input keeps the keyboard
+(`role="combobox"`, `aria-activedescendant`); the arrow keys move the
+selection and Enter chooses it, and the rows are clickable with
+`tabIndex={-1}` so Tab never walks the list. It shows the first 50 hits and
+says so (`shownOf`): a query matching more than that wants another word, not
+a longer list.
+
+Choosing a hit closes the popover first, because the page is about to scroll
+a long way and a popover anchored to a button that has scrolled off the top
+is no use, then after two animation frames (one for whatever `onSelect`
+changed to render, one for layout) scrolls to the block through
+`scrollToElement` with `block: "center"` (a section's name scrolls to the
+card with `"start"`, as the outline does) and draws a brief ring around it
+with the Web Animations API, so the eye lands on the block rather than the
+middle of the screen. The query and results survive the close, so going to
+the next hit is one click and one key. `onCloseAutoFocus` is prevented:
+Radix would otherwise return focus to the trigger, and focusing it scrolls
+the page straight back to it, against the scroll that has just started.
+
+The block is found by `data-block-id`, which `SectionCard`'s `BlockRow`
+already published for drop targeting and which `LessonView` now publishes
+too, on a plain wrapper `<div>` around each block, so the same component
+works in the editor, in the editor's preview and on the public lesson page
+without knowing which of them it is on. The wrapper is a div with no class:
+the document's own styles are descendant rules (`.s2c-lesson-root p` and
+the like) and apply through it unchanged.
+
+`onSelect` is the one hook the host gets, called with the hit before the
+scroll. The editor passes `revealFindHit`, which expands the hit's section
+through `toggleCollapse(id, false)`, for the reason `goToFinding` does: a
+block has to be on the page to be scrolled to. (It doesn't leave preview,
+since the preview answers to the same block ids.) The lesson page passes
+nothing.
+
+### Where the button is
+
+In the editor it is at the top of the section outline, which is the one part
+of the editor that stays on screen: the search for the next hit is always one
+click away, however far the last one scrolled the page. Below 52rem of page
+column there is no outline, so the document panel's stats row carries a
+second copy (`@min-[52rem]/page:hidden`, the complement of the outline's own
+`@min-[52rem]/page:block`). The two are separate instances with separate
+queries, which only shows if the window is resized mid-search; sharing the
+state would mean lifting it into `EditorPage` for a case nobody hits.
+
+The lesson page (`LessonOverview`) does the same: a copy in the About rail,
+which is sticky beside the lesson from 52rem, and a copy above the lesson
+for the widths where the rail is stacked under it.
+
 ## What isn't solved yet
 
 The section outline above was one of the answers this page called for. One

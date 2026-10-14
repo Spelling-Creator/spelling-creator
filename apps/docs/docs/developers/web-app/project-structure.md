@@ -161,6 +161,7 @@ only through another module.
   sources               a lesson's sources (doc.sources) and how text blocks cite them
   speech                spoken text: what read-aloud says for a text block, and chunking it for a voice
   lessonSearch          fully client-side hub search (Fuse.js)
+  lessonFind            find within one lesson: the entries, the lexical matching and the snippets behind Find in lesson
   lessonFile            the .json lesson-file envelope (shared with the importer + MCP)
   jsonImport            parse + validate a .json lesson file (or an OSLF one, JSON or XML) back into the lesson model
   oslf                  the lesson as an Open Spelling Lesson Format file, and back

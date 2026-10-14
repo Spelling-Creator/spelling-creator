@@ -40,6 +40,7 @@ import {
 import PageBar from "../components/layout/PageBar.jsx";
 import { PAGE_GUTTER } from "../components/layout/PageBody.jsx";
 import SectionOutline from "../components/editor/SectionOutline.jsx";
+import LessonFind from "../components/LessonFind.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
 import { useLessonChecks } from "../lib/lessonChecks.js";
@@ -918,6 +919,16 @@ export default function EditorPage() {
         }),
       );
     },
+    [toggleCollapse],
+  );
+
+  // Go to a hit from Find in lesson. The scroll is LessonFind's; this only
+  // opens the section first, for the same reason goToFinding does: the block
+  // has to be on the page to be scrolled to. Preview is left as it is, since
+  // LessonView answers to the same block ids and the hit is just as findable
+  // there.
+  const revealFindHit = useCallback(
+    (hit) => toggleCollapse(hit.sectionId, false),
     [toggleCollapse],
   );
 
@@ -3021,6 +3032,9 @@ export default function EditorPage() {
           onToggleAll={toggleAllCollapsed}
           onAddSection={openAddDialog}
           checks={checks}
+          find={
+            <LessonFind doc={doc} onSelect={revealFindHit} className="w-full" />
+          }
         />
 
         {/* min-w-0 is load-bearing: without it this flex item is sized by its
@@ -3128,6 +3142,21 @@ export default function EditorPage() {
                         ? t("documentPanel.expandAll")
                         : t("documentPanel.collapseAll")}
                     </Button>
+                  )}
+                  {/* The narrow-screen copy of the outline's Find in lesson:
+                      below 52rem of page column there is no outline, and
+                      this row is the only place that names the lesson as a
+                      whole. Its own instance (its own query), which only
+                      shows if the window is resized mid-search. */}
+                  {sectionCount > 0 && (
+                    <span className="@min-[52rem]/page:hidden">
+                      <LessonFind
+                        doc={doc}
+                        onSelect={revealFindHit}
+                        variant="ghost"
+                        className="h-10 sm:h-8"
+                      />
+                    </span>
                   )}
                 </div>
 

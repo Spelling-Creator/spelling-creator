@@ -53,6 +53,7 @@ export default function SectionOutline({
   onAddSection,
   readOnly = false,
   checks,
+  find,
 }) {
   const { t } = useTranslation("editor");
   const { t: tChecks } = useTranslation("checks");
@@ -93,10 +94,17 @@ export default function SectionOutline({
         )}
       </div>
 
+      {/* Find in lesson sits here because this column is the one part of the
+          editor that stays on screen: the search for the next hit is always
+          one click away, however far the last one scrolled the page. The
+          document panel carries the same control for the widths where this
+          column is hidden. */}
+      {find && sections.length > 0 && <div className="mb-3">{find}</div>}
+
       {sections.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("outline.empty")}</p>
       ) : (
-        <ol className="m-0 flex max-h-[calc(100dvh-var(--header-h)-9rem)] list-none flex-col gap-0.5 overflow-y-auto p-0">
+        <ol className="m-0 flex max-h-[calc(100dvh-var(--header-h)-12rem)] list-none flex-col gap-0.5 overflow-y-auto p-0">
           {sections.map((section, i) => {
             const problems = checks?.bySection.get(section.id)?.problems ?? 0;
             return (
