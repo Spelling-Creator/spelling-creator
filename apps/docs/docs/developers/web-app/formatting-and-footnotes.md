@@ -307,9 +307,22 @@ document on each keystroke.
 
 - **Lesson page and preview.** Formatting renders as written. Each footnote is
   a superscript number linking down to the Notes list, and each note links back
-  up. The Sources list follows the notes.
+  up. The Sources list follows the notes. A prompt and a step draw through
+  `InlineText.jsx`, which is `TextRuns` over `inlineTextRuns`.
+- **The editor.** A prompt and a step get `LessonLineInput.jsx`: the text
+  block's tiptap schema less the footnote node, with the document held to one
+  paragraph (so Enter does nothing and a pasted passage lands as one line),
+  and the same toolbar (`LessonTextToolbar` with `footnotes={false}`) shown
+  only while the line is being edited. Both editors commit through
+  `lib/useLiveEditor.js`, which holds the pause-then-commit and held-off
+  remote change behavior the plain fields have; the line editor commits
+  `normalizeInlineText` of its document, so a plain line is stored as a string.
 - **Word and PDF export.** Formatting becomes Word run formatting, and footnotes
-  become real Word footnotes at the foot of each page. The Sources list closes
+  become real Word footnotes at the foot of each page. A prompt's runs each
+  wear the question's character style, so the importer reads the whole prompt
+  back off the styled spans; a formula in a prompt or a step is an equation
+  (or a picture, on the PDF path) in the line, and `lessonFormulas` collects
+  formulas from prompts and steps as well as text blocks. The Sources list closes
   the document under a "Sources" line, written with its own paragraph styles so
   the PDF can style it and the importer can recognize it (`S2C Sources
 Heading` and `S2C Source Entry`; the footnote locator and note are the
@@ -331,14 +344,17 @@ Heading` and `S2C Source Entry`; the footnote locator and note are the
   caption of the picture above it, and so do image
   [credits](./images.md), so they come back as credits.
 - **Word import.** Read-aloud hints and pauses have no place in a Word
-  document, so a Word round trip loses them.
+  document, so a Word round trip loses them. A prompt and a step come back
+  as their plain words.
 - **JSON import and export.** Lossless. Citations of a source the file doesn't
   list are dropped on import (keeping any note), since they would print as
   "Source no longer listed." (`MISSING_SOURCE_TEXT`). A footnote citing a source that is in the list but
   not filled in yet names it "Untitled source" (`UNTITLED_SOURCE_TEXT`).
 - **Interactive mode.** Formatting shows, footnote markers don't. That screen is
   what the speller reads, and a number with nowhere to lead is clutter there. The
-  read-aloud voice reads the words with their hints and pauses.
+  read-aloud voice reads the words with their hints and pauses, in a prompt as
+  in a passage (`inlineTextSpeech`); the revealed working draws each step's
+  formulas, and the saved response snapshot keeps the prompt's plain words.
 - **Translation.** Each paragraph's plain words translate as one segment, so a
   translated paragraph loses its formatting and keeps its footnote markers at
   its end. Footnote notes translate. Citations and the Sources list don't: an

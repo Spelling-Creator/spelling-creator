@@ -1,27 +1,20 @@
 // The editor for a lesson text block: tiptap, with bold, italics, underlining,
-// footnotes and read-aloud hints and pauses, and nothing else.
+// footnotes, read-aloud hints and pauses, and formulas, and nothing else.
 //
 // The schema matches what @spelling-creator/core/lessonText stores and every
-// renderer draws: paragraphs of text runs, three marks, one footnote node, and
-// the speech mark and pause node that only read-aloud uses.
+// renderer draws: paragraphs of text runs, three marks, one footnote node, the
+// speech mark and pause node that only read-aloud uses, and the formula node.
 // Headings, lists, links, code and line breaks inside a paragraph are switched
 // off, so pasting them in leaves only their words.
 //
-// It behaves like the LiveTextarea it replaced (see lib/useLiveField.js):
-// typing commits upstream about 200ms after a pause rather than on every
-// keystroke, because each commit is broadcast to collaborators and recorded by
-// version history, and a change that arrives from elsewhere (a collaborator, a
-// restored version) is held off while you're in the block and applied once you
-// leave it. Leaving only writes the block back if you actually changed it, so
-// clicking into a block and out again never writes your stale copy over a
-// collaborator's edit that arrived in between.
-//
-// What it commits is always a `content` document (withTextBlockDocument), even
-// for a block nobody has formatted: the collaboration document merges a block
-// key by key, and two people editing one block have to be writing the same key.
+// It commits the way the LiveTextarea it replaced did (see lib/useLiveEditor.js
+// for the timing and what happens to a change from elsewhere). What it
+// commits is always a `content` document (withTextBlockDocument), even for a
+// block nobody has formatted: the collaboration document merges a block key
+// by key, and two people editing one block have to be writing the same key.
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useMemo, useState } from "react";
+import { EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { useTranslation } from "react-i18next";
@@ -35,9 +28,8 @@ import { Footnote } from "../../lib/footnoteExtension.js";
 import { Pause, SpeechHint } from "../../lib/speechExtensions.js";
 import { FormulaNode } from "../../lib/formulaExtension.js";
 import { useLessonSources } from "../../lib/lessonSources.jsx";
+import { useLiveEditor } from "../../lib/useLiveEditor.js";
 import LessonTextToolbar from "./LessonTextToolbar.jsx";
-
-const COMMIT_DELAY = 200;
 
 function contentKey(content) {
   return JSON.stringify(normalizeTextContent(content));
@@ -45,10 +37,54 @@ function contentKey(content) {
 
 // Refuse dropped and pasted files, as the comment editor does: a text block
 // holds words, and pictures have blocks of their own.
-const EDITOR_PROPS = {
+export const EDITOR_PROPS = {
   handleDrop: (_view, event) => Boolean(event.dataTransfer?.files?.length),
   handlePaste: (_view, event) => Boolean(event.clipboardData?.files?.length),
 };
+
+// What StarterKit is left with: paragraphs, the three marks, history and the
+// keymap. Shared with the one-line editor (LessonLineInput.jsx).
+export const STARTER_KIT_OPTIONS = {
+  heading: false,
+  blockquote: false,
+  bulletList: false,
+  orderedList: false,
+  listItem: false,
+  listKeymap: false,
+  codeBlock: false,
+  code: false,
+  horizontalRule: false,
+  hardBreak: false,
+  strike: false,
+  link: false,
+};
+
+/**
+ * The read-aloud and formula extensions, with their labels in the editor's
+ * language. Shared with the one-line editor.
+ * @param {import("i18next").TFunction} t
+ */
+export function speechAndFormulaExtensions(t) {
+  return [
+    SpeechHint.configure({
+      describe: (attrs) =>
+        attrs.ipa
+          ? t("contentBlock.readAloud.describeIpa", { ipa: attrs.ipa })
+          : attrs.alias
+            ? t("contentBlock.readAloud.describeAlias", {
+                alias: attrs.alias,
+              })
+            : t("contentBlock.readAloud.describeSpell"),
+    }),
+    Pause.configure({
+      label: (length) =>
+        length === "long"
+          ? t("contentBlock.readAloud.longPauseChip")
+          : t("contentBlock.readAloud.shortPauseChip"),
+    }),
+    FormulaNode,
+  ];
+}
 
 /**
  * @param {object} props
@@ -69,152 +105,43 @@ export default function LessonTextInput({
   const [readAloudOpen, setReadAloudOpen] = useState(false);
   const [formulaOpen, setFormulaOpen] = useState(false);
 
-  // The latest block and callback, for the commit that fires after a pause.
-  const latest = useRef({ block, onChange });
-  useEffect(() => {
-    latest.current = { block, onChange };
-  });
-  const focused = useRef(false);
-  // Whether there are local edits not yet committed. Set by typing (onUpdate
-  // only fires for local changes: a change from elsewhere is applied with
-  // emitUpdate off), cleared by a commit.
-  const dirty = useRef(false);
-  // A change from elsewhere arrived while focused and was held off.
-  const held = useRef(false);
-  const timer = useRef(null);
-
   const extensions = useMemo(
     () => [
-      StarterKit.configure({
-        heading: false,
-        blockquote: false,
-        bulletList: false,
-        orderedList: false,
-        listItem: false,
-        listKeymap: false,
-        codeBlock: false,
-        code: false,
-        horizontalRule: false,
-        hardBreak: false,
-        strike: false,
-        link: false,
-      }),
+      StarterKit.configure(STARTER_KIT_OPTIONS),
       Placeholder.configure({ placeholder }),
       Footnote.configure({
         HTMLAttributes: { title: t("contentBlock.text.footnoteMarkerTitle") },
       }),
-      SpeechHint.configure({
-        describe: (attrs) =>
-          attrs.ipa
-            ? t("contentBlock.readAloud.describeIpa", { ipa: attrs.ipa })
-            : attrs.alias
-              ? t("contentBlock.readAloud.describeAlias", {
-                  alias: attrs.alias,
-                })
-              : t("contentBlock.readAloud.describeSpell"),
-      }),
-      Pause.configure({
-        label: (length) =>
-          length === "long"
-            ? t("contentBlock.readAloud.longPauseChip")
-            : t("contentBlock.readAloud.shortPauseChip"),
-      }),
-      FormulaNode,
+      ...speechAndFormulaExtensions(t),
     ],
     [placeholder, t],
   );
 
-  const commit = (editor) => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    if (!dirty.current) return;
-    dirty.current = false;
-    const { block: current, onChange: emit } = latest.current;
-    const json = editor.getJSON();
-    if (contentKey(json) === contentKey(textBlockContent(current))) return;
-    emit(withTextBlockDocument(current, json));
-  };
+  const content = useMemo(() => textBlockContent(block), [block]);
 
-  // Show the block as it now stands, if that isn't what the editor shows.
-  const syncFromBlock = (editor) => {
-    const incoming = textBlockContent(latest.current.block);
-    if (contentKey(editor.getJSON()) !== contentKey(incoming)) {
-      editor.commands.setContent(incoming, { emitUpdate: false });
-    }
-  };
-
-  const editor = useEditor(
-    {
-      extensions,
-      content: textBlockContent(block),
-      editorProps: {
-        ...EDITOR_PROPS,
-        attributes: {
-          class:
-            "prose-editor lesson-text-editor min-h-16 px-3 py-2 text-sm outline-none",
-          "aria-label": t("contentBlock.text.ariaLabel"),
-          ...(collabField ? { "data-collab-field": collabField } : {}),
-        },
-        // Clicking a footnote, a pause or a formula selects it; open its form
-        // straight away.
-        handleClickOn: (_view, _pos, node) => {
-          if (node.type.name === "footnote") setFootnoteOpen(true);
-          if (node.type.name === "pause") setReadAloudOpen(true);
-          if (node.type.name === "math") setFormulaOpen(true);
-          return false;
-        },
+  const editor = useLiveEditor({
+    content,
+    contentKey,
+    onCommit: (json) => onChange(withTextBlockDocument(block, json)),
+    extensions,
+    editorProps: {
+      ...EDITOR_PROPS,
+      attributes: {
+        class:
+          "prose-editor lesson-text-editor min-h-16 px-3 py-2 text-sm outline-none",
+        "aria-label": t("contentBlock.text.ariaLabel"),
+        ...(collabField ? { "data-collab-field": collabField } : {}),
       },
-      onFocus: () => {
-        focused.current = true;
-      },
-      onBlur: ({ editor }) => {
-        focused.current = false;
-        // Your edits go up; with none, catch up with anything held off while
-        // you were in the block.
-        if (dirty.current) commit(editor);
-        else if (held.current) syncFromBlock(editor);
-        held.current = false;
-      },
-      onUpdate: ({ editor }) => {
-        dirty.current = true;
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => commit(editor), COMMIT_DELAY);
+      // Clicking a footnote, a pause or a formula selects it; open its form
+      // straight away.
+      handleClickOn: (_view, _pos, node) => {
+        if (node.type.name === "footnote") setFootnoteOpen(true);
+        if (node.type.name === "pause") setReadAloudOpen(true);
+        if (node.type.name === "math") setFormulaOpen(true);
+        return false;
       },
     },
-    [extensions],
-  );
-
-  // Typing within the last 200ms is still waiting on its commit when the
-  // editor goes away: the block unmounts (the page is left, a section folds) or
-  // the editor is rebuilt (its extensions change with the language). Commit it
-  // then rather than drop it. tiptap destroys an editor on a timeout, so this
-  // instance can still be read here.
-  useEffect(() => {
-    if (!editor) return undefined;
-    return () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
-        timer.current = null;
-      }
-      if (dirty.current) commit(editor);
-    };
-    // commit reads everything it needs through refs, so the one captured with
-    // this editor is never stale.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
-
-  // A change from elsewhere. Applied only while the block isn't being typed in,
-  // and only when it really differs from what the editor shows, so a commit of
-  // our own coming back round is a no-op rather than a cursor jump.
-  useEffect(() => {
-    if (!editor) return;
-    const incoming = textBlockContent(block);
-    if (contentKey(editor.getJSON()) === contentKey(incoming)) return;
-    if (focused.current) held.current = true;
-    else editor.commands.setContent(incoming, { emitUpdate: false });
-  }, [editor, block]);
+  });
 
   return (
     <div

@@ -29,6 +29,7 @@ import { Button } from "../ui/button.jsx";
 import { Alert, AlertDescription } from "../ui/alert.jsx";
 import { Skeleton } from "../ui/skeleton.jsx";
 import { suggestFix } from "@spelling-creator/core/aiSuggest";
+import { inlineTextPlain } from "@spelling-creator/core/inlineText";
 import { checkFix } from "@spelling-creator/core/lessonAiFixes";
 import { textBlockPlain } from "@spelling-creator/core/lessonText";
 import { QUESTION_TYPES } from "@spelling-creator/core/questions";
@@ -55,7 +56,7 @@ function blockLines(t, block) {
       label: t("aiFix.fields.type"),
       text: QUESTION_TYPES[block.questionType]?.label || block.questionType,
     },
-    { label: t("aiFix.fields.prompt"), text: block.prompt || "" },
+    { label: t("aiFix.fields.prompt"), text: inlineTextPlain(block.prompt) },
   ];
   if (block.answer != null) {
     lines.push({ label: t("aiFix.fields.answer"), text: String(block.answer) });
@@ -69,7 +70,10 @@ function blockLines(t, block) {
   if (block.steps?.length) {
     lines.push({
       label: t("aiFix.fields.steps"),
-      text: texts(block.steps).join(" / "),
+      text: block.steps
+        .map((step) => inlineTextPlain(step?.text))
+        .filter(Boolean)
+        .join(" / "),
     });
   }
   return lines;

@@ -1,6 +1,8 @@
 // The toolbar over a lesson text block: bold, italic, underline, the footnote
 // button, the Read aloud button (ReadAloudControls.jsx) and the Formula
-// button (FormulaControls.jsx).
+// button (FormulaControls.jsx). The one-line editor a prompt or a step gets
+// (LessonLineInput.jsx) shows the same toolbar without the footnote button,
+// since inline text holds no footnotes.
 //
 // The footnote button inserts a footnote after the cursor (or after the
 // selected words), or, when a footnote is selected, edits that one. A footnote
@@ -26,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select.jsx";
+import { cn } from "../../lib/utils.js";
 import { useLessonSources } from "../../lib/lessonSources.jsx";
 import ReadAloudControls from "./ReadAloudControls.jsx";
 import FormulaControls from "./FormulaControls.jsx";
@@ -259,12 +262,14 @@ function FootnoteForm({ initial, editing, onSave, onRemove }) {
 
 export default function LessonTextToolbar({
   editor,
-  footnoteOpen,
+  footnotes = true,
+  footnoteOpen = false,
   onFootnoteOpenChange,
   readAloudOpen,
   onReadAloudOpenChange,
   formulaOpen,
   onFormulaOpenChange,
+  className,
 }) {
   const { t } = useTranslation("editorSections");
   const state = useEditorState({
@@ -306,7 +311,12 @@ export default function LessonTextToolbar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-border p-1">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1 border-b border-border p-1",
+        className,
+      )}
+    >
       <MarkButton
         pressed={state.bold}
         onPressedChange={() => editor.chain().focus().toggleBold().run()}
@@ -328,35 +338,37 @@ export default function LessonTextToolbar({
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <Popover open={footnoteOpen} onOpenChange={onFootnoteOpenChange}>
-        <PopoverTrigger asChild>
-          <Toggle
-            size="sm"
-            pressed={state.footnote}
-            aria-label={
-              state.footnote
-                ? t("contentBlock.footnote.editButton")
-                : t("contentBlock.footnote.addButton")
-            }
-          >
-            <MessageSquarePlus />
-            <span className="text-xs">
-              {state.footnote
-                ? t("contentBlock.footnote.editButtonShort")
-                : t("contentBlock.footnote.addButtonShort")}
-            </span>
-          </Toggle>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <FootnoteForm
-            key={state.footnote ? `footnote-${state.footnotePos}` : "new"}
-            initial={state.footnote ? state.footnoteAttrs : {}}
-            editing={state.footnote}
-            onSave={save}
-            onRemove={remove}
-          />
-        </PopoverContent>
-      </Popover>
+      {footnotes && (
+        <Popover open={footnoteOpen} onOpenChange={onFootnoteOpenChange}>
+          <PopoverTrigger asChild>
+            <Toggle
+              size="sm"
+              pressed={state.footnote}
+              aria-label={
+                state.footnote
+                  ? t("contentBlock.footnote.editButton")
+                  : t("contentBlock.footnote.addButton")
+              }
+            >
+              <MessageSquarePlus />
+              <span className="text-xs">
+                {state.footnote
+                  ? t("contentBlock.footnote.editButtonShort")
+                  : t("contentBlock.footnote.addButtonShort")}
+              </span>
+            </Toggle>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="start">
+            <FootnoteForm
+              key={state.footnote ? `footnote-${state.footnotePos}` : "new"}
+              initial={state.footnote ? state.footnoteAttrs : {}}
+              editing={state.footnote}
+              onSave={save}
+              onRemove={remove}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
 
       <ReadAloudControls
         editor={editor}

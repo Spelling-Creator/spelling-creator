@@ -21,6 +21,8 @@ import { useTranslation } from "react-i18next";
 import { ArrowUpIcon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton.jsx";
 import { CitationParts, TextRuns } from "./TextRuns.jsx";
+import InlineText from "./InlineText.jsx";
+import { inlineTextPlain } from "@spelling-creator/core/inlineText";
 import { fitWithin, imageSizeScale } from "@spelling-creator/core/image";
 import { headingText } from "@spelling-creator/core/heading";
 import { imageCaptionParts } from "@spelling-creator/core/imageCredit";
@@ -429,8 +431,14 @@ function QuestionBlock({ block, si, bi, translation }) {
             fontStyle: meta.italic ? "italic" : undefined,
           }}
         >
-          {translation?.get(lessonSegmentKey.prompt(si, bi)) ??
-            (block.prompt || t("lessonView.noQuestionText"))}
+          {/* A translated prompt is plain words; the original draws with
+              its formatting and formulas (InlineText). */}
+          {translation?.get(lessonSegmentKey.prompt(si, bi)) ?? (
+            <InlineText
+              value={block.prompt}
+              fallback={t("lessonView.noQuestionText")}
+            />
+          )}
         </span>
         {answer ? `${ANSWER_GAP}${answer}` : null}
       </p>
@@ -453,7 +461,9 @@ function QuestionBlock({ block, si, bi, translation }) {
       {steps.map((step, i) => (
         <p key={step.id} style={{ marginLeft: "24px" }}>
           {i + 1}.{" "}
-          {translation?.get(lessonSegmentKey.step(si, bi, i)) ?? step.text}
+          {translation?.get(lessonSegmentKey.step(si, bi, i)) ?? (
+            <InlineText value={step.text} />
+          )}
         </p>
       ))}
     </>
@@ -654,9 +664,10 @@ export function lessonPlainText(doc) {
       if (block.type === "text") {
         const text = textBlockPlain(block);
         if (text.trim()) parts.push(text);
-      } else if (block.type === "question" && block.prompt)
-        parts.push(block.prompt);
-      else if (block.type === "spelling") {
+      } else if (block.type === "question") {
+        const prompt = inlineTextPlain(block.prompt);
+        if (prompt.trim()) parts.push(prompt);
+      } else if (block.type === "spelling") {
         const words = (block.words || [])
           .map((w) => (w.text || "").trim())
           .filter(Boolean);

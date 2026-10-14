@@ -474,6 +474,15 @@
   min-height: 1.5em;
 }
 
+/* The one-line editor (LessonLineInput.jsx): one paragraph, sized like the
+   Input it replaced, and wrapping rather than scrolling when a prompt runs
+   long. */
+.lesson-line-editor p {
+  margin: 0;
+  min-height: 1.75em;
+  line-height: 1.75;
+}
+
 /* Footnote markers. The editor starts the counter at the number of footnotes
    that come before its block (an inline counter-reset on the wrapper), so the
    markers carry the numbers the printed lesson will. */

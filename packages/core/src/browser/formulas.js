@@ -6,6 +6,7 @@
 // Nothing here loads anything until a lesson with a formula is drawn, exported
 // or read aloud, so a lesson without math costs nothing extra.
 
+import { inlineTextRuns } from "../inlineText.js";
 import { textBlockParagraphs } from "../lessonText.js";
 
 /**
@@ -19,24 +20,32 @@ export function formulaKey({ format, source, display }) {
 }
 
 /**
- * Every distinct formula in a lesson's text blocks, by key.
+ * Every distinct formula in a lesson's text blocks, prompts and steps, by key.
  * @param {object} doc
  * @returns {Map<string, { format: string, source: string, display: boolean }>}
  */
 export function lessonFormulas(doc) {
   const out = new Map();
+  const collect = (runs) => {
+    for (const run of runs) {
+      if (run.type !== "math") continue;
+      const formula = {
+        format: run.format,
+        source: run.source,
+        display: Boolean(run.display),
+      };
+      out.set(formulaKey(formula), formula);
+    }
+  };
   for (const section of doc?.sections || []) {
     for (const block of section.blocks || []) {
-      if (block?.type !== "text") continue;
-      for (const paragraph of textBlockParagraphs(block)) {
-        for (const run of paragraph) {
-          if (run.type !== "math") continue;
-          const formula = {
-            format: run.format,
-            source: run.source,
-            display: Boolean(run.display),
-          };
-          out.set(formulaKey(formula), formula);
+      if (block?.type === "text") {
+        for (const paragraph of textBlockParagraphs(block)) collect(paragraph);
+      } else if (block?.type === "question") {
+        // A prompt and a step can hold a formula too (see inlineText.js).
+        collect(inlineTextRuns(block.prompt));
+        for (const step of block.steps || []) {
+          collect(inlineTextRuns(step?.text));
         }
       }
     }

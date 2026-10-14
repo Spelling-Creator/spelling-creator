@@ -8,18 +8,21 @@ Text blocks in a lesson can have a little formatting and footnotes, and a
 footnote can cite one of the lesson's sources. You list each source once, in
 the lesson's **Sources** card, and footnotes anywhere in the text can point to
 it. Footnotes are numbered in reading order through the whole lesson, and the
-lesson ends with a **Notes** list and a **Sources** list.
+lesson ends with a **Notes** list and a **Sources** list. A question and the
+steps of a Math question can carry the same formatting, read-aloud fixes and
+formulas, but not footnotes.
 
 ## What you can do
 
-| Available                                         | Not available                                   |
-| ------------------------------------------------- | ----------------------------------------------- |
-| Bold, italic, underline                           | Headings, lists, links, code, line breaks       |
-| Footnotes that cite a source, with a page         | Pictures or other media inside a text block     |
-| Footnotes with a note of your own                 | Footnotes in question, picture or VAKT blocks   |
-| A footnote that does both (a citation and a note) | Formatting in any block other than a text block |
-| How words are read aloud, and pauses              | Read-aloud fixes outside a text block           |
-| Formulas, in AsciiMath or LaTeX                   | Formulas in questions or answers                |
+| Available                                                                  | Not available                                      |
+| -------------------------------------------------------------------------- | -------------------------------------------------- |
+| Bold, italic, underline                                                    | Headings, lists, links, code, line breaks          |
+| Footnotes that cite a source, with a page                                  | Pictures or other media inside a text block        |
+| Footnotes with a note of your own                                          | Footnotes anywhere but a text block                |
+| A footnote that does both (a citation and a note)                          | Formatting in answers, spelling words or VAKT text |
+| How words are read aloud, and pauses                                       | Read-aloud fixes in answers or captions            |
+| Formulas, in AsciiMath or LaTeX                                            | Formulas in answers                                |
+| All of these in a question and in a Math question's steps, footnotes aside |                                                    |
 
 The set is small on purpose. A lesson is read aloud to a speller and printed
 for whoever is running it, ALL CAPS already marks the spelling words, and
@@ -31,6 +34,11 @@ book titles and scientific names, and footnotes for sources.
 Each text block has a small toolbar with **Bold**, **Italic**, **Underline**,
 **Footnote**, **Read aloud** and **Formula**. Select some words and press a
 button to format them.
+
+A question's text and each step of a Math question have the same toolbar,
+without **Footnote**. It shows under the field while you're typing in it and
+hides again when you leave, so a section of fifteen questions stays readable.
+A question is one line, so Enter does nothing there.
 
 ## Adding a footnote
 
@@ -80,8 +88,10 @@ written.
 ## Formulas
 
 A math or science passage can carry a typeset formula: a fraction, a power, a
-root, an equation. Put the cursor where it goes (or select the words it
-follows), press **Formula**, and write it in one of two notations:
+root, an equation. So can a Math question and its steps: "There are 60
+seconds in a minute" and then `\frac{60}{5} = 12`, typeset. Put the cursor
+where it goes (or select the words it follows), press **Formula**, and write
+it in one of two notations:
 
 - **AsciiMath** is close to how you would type math in a message, and quick
   to learn: `2 xx 8 = 16` for times, `48 -: 6 = 8` for divided by, `3/4` for a
@@ -93,7 +103,8 @@ follows), press **Formula**, and write it in one of two notations:
 
 The formula shows below the box as you type it. Choose **In the sentence** or
 **On its own line**, and press **Add formula**. Click a formula in the text to
-change or remove it.
+change or remove it. In a question or a step, a formula always sits in the
+line: those are one line each.
 
 Formulas are read aloud automatically ("60 over 5 equals 12", "x squared").
 If that reading is right but awkward to hear, fill in **Read aloud as** with
@@ -135,7 +146,7 @@ removed, and one that also had a note keeps the note.
   the footnotes (with their sources and pages) and the Sources list. Footnotes
   from other Word documents come back as notes. Read-aloud fixes and pauses
   aren't part of a Word document, so they don't come back, and neither do
-  formulas.
+  formulas. A question and its steps come back as plain words.
 - **Lesson files (JSON and OSLF)** keep everything, read-aloud fixes, pauses and
   formulas included.
 - **Interactive mode** shows the formatting and the formulas but not the
