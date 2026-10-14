@@ -17,10 +17,23 @@ export type QuestionType =
   | "wyr"
   | "background";
 
-/** A spelling word, an accepted answer or a working-out step. */
+/** A spelling word or an accepted answer. */
 export interface TextItem {
   id: string;
   text: string;
+}
+
+/**
+ * Inline text: a question's prompt or a working-out step. A plain string, or
+ * a one-paragraph tiptap document once it carries formatting, a read-aloud
+ * hint or a formula (see core's inlineText.js).
+ */
+export type InlineText = string | Record<string, unknown>;
+
+/** A working-out step of a math question. */
+export interface StepItem {
+  id: string;
+  text: InlineText;
 }
 
 export interface TextBlock {
@@ -45,10 +58,10 @@ export interface QuestionBlock {
   threeBoard?: boolean;
   /** `multiple` only: the accepted answer a Besides line names. */
   besides?: string;
-  prompt: string;
+  prompt: InlineText;
   answer?: string;
   answers?: TextItem[];
-  steps?: TextItem[];
+  steps?: StepItem[];
 }
 
 export interface VaktLink {

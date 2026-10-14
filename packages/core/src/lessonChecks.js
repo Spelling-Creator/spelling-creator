@@ -27,6 +27,10 @@
 // since a message telling a person to "call the tool again" is no use to them.
 
 import {
+  inlineTextContent,
+  inlineTextPlain,
+} from "@spelling-creator/core/inlineText";
+import {
   textBlockFootnotes,
   textBlockFormattedSpans,
   textBlockPlain,
@@ -656,7 +660,7 @@ export function validateLesson(doc) {
           // BLANKED OUT, so the speller recalls it. A prompt carrying its own
           // answers hands them over and tests nothing — the commonest orange
           // defect, and invisible unless something looks for it.
-          const promptNorm = normalizeText(block.prompt || "");
+          const promptNorm = normalizeText(inlineTextPlain(block.prompt));
           const given = answers.filter((a) =>
             containsPhrase(promptNorm, normalizeText(a)),
           );
@@ -678,7 +682,7 @@ export function validateLesson(doc) {
           // out does that; "Name one." leaves them guessing. A prompt can
           // identify its list without a literal blank ("Which three trees line
           // the bank?"), so this one advises rather than blocks.
-          if (!ORANGE_BLANK.test(block.prompt || "")) {
+          if (!ORANGE_BLANK.test(inlineTextPlain(block.prompt))) {
             warn(
               "W_ORANGE_NO_BLANK",
               questionId,
@@ -805,7 +809,7 @@ export function validateLesson(doc) {
         case "tight_open":
         case "broad_open":
         case "open": {
-          if (RETIRED_STEM.test(block.prompt || "")) {
+          if (RETIRED_STEM.test(inlineTextPlain(block.prompt))) {
             error(
               "E_RETIRED_STEM",
               questionId,
@@ -823,7 +827,7 @@ export function validateLesson(doc) {
         // Only a warning: the wording is a convention, and a choice phrased
         // some other way is still a usable question.
         case "wyr": {
-          const prompt = (block.prompt || "").trim();
+          const prompt = inlineTextPlain(block.prompt).trim();
           const separators = wyrSeparators(prompt);
           if (!WYR_STEM.test(prompt) || separators === 0) {
             warn(
@@ -885,7 +889,7 @@ export function validateLesson(doc) {
     });
     ctx.questions.forEach((block, qi) => {
       const questionId = block?.id || `${ctx.id}#q${qi}`;
-      const promptNorm = normalizeText(block?.prompt || "");
+      const promptNorm = normalizeText(inlineTextPlain(block?.prompt));
       if (!promptNorm) return;
       // A prompt carrying its own orange answers is E_ORANGE_ANSWER_IN_PROMPT's
       // business, so the owning question is skipped here rather than reported
@@ -1378,15 +1382,29 @@ export function isCapsSpan(text) {
   return /^[\p{Lu}\s'’-]+$/u.test(text) && /\p{Lu}{2}/u.test(text);
 }
 
-// Every formatted span in a section's text blocks (textBlockFormattedSpans),
-// tagged with the block it sits in, and the length of the prose around them.
+// Every formatted span in a section's text blocks (textBlockFormattedSpans)
+// and in its questions' prompts and steps, which take the same formatting
+// (see inlineText.js), tagged with the block it sits in, and the length of the
+// prose around them.
 function formattedSpans(blocks) {
   const spans = [];
   let total = 0;
-  for (const block of blocks.filter((b) => b?.type === "text")) {
-    const found = textBlockFormattedSpans(block);
+  const add = (block, found) => {
     spans.push(...found.spans.map((span) => ({ ...span, blockId: block.id })));
     total += found.totalChars;
+  };
+  for (const block of blocks) {
+    if (block?.type === "text") {
+      add(block, textBlockFormattedSpans(block));
+    } else if (block?.type === "question") {
+      const lines = [block.prompt, ...(block.steps || []).map((s) => s?.text)];
+      for (const line of lines) {
+        add(
+          block,
+          textBlockFormattedSpans({ content: inlineTextContent(line) }),
+        );
+      }
+    }
   }
   return { spans, total };
 }

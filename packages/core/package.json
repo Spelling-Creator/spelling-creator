@@ -54,6 +54,7 @@
     "./image": "./src/image.js",
     "./imageCredit": "./src/imageCredit.js",
     "./imagesClient": "./src/imagesClient.js",
+    "./inlineText": "./src/inlineText.js",
     "./interactive": "./src/interactive.js",
     "./jsonImport": "./src/jsonImport.js",
     "./lessonAiFixes": "./src/lessonAiFixes.js",

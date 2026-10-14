@@ -28,6 +28,7 @@ import {
   PageNumber,
   FootnoteReferenceRun,
 } from "docx";
+import { inlineTextPlain, inlineTextRuns } from "../inlineText.js";
 import { footnoteParts, textBlockParagraphs } from "../lessonText.js";
 import { formulaToDocx } from "./formulaDocx.js";
 import { formulaKey, renderLessonFormulas } from "./formulas.js";
@@ -382,16 +383,44 @@ async function imageBlockParagraphs(block, embedded) {
   return paragraphs;
 }
 
+// Inline text (a prompt, a step) as docx runs: its words with their
+// formatting, a formula as formulaChild gives it, nothing for a pause. `run`
+// is the TextRun options every text run shares (the prompt's style and
+// colour), and the text's own marks are laid over it. A formula set on its
+// own line stays in the line here: a prompt is one line.
+function inlineTextChildren(value, run, formulas, embedded) {
+  const children = [];
+  for (const piece of inlineTextRuns(value)) {
+    if (piece.type === "pause") continue;
+    if (piece.type === "math") {
+      children.push(
+        formulaChild({ ...piece, display: false }, formulas, embedded),
+      );
+    } else if (piece.type === "text") {
+      children.push(
+        new TextRun({
+          ...run,
+          text: piece.text,
+          bold: piece.bold || run.bold,
+          italics: piece.italic || run.italics,
+          underline: piece.underline ? {} : run.underline,
+        }),
+      );
+    }
+  }
+  return children;
+}
+
 // One question: its type's tag, the prompt in its type's colour, then the
 // answer in black on the same line. Consecutive questions sit directly under
 // one another, so the run of them reads as a block of colour-coded lines rather
 // than a list of headings.
-function questionBlockParagraphs(block) {
+function questionBlockParagraphs(block, formulas, embedded) {
   const meta = questionMeta(block.questionType);
   const answer = questionAnswerText(block);
   const steps = (block.steps || [])
-    .map((s) => (s.text || "").trim())
-    .filter(Boolean);
+    .map((s) => s?.text)
+    .filter((text) => inlineTextPlain(text).trim());
 
   // The three-board mark rides in the tag run, so it reads as part of the
   // marking rather than as the first words of the prompt, and so the importer
@@ -399,6 +428,16 @@ function questionBlockParagraphs(block) {
   const tag = isThreeBoard(block)
     ? `${meta.tag} ${THREE_BOARD_MARK}${QUESTION_TAG_GAP}`
     : `${meta.tag}${QUESTION_TAG_GAP}`;
+  // The named character style is what carries the type through mammoth to the
+  // PDF and the importer; the explicit colour is what Word itself renders.
+  // Every run of the prompt wears it, so the importer reads the whole prompt
+  // back off the styled spans.
+  const promptRun = {
+    style: questionStyleId(meta.key),
+    color: hex(meta.color),
+    italics: Boolean(meta.italic),
+    size: BODY_SIZE,
+  };
   const children = [
     // The tag is the marking that survives a grey photocopy. Its own style
     // keeps it out of the prompt span the importer reads the question off.
@@ -409,15 +448,9 @@ function questionBlockParagraphs(block) {
       bold: true,
       size: TAG_SIZE,
     }),
-    // The named character style is what carries the type through mammoth to the
-    // PDF and the importer; the explicit colour is what Word itself renders.
-    new TextRun({
-      text: block.prompt || "(no question text)",
-      style: questionStyleId(meta.key),
-      color: hex(meta.color),
-      italics: Boolean(meta.italic),
-      size: BODY_SIZE,
-    }),
+    ...(inlineTextPlain(block.prompt).trim()
+      ? inlineTextChildren(block.prompt, promptRun, formulas, embedded)
+      : [new TextRun({ ...promptRun, text: "(no question text)" })]),
   ];
   if (answer) {
     children.push(
@@ -477,7 +510,10 @@ function questionBlockParagraphs(block) {
       new Paragraph({
         spacing: { after: i === steps.length - 1 ? 60 : 40 },
         indent: { left: 360 },
-        children: [new TextRun({ text: `${i + 1}. ${text}`, size: 24 })],
+        children: [
+          new TextRun({ text: `${i + 1}. `, size: 24 }),
+          ...inlineTextChildren(text, { size: 24 }, formulas, embedded),
+        ],
       }),
     );
   });
@@ -594,7 +630,7 @@ async function sectionParagraphs(section, embedded, notes, formulas) {
     } else if (block.type === "image" && (block.image || block.src)) {
       paragraphs.push(...(await imageBlockParagraphs(block, embedded)));
     } else if (block.type === "question") {
-      paragraphs.push(...questionBlockParagraphs(block));
+      paragraphs.push(...questionBlockParagraphs(block, formulas, embedded));
     } else if (block.type === "spelling") {
       paragraphs.push(...spellingBlockParagraphs(block));
     } else if (block.type === "vakt") {

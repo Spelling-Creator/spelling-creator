@@ -11,8 +11,11 @@
 //
 // Two things don't survive the trip and are worth knowing:
 //
-//   - A prompt, caption or heading is rich text in OSLF and a plain string
-//     here, so marks and notes on those come back as their text alone.
+//   - A caption or heading is rich text in OSLF and a plain string here, so
+//     marks and notes on those come back as their text alone. A prompt and a
+//     math question's working are inline text (see inlineText.js), which
+//     holds everything the format's rich text does but a note, so a note in
+//     one of those comes back as nothing.
 //   - An image is referred to by URL in OSLF. Exporting writes the public URL
 //     the caller supplies for each stored picture (or the data URL a block
 //     already carries); importing keeps an https or data URL as the block's
@@ -25,6 +28,11 @@
 
 import { headingText } from "./heading.js";
 import { imageCaptionParts } from "./imageCredit.js";
+import {
+  inlineTextContent,
+  inlineTextPlain,
+  normalizeInlineText,
+} from "./inlineText.js";
 import { lessonFileBase } from "./lessonFile.js";
 import { normalizeTextContent, textBlockContent } from "./lessonText.js";
 import {
@@ -178,7 +186,7 @@ function requireAnswer(block, section, number) {
   if (!ANSWER_REQUIRED_TYPES.has(type) || questionAnswerItems(block).length) {
     return;
   }
-  const prompt = oneLine(block.prompt).trim();
+  const prompt = oneLine(inlineTextPlain(block.prompt)).trim();
   const named = prompt ? ` ("${prompt}")` : "";
   throw new OslfExportError(
     `Section ${section}, question ${number}${named} has no answer. The Open Spelling Lesson Format ` +
@@ -246,57 +254,67 @@ function blockToOslf(block, imageSrc) {
 // paragraph has no marks or notes, and a list of runs otherwise.
 function passageOf(block) {
   const content = textBlockContent(block);
-  const paragraphs = (content?.content || []).map((paragraph) => {
-    const runs = [];
-    for (const node of paragraph.content || []) {
-      if (node.type === "pause") {
-        runs.push({ pause: node.attrs?.length === "long" ? "long" : "short" });
-      } else if (node.type === "math") {
-        const { format, source, display, spoken } = node.attrs;
-        const math = { format, source: oneLine(source) };
-        if (display) math.display = true;
-        if (spoken) math.spoken = spoken;
-        runs.push({ math });
-      } else if (node.type === "text") {
-        const marks = new Set((node.marks || []).map((m) => m.type));
-        const speech = (node.marks || []).find((m) => m.type === "speech");
-        marks.delete("speech");
-        const text = oneLine(node.text);
-        if (!marks.size && !speech) {
-          // Adjacent plain runs join, so a paragraph with no formatting is
-          // one string.
-          if (typeof runs[runs.length - 1] === "string") {
-            runs[runs.length - 1] += text;
-          } else {
-            runs.push(text);
-          }
-          continue;
-        }
-        const run = { text };
-        if (marks.has("bold")) run.bold = true;
-        if (marks.has("italic")) run.italic = true;
-        if (marks.has("underline")) run.underline = true;
-        // The stored mark already holds exactly one of the format's three.
-        if (speech) Object.assign(run, speech.attrs);
-        runs.push(run);
-      } else if (node.type === "footnote") {
-        const note = {};
-        const { sourceId, locator, note: text } = node.attrs || {};
-        if (typeof sourceId === "string" && sourceId) note.source = sourceId;
-        if (typeof locator === "string" && locator.trim()) {
-          note.locator = oneLine(locator).trim();
-        }
-        if (typeof text === "string" && text.trim()) {
-          note.text = oneLine(text).trim();
-        }
-        // A note with neither a source nor any text says nothing.
-        if (note.source || note.text) runs.push({ note });
-      }
-    }
-    if (runs.length === 1 && typeof runs[0] === "string") return runs[0];
-    return runs.length ? runs : "";
-  });
+  const paragraphs = (content?.content || []).map(paragraphToOslf);
   return paragraphs.length ? paragraphs : [""];
+}
+
+// One stored paragraph as OSLF rich text.
+function paragraphToOslf(paragraph) {
+  const runs = [];
+  for (const node of paragraph.content || []) {
+    if (node.type === "pause") {
+      runs.push({ pause: node.attrs?.length === "long" ? "long" : "short" });
+    } else if (node.type === "math") {
+      const { format, source, display, spoken } = node.attrs;
+      const math = { format, source: oneLine(source) };
+      if (display) math.display = true;
+      if (spoken) math.spoken = spoken;
+      runs.push({ math });
+    } else if (node.type === "text") {
+      const marks = new Set((node.marks || []).map((m) => m.type));
+      const speech = (node.marks || []).find((m) => m.type === "speech");
+      marks.delete("speech");
+      const text = oneLine(node.text);
+      if (!marks.size && !speech) {
+        // Adjacent plain runs join, so a paragraph with no formatting is
+        // one string.
+        if (typeof runs[runs.length - 1] === "string") {
+          runs[runs.length - 1] += text;
+        } else {
+          runs.push(text);
+        }
+        continue;
+      }
+      const run = { text };
+      if (marks.has("bold")) run.bold = true;
+      if (marks.has("italic")) run.italic = true;
+      if (marks.has("underline")) run.underline = true;
+      // The stored mark already holds exactly one of the format's three.
+      if (speech) Object.assign(run, speech.attrs);
+      runs.push(run);
+    } else if (node.type === "footnote") {
+      const note = {};
+      const { sourceId, locator, note: text } = node.attrs || {};
+      if (typeof sourceId === "string" && sourceId) note.source = sourceId;
+      if (typeof locator === "string" && locator.trim()) {
+        note.locator = oneLine(locator).trim();
+      }
+      if (typeof text === "string" && text.trim()) {
+        note.text = oneLine(text).trim();
+      }
+      // A note with neither a source nor any text says nothing.
+      if (note.source || note.text) runs.push({ note });
+    }
+  }
+  if (runs.length === 1 && typeof runs[0] === "string") return runs[0];
+  return runs.length ? runs : "";
+}
+
+// Inline text (a prompt, a step) as OSLF rich text: its plain string, or
+// its one paragraph's runs.
+function inlineTextToOslf(value) {
+  if (typeof value === "string") return oneLine(value);
+  return paragraphToOslf(inlineTextContent(value).content[0]);
 }
 
 function imageToOslf(block, imageSrc) {
@@ -335,7 +353,7 @@ function questionToOslf(block) {
   const out = {
     type: "question",
     questionType,
-    prompt: oneLine(block.prompt),
+    prompt: inlineTextToOslf(block.prompt),
   };
   const answers = questionAnswerItems(block);
   switch (type) {
@@ -345,9 +363,9 @@ function questionToOslf(block) {
       if (answers.length) out.answers = answers;
       if (type === "number") {
         const working = (block.steps || [])
-          .map((s) => (typeof s === "string" ? s : s?.text) || "")
-          .map((text) => text.trim())
-          .filter(Boolean);
+          .map((s) => (typeof s === "string" ? s : s?.text))
+          .filter((text) => inlineTextPlain(text).trim())
+          .map(inlineTextToOslf);
         if (working.length) out.working = working;
       }
       break;
@@ -583,8 +601,16 @@ function creditText(credit) {
     .join(", ");
 }
 
+// OSLF rich text as inline text in its stored shape (a prompt, a step).
+function inlineTextFromOslf(value) {
+  return normalizeInlineText({
+    type: "doc",
+    content: [paragraphFromOslf(value)],
+  });
+}
+
 function questionFromOslf(block) {
-  const prompt = richTextPlain(block.prompt);
+  const prompt = inlineTextFromOslf(block.prompt);
   const answers = (Array.isArray(block.answers) ? block.answers : []).filter(
     (a) => typeof a === "string" && a.trim(),
   );
@@ -602,9 +628,10 @@ function questionFromOslf(block) {
         ...base,
         questionType: type,
         answer: answers[0] ?? "",
+        // As the editor's step rows (normalizeLessonFile gives them ids).
         steps: (Array.isArray(block.working) ? block.working : [])
-          .map(richTextPlain)
-          .filter(Boolean),
+          .map((step) => ({ text: inlineTextFromOslf(step) }))
+          .filter((step) => inlineTextPlain(step.text).trim()),
       };
     case "multiple": {
       if (suggested) return { ...base, questionType: "multiple_open", answers };

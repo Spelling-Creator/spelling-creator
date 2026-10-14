@@ -33,6 +33,7 @@ import {
 } from "./ui/dropdown-menu.jsx";
 import { LiveInput, LiveTextarea } from "./LiveField.jsx";
 import IconActionButton from "./IconActionButton.jsx";
+import LessonLineInput from "./editor/LessonLineInput.jsx";
 import LessonTextInput from "./editor/LessonTextInput.jsx";
 import {
   fitWithin,
@@ -987,17 +988,21 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
               </span>
             )}
           </div>
+          {/* The prompt and the steps are inline text (one line that can
+              carry a formula or a read-aloud hint; see core/inlineText.js),
+              so they get the one-line lesson editor rather than a plain
+              field. */}
           <Field>
             <FieldLabel htmlFor={`${block.id}-prompt`}>
               {t("contentBlock.question.label")}
             </FieldLabel>
-            <LiveTextarea
+            <LessonLineInput
               id={`${block.id}-prompt`}
+              label={t("contentBlock.question.label")}
               placeholder={t("contentBlock.question.promptPlaceholder")}
-              value={block.prompt || ""}
-              onCommit={(prompt) => onChange({ ...block, prompt })}
-              data-collab-field={`block:${block.id}:prompt`}
-              className="min-h-9"
+              value={block.prompt}
+              onChange={(prompt) => onChange({ ...block, prompt })}
+              collabField={`block:${block.id}:prompt`}
             />
           </Field>
 
@@ -1018,14 +1023,17 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
 
               <div className="mt-3 flex flex-col gap-2">
                 {steps.map((step, i) => (
-                  <div key={step.id} className="flex items-center gap-1">
-                    <LiveInput
+                  <div key={step.id} className="flex items-start gap-1">
+                    <LessonLineInput
+                      label={t("contentBlock.question.stepPlaceholder", {
+                        number: i + 1,
+                      })}
                       placeholder={t("contentBlock.question.stepPlaceholder", {
                         number: i + 1,
                       })}
                       value={step.text}
-                      onCommit={(text) => setStep(step.id, text)}
-                      data-collab-field={`block:${block.id}:step:${step.id}`}
+                      onChange={(text) => setStep(step.id, text)}
+                      collabField={`block:${block.id}:step:${step.id}`}
                     />
                     <IconActionButton
                       tooltip={t("contentBlock.question.removeStep")}

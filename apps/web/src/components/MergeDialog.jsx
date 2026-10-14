@@ -40,6 +40,7 @@ import { Badge } from "./ui/badge.jsx";
 import { Alert, AlertDescription } from "./ui/alert.jsx";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group.jsx";
 import { cn } from "../lib/utils.js";
+import { inlineTextPlain } from "@spelling-creator/core/inlineText";
 import { questionMeta } from "@spelling-creator/core/questions";
 import {
   textBlockFootnotes,
@@ -64,6 +65,10 @@ function ValueText({ value, field }) {
       </p>
     );
   }
+  // A formatted prompt, likewise (see core/inlineText.js).
+  if (field === "prompt" && value && typeof value === "object") {
+    return <p className="text-sm">{inlineTextPlain(value)}</p>;
+  }
   if (value === null || value === undefined || value === "") {
     return (
       <p className="text-sm text-muted-foreground italic">
@@ -72,8 +77,11 @@ function ValueText({ value, field }) {
     );
   }
   if (Array.isArray(value)) {
-    // Spelling words and multiple-choice answers are [{ id, text }].
-    const items = value.map((v) => (v && typeof v === "object" ? v.text : v));
+    // Spelling words, multiple-choice answers and steps are [{ id, text }],
+    // and a step's text can be a document.
+    const items = value.map((v) =>
+      v && typeof v === "object" ? inlineTextPlain(v.text) : v,
+    );
     return <p className="text-sm">{items.join(", ")}</p>;
   }
   if (typeof value === "object") {

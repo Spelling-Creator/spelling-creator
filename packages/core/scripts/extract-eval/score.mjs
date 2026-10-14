@@ -2,6 +2,7 @@
 // a lesson rebuilt from it passes the lesson checks.
 
 import { deriveQuestionType } from "../../src/documentImport.js";
+import { inlineTextPlain } from "../../src/inlineText.js";
 import { normalizeLessonFile } from "../../src/jsonImport.js";
 import { validateLesson } from "../../src/lessonChecks.js";
 import { textBlockPlain } from "../../src/lessonText.js";
@@ -21,10 +22,10 @@ export function groundTruthSection(section) {
     questions: blocks
       .filter((b) => b.type === "question")
       .map((b) => ({
-        prompt: b.prompt || "",
+        prompt: inlineTextPlain(b.prompt),
         type: b.questionType,
         answers: questionAnswerItems(b),
-        steps: (b.steps || []).map((s) => s.text),
+        steps: (b.steps || []).map((s) => inlineTextPlain(s.text)),
       })),
   };
 }

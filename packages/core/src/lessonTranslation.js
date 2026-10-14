@@ -20,7 +20,9 @@
 // - question prompts, their printed answers and their numbered steps, with
 //   each accepted answer as its own segment (questionAnswerItems), so the
 //   non-breaking gaps that separate several accepted answers survive the
-//   round trip through a model that would fold them into ordinary spaces
+//   round trip through a model that would fold them into ordinary spaces. A
+//   prompt or a step is its plain words, like a paragraph: a translated one
+//   renders unformatted, with a formula as its source
 // - image captions
 // - VAKT activity text
 //
@@ -40,6 +42,7 @@
 // (LessonTranslation), so the two agree on keys by construction.
 
 import { imageCaptionParts } from "./imageCredit.js";
+import { inlineTextPlain } from "./inlineText.js";
 import { textBlockFootnotes, textBlockLines } from "./lessonText.js";
 import { questionAnswerItems } from "./questions.js";
 import { headingText } from "./heading.js";
@@ -71,7 +74,7 @@ export const lessonSegmentKey = {
  * @returns {object[]}
  */
 export function questionStepsWithText(block) {
-  return (block?.steps || []).filter((s) => (s.text || "").trim());
+  return (block?.steps || []).filter((s) => inlineTextPlain(s?.text).trim());
 }
 
 /**
@@ -114,11 +117,9 @@ export function lessonTranslationBatches(doc) {
           }
         });
       } else if (block.type === "question") {
-        if ((block.prompt || "").trim()) {
-          segments.push({
-            key: lessonSegmentKey.prompt(si, bi),
-            text: block.prompt,
-          });
+        const prompt = inlineTextPlain(block.prompt);
+        if (prompt.trim()) {
+          segments.push({ key: lessonSegmentKey.prompt(si, bi), text: prompt });
         }
         questionAnswerItems(block).forEach((answer, i) => {
           segments.push({
@@ -129,7 +130,7 @@ export function lessonTranslationBatches(doc) {
         questionStepsWithText(block).forEach((step, i) => {
           segments.push({
             key: lessonSegmentKey.step(si, bi, i),
-            text: step.text,
+            text: inlineTextPlain(step.text),
           });
         });
       } else if (block.type === "image") {

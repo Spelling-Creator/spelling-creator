@@ -84,7 +84,8 @@ reveal:
 | `broad_open`, `paraphrase`, `wyr`, a legacy `open`, a tight open without examples, an unknown type, or a blank answer | null: "This question has no set answer."                           |
 
 `revealedAnswers` turns that into the flat list of boxes the UI draws (the
-working is not one of them; it stays a numbered list below), and
+working is not one of them; it stays a numbered list below, each step drawn
+with its formatting and formulas, since a step is inline text), and
 `hasRevealableAnswers(steps)` decides whether the toggle is rendered at all.
 
 The two semi-open types share a color and an `answers` list because the app's
@@ -234,7 +235,8 @@ where it's missing, neither the controls nor the settings section is rendered.
 
 `stepSpeech(step)` builds what a step says: the section name, then the
 prose, image captions (never their [credits](./images.md)), spelling words, a VAKT
-activity's text without its label or links, or the question prompt. A question's
+activity's text without its label or links, or the question prompt, with the
+prompt's own read-aloud hints and formulas (`inlineTextSpeech`). A question's
 answer is deliberately never included, even with the reveal on.
 (`stepSpeechText` is the same as plain text, one line per utterance.)
 

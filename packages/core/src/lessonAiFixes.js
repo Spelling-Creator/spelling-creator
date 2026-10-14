@@ -27,6 +27,7 @@ import {
   newFindings,
   validateLesson,
 } from "./lessonChecks.js";
+import { inlineTextMarkup } from "./inlineText.js";
 import {
   textBlockContent,
   textBlockFootnotes,
@@ -100,11 +101,15 @@ export function blockForModel(block) {
         id: block.id,
         type: "question",
         questionType: block.questionType,
-        prompt: block.prompt || "",
+        prompt: inlineTextMarkup(block.prompt),
       };
       if (block.answer != null) out.answer = String(block.answer);
       if (Array.isArray(block.answers)) out.answers = texts(block.answers);
-      if (Array.isArray(block.steps)) out.steps = texts(block.steps);
+      if (Array.isArray(block.steps)) {
+        out.steps = block.steps
+          .map((step) => inlineTextMarkup(step?.text).trim())
+          .filter(Boolean);
+      }
       return out;
     }
     default:
@@ -244,12 +249,14 @@ export function aiEditsToOperations(doc, finding, edits) {
 }
 
 // A rebuilt list keeps the ids of the items whose text didn't change, so the
-// editor's fields (and anyone else's cursor in them) stay put.
+// editor's fields (and anyone else's cursor in them) stay put. A step's text
+// can be a document (see inlineText.js), so the two are compared as JSON.
 function keepItemIds(before, after) {
   if (!Array.isArray(before) || !Array.isArray(after)) return after;
   const unused = [...before];
+  const same = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
   return after.map((item) => {
-    const at = unused.findIndex((old) => old?.text === item.text);
+    const at = unused.findIndex((old) => same(old?.text, item.text));
     if (at === -1) return item;
     const [old] = unused.splice(at, 1);
     return { ...item, id: old.id };

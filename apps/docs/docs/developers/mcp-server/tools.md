@@ -539,6 +539,13 @@ asterisk survives. `get_lesson` escapes whatever needs it, so a block it returns
 passed straight back to `replace_block` or `update_lesson`. A block with no markup in it
 is stored as the plain string it always was.
 
+A question's `prompt` and each of a `number` question's `steps` are written and read
+back in the same markup, one line each, less the footnotes (`^[...]` in a prompt is
+dropped). That is how a math prompt or a step carries a typeset formula:
+`"steps": ["There are 60 seconds in a minute.", "{tex: \\frac{60}{5} = 12}"]`. A line
+break in one becomes a space. Answers, spelling words and VAKT text stay plain strings.
+See [Inline text](../web-app/formatting-and-footnotes.md#inline-text-prompts-and-steps).
+
 The block's description, and the standard, tell assistants to **leave text plain**:
 lessons are read aloud and printed, ALL CAPS already marks the vocabulary, and formatting
 sprinkled through a passage reads as bloated and machine-written. Italics for a book's

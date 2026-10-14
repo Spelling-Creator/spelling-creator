@@ -27,6 +27,7 @@ one that also had a note, as a plain note.
 | File                                                   | Role                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------ |
 | `@spelling-creator/core/lessonText`                    | Text block content: the schema, plain text, runs, footnotes. |
+| `@spelling-creator/core/inlineText`                    | A prompt or a step: the same words in a one-line field.      |
 | `@spelling-creator/core/sources`                       | The source list and how a source is printed.                 |
 | `apps/web/src/components/editor/LessonTextInput.jsx`   | The tiptap editor for a text block.                          |
 | `apps/web/src/components/editor/LessonTextToolbar.jsx` | Its toolbar and the footnote form.                           |
@@ -122,6 +123,42 @@ same git blob.
 
 A source's link is only ever made into a link after `isSafeLink` accepts it
 (http, https or mailto), the same rule VAKT links follow.
+
+## Inline text: prompts and steps
+
+A question's `prompt` and each of a math question's `steps[].text` are one
+line each, and they can carry what a text block's words can: the three marks,
+read-aloud hints and pauses, and formulas. Not footnotes: the Notes list
+numbers those through the text blocks, and a prompt has nothing to cite. This
+is what the Open Spelling Lesson Format calls rich text on both fields.
+
+A field of inline text holds one of two shapes under one key
+(`@spelling-creator/core/inlineText`):
+
+- **a string**, the plain words. Every prompt and step written before this
+  existed looks like this, and so does any field nobody has formatted.
+- **a document**, a tiptap document of exactly one paragraph in the text
+  block's schema, once the field carries a mark, a hint, a pause or a formula.
+
+One key rather than the text block's two, because the collaboration document
+merges a block key by key, so a field with one key is simply last write wins,
+as a plain prompt always was. Every writer stores the smaller shape
+(`normalizeInlineText`): the editor, the importers and the MCP server all
+write a plain string back for a field with nothing in it a string couldn't
+hold, so a lesson nobody has formatted is byte for byte what it was. The
+normalizer also folds several paragraphs into one line, with a space where
+each break was, drops any footnote, and sets a `display` formula in the line.
+
+Nothing reads either shape directly. `inlineTextContent` gives the document
+(what the editor shows), `inlineTextRuns` the runs a renderer draws (one
+paragraph of `textBlockParagraphs`), `inlineTextPlain` the plain words (a
+formula as its source), `inlineTextSpeech` in `core/speech` the spoken runs,
+and `inlineTextMarkup` and `markupToInlineText` the MCP server's markup. The
+checks, translation, search, the summaries, the AI helpers and the response
+snapshot interactive mode saves all take the plain words. In OSLF a prompt is
+written as rich text and read back as inline text (`oslf.js`), so a formula
+or a hint in a prompt survives the round trip; a note in one is read as
+nothing.
 
 ## Read-aloud hints
 
@@ -270,9 +307,22 @@ document on each keystroke.
 
 - **Lesson page and preview.** Formatting renders as written. Each footnote is
   a superscript number linking down to the Notes list, and each note links back
-  up. The Sources list follows the notes.
+  up. The Sources list follows the notes. A prompt and a step draw through
+  `InlineText.jsx`, which is `TextRuns` over `inlineTextRuns`.
+- **The editor.** A prompt and a step get `LessonLineInput.jsx`: the text
+  block's tiptap schema less the footnote node, with the document held to one
+  paragraph (so Enter does nothing and a pasted passage lands as one line),
+  and the same toolbar (`LessonTextToolbar` with `footnotes={false}`) shown
+  only while the line is being edited. Both editors commit through
+  `lib/useLiveEditor.js`, which holds the pause-then-commit and held-off
+  remote change behavior the plain fields have; the line editor commits
+  `normalizeInlineText` of its document, so a plain line is stored as a string.
 - **Word and PDF export.** Formatting becomes Word run formatting, and footnotes
-  become real Word footnotes at the foot of each page. The Sources list closes
+  become real Word footnotes at the foot of each page. A prompt's runs each
+  wear the question's character style, so the importer reads the whole prompt
+  back off the styled spans; a formula in a prompt or a step is an equation
+  (or a picture, on the PDF path) in the line, and `lessonFormulas` collects
+  formulas from prompts and steps as well as text blocks. The Sources list closes
   the document under a "Sources" line, written with its own paragraph styles so
   the PDF can style it and the importer can recognize it (`S2C Sources
 Heading` and `S2C Source Entry`; the footnote locator and note are the
@@ -294,14 +344,17 @@ Heading` and `S2C Source Entry`; the footnote locator and note are the
   caption of the picture above it, and so do image
   [credits](./images.md), so they come back as credits.
 - **Word import.** Read-aloud hints and pauses have no place in a Word
-  document, so a Word round trip loses them.
+  document, so a Word round trip loses them. A prompt and a step come back
+  as their plain words.
 - **JSON import and export.** Lossless. Citations of a source the file doesn't
   list are dropped on import (keeping any note), since they would print as
   "Source no longer listed." (`MISSING_SOURCE_TEXT`). A footnote citing a source that is in the list but
   not filled in yet names it "Untitled source" (`UNTITLED_SOURCE_TEXT`).
 - **Interactive mode.** Formatting shows, footnote markers don't. That screen is
   what the speller reads, and a number with nowhere to lead is clutter there. The
-  read-aloud voice reads the words with their hints and pauses.
+  read-aloud voice reads the words with their hints and pauses, in a prompt as
+  in a passage (`inlineTextSpeech`); the revealed working draws each step's
+  formulas, and the saved response snapshot keeps the prompt's plain words.
 - **Translation.** Each paragraph's plain words translate as one segment, so a
   translated paragraph loses its formatting and keeps its footnote markers at
   its end. Footnote notes translate. Citations and the Sources list don't: an

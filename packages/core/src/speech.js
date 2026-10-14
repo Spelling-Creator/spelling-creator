@@ -10,9 +10,10 @@
 //   { pause: "short" } / { pause: "long" }     a pause
 //
 // a deliberately small subset of SSML. A text block's speech hints and pauses
-// (see lessonText.js) become these runs, and everything else a step says (a
-// prompt, a caption, a heading) is plain words. The voices (the web app's
-// useSpeech and core/browser/readAloudEngine.js) take it from here:
+// (see lessonText.js) become these runs, and so do a question prompt's (see
+// inlineText.js); everything else a step says (a caption, a heading) is plain
+// words. The voices (the web app's useSpeech and
+// core/browser/readAloudEngine.js) take it from here:
 //
 //   Kokoro speaks phonemes, so it can follow every run: IPA goes in as it is,
 //   an alias or a spelled-out word is turned into phonemes in place of the
@@ -34,6 +35,7 @@
 // before speaking. A voice that gets a formula run anyway says its `text`, the
 // source, as it would any run it doesn't know.
 
+import { inlineTextRuns } from "./inlineText.js";
 import {
   SAY_AS_CHARACTERS,
   normalizeSpokenText as storedSpokenText,
@@ -210,6 +212,18 @@ export function textBlockSpeech(block) {
   return textBlockParagraphs(block)
     .map(paragraphSpeech)
     .filter((runs) => spokenWords(runs).trim());
+}
+
+/**
+ * Inline text (a question's prompt, a working step) as spoken text: its
+ * hints, pauses and formulas, the way a paragraph's are. Empty when it says
+ * nothing.
+ * @param {unknown} value
+ * @returns {SpokenRun[]}
+ */
+export function inlineTextSpeech(value) {
+  const runs = paragraphSpeech(inlineTextRuns(value));
+  return spokenWords(runs).trim() ? runs : [];
 }
 
 /**

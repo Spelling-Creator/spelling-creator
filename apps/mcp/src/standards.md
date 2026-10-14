@@ -50,6 +50,10 @@ asks. Never bold or underline for emphasis, never format a whole phrase or sente
 an ALL-CAPS word, and don't reach for formatting to make a passage feel lively. Most sections
 need none at all.
 
+A question's `prompt` and a math question's `steps` take the same markup as a text block
+(formatting, read-aloud hints and formulas, but no footnotes), and the same restraint applies
+to them. Answers, spelling words and VAKT text are plain.
+
 ## Read-aloud
 
 The app's practice mode reads lessons aloud to the speller. Where its voice would say something
@@ -72,6 +76,10 @@ A math or science passage can carry a typeset formula, written in AsciiMath (`{a
 notation (`{tex display: ...}`) to set it on a line of its own. Formulas are read aloud
 automatically; where that reading would be awkward, add the words to say straight after it:
 `{asciimath: 3/4}{spoken: three quarters}`.
+
+A math question's `prompt` and its `steps` can carry a formula the same way: "There are 60
+seconds in a minute.", then `{tex: \frac{60}{5} = 12}`. In a prompt or a step a formula always
+sits in the line.
 
 A formula is for math, not for a number in prose: "360 steps" and "$2.50" stay as plain text. The
 speller spells the answer, so a question's answer is plain text too, never a formula.

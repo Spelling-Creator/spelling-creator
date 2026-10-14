@@ -26,7 +26,8 @@
 // submission is.
 
 import { imageCaptionParts } from "./imageCredit.js";
-import { speechText, textBlockSpeech } from "./speech.js";
+import { inlineTextPlain } from "./inlineText.js";
+import { inlineTextSpeech, speechText, textBlockSpeech } from "./speech.js";
 import { headingText } from "./heading.js";
 import { vaktText } from "./vakt.js";
 
@@ -160,8 +161,9 @@ export function isInteractivePlayable(doc) {
  * What one step says, for text-to-speech (see the web app's useSpeech hook):
  * lines of spoken text (see speech.js), one idea per line. Reading order
  * matches what's on screen: the section name first, then each block's words. A
- * text block's lines carry its pronunciations, substitutions, spell-outs and
- * pauses; everything else is plain words.
+ * text block's lines and a question's prompt carry their pronunciations,
+ * substitutions, spell-outs, pauses and formulas; everything else is plain
+ * words.
  *
  * Deliberately excluded: a question's *answer*. Interactive mode can show the
  * author's answer on screen when whoever is presenting turns the reveal on (see
@@ -178,8 +180,8 @@ export function stepSpeech(step) {
   if (step.sectionName) lines.push(step.sectionName);
 
   if (step.kind === "question") {
-    const prompt = (step.block?.prompt || "").trim();
-    if (prompt) lines.push(prompt);
+    const prompt = inlineTextSpeech(step.block?.prompt);
+    if (prompt.length) lines.push(prompt);
     return lines;
   }
 
@@ -241,8 +243,12 @@ export function stepSpeechText(step) {
  * distinct from an empty answer, so a presenter is told the question has no set
  * answer instead of being shown a gap and left wondering.
  *
+ * The steps are inline text (see inlineText.js), each as stored: the reveal
+ * draws them with their formulas, and a step is shown as its plain words
+ * everywhere else.
+ *
  * @param {object} block  A question block.
- * @returns {{ answer: string, answers: string[], steps: string[], suggested: boolean } | null}
+ * @returns {{ answer: string, answers: string[], steps: Array<string | object>, suggested: boolean } | null}
  */
 export function questionAnswer(block) {
   if (!isQuestionBlock(block)) return null;
@@ -252,6 +258,10 @@ export function questionAnswer(block) {
     (Array.isArray(list) ? list : [])
       .map((entry) => trimmed(entry?.text))
       .filter(Boolean);
+  const steps = (list) =>
+    (Array.isArray(list) ? list : [])
+      .filter((entry) => inlineTextPlain(entry?.text).trim())
+      .map((entry) => entry.text);
 
   switch (block.questionType) {
     // A tight open's examples are suggestions in the same sense a loose
@@ -273,9 +283,9 @@ export function questionAnswer(block) {
       // A number question can carry its working with it, and a half-filled one
       // (working but no total, or the reverse) is still worth revealing.
       const answer = trimmed(block.answer);
-      const steps = texts(block.steps);
-      return answer || steps.length
-        ? { answer, answers: [], steps, suggested: false }
+      const working = steps(block.steps);
+      return answer || working.length
+        ? { answer, answers: [], steps: working, suggested: false }
         : null;
     }
     case "single":
@@ -360,7 +370,7 @@ export function collectResponses(steps, answers) {
       sectionId: step.sectionId,
       sectionName: step.sectionName,
       questionType: step.block?.questionType || "open",
-      prompt: (step.block?.prompt || "").trim(),
+      prompt: inlineTextPlain(step.block?.prompt).trim(),
       answer: (answers?.[answerKey(step)] || "").slice(0, MAX_RESPONSE_LENGTH),
     }));
 }

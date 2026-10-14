@@ -30,6 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "./ui/dropdown-menu.jsx";
+import { inlineTextPlain } from "@spelling-creator/core/inlineText";
 import { textBlockPlain } from "@spelling-creator/core/lessonText";
 import ContentBlock from "./ContentBlock.jsx";
 import { LiveInput } from "./LiveField.jsx";
@@ -182,8 +183,9 @@ function SectionCard({
   // Prompts of the questions already in this section, sent to the AI so a newly
   // suggested question doesn't repeat one the user already has.
   const existingQuestions = section.blocks
-    .filter((b) => b.type === "question" && b.prompt)
-    .map((b) => b.prompt);
+    .filter((b) => b.type === "question")
+    .map((b) => inlineTextPlain(b.prompt))
+    .filter((prompt) => prompt.trim());
 
   const addTextBlock = () => {
     insertBlocks([{ id: newId(), type: "text", text: "" }]);

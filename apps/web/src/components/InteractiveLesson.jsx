@@ -108,6 +108,7 @@ import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import { textBlockParagraphs } from "@spelling-creator/core/lessonText";
 import { TextRuns } from "./TextRuns.jsx";
+import InlineText from "./InlineText.jsx";
 import { DOWNLOAD_MB } from "@spelling-creator/core/browser/readAloud";
 import { SPEECH_RATES } from "../lib/speechPrefs.js";
 import { useSpeech } from "../lib/useSpeech.js";
@@ -420,7 +421,9 @@ function AnswerReveal({ block, className, onUse }) {
           {label(t("answers.working"))}
           <ol className="mt-1 list-decimal pl-5">
             {revealed.steps.map((step, index) => (
-              <li key={index}>{step}</li>
+              <li key={index}>
+                <InlineText value={step} />
+              </li>
             ))}
           </ol>
         </div>
@@ -684,7 +687,10 @@ function QuestionStep({ step, value, onChange, showAnswers }) {
           {meta.label}
         </span>
         <p className="mt-2 text-2xl leading-snug font-semibold">
-          {step.block.prompt || t("step.noQuestionText")}
+          <InlineText
+            value={step.block.prompt}
+            fallback={t("step.noQuestionText")}
+          />
         </p>
         {/* The Besides follow-up names one accepted answer and asks for
             another; the reveal below still shows the whole list. */}
