@@ -53,6 +53,7 @@ import { useImageSrc } from "../lib/useImageSrc.js";
 import {
   THREE_BOARD_MARK,
   isOrangeType,
+  questionAnswerPlain,
   questionBesides,
   questionMeta,
 } from "@spelling-creator/core/questions";
@@ -1012,10 +1013,17 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
                 <FieldLabel htmlFor={`${block.id}-answer`}>
                   {t("contentBlock.question.answerLabel")}
                 </FieldLabel>
+                {/* A text field with a numeric keyboard, not type="number":
+                    a math answer written by an assistant or imported from a
+                    file can be "1,926 years" or "3/4", which a number input
+                    can't hold (it shows an empty field and the browser logs a
+                    parse warning on every render), and the author would never
+                    see what the lesson actually says. */}
                 <LiveInput
                   id={`${block.id}-answer`}
-                  type="number"
-                  value={block.answer ?? ""}
+                  type="text"
+                  inputMode="decimal"
+                  value={questionAnswerPlain(block.answer)}
                   onCommit={(answer) => onChange({ ...block, answer })}
                   data-collab-field={`block:${block.id}:answer`}
                 />
@@ -1070,7 +1078,7 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
               <LiveInput
                 id={`${block.id}-answer`}
                 placeholder={t("contentBlock.question.answerPlaceholder")}
-                value={block.answer ?? ""}
+                value={questionAnswerPlain(block.answer)}
                 onCommit={(answer) => onChange({ ...block, answer })}
                 data-collab-field={`block:${block.id}:answer`}
               />
@@ -1145,7 +1153,7 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
               <LiveInput
                 id={`${block.id}-answer`}
                 placeholder={t("contentBlock.question.answerPlaceholder")}
-                value={block.answer ?? ""}
+                value={questionAnswerPlain(block.answer)}
                 onCommit={(answer) => onChange({ ...block, answer })}
                 data-collab-field={`block:${block.id}:answer`}
               />

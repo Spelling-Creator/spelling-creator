@@ -23,28 +23,36 @@ import LessonView from "../LessonView.jsx";
  * @param {object} props.doc     The working lesson, rendered read-only.
  * @param {() => void} props.onExit  Leave preview. Wired to the same toggle the
  *   bar's Preview button calls, so there is one way out and one state machine.
+ * @param {import("react").ReactNode} [props.find]  The narrow-screen Find in
+ *   lesson. The document panel carries it while editing and is gone in
+ *   preview, so below 52rem of page column (where the outline, which has its
+ *   own copy, is hidden) this header is where it lives.
  */
-export default function LessonPreview({ doc, onExit }) {
+export default function LessonPreview({ doc, onExit, find }) {
   const { t } = useTranslation("editor");
 
   return (
     <>
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           {t("preview.eyebrow")}
         </p>
-        {/* The narrow-screen copy of the bar's toggle. Below `md` the labelled
-            cluster is inside the overflow menu, and a mode whose only exit is
-            behind a hidden menu is a trap. From `md` up the bar has it. */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onExit}
-          className="md:hidden"
-        >
-          <PencilIcon data-icon="inline-start" />
-          {t("header.backToEditing")}
-        </Button>
+        <div className="flex items-center gap-2">
+          {find && <span className="@min-[52rem]/page:hidden">{find}</span>}
+          {/* The narrow-screen copy of the bar's toggle. Below `md` the
+              labelled cluster is inside the overflow menu, and a mode whose
+              only exit is behind a hidden menu is a trap. From `md` up the
+              bar has it. */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExit}
+            className="md:hidden"
+          >
+            <PencilIcon data-icon="inline-start" />
+            {t("header.backToEditing")}
+          </Button>
+        </div>
       </div>
 
       <p className="mb-4 text-sm text-muted-foreground">{t("preview.note")}</p>

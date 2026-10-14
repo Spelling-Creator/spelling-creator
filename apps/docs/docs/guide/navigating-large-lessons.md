@@ -80,6 +80,32 @@ jump around while reading the lesson back too.
 On narrower screens there isn't room for the list, so it's hidden. Collapse all
 is the way to get an overview there.
 
+## Find in lesson
+
+**Find in lesson**, at the top of the section list (or next to **Collapse
+all** on a narrower screen), searches the lesson you have open: the passages,
+the spelling words, the questions and their answers, picture captions, VAKT
+activities and the section names. Type a word or two and every block that
+holds all of them is listed, named by its section and its place in it, such
+as "Prize and Exile · Q1", with the words around the match. Click one, or
+move to it with the arrow keys and press Enter, to go straight there. A
+folded section opens on the way.
+
+It matches any part of a word and ignores capitals and accents, so "egypt"
+finds "Egyptian" and "cafe" finds "café". With more than one word, a block
+has to contain all of them.
+
+It is different from the browser's own find (Cmd-F or Ctrl-F), which still
+works too: the browser highlights a word wherever it is on the page, while
+this tells you which block the word is in before you go there, which matters
+in a lesson that is 37 screens long.
+
+The same control sits beside a lesson on its hub page, in the About rail (or
+above the lesson on a phone), so a reader can find their way around a lesson
+without opening the editor. If you have [translated](./translation.md) the
+lesson, it searches the translation you are reading, so the word you can see
+is the word to type.
+
 ## Your place is kept
 
 - **Moving a section or block** keeps it under your pointer. You can press

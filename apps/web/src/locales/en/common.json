@@ -71,5 +71,27 @@
     "ratingSummary": "{{label}}: {{display}} out of {{max}}",
     "starLabel_one": "{{count}} star",
     "starLabel_other": "{{count}} stars"
+  },
+  "lessonFind": {
+    "button": "Find in lesson",
+    "label": "Find in lesson",
+    "placeholder": "Find a word or phrase",
+    "clearAria": "Clear",
+    "hint": "Searches the passages, spelling words, questions, captions and activities of this lesson.",
+    "resultsLabel": "Matches",
+    "noMatches": "No matches.",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches",
+    "shownOf": "Showing the first {{shown}} of {{count}} matches.",
+    "section": "Section {{n}}",
+    "kind": {
+      "section": "Section name",
+      "heading": "Heading",
+      "text": "Paragraph {{n}}",
+      "spelling": "Spelling words",
+      "question": "Q{{n}}",
+      "image": "Picture",
+      "vakt": "VAKT"
+    }
   }
 }

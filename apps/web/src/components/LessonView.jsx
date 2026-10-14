@@ -610,14 +610,21 @@ export default function LessonView({ doc, translation }) {
           className="scroll-mt-(--header-h)"
         >
           {(section.blocks || []).map((block, bi) => (
-            <Block
-              key={block.id || bi}
-              block={block}
-              si={si}
-              bi={bi}
-              translation={translation}
-              footnoteStart={starts.get(block.id) ?? 0}
-            />
+            // data-block-id is the other half of that contract: it is how
+            // Find in lesson (LessonFind) scrolls to a block here, on the
+            // lesson page and in the preview, the way it does to a
+            // SectionCard's block row in the editor. A plain wrapper, so the
+            // document's own styles (descendant rules on p, figure and the
+            // rest) apply as they did.
+            <div key={block.id || bi} data-block-id={block.id}>
+              <Block
+                block={block}
+                si={si}
+                bi={bi}
+                translation={translation}
+                footnoteStart={starts.get(block.id) ?? 0}
+              />
+            </div>
           ))}
         </section>
       ))}

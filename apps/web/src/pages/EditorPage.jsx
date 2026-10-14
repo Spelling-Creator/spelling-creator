@@ -40,6 +40,7 @@ import {
 import PageBar from "../components/layout/PageBar.jsx";
 import { PAGE_GUTTER } from "../components/layout/PageBody.jsx";
 import SectionOutline from "../components/editor/SectionOutline.jsx";
+import LessonFind from "../components/LessonFind.jsx";
 import SourcesPanel from "../components/editor/SourcesPanel.jsx";
 import LessonChecksSheet from "../components/editor/LessonChecksSheet.jsx";
 import { useLessonChecks } from "../lib/lessonChecks.js";
@@ -158,6 +159,7 @@ import { useDragAutoScroll } from "../lib/useDragAutoScroll.js";
 import {
   idSelector,
   scrollToElement,
+  scrollToLessonTarget,
   useScrollAnchor,
 } from "../lib/useScrollAnchor.js";
 
@@ -882,41 +884,36 @@ export default function EditorPage() {
     (finding) => {
       setPreviewing(false);
       if (finding.sectionId) toggleCollapse(finding.sectionId, false);
-      // Two frames: one for React to render the editor and the section, one
-      // for them to be laid out.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          const block =
-            finding.blockId &&
-            document.querySelector(
-              idSelector("data-block-id", finding.blockId),
-            );
-          const target =
-            block ||
-            (finding.sectionId &&
-              document.querySelector(
-                idSelector("data-section-id", finding.sectionId),
-              ));
-          if (!target) return;
-          scrollToElement(target, { block: block ? "center" : "start" });
-          if (!block) return;
-          // The word or answer the finding is about, when it names one (its
-          // field ends in that item's id, as in block:<id>:word:<wordId>), so
-          // "ash is too short" lands on ash and not on the list's first word.
-          // Otherwise the block's first field.
-          const item =
-            finding.itemId &&
-            [...block.querySelectorAll("[data-collab-field]")].find((el) =>
-              el.dataset.collabField.endsWith(`:${finding.itemId}`),
-            );
-          (
-            item ||
-            block.querySelector(
-              "textarea, input:not([type=hidden]), [contenteditable=true]",
-            )
-          )?.focus({ preventScroll: true });
-        }),
-      );
+      scrollToLessonTarget(finding, (block, isBlock) => {
+        if (!isBlock) return;
+        // The word or answer the finding is about, when it names one (its
+        // field ends in that item's id, as in block:<id>:word:<wordId>), so
+        // "ash is too short" lands on ash and not on the list's first word.
+        // Otherwise the block's first field.
+        const item =
+          finding.itemId &&
+          [...block.querySelectorAll("[data-collab-field]")].find((el) =>
+            el.dataset.collabField.endsWith(`:${finding.itemId}`),
+          );
+        (
+          item ||
+          block.querySelector(
+            "textarea, input:not([type=hidden]), [contenteditable=true]",
+          )
+        )?.focus({ preventScroll: true });
+      });
+    },
+    [toggleCollapse],
+  );
+
+  // Go to a hit from Find in lesson. The scroll is LessonFind's; this only
+  // opens the section first, for the same reason goToFinding does: the block
+  // has to be on the page to be scrolled to. Preview is left as it is, since
+  // LessonView answers to the same block ids and the hit is just as findable
+  // there.
+  const revealFindHit = useCallback(
+    (hit) => {
+      if (hit.sectionId) toggleCollapse(hit.sectionId, false);
     },
     [toggleCollapse],
   );
@@ -3021,6 +3018,9 @@ export default function EditorPage() {
           onToggleAll={toggleAllCollapsed}
           onAddSection={openAddDialog}
           checks={checks}
+          find={
+            <LessonFind doc={doc} onSelect={revealFindHit} className="w-full" />
+          }
         />
 
         {/* min-w-0 is load-bearing: without it this flex item is sized by its
@@ -3048,7 +3048,21 @@ export default function EditorPage() {
             is a bound, not a measure. */}
         <div className="min-w-0 flex-1">
           {previewing ? (
-            <LessonPreview doc={doc} onExit={togglePreview} />
+            <LessonPreview
+              doc={doc}
+              onExit={togglePreview}
+              // Preview replaces the document panel, and with it the
+              // narrow-screen Find; this is that copy's seat in preview.
+              find={
+                sectionCount > 0 && (
+                  <LessonFind
+                    doc={doc}
+                    onSelect={revealFindHit}
+                    className="h-10 sm:h-8"
+                  />
+                )
+              }
+            />
           ) : (
             <>
               <div className="rounded-panel border border-border bg-card p-4 text-card-foreground sm:p-6">
@@ -3128,6 +3142,21 @@ export default function EditorPage() {
                         ? t("documentPanel.expandAll")
                         : t("documentPanel.collapseAll")}
                     </Button>
+                  )}
+                  {/* The narrow-screen copy of the outline's Find in lesson:
+                      below 52rem of page column there is no outline, and
+                      this row is the only place that names the lesson as a
+                      whole. Its own instance (its own query), which only
+                      shows if the window is resized mid-search. */}
+                  {sectionCount > 0 && (
+                    <span className="@min-[52rem]/page:hidden">
+                      <LessonFind
+                        doc={doc}
+                        onSelect={revealFindHit}
+                        variant="ghost"
+                        className="h-10 sm:h-8"
+                      />
+                    </span>
                   )}
                 </div>
 

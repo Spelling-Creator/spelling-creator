@@ -12,6 +12,7 @@
 // prose set to the full width of a desktop screen is harder to read, not
 // easier, and this is text a child is meant to work through.
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import {
@@ -26,6 +27,7 @@ import {
 import PageBody from "../../components/layout/PageBody.jsx";
 import { Button } from "../../components/ui/button.jsx";
 import { Spinner } from "../../components/ui/spinner.jsx";
+import LessonFind from "../../components/LessonFind.jsx";
 import LessonSummary from "../../components/LessonSummary.jsx";
 import TranslatableLesson from "../../components/LessonTranslation.jsx";
 import MyLessonAnswers from "../../components/MyLessonAnswers.jsx";
@@ -48,6 +50,9 @@ export default function LessonOverview() {
   const { t } = useTranslation("lesson");
   const { lesson, busy, handleExport, forkLesson, answersSaved, formatDate } =
     useLesson();
+  // The translation the lesson is showing, if any, so Find in lesson
+  // searches the words on the page rather than the words underneath them.
+  const [translation, setTranslation] = useState(null);
 
   return (
     <PageBody className="flex flex-col gap-6 @min-[52rem]/page:flex-row">
@@ -57,13 +62,20 @@ export default function LessonOverview() {
             Summarizer API. */}
         <LessonSummary doc={lesson.doc} />
 
+        {/* Find in lesson, for the widths where the rail (which has the same
+            control, and stays on screen) sits under the lesson instead of
+            beside it. */}
+        <div className="mb-4 @min-[52rem]/page:hidden">
+          <LessonFind doc={lesson.doc} translation={translation} />
+        </div>
+
         {/* The lesson itself, with on-device translation wrapped around it:
             LessonView draws the lesson in the app's theme, light or dark, the
             same way interactive mode does — the bordered frame around it makes
             it read as a document set into the page rather than as more page.
             The printout look lives in the docx/PDF export, not here, and the
             exports always use the lesson as written (see LessonTranslation). */}
-        <TranslatableLesson doc={lesson.doc} />
+        <TranslatableLesson doc={lesson.doc} onTranslation={setTranslation} />
 
         {/* The reader's own saved run-throughs of this lesson, visible to
             nobody else — including the lesson's author. Renders nothing when
@@ -80,6 +92,18 @@ export default function LessonOverview() {
       <aside className="order-last w-full shrink-0 @min-[52rem]/page:w-64">
         <div className="flex flex-col gap-3 @min-[52rem]/page:sticky @min-[52rem]/page:top-[calc(var(--header-h)+3.5rem)]">
           <h3 className="text-sm font-semibold">{t("about.heading")}</h3>
+
+          {/* Beside the lesson the rail is sticky, so Find in lesson here is
+              reachable however far down a hit took the reader. Hidden when
+              the rail is stacked under the lesson; the copy above the lesson
+              serves then. */}
+          <div className="hidden @min-[52rem]/page:block">
+            <LessonFind
+              doc={lesson.doc}
+              translation={translation}
+              className="w-full"
+            />
+          </div>
 
           <Fact icon={UserIcon} label={t("about.author")}>
             {lesson.authorId ? (

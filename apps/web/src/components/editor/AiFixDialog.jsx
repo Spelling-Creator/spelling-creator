@@ -32,7 +32,10 @@ import { suggestFix } from "@spelling-creator/core/aiSuggest";
 import { inlineTextPlain } from "@spelling-creator/core/inlineText";
 import { checkFix } from "@spelling-creator/core/lessonAiFixes";
 import { textBlockPlain } from "@spelling-creator/core/lessonText";
-import { QUESTION_TYPES } from "@spelling-creator/core/questions";
+import {
+  QUESTION_TYPES,
+  questionAnswerPlain,
+} from "@spelling-creator/core/questions";
 import { turnstileSiteKey } from "@spelling-creator/core/config";
 import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
 import { describeFinding } from "../../lib/lessonChecks.js";
@@ -59,7 +62,10 @@ function blockLines(t, block) {
     { label: t("aiFix.fields.prompt"), text: inlineTextPlain(block.prompt) },
   ];
   if (block.answer != null) {
-    lines.push({ label: t("aiFix.fields.answer"), text: String(block.answer) });
+    lines.push({
+      label: t("aiFix.fields.answer"),
+      text: questionAnswerPlain(block.answer),
+    });
   }
   if (block.answers) {
     lines.push({
