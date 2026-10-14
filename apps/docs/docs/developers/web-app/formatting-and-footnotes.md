@@ -27,6 +27,7 @@ one that also had a note, as a plain note.
 | File                                                   | Role                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------ |
 | `@spelling-creator/core/lessonText`                    | Text block content: the schema, plain text, runs, footnotes. |
+| `@spelling-creator/core/inlineText`                    | A prompt or a step: the same words in a one-line field.      |
 | `@spelling-creator/core/sources`                       | The source list and how a source is printed.                 |
 | `apps/web/src/components/editor/LessonTextInput.jsx`   | The tiptap editor for a text block.                          |
 | `apps/web/src/components/editor/LessonTextToolbar.jsx` | Its toolbar and the footnote form.                           |
@@ -122,6 +123,42 @@ same git blob.
 
 A source's link is only ever made into a link after `isSafeLink` accepts it
 (http, https or mailto), the same rule VAKT links follow.
+
+## Inline text: prompts and steps
+
+A question's `prompt` and each of a math question's `steps[].text` are one
+line each, and they can carry what a text block's words can: the three marks,
+read-aloud hints and pauses, and formulas. Not footnotes: the Notes list
+numbers those through the text blocks, and a prompt has nothing to cite. This
+is what the Open Spelling Lesson Format calls rich text on both fields.
+
+A field of inline text holds one of two shapes under one key
+(`@spelling-creator/core/inlineText`):
+
+- **a string**, the plain words. Every prompt and step written before this
+  existed looks like this, and so does any field nobody has formatted.
+- **a document**, a tiptap document of exactly one paragraph in the text
+  block's schema, once the field carries a mark, a hint, a pause or a formula.
+
+One key rather than the text block's two, because the collaboration document
+merges a block key by key, so a field with one key is simply last write wins,
+as a plain prompt always was. Every writer stores the smaller shape
+(`normalizeInlineText`): the editor, the importers and the MCP server all
+write a plain string back for a field with nothing in it a string couldn't
+hold, so a lesson nobody has formatted is byte for byte what it was. The
+normalizer also folds several paragraphs into one line, with a space where
+each break was, drops any footnote, and sets a `display` formula in the line.
+
+Nothing reads either shape directly. `inlineTextContent` gives the document
+(what the editor shows), `inlineTextRuns` the runs a renderer draws (one
+paragraph of `textBlockParagraphs`), `inlineTextPlain` the plain words (a
+formula as its source), `inlineTextSpeech` in `core/speech` the spoken runs,
+and `inlineTextMarkup` and `markupToInlineText` the MCP server's markup. The
+checks, translation, search, the summaries, the AI helpers and the response
+snapshot interactive mode saves all take the plain words. In OSLF a prompt is
+written as rich text and read back as inline text (`oslf.js`), so a formula
+or a hint in a prompt survives the round trip; a note in one is read as
+nothing.
 
 ## Read-aloud hints
 

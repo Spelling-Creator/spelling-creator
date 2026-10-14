@@ -26,6 +26,7 @@
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
 import { imageCaptionParts } from "../imageCredit.js";
+import { inlineTextPlain } from "../inlineText.js";
 import { textBlockPlain } from "../lessonText.js";
 import { baseLanguageTag } from "../translationLanguages.js";
 import { headingText } from "../heading.js";
@@ -465,8 +466,11 @@ export function lessonSummaryText(doc) {
     for (const block of section.blocks || []) {
       if (block.type === "text" && textBlockPlain(block).trim()) {
         parts.push(textBlockPlain(block));
-      } else if (block.type === "question" && block.prompt) {
-        parts.push(`Question: ${block.prompt}`);
+      } else if (
+        block.type === "question" &&
+        inlineTextPlain(block.prompt).trim()
+      ) {
+        parts.push(`Question: ${inlineTextPlain(block.prompt)}`);
       } else if (block.type === "spelling") {
         const words = (block.words || [])
           .map((word) => (word.text || "").trim())

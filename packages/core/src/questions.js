@@ -22,6 +22,8 @@
 // so every document exported under the old labels needs its old style name
 // mapped too or it imports as plain text.
 
+import { inlineTextPlain } from "./inlineText.js";
+
 export const QUESTION_TYPES = {
   number: {
     key: "number",
@@ -201,7 +203,7 @@ const TIGHT_OPEN_MAX_WORDS = 12;
  */
 export function resolveOpenType(block) {
   if (block?.questionType !== "open") return block?.questionType;
-  const prompt = String(block.prompt || "");
+  const prompt = inlineTextPlain(block.prompt);
   if (TIGHT_STEM.test(prompt)) return "tight_open";
   if (PARAPHRASE_STEM.test(prompt)) {
     return OPINION_CUE.test(prompt) ? "broad_open" : "paraphrase";

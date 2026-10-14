@@ -16,6 +16,7 @@ import { newId } from "./id.js";
 import { QUESTION_TYPES, questionBesides } from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
+import { normalizeInlineText } from "./inlineText.js";
 import { OslfImportError, fromOslf, isOslfFile } from "./oslf.js";
 import { isSafeLink } from "./richText.js";
 import {
@@ -302,17 +303,18 @@ function normalizeVaktLink(link) {
 
 function normalizeQuestion(block) {
   if (!QUESTION_KEYS.has(block.questionType)) return null;
-  const prompt = typeof block.prompt === "string" ? block.prompt : "";
   const base = {
     id: keepId(block.id),
     type: "question",
     questionType: block.questionType,
-    prompt,
+    // A string or a one-paragraph document (see inlineText.js); anything
+    // else, or a document holding nothing, is an empty prompt.
+    prompt: normalizeInlineText(block.prompt),
   };
   switch (block.questionType) {
     case "number": {
       const steps = (Array.isArray(block.steps) ? block.steps : [])
-        .map(normalizeTextItem)
+        .map(normalizeStepItem)
         .filter(Boolean);
       return {
         ...base,
@@ -377,6 +379,16 @@ function normalizeTextItem(item) {
     return text ? { id: keepId(item.id), text } : null;
   }
   return null;
+}
+
+// A working step: like a text item, but its text is inline text, so it may
+// be a document as well as a string (see inlineText.js).
+function normalizeStepItem(item) {
+  if (typeof item === "string") return normalizeTextItem(item);
+  if (!item || typeof item !== "object") return null;
+  const text = normalizeInlineText(item.text);
+  if (typeof text === "string") return normalizeTextItem({ ...item, text });
+  return { id: keepId(item.id), text };
 }
 
 // Reuse an existing string id, or mint a fresh one. Imported files normally

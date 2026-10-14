@@ -14,14 +14,18 @@
 // packages/core/src/lessonText.js): **bold**, *italic*, <u>underline</u>, and
 // footnotes as ^[a note] or ^[@sourceId, p. 12 | a note]. A block with none of
 // that is stored as a plain `text` string, exactly as before; one with any of it
-// is stored as a formatted `content` document. presentDoc turns stored blocks
-// back into the same markup, so what get_lesson shows can be sent straight back.
+// is stored as a formatted `content` document. A question's prompt and a math
+// question's steps take the same markup, less the footnotes, and are stored
+// the way inlineText.js says (a plain string, or a one-paragraph document).
+// presentDoc turns stored blocks back into the same markup, so what get_lesson
+// shows can be sent straight back.
 // Blocks carry a stable `id`; we generate every id here so callers (and the AI
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
 import { IMAGE_ALIGNS, extFromMime } from "./image.js";
 import { withSeparateCredit } from "./imageCredit.js";
+import { inlineTextMarkup, markupToInlineText } from "./inlineText.js";
 import { isSafeLink } from "./richText.js";
 import {
   markupToContent,
@@ -189,7 +193,14 @@ function buildQuestionBlock(block, where) {
   if (typeof prompt !== "string" || !prompt.trim()) {
     throw new Error(`${where}: question block needs a non-empty "prompt".`);
   }
-  const base = { id: newId(), type: "question", questionType, prompt };
+  // The prompt is markup, like a text block's words (a formula, a read-aloud
+  // hint), stored in the smaller of inline text's two shapes.
+  const base = {
+    id: newId(),
+    type: "question",
+    questionType,
+    prompt: markupToInlineText(prompt.trim()),
+  };
 
   switch (questionType) {
     case "number": {
@@ -200,7 +211,10 @@ function buildQuestionBlock(block, where) {
       const rawSteps = Array.isArray(block.steps) ? block.steps : [];
       const steps = rawSteps
         .filter((t) => typeof t === "string" && t.trim())
-        .map((text) => ({ id: newId(), text: text.trim() }));
+        .map((text) => ({
+          id: newId(),
+          text: markupToInlineText(text.trim()),
+        }));
       return { ...base, answer: String(block.answer), steps };
     }
 
@@ -399,8 +413,9 @@ function sameSource(raw, stored) {
 /**
  * A stored lesson as the tools present it to an assistant: the same document,
  * with every text block as markup in `text` rather than as a stored `content`
- * tree. Plain blocks come out escaped (a literal asterisk as \*), so any of
- * them can be passed back to replace_block or update_lesson unchanged.
+ * tree, and every question's prompt and steps as markup too. Plain blocks
+ * come out escaped (a literal asterisk as \*), so any of them can be passed
+ * back to replace_block or update_lesson unchanged.
  *
  * Every picture comes out with its caption and credit as separate fields, even
  * one stored from before credits had their own (see ./imageCredit.js). The
@@ -420,10 +435,27 @@ export function presentDoc(doc) {
         (block) =>
           block?.type === "text"
             ? { id: block.id, type: "text", text: textBlockMarkup(block) }
-            : withSeparateCredit(block),
+            : block?.type === "question"
+              ? presentQuestion(block)
+              : withSeparateCredit(block),
       ),
     })),
   };
+}
+
+// A question with its prompt and steps as markup. The steps keep their ids:
+// a step passed back unchanged keeps its field in the editor (see
+// keepItemIds in lessonAiFixes.js).
+function presentQuestion(block) {
+  const out = { ...block, prompt: inlineTextMarkup(block.prompt) };
+  if (Array.isArray(block.steps)) {
+    out.steps = block.steps.map((step) =>
+      step && typeof step === "object"
+        ? { ...step, text: inlineTextMarkup(step.text) }
+        : inlineTextMarkup(step),
+    );
+  }
+  return out;
 }
 
 /**

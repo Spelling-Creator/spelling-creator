@@ -420,7 +420,7 @@ describe("fromOslf", () => {
     );
   });
 
-  it("flattens a rich prompt to its words and keeps an unknown type as an open question", () => {
+  it("keeps a rich prompt, and keeps an unknown type as an open question", () => {
     const back = fromOslf({
       oslf: "0.1",
       title: "T",
@@ -442,7 +442,19 @@ describe("fromOslf", () => {
         },
       ],
     });
-    expect(back.sections[0].blocks[0].prompt).toBe("Give a word for beam.");
+    expect(back.sections[0].blocks[0].prompt).toEqual({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Give a word for " },
+            { type: "text", text: "beam", marks: [{ type: "italic" }] },
+            { type: "text", text: "." },
+          ],
+        },
+      ],
+    });
     expect(back.sections[0].blocks[1]).toMatchObject({
       questionType: "open",
       prompt: "Pick one.",
@@ -550,7 +562,7 @@ describe("read-aloud hints", () => {
     );
   });
 
-  it("reads math working given as rich text as its words", () => {
+  it("reads math working given as rich text, hints and all", () => {
     const back = fromOslf({
       oslf: OSLF_VERSION,
       title: "T",
@@ -565,16 +577,82 @@ describe("read-aloud hints", () => {
               working: [
                 "There are 60 seconds.",
                 ["Then ", { text: "sixty", ipa: "ˈsɪksti" }, " over 5."],
+                [" "],
               ],
             },
           ],
         },
       ],
     });
-    expect(back.sections[0].blocks[0].steps).toEqual([
+    expect(back.sections[0].blocks[0].steps.map((s) => s.text)).toEqual([
       "There are 60 seconds.",
-      "Then sixty over 5.",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Then " },
+              {
+                type: "text",
+                text: "sixty",
+                marks: [{ type: "speech", attrs: { ipa: "ˈsɪksti" } }],
+              },
+              { type: "text", text: " over 5." },
+            ],
+          },
+        ],
+      },
     ]);
+  });
+
+  it("round trips a prompt and working with formulas and hints", () => {
+    const prompt = [
+      "How many times is ",
+      { math: { format: "tex", source: "\\frac{60}{5}" } },
+      "?",
+    ];
+    const working = [
+      "There are 60 seconds in a minute.",
+      [
+        {
+          math: {
+            format: "tex",
+            source: "\\frac{60}{5} = 12",
+            spoken: "sixty over five is twelve",
+          },
+        },
+        { pause: "short" },
+        { text: "QED", sayAs: "characters" },
+      ],
+    ];
+    const back = fromOslf({
+      oslf: OSLF_VERSION,
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            {
+              type: "question",
+              questionType: "math",
+              prompt,
+              answers: ["12"],
+              working,
+            },
+          ],
+        },
+      ],
+    });
+    const block = back.sections[0].blocks[0];
+    expect(typeof block.prompt).toBe("object");
+    expect(typeof block.steps[0].text).toBe("string");
+    expect(typeof block.steps[1].text).toBe("object");
+    const doc = normalizeLessonFile({ title: "T", sections: back.sections });
+    const out = toOslf(doc);
+    const question = out.sections[0].blocks[0];
+    expect(question.prompt).toEqual(prompt);
+    expect(question.working).toEqual(working);
+    expect(validate(out)).toBe(true);
   });
 });
 
