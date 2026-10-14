@@ -144,6 +144,36 @@ describe("validateLesson finding locations", () => {
     expect(heavy?.params).toMatchObject({ count: 1, tooMany: false });
   });
 
+  it("counts formatting in a question's prompt and steps with the section's", () => {
+    const doc = lesson();
+    const bold = (text) => ({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text, marks: [{ type: "bold" }] }],
+        },
+      ],
+    });
+    doc.sections[0].blocks.push({
+      id: "q9",
+      type: "question",
+      questionType: "number",
+      prompt: bold("How many?"),
+      answer: "3",
+      steps: [
+        { id: "st1", text: bold("One") },
+        { id: "st2", text: bold("Two") },
+        { id: "st3", text: bold("Three") },
+      ],
+    });
+    const heavy = validateLesson(doc).errors.find(
+      (f) => f.code === "E_FORMAT_HEAVY",
+    );
+    expect(heavy?.blockId).toBe("q9");
+    expect(heavy?.params).toMatchObject({ count: 4, tooMany: true });
+  });
+
   it("leaves lesson-wide findings without a section", () => {
     expect(find(warnings, "W_SECTION_COUNT")).toMatchObject({
       section: null,

@@ -166,8 +166,8 @@ formatting (italics for a title, a scientific name, a word from another language
 user asks for it. The `E_FORMAT_*` and `W_FORMAT_*` checks hold it to that, because the
 failure they catch is the one an assistant drifts into: a word bolded here, a phrase
 italicized there, until the passage reads as machine-written. The limits are counted per
-section, over all its text blocks together, so a short block that is mostly one italic
-title is fine.
+section, over all its text blocks together with its questions' prompts and steps (which
+take the same formatting), so a short block that is mostly one italic title is fine.
 
 They are only ever held against formatting the write adds. Findings are keyed on the
 formatting itself (which words, with which marks), not on where it sits or on the prose

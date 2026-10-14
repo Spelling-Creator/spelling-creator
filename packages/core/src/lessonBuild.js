@@ -443,17 +443,14 @@ export function presentDoc(doc) {
   };
 }
 
-// A question with its prompt and steps as markup. The steps keep their ids:
-// a step passed back unchanged keeps its field in the editor (see
-// keepItemIds in lessonAiFixes.js).
+// A question with its prompt and steps as markup, the steps as the strings
+// the input takes (buildQuestionBlock gives them ids again).
 function presentQuestion(block) {
   const out = { ...block, prompt: inlineTextMarkup(block.prompt) };
   if (Array.isArray(block.steps)) {
-    out.steps = block.steps.map((step) =>
-      step && typeof step === "object"
-        ? { ...step, text: inlineTextMarkup(step.text) }
-        : inlineTextMarkup(step),
-    );
+    out.steps = block.steps
+      .map((step) => inlineTextMarkup(step?.text ?? step))
+      .filter((text) => text.trim());
   }
   return out;
 }

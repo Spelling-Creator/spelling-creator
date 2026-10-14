@@ -26,7 +26,10 @@
 // same facts as data, for the editor to word in its own (translated) strings,
 // since a message telling a person to "call the tool again" is no use to them.
 
-import { inlineTextPlain } from "@spelling-creator/core/inlineText";
+import {
+  inlineTextContent,
+  inlineTextPlain,
+} from "@spelling-creator/core/inlineText";
 import {
   textBlockFootnotes,
   textBlockFormattedSpans,
@@ -1379,15 +1382,29 @@ export function isCapsSpan(text) {
   return /^[\p{Lu}\s'’-]+$/u.test(text) && /\p{Lu}{2}/u.test(text);
 }
 
-// Every formatted span in a section's text blocks (textBlockFormattedSpans),
-// tagged with the block it sits in, and the length of the prose around them.
+// Every formatted span in a section's text blocks (textBlockFormattedSpans)
+// and in its questions' prompts and steps, which take the same formatting
+// (see inlineText.js), tagged with the block it sits in, and the length of the
+// prose around them.
 function formattedSpans(blocks) {
   const spans = [];
   let total = 0;
-  for (const block of blocks.filter((b) => b?.type === "text")) {
-    const found = textBlockFormattedSpans(block);
+  const add = (block, found) => {
     spans.push(...found.spans.map((span) => ({ ...span, blockId: block.id })));
     total += found.totalChars;
+  };
+  for (const block of blocks) {
+    if (block?.type === "text") {
+      add(block, textBlockFormattedSpans(block));
+    } else if (block?.type === "question") {
+      const lines = [block.prompt, ...(block.steps || []).map((s) => s?.text)];
+      for (const line of lines) {
+        add(
+          block,
+          textBlockFormattedSpans({ content: inlineTextContent(line) }),
+        );
+      }
+    }
   }
   return { spans, total };
 }

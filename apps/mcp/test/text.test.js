@@ -56,6 +56,48 @@ test("get_lesson's view round-trips through update_lesson unchanged", () => {
   assert.deepEqual(rebuilt.sources, doc.sources);
 });
 
+test("a prompt and its steps take the markup too, and come back as it", () => {
+  const doc = buildDoc({
+    title: "t",
+    sections: [
+      {
+        name: "One",
+        blocks: [
+          {
+            type: "question",
+            questionType: "number",
+            prompt: "How many is {tex: \\frac{60}{5}}?^[Dropped.]",
+            answer: 12,
+            steps: [
+              "There are 60 seconds in a minute.",
+              "{tex: \\frac{60}{5} = 12}{spoken: sixty over five is twelve}",
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  const [block] = doc.sections[0].blocks;
+  assert.equal(block.prompt.type, "doc");
+  assert.equal(block.steps[0].text, "There are 60 seconds in a minute.");
+  assert.equal(block.steps[1].text.type, "doc");
+  const [shown] = presentDoc(doc).sections[0].blocks;
+  assert.equal(shown.prompt, "How many is {tex: \\frac{60}{5}}?");
+  assert.deepEqual(shown.steps, [
+    "There are 60 seconds in a minute.",
+    "{tex: \\frac{60}{5} = 12}{spoken: sixty over five is twelve}",
+  ]);
+  const rebuilt = buildDoc({
+    title: "t",
+    sections: [{ name: "One", blocks: [shown] }],
+  });
+  assert.deepEqual(rebuilt.sections[0].blocks[0].prompt, block.prompt);
+  assert.deepEqual(
+    rebuilt.sections[0].blocks[0].steps.map((s) => s.text),
+    block.steps.map((s) => s.text),
+  );
+});
+
 test("get_lesson shows an older picture's credit apart from its caption", () => {
   const credit = "Image (by Jane Doe, CC BY-SA 4.0) via Wikimedia Commons";
   const doc = {

@@ -174,7 +174,11 @@ const blockSchema = z
           "No prompt may name a word another question in the same section expects the speller to retrieve (a green " +
           'answer or an orange option): a green answer of BRITAIN and a later prompt reading "…cats reached ' +
           'Britain around the year ___" gives the green answer away, and is fixed by writing "the British Isles". ' +
-          "Naming a topic word whose own question wants a number back is fine.",
+          "Naming a topic word whose own question wants a number back is fine.\n\n" +
+          "One line, in the same markup as `text` (formatting, read-aloud hints and formulas; no footnotes): a " +
+          'math prompt can hold a typeset formula, "How many is {tex: \\frac{60}{5}}?", and a prompt that names ' +
+          "a person or place the voice gets wrong can carry the same [NAME]{ipa: ...} hint a passage would. " +
+          "Leave it plain otherwise, as with passages.",
       ),
     answer: z
       .union([z.string(), z.number()])
@@ -223,7 +227,10 @@ const blockSchema = z
           "show the set-up (not just the arithmetic), flag the common error where one exists, break hard arithmetic " +
           "into manageable pieces, and verify the result where that is cheap. Leave them off the plain " +
           "fill-in-the-blank number question, whose answer is quoted from the passage rather than computed — the " +
-          "absence of steps is what marks it as the fill-in-the-blank one.",
+          "absence of steps is what marks it as the fill-in-the-blank one.\n\n" +
+          "Each step is one line in the same markup as `text`, so the arithmetic can be a typeset formula: " +
+          '"There are 60 seconds in a minute.", then "{tex: \\frac{60}{5} = 12}". The answer itself stays a ' +
+          "plain number.",
       ),
     image: z
       .object({
