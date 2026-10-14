@@ -1445,6 +1445,10 @@ export function registerTools(server, ctx) {
         "Replace the title and content of a lesson you authored. This overwrites the whole document, so pass the " +
         "complete set of sections you want the lesson to have (use get_lesson first if you need the current content). " +
         "Optionally flip published to move between draft and public.\n\n" +
+        "To change an existing lesson, update A FORK of it (fork_lesson, then propose_changes) rather than the " +
+        "lesson itself, so the user decides before anything changes. That's the default for their own lessons " +
+        "too. Update the lesson directly only when they've told you to, or when it's one you created in this " +
+        "conversation. See fork_lesson.\n\n" +
         "The result is checked against the same authoring standard as create_lesson (see that tool's description) " +
         "and rejected if it breaks it. Because this replaces everything, you own every defect in the result — " +
         "including ones already in the lesson you fetched. Prefer patch_lesson for a small edit: it only holds you " +
@@ -1546,6 +1550,11 @@ export function registerTools(server, ctx) {
         "Prefer this over update_lesson for anything short of a full rewrite. Call get_lesson first to read the " +
         "current sections/blocks and their ids; operations address them by id. The server fetches the lesson, " +
         "applies the operations in order, then saves the result.\n\n" +
+        "WHICH LESSON TO PATCH. To change an existing lesson, patch A FORK of it (fork_lesson, then " +
+        "propose_changes) rather than the lesson itself, so the user decides before anything changes. That's the " +
+        "default for their own lessons too, however small the fix. Patch the lesson directly only when they've " +
+        "told you to, or when it's one you created in this conversation and are still building. See " +
+        "fork_lesson.\n\n" +
         "TWO USES. The obvious one is a tweak — a typo, a wrong answer, a reworded prompt. The other is BUILDING A " +
         "LESSON UP IN PASSES: create_lesson with the first section or two, then add_section the rest one pass at a " +
         "time. A six-section lesson is a lot to get right in a single call, and every pass here is checked, " +
@@ -1644,17 +1653,17 @@ export function registerTools(server, ctx) {
       title: "Fork a lesson",
       description:
         "Copy a lesson into a new private draft of your own, keeping its version history and a link back to the " +
-        "original. This is the first step of the review flow:\n\n" +
+        "original. This is THE DEFAULT WAY TO CHANGE AN EXISTING LESSON, the user's own included:\n\n" +
         "  1. fork_lesson(lessonId)      -> a draft fork you own\n" +
         "  2. patch_lesson(fork.id, ...) -> edit THE FORK, not the original\n" +
         "  3. propose_changes(...)       -> open a proposal for a human to read and merge\n\n" +
-        "USE THIS INSTEAD OF EDITING DIRECTLY when either applies:\n" +
-        "• The lesson was written by someone else. You cannot save over it at all — a proposal is the only route.\n" +
-        "• The user wants to look over your changes before they go live. Editing their lesson with patch_lesson " +
-        "  overwrites it immediately — recorded in the lesson's history, so it can be reverted afterwards, but " +
-        "  nobody got to decide first; forking leaves the lesson untouched until they merge, and they can decline.\n\n" +
-        "Prefer editing directly (patch_lesson) for a small correction to the user's own lesson that they have " +
-        "asked for outright — a typo, a wrong answer — where a review step is just friction.\n\n" +
+        "Forking leaves the lesson untouched until a person merges the proposal, and they can decline it. Editing " +
+        "the lesson itself with patch_lesson or update_lesson overwrites it at once: it's recorded in the " +
+        "lesson's history and can be reverted, but nobody got to decide first. So fork for a one-word fix as " +
+        "well as a rewrite.\n\n" +
+        'Edit the lesson directly instead only when the user tells you to ("edit it directly", "skip the ' +
+        "proposal\"), or when it's a lesson you created in this conversation and are still building. A lesson " +
+        "someone else wrote can't be edited directly at all: a proposal is the only route.\n\n" +
         "Forks count against your private-draft limit; delete_lesson the fork once its proposal is merged or " +
         "declined. Images are shared with the original rather than copied, so forking is cheap.",
       inputSchema: {

@@ -80,22 +80,26 @@ and you'll see the rest in the editor's Check panel.
 
 ## Edit a lesson
 
-Ask it to fix a typo, reword a question, swap a spelling word or add a section, on a lesson
-you wrote. It changes the lesson straight away. Every change it makes shows up in the
-lesson's version history (the **History** tab on its hub page, or **Version history** in
-the editor) with a note saying an AI assistant made it, so you can see exactly what
-changed and undo it if you don't like it.
+Ask it to fix a typo, reword a question, swap a spelling word or add a section. By default
+it doesn't change your lesson straight away: it **proposes** the change. It makes a private
+copy of the lesson, edits the copy, and opens a proposal on the original, so you see what it
+did before anything changes. The lesson itself doesn't change until its author merges the
+proposal. See [Proposals](../pull-requests.md) for how reviewing works.
+
+If you'd rather skip that step, tell it to edit the lesson directly (for example "just save
+it straight to the lesson"). It then changes your lesson straight away for the rest of the
+conversation. It also edits directly while it's still building a lesson it created for you
+in the same conversation. Every direct change shows up in the lesson's version history (the
+**History** tab on its hub page, or **Version history** in the editor) with a note saying an
+AI assistant made it, so you can see exactly what changed and undo it if you don't like it.
+
+A lesson that belongs to someone else can only be changed by a proposal, since nobody can
+save over another person's lesson.
 
 If you are editing the lesson live in the editor at the same time, bring the assistant
 into the session instead. See [Live sessions](./live-sessions.md).
 
-## Propose changes instead of making them
-
-Sometimes you want to look before anything changes, or the lesson belongs to someone else
-(nobody can save over another person's lesson). Then ask the assistant to **propose** its
-changes. It makes a private copy of the lesson, edits the copy, and opens a proposal on the
-original. The lesson itself doesn't change until its author merges the proposal. See
-[Proposals](../pull-requests.md) for how reviewing works.
+## How proposals work
 
 A few things to know:
 

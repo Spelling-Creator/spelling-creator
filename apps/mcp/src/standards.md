@@ -385,6 +385,25 @@ action rather than carrying the lesson.
 None. Do not add any brand name, byline, or footer to a generated lesson unless the user
 explicitly supplies one.
 
+## Changing an existing lesson
+
+By default, don't write to a lesson that already exists. Fork it and propose the change: `fork_lesson`,
+then `patch_lesson` (or `update_lesson`) on THE FORK's id, then `propose_changes`. The lesson stays as
+it is until a person reads the diff and merges it, and they can decline. This is the default for the
+user's own lessons as well as other people's, and for a one-word fix as well as a rewrite. Hand the
+user the proposal's `url`, or call `review_proposal` when the lesson is theirs so they can decide in
+the conversation. Don't tell them the change is made: it isn't until they merge it.
+
+Write to the lesson directly with `patch_lesson` or `update_lesson` only when:
+
+- the user tells you to ("edit it directly", "save it straight to the lesson", "skip the proposal").
+  That holds for that lesson for the rest of the conversation unless they say otherwise.
+- you created the lesson in this conversation and are still building it, such as adding sections a
+  pass at a time.
+
+A lesson someone else wrote can only change through a proposal. A live session (`join_collab_session`)
+is different again: there the user is watching your edits land, so `edit_collab_doc` is how you work.
+
 ## Validation on save
 
 `create_lesson`, `create_lesson_file`, `update_lesson` and `patch_lesson` check the lesson before

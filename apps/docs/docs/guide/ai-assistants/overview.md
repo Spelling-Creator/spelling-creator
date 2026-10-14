@@ -27,12 +27,13 @@ beyond whether your assistant supports it. See
   images and adds the one you choose, with its credit. In Claude you see the
   candidates as pictures and click the one you want.
 - **Changing an existing lesson.** Ask for a reworded passage, an extra
-  question or a new section, and it edits just that part.
+  question or a new section. By default it makes its own copy, changes that,
+  and offers the changes back as a proposal, so you read them and decide before
+  your lesson changes. Tell it to edit the lesson directly if you'd rather skip
+  that step.
 - **Suggesting changes to someone else's lesson.** It can't edit a lesson
-  another person wrote. Instead it makes your own copy, changes that, and offers
-  the changes back as a proposal, so the lesson's author reads them and decides.
-  You can ask it to work this way on your own lessons too, if you'd rather check
-  its work before it goes live.
+  another person wrote, so a proposal is the only way, and the lesson's author
+  reads it and decides.
 - **Helping during a live session.** If you're editing a lesson live, you can
   let the assistant join the session as a participant and work alongside you.
   See [Live sessions with an assistant](./live-sessions.md).

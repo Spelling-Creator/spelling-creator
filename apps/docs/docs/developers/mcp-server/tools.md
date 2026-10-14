@@ -20,7 +20,7 @@ the remote endpoint) get the same set.
 | `create_lesson_file`    | Build an importable lesson file offline, with no account or network, as the app's own file or (`format: "oslf"`) an Open Spelling Lesson Format file.                                         |
 | `patch_lesson`          | Edit a lesson with a small diff (id-addressed ops) instead of a full replace.                                                                                                                 |
 | `update_lesson`         | Replace a lesson's whole title/content (author only).                                                                                                                                         |
-| `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history.                                                                                                                  |
+| `fork_lesson`           | Copy a lesson into a private draft of your own, keeping its version history. The default first step for changing an existing lesson.                                                          |
 | `propose_changes`       | Offer a fork's changes back to the original, for a human to review and merge.                                                                                                                 |
 | `list_lesson_proposals` | List the proposals against a lesson, and whether yours have been resolved.                                                                                                                    |
 | `review_proposal`       | Read what a proposal changes, as a diff with merge and decline, where a client can show one.                                                                                                  |
@@ -137,12 +137,9 @@ assistant to ask in the conversation regardless.
 An assistant can change a lesson two ways, and which one it should use is a question
 about **who decides**, not about the size of the edit.
 
-`patch_lesson` writes straight to the lesson. It's right for a correction the user has
-asked for outright (a typo, a wrong answer), where a review step is only friction.
-
-**`fork_lesson` + `propose_changes`** leaves the lesson untouched and puts the changes in
-its [Proposals](../web-app/pull-requests.md) tab instead, where a person reads the diff and
-merges or declines it:
+**`fork_lesson` + `propose_changes`** is the default. It leaves the lesson untouched and
+puts the changes in its [Proposals](../web-app/pull-requests.md) tab instead, where a
+person reads the diff and merges or declines it:
 
 ```text
 fork_lesson({ lessonId })          -> a private draft fork you own
@@ -150,11 +147,22 @@ patch_lesson({ id: fork.id, … })   -> edit THE FORK
 propose_changes({ forkLessonId })  -> a proposal, with a URL to review it
 ```
 
-That's the only available route for a lesson somebody else wrote (nobody can save over
-another person's lesson), and it's the better route whenever the user wants to look over
-the assistant's work before it goes live. `propose_changes` returns the proposal's `url`;
-the assistant is expected to hand that over and stop, rather than report the change as
-done.
+The assistant is told to work this way on the user's own lessons too, and for a one-word
+fix as much as a rewrite, so nothing they wrote changes until they've seen it. For a
+lesson somebody else wrote it's the only route (nobody can save over another person's
+lesson). `propose_changes` returns the proposal's `url`; the assistant is expected to
+hand that over (or show the diff with `review_proposal` when the lesson is the user's)
+and stop, rather than report the change as done.
+
+`patch_lesson` and `update_lesson` on the lesson itself write straight to it. The
+assistant only does that when the user tells it to ("edit it directly", "skip the
+proposal"), which then holds for that lesson for the rest of the conversation, or when it
+created the lesson in the same conversation and is still building it in passes.
+
+The rule is stated in the server instructions (`apps/mcp/src/standards.md`, under
+"Changing an existing lesson") and repeated in the descriptions of `fork_lesson`,
+`patch_lesson` and `update_lesson`, since not every client shows the model the server
+instructions.
 
 Some mechanics worth knowing:
 
@@ -291,7 +299,9 @@ visible, and notifies its author, exactly as declining in the web app does.
 
 ## Editing a lesson: patch vs. replace
 
-For tweaks, prefer **`patch_lesson`**: `get_lesson` to read the current section/block
+Whichever lesson is being edited (by default a fork of it, see
+[Proposing changes instead of making them](#proposing-changes-instead-of-making-them)),
+the tools are the same. For tweaks, prefer **`patch_lesson`**: `get_lesson` to read the current section/block
 **ids**, then send a small list of operations that address those ids, e.g.:
 
 ```json
