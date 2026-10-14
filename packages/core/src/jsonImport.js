@@ -13,7 +13,11 @@
 import { AGE_RANGES } from "./ageRanges.js";
 import { headingText } from "./heading.js";
 import { newId } from "./id.js";
-import { QUESTION_TYPES, questionBesides } from "./questions.js";
+import {
+  QUESTION_TYPES,
+  questionAnswerPlain,
+  questionBesides,
+} from "./questions.js";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
 import { LESSON_FILE_FORMAT } from "./lessonFile.js";
 import { normalizeInlineText } from "./inlineText.js";
@@ -318,15 +322,12 @@ function normalizeQuestion(block) {
         .filter(Boolean);
       return {
         ...base,
-        answer: block.answer != null ? String(block.answer) : "",
+        answer: questionAnswerPlain(block.answer),
         steps,
       };
     }
     case "single":
-      return {
-        ...base,
-        answer: typeof block.answer === "string" ? block.answer : "",
-      };
+      return { ...base, answer: questionAnswerPlain(block.answer) };
     case "multiple":
     case "multiple_open": {
       const answers = (Array.isArray(block.answers) ? block.answers : [])
@@ -358,10 +359,7 @@ function normalizeQuestion(block) {
     case "wyr":
       return base;
     case "background":
-      return {
-        ...base,
-        answer: typeof block.answer === "string" ? block.answer : "",
-      };
+      return { ...base, answer: questionAnswerPlain(block.answer) };
     default:
       return null;
   }

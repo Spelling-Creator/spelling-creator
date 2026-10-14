@@ -27,6 +27,7 @@
 
 import { imageCaptionParts } from "./imageCredit.js";
 import { inlineTextPlain } from "./inlineText.js";
+import { questionAnswerPlain } from "./questions.js";
 import { inlineTextSpeech, speechText, textBlockSpeech } from "./speech.js";
 import { headingText } from "./heading.js";
 import { vaktText } from "./vakt.js";
@@ -282,7 +283,7 @@ export function questionAnswer(block) {
     case "number": {
       // A number question can carry its working with it, and a half-filled one
       // (working but no total, or the reverse) is still worth revealing.
-      const answer = trimmed(block.answer);
+      const answer = questionAnswerPlain(block.answer).trim();
       const working = steps(block.steps);
       return answer || working.length
         ? { answer, answers: [], steps: working, suggested: false }
@@ -290,7 +291,7 @@ export function questionAnswer(block) {
     }
     case "single":
     case "background": {
-      const answer = trimmed(block.answer);
+      const answer = questionAnswerPlain(block.answer).trim();
       return answer
         ? { answer, answers: [], steps: [], suggested: false }
         : null;

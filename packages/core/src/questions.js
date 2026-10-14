@@ -454,6 +454,24 @@ export function questionTagStyleMap() {
 // Types whose answer is a single value held on `block.answer`.
 const SINGLE_ANSWER_TYPES = new Set(["number", "single", "background"]);
 
+/**
+ * A single answer (`block.answer`) as plain words. An answer is a plain
+ * string, and a number question's may have been stored as a number. But a
+ * lesson can also arrive with an answer in the prompt's rich inline-text
+ * shape (a one-paragraph document; see inlineText.js), written by a client
+ * that gave the answer field the same editor as the prompt. Read as a
+ * string that would be "[object Object]", which the number field then tries
+ * to parse. So every reader of a single answer, and the importer, takes the
+ * words of whatever shape is there.
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function questionAnswerPlain(value) {
+  if (value == null) return "";
+  if (typeof value === "object") return inlineTextPlain(value);
+  return String(value);
+}
+
 // The gap between an answer and the next thing along. Built around a
 // non-breaking space on purpose: the PDF path renders the docx as HTML, which
 // collapses a run of ordinary spaces down to one, and the wide gap is what
@@ -493,7 +511,7 @@ export function questionAnswersAreExamples(block) {
 export function questionAnswerItems(block) {
   if (!block) return [];
   if (SINGLE_ANSWER_TYPES.has(block.questionType)) {
-    const answer = block.answer == null ? "" : String(block.answer).trim();
+    const answer = questionAnswerPlain(block.answer).trim();
     return answer ? [answer] : [];
   }
   if (LIST_ANSWER_TYPES.has(block.questionType)) {

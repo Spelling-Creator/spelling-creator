@@ -16,6 +16,8 @@ import {
   besidesAnswers,
   createQuestionBlock,
   isThreeBoard,
+  questionAnswerItems,
+  questionAnswerPlain,
   questionAnswerText,
   questionBesides,
   resolveOpenType,
@@ -165,6 +167,70 @@ describe("questionAnswerText", () => {
 
 // A Besides line names one accepted answer and asks for another. Both halves
 // come from the answer list, so a name the list no longer has means no line.
+describe("questionAnswerPlain", () => {
+  const richAnswer = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "1884 or " },
+          { type: "math", attrs: { format: "asciimath", source: "3/4" } },
+        ],
+      },
+    ],
+  };
+
+  it("reads a string, a number and nothing", () => {
+    expect(questionAnswerPlain("BASTET")).toBe("BASTET");
+    expect(questionAnswerPlain(1884)).toBe("1884");
+    expect(questionAnswerPlain(null)).toBe("");
+    expect(questionAnswerPlain(undefined)).toBe("");
+  });
+
+  it("reads an answer stored in the inline-text shape as its words", () => {
+    expect(questionAnswerPlain(richAnswer)).toBe("1884 or 3/4");
+    expect(
+      questionAnswerItems({ questionType: "number", answer: richAnswer }),
+    ).toEqual(["1884 or 3/4"]);
+    expect(questionAnswerItems({ questionType: "single", answer: {} })).toEqual(
+      [],
+    );
+  });
+
+  it("is what the importer stores for such an answer", () => {
+    const file = normalizeLessonFile({
+      title: "T",
+      sections: [
+        {
+          id: "s1",
+          name: "S",
+          blocks: [
+            {
+              id: "q",
+              type: "question",
+              questionType: "number",
+              prompt: "How tall?",
+              answer: richAnswer,
+            },
+            {
+              id: "k",
+              type: "question",
+              questionType: "single",
+              prompt: "Who?",
+              answer: richAnswer,
+            },
+          ],
+        },
+      ],
+    });
+    expect(file.sections[0].blocks.map((b) => b.answer)).toEqual([
+      "1884 or 3/4",
+      "1884 or 3/4",
+    ]);
+  });
+});
+
 describe("three-board questions", () => {
   const block = (fields) => ({
     questionType: "multiple",

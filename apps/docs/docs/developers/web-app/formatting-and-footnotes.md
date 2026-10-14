@@ -160,6 +160,15 @@ written as rich text and read back as inline text (`oslf.js`), so a formula
 or a hint in a prompt survives the round trip; a note in one is read as
 nothing.
 
+An answer is not inline text: `answer` and `answers[].text` are plain
+strings, and spelling words and VAKT activities likewise. A lesson can still
+arrive with a single answer in the document shape, written by a client that
+gave the answer field the prompt's editor, and read as a string that is
+"[object Object]", which a number field then fails to parse. So every reader
+of a single answer (`questionAnswerItems`, the editor's fields, interactive
+mode, the AI fixes) and the importer go through `questionAnswerPlain` in
+`core/questions`, which takes the words of whatever shape is there.
+
 ## Read-aloud hints
 
 A text block can say how its words are read aloud without changing how they

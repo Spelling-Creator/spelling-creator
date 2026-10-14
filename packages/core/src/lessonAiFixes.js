@@ -28,6 +28,7 @@ import {
   validateLesson,
 } from "./lessonChecks.js";
 import { inlineTextMarkup } from "./inlineText.js";
+import { questionAnswerPlain } from "./questions.js";
 import {
   textBlockContent,
   textBlockFootnotes,
@@ -103,7 +104,7 @@ export function blockForModel(block) {
         questionType: block.questionType,
         prompt: inlineTextMarkup(block.prompt),
       };
-      if (block.answer != null) out.answer = String(block.answer);
+      if (block.answer != null) out.answer = questionAnswerPlain(block.answer);
       if (Array.isArray(block.answers)) out.answers = texts(block.answers);
       if (Array.isArray(block.steps)) {
         out.steps = block.steps
@@ -145,7 +146,10 @@ export function fixContext(doc, finding) {
           ? texts(block.words)
           : block?.type === "question" &&
               !SUGGESTION_TYPES.has(block.questionType)
-            ? [...texts([String(block.answer ?? "")]), ...texts(block.answers)]
+            ? [
+                ...texts([questionAnswerPlain(block.answer)]),
+                ...texts(block.answers),
+              ]
             : [];
       for (const word of words) usedElsewhere.add(word);
     }
