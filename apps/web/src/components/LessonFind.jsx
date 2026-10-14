@@ -18,7 +18,7 @@
 // The matching is @spelling-creator/core/lessonFind: plain, lexical, case and
 // accents ignored, every word of the query somewhere in the same block.
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchIcon, XIcon } from "lucide-react";
 import {
@@ -29,7 +29,7 @@ import { Button } from "./ui/button.jsx";
 import { Input } from "./ui/input.jsx";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover.jsx";
 import { cn } from "../lib/utils.js";
-import { idSelector, scrollToElement } from "../lib/useScrollAnchor.js";
+import { scrollToLessonTarget } from "../lib/useScrollAnchor.js";
 
 /** How many hits the list shows. A query matching more than this wants a
  * longer query, not a longer list. */
@@ -49,9 +49,25 @@ function flash(el) {
   );
 }
 
+// Put the keyboard where the reader was taken: in the editor, the block's
+// first field (a section-name hit lands in the section's name), the way the
+// Check panel's findings do; on the lesson page, where nothing is editable,
+// the block itself. Either way the next Tab starts from the hit rather than
+// from the top of the page, and a screen reader is told where it is.
+function focusTarget(target) {
+  const field = target.querySelector(
+    "textarea, input:not([type=hidden]), [contenteditable=true]",
+  );
+  if (!field) target.tabIndex = -1;
+  (field || target).focus({ preventScroll: true });
+}
+
 /**
  * @param {object} props
  * @param {object} props.doc  The lesson body.
+ * @param {Map<string, string>|null} [props.translation]  The translation the
+ *   page is showing, if any (see TranslatableLesson), so the search is over
+ *   the words the reader can see.
  * @param {(hit: object) => void} [props.onSelect]  Called with the chosen hit
  *   before the page scrolls to it: the editor uses it to open a folded
  *   section, since a block has to be on the page to be scrolled to.
@@ -61,6 +77,7 @@ function flash(el) {
  */
 export default function LessonFind({
   doc,
+  translation = null,
   onSelect,
   className,
   variant = "outline",
@@ -69,48 +86,52 @@ export default function LessonFind({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  // Whether the popover is closing because a hit was chosen, as opposed to
+  // Escape or a click outside. Decides where focus goes (below).
+  const chosenRef = useRef(false);
   const listId = useId();
 
-  // The entries are rebuilt whenever the lesson changes (every keystroke in
-  // the editor); at a hundred blocks that is nothing.
-  const entries = useMemo(() => lessonFindEntries(doc), [doc]);
+  // Nothing is indexed while the popover is closed: in the editor the lesson
+  // changes on every keystroke, and two copies of this sit on the page.
+  // Open, the entries are built once per lesson and matched per keystroke.
+  const entries = useMemo(
+    () => (open ? lessonFindEntries(doc, translation) : null),
+    [open, doc, translation],
+  );
   const results = useMemo(
-    () => findInLesson(doc, query, entries),
+    () => (entries ? findInLesson(doc, query, entries) : []),
     [doc, query, entries],
   );
   const shown = results.slice(0, SHOWN_LIMIT);
   const current = Math.min(active, Math.max(shown.length - 1, 0));
 
+  // The keyboard moves the selection while focus stays in the input, so the
+  // list has to follow the selection itself.
+  useEffect(() => {
+    if (!open || !shown.length) return;
+    document
+      .getElementById(`${listId}-${current}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, current, listId, shown.length]);
+
   const goTo = (hit) => {
     if (!hit) return;
+    chosenRef.current = true;
     onSelect?.(hit);
     setOpen(false);
-    // Two frames: one for whatever onSelect changed (a section unfolding) to
-    // render, one for it to be laid out.
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        const block = hit.blockId
-          ? document.querySelector(idSelector("data-block-id", hit.blockId))
-          : null;
-        const target =
-          block ||
-          document.querySelector(idSelector("data-section-id", hit.sectionId));
-        if (!target) return;
-        // A block is centered so it doesn't land under its section's sticky
-        // header; a section is aligned to the top, where its header is.
-        scrollToElement(target, { block: block ? "center" : "start" });
-        flash(target);
-      }),
-    );
+    scrollToLessonTarget(hit, (target) => {
+      flash(target);
+      focusTarget(target);
+    });
   };
 
   const onKeyDown = (e) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive(Math.min(current + 1, shown.length - 1));
+      if (shown.length) setActive(Math.min(current + 1, shown.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActive(Math.max(current - 1, 0));
+      if (shown.length) setActive(Math.max(current - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
       goTo(shown[current]);
@@ -136,9 +157,15 @@ export default function LessonFind({
       <PopoverContent
         align="start"
         className="flex w-[min(28rem,calc(100vw-2rem))] flex-col gap-2 p-3"
-        // Returning focus to the trigger would scroll the page back to it,
-        // against the scroll to the hit that has just started.
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        // After a hit is chosen, focus goes to the hit (focusTarget), not
+        // back to the trigger: returning it there would scroll the page
+        // straight back, against the scroll to the hit that has just
+        // started. Escape and a click outside keep the usual return.
+        onCloseAutoFocus={(e) => {
+          if (!chosenRef.current) return;
+          chosenRef.current = false;
+          e.preventDefault();
+        }}
       >
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -146,7 +173,7 @@ export default function LessonFind({
             type="text"
             role="combobox"
             aria-label={t("label")}
-            aria-expanded={shown.length > 0}
+            aria-expanded={open && shown.length > 0}
             aria-controls={listId}
             aria-activedescendant={
               shown.length ? `${listId}-${current}` : undefined

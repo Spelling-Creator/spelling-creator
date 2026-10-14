@@ -20,6 +20,41 @@ export function scrollToElement(el, { block = "start", smooth = true } = {}) {
   el.scrollIntoView({ behavior: smooth && !reduce ? "smooth" : "auto", block });
 }
 
+// Scroll to a block of the lesson, or to its section when the block isn't on
+// the page (a section's own name has no block). This is the one anchor
+// contract the lesson surfaces share: SectionCard's rows and LessonView's
+// wrappers publish data-block-id, and both publish data-section-id on the
+// section, so the Check panel's findings and Find in lesson's hits go to the
+// same place through the same code whichever surface is mounted.
+//
+// It waits two animation frames first: one for whatever the caller changed
+// (a folded section opening, preview closing) to render, one for it to be
+// laid out. A block is centered so it doesn't land under its section's sticky
+// header; a section is aligned to the top, where its header is. `then` gets
+// the element about to be scrolled to and whether it is the block, for
+// whatever the caller wants to do there (focus a field, draw a ring). It runs
+// *before* the scroll: focusing a rich-text field puts its caret into view on
+// its own, even with preventScroll, which cut a smooth scroll started just
+// before it short and left the block at the bottom of the screen. Done
+// first, that jump happens and the deliberate scroll has the last word.
+export function scrollToLessonTarget({ blockId, sectionId }, then) {
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const block = blockId
+        ? document.querySelector(idSelector("data-block-id", blockId))
+        : null;
+      const target =
+        block ||
+        (sectionId
+          ? document.querySelector(idSelector("data-section-id", sectionId))
+          : null);
+      if (!target) return;
+      then?.(target, Boolean(block));
+      scrollToElement(target, { block: block ? "center" : "start" });
+    }),
+  );
+}
+
 // Keeps one element visually still across a DOM change that moves it.
 //
 // The editor's move buttons reorder things that are screenfuls tall — a section

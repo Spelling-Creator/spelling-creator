@@ -12,13 +12,20 @@
 // or a long document doesn't hide where it is.
 //
 // Everything that reads words out of a lesson goes through the text helpers
-// (textBlockPlain, inlineTextPlain), so a formatted passage, a formula or a
-// read-aloud hint matches by what shows on the page.
+// (textBlockLines, inlineTextPlain), so a formatted passage, a formula or a
+// read-aloud hint matches by what shows on the page. And when the page shows
+// a translation, the entries are built from the translated segments (keyed
+// the way LessonView keys them, lessonSegmentKey), so a reader finds the
+// words they can see.
 
 import { headingText } from "./heading.js";
 import { imageCaptionParts } from "./imageCredit.js";
 import { inlineTextPlain } from "./inlineText.js";
-import { textBlockPlain } from "./lessonText.js";
+import { textBlockLines } from "./lessonText.js";
+import {
+  lessonSegmentKey,
+  questionStepsWithText,
+} from "./lessonTranslation.js";
 import { questionAnswerItems } from "./questions.js";
 import { vaktLinks, vaktText } from "./vakt.js";
 
@@ -34,42 +41,93 @@ function words(value) {
     .trim();
 }
 
+// Text with case and accents folded away for matching, with `map` giving,
+// for each UTF-16 code unit of the folded text, the code-unit index in the
+// original of the character it came from. Folding can change a character's
+// length (an accented letter loses its mark, an astral character is two
+// units either way, a precomposed Hangul syllable decomposes into its jamo),
+// so matches found in the folded text are mapped back through it.
+function fold(text) {
+  let folded = "";
+  const map = [];
+  let at = 0;
+  for (const char of text) {
+    const chars = char.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    folded += chars;
+    for (let i = 0; i < chars.length; i++) map.push(at);
+    at += char.length;
+  }
+  return { text: folded, map };
+}
+
 /**
  * Every searchable place in a lesson, in reading order: each section's name
  * and each block's words. `number` counts text blocks and questions within
  * their section, from 1, the way the editor labels them (Q7); it is null for
- * the rest. `blockId` is null for a section's name.
+ * the rest. `blockId` is null for a section's name. Each entry also carries
+ * its text folded for matching (`folded`), so a query is matched against
+ * entries built once rather than refolding the lesson per keystroke.
+ *
+ * With a `translation` (a Map from lessonSegmentKey keys to translated
+ * strings, as LessonView takes), every segment it covers is indexed in
+ * translation and the rest as written, which is exactly what the page shows.
  * @param {object} doc  The lesson body: { sections: [{ id, name, blocks }] }.
+ * @param {Map<string, string>|null} [translation]
  * @returns {Array<{ kind: "section"|"heading"|"text"|"spelling"|"question"|"image"|"vakt",
  *   sectionId: string, sectionIndex: number, sectionName: string,
- *   blockId: string|null, number: number|null, text: string }>}
+ *   blockId: string|null, number: number|null, text: string,
+ *   folded: { text: string, map: number[] } }>}
  */
-export function lessonFindEntries(doc) {
+export function lessonFindEntries(doc, translation = null) {
+  const translated = (key, original) => translation?.get(key) ?? original;
   const entries = [];
-  (doc?.sections || []).forEach((section, sectionIndex) => {
+  (doc?.sections || []).forEach((section, si) => {
     const base = {
       sectionId: section?.id ?? "",
-      sectionIndex,
+      sectionIndex: si,
       sectionName: words(section?.name),
     };
     const push = (kind, blockId, number, text) => {
       const joined = words(text);
-      if (joined)
-        entries.push({ kind, ...base, blockId, number, text: joined });
+      if (!joined) return;
+      entries.push({
+        kind,
+        ...base,
+        blockId,
+        number,
+        text: joined,
+        folded: fold(joined),
+      });
     };
     push("section", null, null, section?.name);
     let paragraphs = 0;
     let questions = 0;
-    for (const block of section?.blocks || []) {
-      if (!block?.id) continue;
+    (section?.blocks || []).forEach((block, bi) => {
+      if (!block?.id) return;
       switch (block.type) {
         case "text":
-          push("text", block.id, ++paragraphs, textBlockPlain(block));
+          push(
+            "text",
+            block.id,
+            ++paragraphs,
+            textBlockLines(block)
+              .map((line, li) =>
+                translated(lessonSegmentKey.textLine(si, bi, li), line),
+              )
+              .join(" "),
+          );
           break;
         case "heading":
-          push("heading", block.id, null, headingText(block));
+          push(
+            "heading",
+            block.id,
+            null,
+            translated(lessonSegmentKey.heading(si, bi), headingText(block)),
+          );
           break;
         case "spelling":
+          // Spelling words are the material being spelled and never
+          // translate (see lessonTranslation.js).
           push(
             "spelling",
             block.id,
@@ -83,24 +141,44 @@ export function lessonFindEntries(doc) {
             block.id,
             ++questions,
             [
-              inlineTextPlain(block.prompt),
-              ...questionAnswerItems(block),
-              ...(block.steps || []).map((step) => inlineTextPlain(step?.text)),
+              translated(
+                lessonSegmentKey.prompt(si, bi),
+                inlineTextPlain(block.prompt),
+              ),
+              ...questionAnswerItems(block).map((item, i) =>
+                translated(lessonSegmentKey.answer(si, bi, i), item),
+              ),
+              ...questionStepsWithText(block).map((step, i) =>
+                translated(
+                  lessonSegmentKey.step(si, bi, i),
+                  inlineTextPlain(step.text),
+                ),
+              ),
             ].join(" "),
           );
           break;
         case "image":
           // The caption, not the credit: a search for "Wikimedia" has no
           // business landing on every picture in the lesson.
-          push("image", block.id, null, imageCaptionParts(block).caption);
+          push(
+            "image",
+            block.id,
+            null,
+            translated(
+              lessonSegmentKey.caption(si, bi),
+              imageCaptionParts(block).caption,
+            ),
+          );
           break;
         case "vakt":
+          // The activity translates; link labels name outside resources and
+          // stay as written, as they do on the page.
           push(
             "vakt",
             block.id,
             null,
             [
-              vaktText(block),
+              translated(lessonSegmentKey.vakt(si, bi), vaktText(block)),
               ...vaktLinks(block).map((link) => link.label),
             ].join(" "),
           );
@@ -108,7 +186,7 @@ export function lessonFindEntries(doc) {
         default:
           break;
       }
-    }
+    });
   });
   return entries;
 }
@@ -123,27 +201,10 @@ export function findTerms(query) {
   return words(query).split(" ").filter(Boolean);
 }
 
-// Text with case and accents folded away for matching, with `map` giving the
-// code-unit index in the original of each folded character. Folding can
-// change a character's length (one letter can fold to a base letter plus
-// nothing, or to two code units), so matches found in the folded text are
-// mapped back through it.
-function fold(text) {
-  let folded = "";
-  const map = [];
-  let at = 0;
-  for (const char of text) {
-    const chars = char
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase();
-    for (const ch of chars) {
-      folded += ch;
-      map.push(at);
-    }
-    at += char.length;
-  }
-  return { folded, map };
+// The terms as they are matched: folded, with any that fold to nothing (a
+// lone accent) left out.
+function foldTerms(terms) {
+  return terms.map((term) => fold(term).text).filter(Boolean);
 }
 
 // [start, end) in the original text for a match covering folded indexes
@@ -151,40 +212,30 @@ function fold(text) {
 function originalRange({ map }, textLength, from, to) {
   const start = map[from];
   let next = to;
-  // A match may end inside a character that folded to several (İ folds to
-  // an i and a dot); the range runs to the end of that character.
+  // A match may end inside a character that folded to several code units
+  // (a Hangul syllable folds to its two or three jamo); the range runs to
+  // the end of that character.
   while (next < map.length && map[next] === map[to - 1]) next += 1;
   const end = next < map.length ? map[next] : textLength;
   return [start, end];
 }
 
-/**
- * Where every term occurs in a text, as [start, end) ranges in the text's own
- * code units, sorted and merged, or null when any term is missing. Terms are
- * matched by their folded form (see fold), anywhere in a word.
- * @param {string} text
- * @param {string[]} terms  From findTerms(); their folding is done here.
- * @returns {Array<[number, number]>|null}
- */
-export function findRanges(text, terms) {
-  if (!terms.length) return null;
-  const folded = fold(text);
+// Where every folded term occurs in a folded text, as [start, end) ranges in
+// the original text's code units, sorted and merged, or null when any term is
+// missing or there are no terms.
+function rangesIn(folded, textLength, needles) {
+  if (!needles.length) return null;
   const ranges = [];
-  for (const term of terms) {
-    const needle = fold(term).folded;
-    if (!needle) continue;
-    let from = folded.folded.indexOf(needle);
+  for (const needle of needles) {
+    let from = folded.text.indexOf(needle);
     if (from === -1) return null;
     while (from !== -1) {
       ranges.push(
-        originalRange(folded, text.length, from, from + needle.length),
+        originalRange(folded, textLength, from, from + needle.length),
       );
-      from = folded.folded.indexOf(needle, from + 1);
+      from = folded.text.indexOf(needle, from + 1);
     }
   }
-  // A query of nothing but accents folds to nothing, and nothing is not a
-  // match.
-  if (!ranges.length) return null;
   ranges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const merged = [];
   for (const range of ranges) {
@@ -193,6 +244,19 @@ export function findRanges(text, terms) {
     else merged.push([...range]);
   }
   return merged;
+}
+
+/**
+ * Where every term occurs in a text, as [start, end) ranges in the text's own
+ * code units, sorted and merged, or null when any term is missing. Terms are
+ * matched by their folded form (see fold), anywhere in a word. A query of
+ * nothing but accents folds to nothing, and nothing is not a match.
+ * @param {string} text
+ * @param {string[]} terms  From findTerms(); their folding is done here.
+ * @returns {Array<[number, number]>|null}
+ */
+export function findRanges(text, terms) {
+  return rangesIn(fold(text), text.length, foldTerms(terms));
 }
 
 // The part of an entry a result shows: a window around the first match,
@@ -240,11 +304,11 @@ function snippet(text, ranges) {
  * @returns {Array<object>}
  */
 export function findInLesson(doc, query, entries = lessonFindEntries(doc)) {
-  const terms = findTerms(query);
-  if (!terms.length) return [];
+  const needles = foldTerms(findTerms(query));
+  if (!needles.length) return [];
   const results = [];
   for (const entry of entries) {
-    const ranges = findRanges(entry.text, terms);
+    const ranges = rangesIn(entry.folded, entry.text.length, needles);
     if (!ranges) continue;
     results.push({ ...entry, ranges, snippet: snippet(entry.text, ranges) });
   }

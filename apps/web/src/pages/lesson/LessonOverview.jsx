@@ -12,6 +12,7 @@
 // prose set to the full width of a desktop screen is harder to read, not
 // easier, and this is text a child is meant to work through.
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import {
@@ -49,6 +50,9 @@ export default function LessonOverview() {
   const { t } = useTranslation("lesson");
   const { lesson, busy, handleExport, forkLesson, answersSaved, formatDate } =
     useLesson();
+  // The translation the lesson is showing, if any, so Find in lesson
+  // searches the words on the page rather than the words underneath them.
+  const [translation, setTranslation] = useState(null);
 
   return (
     <PageBody className="flex flex-col gap-6 @min-[52rem]/page:flex-row">
@@ -62,7 +66,7 @@ export default function LessonOverview() {
             control, and stays on screen) sits under the lesson instead of
             beside it. */}
         <div className="mb-4 @min-[52rem]/page:hidden">
-          <LessonFind doc={lesson.doc} />
+          <LessonFind doc={lesson.doc} translation={translation} />
         </div>
 
         {/* The lesson itself, with on-device translation wrapped around it:
@@ -71,7 +75,7 @@ export default function LessonOverview() {
             it read as a document set into the page rather than as more page.
             The printout look lives in the docx/PDF export, not here, and the
             exports always use the lesson as written (see LessonTranslation). */}
-        <TranslatableLesson doc={lesson.doc} />
+        <TranslatableLesson doc={lesson.doc} onTranslation={setTranslation} />
 
         {/* The reader's own saved run-throughs of this lesson, visible to
             nobody else — including the lesson's author. Renders nothing when
@@ -94,7 +98,11 @@ export default function LessonOverview() {
               the rail is stacked under the lesson; the copy above the lesson
               serves then. */}
           <div className="hidden @min-[52rem]/page:block">
-            <LessonFind doc={lesson.doc} className="w-full" />
+            <LessonFind
+              doc={lesson.doc}
+              translation={translation}
+              className="w-full"
+            />
           </div>
 
           <Fact icon={UserIcon} label={t("about.author")}>

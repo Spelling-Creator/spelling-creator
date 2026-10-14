@@ -56,7 +56,16 @@ import {
   sameTranslationSource,
 } from "@spelling-creator/core/lessonTranslation";
 
-export default function TranslatableLesson({ doc }) {
+/**
+ * @param {object} props
+ * @param {object} props.doc
+ * @param {(translation: Map<string, string>|null) => void} [props.onTranslation]
+ *   Told which translation the lesson is showing, or null for the original,
+ *   whenever that changes, so that Find in lesson can search the words the
+ *   reader can see. The map is the one LessonView draws from, partial while
+ *   a translation is still arriving.
+ */
+export default function TranslatableLesson({ doc, onTranslation }) {
   const { t, i18n } = useTranslation("lesson");
   // The language the lesson translates into, and the one language names show
   // in: the reader's app language.
@@ -253,6 +262,9 @@ export default function TranslatableLesson({ doc }) {
   // translated already; "Show original" flips a finished translation back.
   const translation =
     translating || (done && !state.showOriginal) ? state.map : null;
+  useEffect(() => {
+    onTranslation?.(translation);
+  }, [translation, onTranslation]);
   const lesson = (
     <div className="overflow-hidden rounded-panel border border-border bg-card">
       <LessonView doc={doc} translation={translation} />

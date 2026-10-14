@@ -159,6 +159,7 @@ import { useDragAutoScroll } from "../lib/useDragAutoScroll.js";
 import {
   idSelector,
   scrollToElement,
+  scrollToLessonTarget,
   useScrollAnchor,
 } from "../lib/useScrollAnchor.js";
 
@@ -883,41 +884,24 @@ export default function EditorPage() {
     (finding) => {
       setPreviewing(false);
       if (finding.sectionId) toggleCollapse(finding.sectionId, false);
-      // Two frames: one for React to render the editor and the section, one
-      // for them to be laid out.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          const block =
-            finding.blockId &&
-            document.querySelector(
-              idSelector("data-block-id", finding.blockId),
-            );
-          const target =
-            block ||
-            (finding.sectionId &&
-              document.querySelector(
-                idSelector("data-section-id", finding.sectionId),
-              ));
-          if (!target) return;
-          scrollToElement(target, { block: block ? "center" : "start" });
-          if (!block) return;
-          // The word or answer the finding is about, when it names one (its
-          // field ends in that item's id, as in block:<id>:word:<wordId>), so
-          // "ash is too short" lands on ash and not on the list's first word.
-          // Otherwise the block's first field.
-          const item =
-            finding.itemId &&
-            [...block.querySelectorAll("[data-collab-field]")].find((el) =>
-              el.dataset.collabField.endsWith(`:${finding.itemId}`),
-            );
-          (
-            item ||
-            block.querySelector(
-              "textarea, input:not([type=hidden]), [contenteditable=true]",
-            )
-          )?.focus({ preventScroll: true });
-        }),
-      );
+      scrollToLessonTarget(finding, (block, isBlock) => {
+        if (!isBlock) return;
+        // The word or answer the finding is about, when it names one (its
+        // field ends in that item's id, as in block:<id>:word:<wordId>), so
+        // "ash is too short" lands on ash and not on the list's first word.
+        // Otherwise the block's first field.
+        const item =
+          finding.itemId &&
+          [...block.querySelectorAll("[data-collab-field]")].find((el) =>
+            el.dataset.collabField.endsWith(`:${finding.itemId}`),
+          );
+        (
+          item ||
+          block.querySelector(
+            "textarea, input:not([type=hidden]), [contenteditable=true]",
+          )
+        )?.focus({ preventScroll: true });
+      });
     },
     [toggleCollapse],
   );
@@ -928,7 +912,9 @@ export default function EditorPage() {
   // LessonView answers to the same block ids and the hit is just as findable
   // there.
   const revealFindHit = useCallback(
-    (hit) => toggleCollapse(hit.sectionId, false),
+    (hit) => {
+      if (hit.sectionId) toggleCollapse(hit.sectionId, false);
+    },
     [toggleCollapse],
   );
 
@@ -3062,7 +3048,21 @@ export default function EditorPage() {
             is a bound, not a measure. */}
         <div className="min-w-0 flex-1">
           {previewing ? (
-            <LessonPreview doc={doc} onExit={togglePreview} />
+            <LessonPreview
+              doc={doc}
+              onExit={togglePreview}
+              // Preview replaces the document panel, and with it the
+              // narrow-screen Find; this is that copy's seat in preview.
+              find={
+                sectionCount > 0 && (
+                  <LessonFind
+                    doc={doc}
+                    onSelect={revealFindHit}
+                    className="h-10 sm:h-8"
+                  />
+                )
+              }
+            />
           ) : (
             <>
               <div className="rounded-panel border border-border bg-card p-4 text-card-foreground sm:p-6">

@@ -102,7 +102,9 @@ in a lesson that is 37 screens long.
 
 The same control sits beside a lesson on its hub page, in the About rail (or
 above the lesson on a phone), so a reader can find their way around a lesson
-without opening the editor.
+without opening the editor. If you have [translated](./translation.md) the
+lesson, it searches the translation you are reading, so the word you can see
+is the word to type.
 
 ## Your place is kept
 

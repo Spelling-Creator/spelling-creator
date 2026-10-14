@@ -339,23 +339,36 @@ it, shows the words around the match, and goes there on a click.
 
 ### The matching is lexical, on purpose
 
-`lessonFindEntries(doc)` flattens the lesson into one entry per searchable
-place: each section's name, and each block's words (a text block's
-paragraphs, a spelling list, a question's prompt with its answers and steps,
-a picture's caption but not its credit, a VAKT activity with its link
-labels, a heading). Every field is read through the text helpers
-(`textBlockPlain`, `inlineTextPlain`), so a formatted passage, a formula or
-a read-aloud hint matches by what shows on the page. Entries carry the
-section's id and index and the block's id, plus a per-section `number` for
-text blocks and questions, which is what the row label ("Paragraph 2", "Q7")
-is made from; the question numbering is the same count `SectionCard` draws.
+`lessonFindEntries(doc, translation)` flattens the lesson into one entry per
+searchable place: each section's name, and each block's words (a text
+block's paragraphs, a spelling list, a question's prompt with its answers
+and steps, a picture's caption but not its credit, a VAKT activity with its
+link labels, a heading). Every field is read through the text helpers
+(`textBlockLines`, `inlineTextPlain`), so a formatted passage, a formula or
+a read-aloud hint matches by what shows on the page. When the page shows a
+translation, the entries are built from it: `translation` is the same Map
+from `lessonSegmentKey` keys to strings that `LessonView` draws from, and
+every segment it covers is indexed translated, the rest as written, which is
+exactly what is on screen (and still so while a translation is arriving
+section by section). Spelling words and link labels never translate, there
+or here. Entries carry the section's id and index and the block's id, plus a
+per-section `number` for text blocks and questions, which is what the row
+label ("Paragraph 2", "Q7") is made from; the question numbering is the same
+count `SectionCard` draws. Each entry also carries its text folded for
+matching, so the lesson is folded once per open of the popover rather than
+once per keystroke.
 
 `findInLesson(doc, query, entries)` keeps the entries whose text holds every
-whitespace-separated term of the query. Matching folds case and accents on
-both sides (NFD, combining marks stripped, lowercased) and keeps a map from
-folded to original offsets, so a hit is reported as ranges in the original
-string even where folding changed a character's length (İ folds to two code
-units). There is no fuzziness and no query syntax: a lesson is a thousand
+whitespace-separated term of the query. Matching folds case and marks on
+both sides (NFD, every combining mark stripped with `\p{M}`, so Hebrew
+niqqud and Arabic harakat go the way Latin accents do, then lowercased) and
+keeps a map from each folded UTF-16 code unit to the original offset of the
+character it came from, so a hit is reported as ranges in the original string
+even where folding changed a character's length: an accented letter loses a
+unit, an astral character (an emoji) is two units either way, and a
+precomposed Hangul syllable decomposes into two or three jamo, in which case
+a match ending inside the jamo runs to the end of the syllable. There is no
+fuzziness and no query syntax: a lesson is a thousand
 words whose author knows the word they want, and "any part of a word, case
 and accents ignored" is what a browser's find does, which is the behavior a
 reader expects from a box called Find. The hub's search is fuzzy
@@ -377,37 +390,60 @@ across the hub's lessons, not within one.
 A popover (`Popover` from the UI kit) off a **Find in lesson** button: an
 input, a count line, and a `listbox` of hits. The input keeps the keyboard
 (`role="combobox"`, `aria-activedescendant`); the arrow keys move the
-selection and Enter chooses it, and the rows are clickable with
+selection (and scroll the list to keep it in view, since focus never leaves
+the input) and Enter chooses it, and the rows are clickable with
 `tabIndex={-1}` so Tab never walks the list. It shows the first 50 hits and
 says so (`shownOf`): a query matching more than that wants another word, not
-a longer list.
+a longer list. Nothing is indexed while the popover is closed: in the editor
+the lesson changes on every keystroke and two copies of the component sit on
+the page, so the entries are built on open and the matching runs per
+keystroke in the box.
 
 Choosing a hit closes the popover first, because the page is about to scroll
 a long way and a popover anchored to a button that has scrolled off the top
-is no use, then after two animation frames (one for whatever `onSelect`
-changed to render, one for layout) scrolls to the block through
-`scrollToElement` with `block: "center"` (a section's name scrolls to the
-card with `"start"`, as the outline does) and draws a brief ring around it
-with the Web Animations API, so the eye lands on the block rather than the
-middle of the screen. The query and results survive the close, so going to
-the next hit is one click and one key. `onCloseAutoFocus` is prevented:
-Radix would otherwise return focus to the trigger, and focusing it scrolls
-the page straight back to it, against the scroll that has just started.
+is no use, then goes there through `scrollToLessonTarget` (below) and draws
+a brief ring around the block with the Web Animations API, so the eye lands
+on it rather than on the middle of the screen. Focus goes with it: the
+block's first field in the editor (a section-name hit lands in the section's
+name), the way the Check panel's findings do, or the block itself on the
+lesson page, where nothing is editable (the wrapper gets `tabIndex=-1`), so
+the next Tab starts from the hit and a screen reader is told where it is.
+That is also why `onCloseAutoFocus` is prevented for that close and only
+that one: Radix would otherwise return focus to the trigger, and focusing
+it scrolls the page straight back, against the scroll that has just started.
+Escape and a click outside keep the usual return to the trigger. The query
+and results survive the close, so going to the next hit is one click and one
+key.
 
-The block is found by `data-block-id`, which `SectionCard`'s `BlockRow`
-already published for drop targeting and which `LessonView` now publishes
-too, on a plain wrapper `<div>` around each block, so the same component
-works in the editor, in the editor's preview and on the public lesson page
-without knowing which of them it is on. The wrapper is a div with no class:
-the document's own styles are descendant rules (`.s2c-lesson-root p` and
-the like) and apply through it unchanged.
+`scrollToLessonTarget({ blockId, sectionId }, then)` in
+`lib/useScrollAnchor.js` is the one anchor contract the lesson surfaces
+share, used by the Check panel's `goToFinding` and by this. It waits two
+animation frames (one for whatever the caller changed, a section unfolding
+or preview closing, to render, one for layout), finds the block by
+`data-block-id` or, failing that, its section by `data-section-id`, hands it
+to `then`, and scrolls to it (`block: "center"` for a block, so it doesn't
+land under its section's sticky header; `"start"` for a section, as the
+outline does). `then` runs before the scroll, not after: focusing a
+rich-text field puts its caret into view on its own, even with
+`preventScroll`, which cut a smooth scroll started just before it short and
+left the block at the bottom of the screen. Done first, that jump happens and
+the deliberate scroll has the last word.
+`SectionCard`'s `BlockRow` already published `data-block-id` for drop
+targeting; `LessonView` now publishes it too, on a plain wrapper `<div>`
+around each block, so the same code works in the editor, in the editor's
+preview and on the public lesson page without knowing which of them it is
+on. The wrapper is a div with no class: the document's own styles are
+descendant rules (`.s2c-lesson-root p` and the like) and apply through it
+unchanged.
 
 `onSelect` is the one hook the host gets, called with the hit before the
 scroll. The editor passes `revealFindHit`, which expands the hit's section
 through `toggleCollapse(id, false)`, for the reason `goToFinding` does: a
 block has to be on the page to be scrolled to. (It doesn't leave preview,
 since the preview answers to the same block ids.) The lesson page passes
-nothing.
+`translation` instead: `TranslatableLesson` reports the map it is showing
+through `onTranslation`, `LessonOverview` keeps it, and the find searches
+what the reader can see rather than the English underneath it.
 
 ### Where the button is
 
@@ -416,9 +452,11 @@ of the editor that stays on screen: the search for the next hit is always one
 click away, however far the last one scrolled the page. Below 52rem of page
 column there is no outline, so the document panel's stats row carries a
 second copy (`@min-[52rem]/page:hidden`, the complement of the outline's own
-`@min-[52rem]/page:block`). The two are separate instances with separate
-queries, which only shows if the window is resized mid-search; sharing the
-state would mean lifting it into `EditorPage` for a case nobody hits.
+`@min-[52rem]/page:block`), and since preview replaces the document panel,
+`LessonPreview`'s header row carries that copy's seat in preview. The copies
+are separate instances with separate queries, which only shows if the window
+is resized mid-search; sharing the state would mean lifting it into
+`EditorPage` for a case nobody hits.
 
 The lesson page (`LessonOverview`) does the same: a copy in the About rail,
 which is sticky beside the lesson from 52rem, and a copy above the lesson

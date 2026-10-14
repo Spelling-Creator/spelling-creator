@@ -168,8 +168,25 @@ describe("findRanges", () => {
     expect(findRanges("Cafe in Zurich", ["zür"])).toEqual([[8, 11]]);
   });
 
-  it("maps a match back through a letter that folds to two", () => {
+  it("strips marks from any script, not just Latin accents", () => {
+    // Hebrew with niqqud, matched by its bare letters.
+    expect(findRanges("שָׁלוֹם", ["שלום"])).toEqual([[0, 7]]);
     expect(findRanges("İstanbul", ["ist"])).toEqual([[0, 3]]);
+  });
+
+  it("counts astral characters as the two code units they are", () => {
+    expect(findRanges("😀 ash falls", ["ash"])).toEqual([[3, 6]]);
+    expect(findRanges("🌋🌋🌋 ash", ["ash"])).toEqual([[7, 10]]);
+  });
+
+  it("maps a match back through a character that folds to several", () => {
+    // A Hangul syllable decomposes into its jamo under NFD, so a match that
+    // ends inside the jamo runs to the end of the syllable.
+    expect(findRanges("한국", ["한"])).toEqual([[0, 1]]);
+    // The conjoining jamo NFD produces (U+1112), not the compatibility one
+    // a keyboard types, which is why this is about ranges, not about typing.
+    expect(findRanges("한국", ["ᄒ"])).toEqual([[0, 1]]);
+    expect(findRanges("한국", ["한국"])).toEqual([[0, 2]]);
   });
 
   it("needs every term, and marks every occurrence of each", () => {
@@ -227,6 +244,53 @@ describe("findInLesson", () => {
   it("takes entries built earlier", () => {
     const entries = lessonFindEntries(doc);
     expect(findInLesson(doc, "crater", entries)[0].blockId).toBe("sp");
+  });
+
+  it("marks a hit in text with an emoji before it", () => {
+    const emoji = {
+      sections: [
+        {
+          id: "s",
+          name: "",
+          blocks: [{ id: "t", type: "text", text: "🌋 Ash fell on Pompeii." }],
+        },
+      ],
+    };
+    expect(findInLesson(emoji, "ash")[0].snippet.parts).toEqual([
+      { text: "🌋 ", hit: false },
+      { text: "Ash", hit: true },
+      { text: " fell on Pompeii.", hit: false },
+    ]);
+  });
+
+  it("searches the translation the page shows, where there is one", () => {
+    const translation = new Map([
+      ["s0.b1.line0", "Un VOLCÁN es una abertura."],
+      ["s0.b1.line1", "Salen roca, gas y ceniza."],
+      ["s0.b5.prompt", "¿Qué sale por un volcán?"],
+      ["s0.b5.answer0", "Ceniza"],
+      ["s0.b3.caption", "El Etna de noche"],
+      ["s0.b7.vakt", "Toca una piedra pómez"],
+      ["s0.b0.heading", "Montañas de fuego"],
+    ]);
+    const byId = new Map(
+      lessonFindEntries(doc, translation).map((e) => [e.blockId, e]),
+    );
+    expect(byId.get("t1").text).toBe(
+      "Un VOLCÁN es una abertura. Salen roca, gas y ceniza.",
+    );
+    expect(byId.get("q1").text).toBe("¿Qué sale por un volcán? Ceniza");
+    expect(byId.get("img").text).toBe("El Etna de noche");
+    expect(byId.get("v").text).toBe("Toca una piedra pómez Pumice video");
+    expect(byId.get("h1").text).toBe("Montañas de fuego");
+    // Segments the translation doesn't cover read as written.
+    expect(byId.get("t3").text).toBe("Pompeii was buried in ash.");
+    expect(byId.get("sp").text).toBe("crater magma");
+    expect(
+      findInLesson(doc, "ceniza", lessonFindEntries(doc, translation)).map(
+        (r) => r.blockId,
+      ),
+    ).toEqual(["t1", "q1"]);
   });
 
   it("clips a long entry to a window around the first match", () => {
