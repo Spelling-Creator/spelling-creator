@@ -166,9 +166,10 @@ They print as an indented numbered list under the question, and they're kept
 when you export and re-import the lesson as a Word document or a lesson file.
 
 A step can hold a typeset formula, such as `\frac{60}{5} = 12`, and so can
-the question itself: see
-[Formatting, footnotes & sources](./formatting-and-footnotes.md#formulas). The
-answer stays a plain number, since that's what the speller spells.
+the question itself and its answer: see
+[Formatting, footnotes & sources](./formatting-and-footnotes.md#formulas). A
+whole-number answer is plain digits; where the speller spells a fraction, a
+root or a pi on a math letterboard, the answer can be that formula.
 
 For how question types are stored and exported, see the
 [export pipeline](../developers/web-app/export-pipeline.md) developer notes.

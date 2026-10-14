@@ -59,7 +59,8 @@ export interface QuestionBlock {
   /** `multiple` only: the accepted answer a Besides line names. */
   besides?: string;
   prompt: InlineText;
-  answer?: string;
+  /** A `number` question's answer is inline text too (a fraction, a pi). */
+  answer?: InlineText;
   answers?: TextItem[];
   steps?: StepItem[];
 }

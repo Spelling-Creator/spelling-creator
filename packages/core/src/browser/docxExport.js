@@ -452,7 +452,19 @@ function questionBlockParagraphs(block, formulas, embedded) {
       ? inlineTextChildren(block.prompt, promptRun, formulas, embedded)
       : [new TextRun({ ...promptRun, text: "(no question text)" })]),
   ];
-  if (answer) {
+  if (answer && typeof block.answer === "object" && block.answer) {
+    // A number question's answer is inline text: a fraction or a pi the
+    // speller spells on a math board, typeset the way the prompt is.
+    children.push(
+      new TextRun({ text: ANSWER_GAP, size: BODY_SIZE, color: "000000" }),
+      ...inlineTextChildren(
+        block.answer,
+        { size: BODY_SIZE, color: "000000" },
+        formulas,
+        embedded,
+      ),
+    );
+  } else if (answer) {
     children.push(
       new TextRun({
         text: `${ANSWER_GAP}${answer}`,

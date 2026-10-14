@@ -1008,16 +1008,24 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
 
           {block.questionType === "number" && (
             <>
-              <Field className="mt-3 max-w-[200px]">
+              {/* Inline text like the prompt, not a number field: a speller
+                  on a math board spells a fraction or a pi, so the key can
+                  hold a formula. An older lesson's bare number shows as its
+                  digits. */}
+              <Field className="mt-3 sm:max-w-md">
                 <FieldLabel htmlFor={`${block.id}-answer`}>
                   {t("contentBlock.question.answerLabel")}
                 </FieldLabel>
-                <LiveInput
+                <LessonLineInput
                   id={`${block.id}-answer`}
-                  type="number"
-                  value={block.answer ?? ""}
-                  onCommit={(answer) => onChange({ ...block, answer })}
-                  data-collab-field={`block:${block.id}:answer`}
+                  label={t("contentBlock.question.answerLabel")}
+                  value={
+                    typeof block.answer === "number"
+                      ? String(block.answer)
+                      : block.answer
+                  }
+                  onChange={(answer) => onChange({ ...block, answer })}
+                  collabField={`block:${block.id}:answer`}
                 />
               </Field>
 

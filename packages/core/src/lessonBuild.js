@@ -26,6 +26,11 @@
 import { IMAGE_ALIGNS, extFromMime } from "./image.js";
 import { withSeparateCredit } from "./imageCredit.js";
 import { inlineTextMarkup, markupToInlineText } from "./inlineText.js";
+
+// A number question's stored answer as inline text: an older lesson holds a
+// bare number.
+const answerPlainOrDoc = (answer) =>
+  typeof answer === "number" ? String(answer) : answer;
 import { isSafeLink } from "./richText.js";
 import {
   markupToContent,
@@ -204,8 +209,9 @@ function buildQuestionBlock(block, where) {
 
   switch (questionType) {
     case "number": {
-      // Stored as a string (the editor's number field), but accept a number too.
-      if (block.answer == null || block.answer === "") {
+      // Markup like the prompt (a fraction, a pi), stored as inline text; a
+      // bare number is accepted too.
+      if (block.answer == null || String(block.answer).trim() === "") {
         throw new Error(`${where}: a number question needs an "answer".`);
       }
       const rawSteps = Array.isArray(block.steps) ? block.steps : [];
@@ -215,7 +221,11 @@ function buildQuestionBlock(block, where) {
           id: newId(),
           text: markupToInlineText(text.trim()),
         }));
-      return { ...base, answer: String(block.answer), steps };
+      return {
+        ...base,
+        answer: markupToInlineText(String(block.answer).trim()),
+        steps,
+      };
     }
 
     case "single":
@@ -443,10 +453,14 @@ export function presentDoc(doc) {
   };
 }
 
-// A question with its prompt and steps as markup, the steps as the strings
-// the input takes (buildQuestionBlock gives them ids again).
+// A question with its prompt, its steps and a number question's answer as
+// markup, the steps as the strings the input takes (buildQuestionBlock gives
+// them ids again).
 function presentQuestion(block) {
   const out = { ...block, prompt: inlineTextMarkup(block.prompt) };
+  if (block.questionType === "number" && block.answer != null) {
+    out.answer = inlineTextMarkup(answerPlainOrDoc(block.answer));
+  }
   if (Array.isArray(block.steps)) {
     out.steps = block.steps
       .map((step) => inlineTextMarkup(step?.text ?? step))

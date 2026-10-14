@@ -440,7 +440,19 @@ function QuestionBlock({ block, si, bi, translation }) {
             />
           )}
         </span>
-        {answer ? `${ANSWER_GAP}${answer}` : null}
+        {/* A number question's answer is inline text (a fraction, a pi), so
+            it draws typeset unless a translation stands in for it. */}
+        {answer &&
+        block.questionType === "number" &&
+        typeof block.answer === "object" &&
+        translation?.get(lessonSegmentKey.answer(si, bi, 0)) == null ? (
+          <>
+            {ANSWER_GAP}
+            <InlineText value={block.answer} />
+          </>
+        ) : answer ? (
+          `${ANSWER_GAP}${answer}`
+        ) : null}
       </p>
 
       {besides != null && (

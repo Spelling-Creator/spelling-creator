@@ -35,7 +35,11 @@ import {
   textBlockFormattedSpans,
   textBlockPlain,
 } from "@spelling-creator/core/lessonText";
-import { isOpenType, resolveOpenType } from "@spelling-creator/core/questions";
+import {
+  answerPlain,
+  isOpenType,
+  resolveOpenType,
+} from "@spelling-creator/core/questions";
 
 /** The default lesson shape (see standards.md). Deviations are warnings. */
 export const SECTION_COUNT = 6;
@@ -435,9 +439,7 @@ function answersOf(block) {
       .map((a) => a.trim())
       .filter(Boolean);
   }
-  const answer = block?.answer;
-  if (answer == null || answer === "") return [];
-  return [String(answer).trim()].filter(Boolean);
+  return [answerPlain(block?.answer).trim()].filter(Boolean);
 }
 
 function hasSteps(block) {

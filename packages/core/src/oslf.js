@@ -15,7 +15,9 @@
 //     marks and notes on those come back as their text alone. A prompt and a
 //     math question's working are inline text (see inlineText.js), which
 //     holds everything the format's rich text does but a note, so a note in
-//     one of those comes back as nothing.
+//     one of those comes back as nothing. A math question's answer is inline
+//     text here and a plain string in the format, so a formula in one is
+//     written as its source and read back as plain text.
 //   - An image is referred to by URL in OSLF. Exporting writes the public URL
 //     the caller supplies for each stored picture (or the data URL a block
 //     already carries); importing keeps an https or data URL as the block's

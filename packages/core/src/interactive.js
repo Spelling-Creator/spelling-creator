@@ -243,12 +243,12 @@ export function stepSpeechText(step) {
  * distinct from an empty answer, so a presenter is told the question has no set
  * answer instead of being shown a gap and left wondering.
  *
- * The steps are inline text (see inlineText.js), each as stored: the reveal
- * draws them with their formulas, and a step is shown as its plain words
- * everywhere else.
+ * A number question's answer and steps are inline text (see inlineText.js),
+ * each as stored: the reveal draws them with their formulas, and they are
+ * shown as their plain words everywhere else.
  *
  * @param {object} block  A question block.
- * @returns {{ answer: string, answers: string[], steps: Array<string | object>, suggested: boolean } | null}
+ * @returns {{ answer: string | object, answers: string[], steps: Array<string | object>, suggested: boolean } | null}
  */
 export function questionAnswer(block) {
   if (!isQuestionBlock(block)) return null;
@@ -281,10 +281,15 @@ export function questionAnswer(block) {
     }
     case "number": {
       // A number question can carry its working with it, and a half-filled one
-      // (working but no total, or the reverse) is still worth revealing.
-      const answer = trimmed(block.answer);
+      // (working but no total, or the reverse) is still worth revealing. Its
+      // answer is inline text, kept as stored so the reveal can typeset a
+      // fraction; an older lesson's bare number becomes its string.
+      const answer =
+        typeof block.answer === "object" && block.answer
+          ? block.answer
+          : trimmed(block.answer);
       const working = steps(block.steps);
-      return answer || working.length
+      return inlineTextPlain(answer).trim() || working.length
         ? { answer, answers: [], steps: working, suggested: false }
         : null;
     }
@@ -316,13 +321,14 @@ export function questionAnswer(block) {
  * the answer, not an answer, and it is shown as working.
  *
  * @param {object} block  A question block.
- * @returns {string[]}
+ * @returns {Array<string | object>}  Strings, but for a number question's
+ *   answer, which is inline text as stored.
  */
 export function revealedAnswers(block) {
   const revealed = questionAnswer(block);
   if (!revealed) return [];
   if (revealed.answers.length > 0) return revealed.answers;
-  return revealed.answer ? [revealed.answer] : [];
+  return inlineTextPlain(revealed.answer).trim() ? [revealed.answer] : [];
 }
 
 /**

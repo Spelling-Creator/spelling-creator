@@ -126,11 +126,16 @@ A source's link is only ever made into a link after `isSafeLink` accepts it
 
 ## Inline text: prompts and steps
 
-A question's `prompt` and each of a math question's `steps[].text` are one
-line each, and they can carry what a text block's words can: the three marks,
-read-aloud hints and pauses, and formulas. Not footnotes: the Notes list
-numbers those through the text blocks, and a prompt has nothing to cite. This
-is what the Open Spelling Lesson Format calls rich text on both fields.
+A question's `prompt`, each of a math question's `steps[].text` and a math
+question's `answer` are one line each, and they can carry what a text block's
+words can: the three marks, read-aloud hints and pauses, and formulas. Not
+footnotes: the Notes list numbers those through the text blocks, and a prompt
+has nothing to cite. This is what the Open Spelling Lesson Format calls rich
+text on the prompt and the working. The answer is rich here because a speller
+on a math letterboard spells a fraction or a pi, so the key has to be able to
+say one; in OSLF an answer is a plain string, so a formula in one is written
+as its source. (A lesson from before this holds the answer as a bare number,
+which every reader takes as its digits: `answerPlain` in `questions.js`.)
 
 A field of inline text holds one of two shapes under one key
 (`@spelling-creator/core/inlineText`):

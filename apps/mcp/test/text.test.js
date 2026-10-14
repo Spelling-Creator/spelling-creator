@@ -67,7 +67,7 @@ test("a prompt and its steps take the markup too, and come back as it", () => {
             type: "question",
             questionType: "number",
             prompt: "How many is {tex: \\frac{60}{5}}?^[Dropped.]",
-            answer: 12,
+            answer: "{asciimath: 3/4}",
             steps: [
               "There are 60 seconds in a minute.",
               "{tex: \\frac{60}{5} = 12}{spoken: sixty over five is twelve}",
@@ -79,10 +79,29 @@ test("a prompt and its steps take the markup too, and come back as it", () => {
   });
   const [block] = doc.sections[0].blocks;
   assert.equal(block.prompt.type, "doc");
+  assert.equal(block.answer.type, "doc");
   assert.equal(block.steps[0].text, "There are 60 seconds in a minute.");
   assert.equal(block.steps[1].text.type, "doc");
   const [shown] = presentDoc(doc).sections[0].blocks;
   assert.equal(shown.prompt, "How many is {tex: \\frac{60}{5}}?");
+  assert.equal(shown.answer, "{asciimath: 3/4}");
+  // A bare number is still an answer, and comes back as its digits.
+  const plain = buildDoc({
+    title: "t",
+    sections: [
+      {
+        blocks: [
+          {
+            type: "question",
+            questionType: "number",
+            prompt: "How?",
+            answer: 12,
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(plain.sections[0].blocks[0].answer, "12");
   assert.deepEqual(shown.steps, [
     "There are 60 seconds in a minute.",
     "{tex: \\frac{60}{5} = 12}{spoken: sixty over five is twelve}",

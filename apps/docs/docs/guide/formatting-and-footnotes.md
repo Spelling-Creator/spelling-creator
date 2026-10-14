@@ -14,15 +14,15 @@ formulas, but not footnotes.
 
 ## What you can do
 
-| Available                                                                  | Not available                                      |
-| -------------------------------------------------------------------------- | -------------------------------------------------- |
-| Bold, italic, underline                                                    | Headings, lists, links, code, line breaks          |
-| Footnotes that cite a source, with a page                                  | Pictures or other media inside a text block        |
-| Footnotes with a note of your own                                          | Footnotes anywhere but a text block                |
-| A footnote that does both (a citation and a note)                          | Formatting in answers, spelling words or VAKT text |
-| How words are read aloud, and pauses                                       | Read-aloud fixes in answers or captions            |
-| Formulas, in AsciiMath or LaTeX                                            | Formulas in answers                                |
-| All of these in a question and in a Math question's steps, footnotes aside |                                                    |
+| Available                                                                              | Not available                                      |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Bold, italic, underline                                                                | Headings, lists, links, code, line breaks          |
+| Footnotes that cite a source, with a page                                              | Pictures or other media inside a text block        |
+| Footnotes with a note of your own                                                      | Footnotes anywhere but a text block                |
+| A footnote that does both (a citation and a note)                                      | Formatting in answers, spelling words or VAKT text |
+| How words are read aloud, and pauses                                                   | Read-aloud fixes in answers or captions            |
+| Formulas, in AsciiMath or LaTeX                                                        | Formulas in any answer but a Math question's       |
+| All of these in a question, and in a Math question's steps and answer, footnotes aside |                                                    |
 
 The set is small on purpose. A lesson is read aloud to a speller and printed
 for whoever is running it, ALL CAPS already marks the spelling words, and
@@ -114,8 +114,10 @@ Two things to know:
 
 - A formula is for math, not for a number in prose. "360 steps" and "$2.50"
   are plain text.
-- The speller spells the answer, so a question's answer is plain text too
-  (`360`, `3/4`), never a formula.
+- The speller spells the answer. A whole number stays plain digits (`360`).
+  Where the speller uses a math letterboard to spell a fraction, a root or a
+  pi, a Math question's answer can be a formula too, so the key shows what
+  they'll spell.
 
 ## The Sources card
 

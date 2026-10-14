@@ -77,12 +77,14 @@ notation (`{tex display: ...}`) to set it on a line of its own. Formulas are rea
 automatically; where that reading would be awkward, add the words to say straight after it:
 `{asciimath: 3/4}{spoken: three quarters}`.
 
-A math question's `prompt` and its `steps` can carry a formula the same way: "There are 60
-seconds in a minute.", then `{tex: \frac{60}{5} = 12}`. In a prompt or a step a formula always
-sits in the line.
+A math question's `prompt`, its `steps` and its `answer` can carry a formula the same way: "There
+are 60 seconds in a minute.", then `{tex: \frac{60}{5} = 12}`. In those a formula always sits in
+the line. The answer is what the speller spells: plain digits for a whole number ("12"), and a
+formula only where a math letterboard would be used to spell a fraction, a root or a pi
+(`{asciimath: 3/4}`, `{tex: \pi}`).
 
-A formula is for math, not for a number in prose: "360 steps" and "$2.50" stay as plain text. The
-speller spells the answer, so a question's answer is plain text too, never a formula.
+A formula is for math, not for a number in prose: "360 steps" and "$2.50" stay as plain text.
+Every other question's answer is plain text.
 
 ## Sources and footnotes
 

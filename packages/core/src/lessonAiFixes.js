@@ -103,7 +103,17 @@ export function blockForModel(block) {
         questionType: block.questionType,
         prompt: inlineTextMarkup(block.prompt),
       };
-      if (block.answer != null) out.answer = String(block.answer);
+      if (block.answer != null) {
+        // A number question's answer is inline text, so it goes as markup.
+        out.answer =
+          block.questionType === "number"
+            ? inlineTextMarkup(
+                typeof block.answer === "number"
+                  ? String(block.answer)
+                  : block.answer,
+              )
+            : String(block.answer);
+      }
       if (Array.isArray(block.answers)) out.answers = texts(block.answers);
       if (Array.isArray(block.steps)) {
         out.steps = block.steps

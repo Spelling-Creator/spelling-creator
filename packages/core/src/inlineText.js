@@ -1,11 +1,13 @@
 // Inline text: a one-line field that can carry what a text block's words can.
 //
-// A question's prompt and a math question's working steps are one line each,
-// and for most of the app's life they were plain strings. A math question
-// needs a formula in its prompt and its working as much as the passage does,
-// a prompt names the same people and places the passage does and wants the
-// same read-aloud hints, and the Open Spelling Lesson Format types both as
-// rich text. So a field of inline text holds one of two shapes, under one key:
+// A question's prompt, a math question's working steps and its answer are one
+// line each, and for most of the app's life they were plain strings. A math
+// question needs a formula in its prompt and its working as much as the
+// passage does, and in its answer too where the speller spells a fraction or a
+// pi on a math letterboard; a prompt names the same people and places the
+// passage does and wants the same read-aloud hints; and the Open Spelling
+// Lesson Format types the prompt and the working as rich text. So a field of
+// inline text holds one of two shapes, under one key:
 //
 //   a string      the plain words, which is every field written before this
 //                 existed, and any field nobody has formatted

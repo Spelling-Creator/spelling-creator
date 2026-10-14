@@ -109,6 +109,7 @@ import { useImageSrc } from "../lib/useImageSrc.js";
 import { textBlockParagraphs } from "@spelling-creator/core/lessonText";
 import { TextRuns } from "./TextRuns.jsx";
 import InlineText from "./InlineText.jsx";
+import { inlineTextPlain } from "@spelling-creator/core/inlineText";
 import { DOWNLOAD_MB } from "@spelling-creator/core/browser/readAloud";
 import { SPEECH_RATES } from "../lib/speechPrefs.js";
 import { useSpeech } from "../lib/useSpeech.js";
@@ -327,12 +328,17 @@ function AnswerToggle({ shown, onToggle }) {
 // types that answer into the learner's own box. That is a shortcut through
 // typing, not a verdict on anything: nothing is compared, and what lands in the
 // field is thereafter the learner's own answer, saved like any other.
-function RevealedAnswer({ text, onUse }) {
+// `answer` is a string, or a number question's inline text, which draws
+// typeset; taking it puts its plain words (a formula's source) in the field.
+function RevealedAnswer({ answer, onUse }) {
   const { t } = useTranslation("interactive");
   const shell =
     "rounded-panel border border-primary/40 bg-background px-4 py-2 text-lg font-medium";
+  const text = inlineTextPlain(answer);
+  const shown =
+    typeof answer === "object" ? <InlineText value={answer} /> : text;
 
-  if (!onUse) return <div className={shell}>{text}</div>;
+  if (!onUse) return <div className={shell}>{shown}</div>;
 
   return (
     <Tooltip>
@@ -348,7 +354,7 @@ function RevealedAnswer({ text, onUse }) {
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           )}
         >
-          <span>{text}</span>
+          <span>{shown}</span>
           <CornerDownLeftIcon className="size-4 shrink-0 text-muted-foreground" />
         </button>
       </TooltipTrigger>
@@ -411,7 +417,7 @@ function AnswerReveal({ block, className, onUse }) {
               them in, which is not what a multiple-answer question asks for. */}
           <div className="mt-1.5 flex flex-col gap-2">
             {answers.map((answer, index) => (
-              <RevealedAnswer key={index} text={answer} onUse={onUse} />
+              <RevealedAnswer key={index} answer={answer} onUse={onUse} />
             ))}
           </div>
         </div>

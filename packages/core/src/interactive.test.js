@@ -192,6 +192,33 @@ describe("questionAnswer", () => {
         answer: " Italy ",
       }),
     ).toEqual({ answer: "Italy", answers: [], steps: [], suggested: false });
+  });
+
+  it("keeps a math answer's formula for the reveal, and reads a bare number", () => {
+    const formula = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "math",
+              attrs: {
+                format: "asciimath",
+                source: "3/4",
+                display: false,
+                spoken: null,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const rich = { type: "question", questionType: "number", answer: formula };
+    expect(questionAnswer(rich)?.answer).toEqual(formula);
+    expect(revealedAnswers(rich)).toEqual([formula]);
+    const bare = { type: "question", questionType: "number", answer: 12 };
+    expect(revealedAnswers(bare)).toEqual(["12"]);
     expect(
       questionAnswer({
         type: "question",

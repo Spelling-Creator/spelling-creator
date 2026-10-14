@@ -318,7 +318,11 @@ function normalizeQuestion(block) {
         .filter(Boolean);
       return {
         ...base,
-        answer: block.answer != null ? String(block.answer) : "",
+        // Inline text, like the prompt; an older file holds a bare number.
+        answer:
+          typeof block.answer === "number"
+            ? String(block.answer)
+            : normalizeInlineText(block.answer),
         steps,
       };
     }

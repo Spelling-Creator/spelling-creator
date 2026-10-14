@@ -183,7 +183,11 @@ const blockSchema = z
     answer: z
       .union([z.string(), z.number()])
       .optional()
-      .describe("Answer for number/single/background questions."),
+      .describe(
+        "Answer for number/single/background questions. A number question's answer is one line of the same " +
+          "markup as `text`, so where the speller would spell a fraction, a root or a pi on a math board, the " +
+          'key can be a formula: "{asciimath: 3/4}", "{tex: \\pi}". Plain digits otherwise ("12", "1884").',
+      ),
     answers: z
       .array(z.string())
       .optional()

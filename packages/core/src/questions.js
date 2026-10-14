@@ -454,6 +454,19 @@ export function questionTagStyleMap() {
 // Types whose answer is a single value held on `block.answer`.
 const SINGLE_ANSWER_TYPES = new Set(["number", "single", "background"]);
 
+/**
+ * A single answer as plain words. A `number` question's answer is inline text
+ * (see inlineText.js): a speller on a math board spells a fraction or a pi as
+ * readily as a digit, so the key can hold a formula, which reads here as its
+ * source. Older lessons hold a bare number, and the other types a string.
+ * @param {unknown} answer
+ * @returns {string}
+ */
+export function answerPlain(answer) {
+  if (typeof answer === "number") return String(answer);
+  return inlineTextPlain(answer);
+}
+
 // The gap between an answer and the next thing along. Built around a
 // non-breaking space on purpose: the PDF path renders the docx as HTML, which
 // collapses a run of ordinary spaces down to one, and the wide gap is what
@@ -493,7 +506,7 @@ export function questionAnswersAreExamples(block) {
 export function questionAnswerItems(block) {
   if (!block) return [];
   if (SINGLE_ANSWER_TYPES.has(block.questionType)) {
-    const answer = block.answer == null ? "" : String(block.answer).trim();
+    const answer = answerPlain(block.answer).trim();
     return answer ? [answer] : [];
   }
   if (LIST_ANSWER_TYPES.has(block.questionType)) {
