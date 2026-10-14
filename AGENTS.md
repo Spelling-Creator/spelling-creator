@@ -14,7 +14,7 @@ If you have it installed, use the Playwright MCP for this. If not, use the Playw
 
 Use fast, modern tools instead of the slow defaults:
 
-- [`rg`](https://github.com/BurntSushi/ripgrep) (ripgrep) for text search, not `grep`. It respects `.gitignore` and skips `node_modules` for you.
+- [`rg`](https://github.com/BurntSushi/ripgrep) (ripgrep) for text search, not `grep`. It respects `.gitignore` and skips `node_modules` for you. Prefer to use [`ast-grep`](https://ast-grep.github.io) when applicable as it uses the structure of the code instead.
 - [`fd`](https://github.com/sharkdp/fd) for finding files by name, not `find`.
 - [`ast-grep`](https://ast-grep.github.io) for structural searches and rewrites, like finding every call to a function or every component that uses a certain prop. Call it as `ast-grep`. The `sg` alias is deprecated, so don't use it.
 - `jq` for reading and querying JSON.
