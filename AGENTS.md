@@ -40,6 +40,10 @@ Don't skip this. If you must, use `pnpm exec` or `pnpm dlx`, not `npx`.
 
 Always update the docs if necessary when changing or adding code. If the docs already contain outdated information, expand your scope to cover that info too.
 
+## Diagrams are draw.io, not ASCII art
+
+Never draw a flow, pipeline or architecture picture out of characters in a code block. Make a draw.io diagram instead: one `apps/docs/docs/diagrams/<name>.drawio.svg` per diagram, shown with a normal Markdown image and alt text that says what it shows, exported with `pnpm --filter @spelling-creator/docs diagrams` (see "Diagrams" in `apps/docs/docs/developers/getting-started.md`). Reuse the styles of an existing diagram in that folder so it follows the site's light and dark themes. Code blocks are for things that are text: commands, file trees, URLs, output.
+
 ## Outdated packages
 
 PLEASE, PLEASE do not use a package that is old or deprecated. EVEN IF IT IS "INDUSTRY STANDARD" THAT DOES NOT MEAN IT IS GOOD!!! USE THE BEST PACKAGE AND LATEST VERSION LIKE A NORMAL PERSON WOULD!
