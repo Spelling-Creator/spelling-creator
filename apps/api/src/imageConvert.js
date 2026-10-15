@@ -19,7 +19,7 @@ import encodeWebp, { init as initWebpEncode } from '@jsquash/webp/encode.js';
 import decodePng, { init as initPngDecode } from '@jsquash/png/decode.js';
 import decodeJpeg, { init as initJpegDecode } from '@jsquash/jpeg/decode.js';
 
-import { jpegDecoderWasm, pngDecoderWasm, webpEncoderWasm } from '#image-codec-wasm';
+import { jpegDecoderWasm, pngCodecWasm, webpEncoderWasm } from '#image-codec-wasm';
 
 // Quality for the WEBP encoder (0–100). 80 is the usual "visually lossless
 // enough" sweet spot and what most image pipelines default to.
@@ -47,7 +47,7 @@ function ensureWebp() {
 	return webpReady;
 }
 function ensurePng() {
-	if (!pngReady) pngReady = guardInit(pngDecoderWasm().then(initPngDecode), () => (pngReady = null));
+	if (!pngReady) pngReady = guardInit(pngCodecWasm().then(initPngDecode), () => (pngReady = null));
 	return pngReady;
 }
 function ensureJpeg() {

@@ -202,11 +202,13 @@ this host rather than stubbed; a stub would be a promise the process can't keep.
 - **The remote MCP endpoint.** Also a Durable Object, plus a KV-backed OAuth 2.1
   server. The MCP server itself is unaffected and still runs
   [over stdio](./mcp-server/setup.md), which is how most people use it anyway.
-- **Crawler prerendering and og-image screenshots.** Both need Browser Rendering.
-  This matters less than it sounds: [server rendering](./web-app/server-rendering.md)
-  already covers `/hub`, `/hub/:id` (and its tabs) and `/users/:id` with real
-  React for every visitor, and it runs here unchanged. What is lost is a
-  headless-Chromium snapshot of `/` for crawlers, and link-preview images.
+- **Crawler prerendering.** It needs Browser Rendering. This matters less than
+  it sounds: [server rendering](./web-app/server-rendering.md) already covers
+  `/hub`, `/hub/:id` (and its tabs) and `/users/:id` with real React for every
+  visitor, and it runs here unchanged. What is lost is a headless-Chromium
+  snapshot of `/` for crawlers. [Link previews](./web-app/link-previews.md)
+  used to be on this list and are not any more: they are drawn cards, in plain
+  JavaScript with no native dependency, served here like anywhere else.
 
 ## Configuration
 

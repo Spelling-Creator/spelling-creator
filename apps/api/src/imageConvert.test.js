@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { jpegDecoderWasm, pngDecoderWasm, webpEncoderWasm } from '#image-codec-wasm';
+import { jpegDecoderWasm, pngCodecWasm, webpDecoderWasm, webpEncoderWasm } from '#image-codec-wasm';
 import { convertImageToWebp } from './imageConvert.js';
 
 /**
@@ -101,13 +101,14 @@ describe('#image-codec-wasm', () => {
 		// The per-runtime claim, asserted directly: whichever half of the subpath
 		// import this runtime picked, it produced the thing @jsquash's init() wants.
 		expect(await webpEncoderWasm()).toBeInstanceOf(WebAssembly.Module);
-		expect(await pngDecoderWasm()).toBeInstanceOf(WebAssembly.Module);
+		expect(await webpDecoderWasm()).toBeInstanceOf(WebAssembly.Module);
+		expect(await pngCodecWasm()).toBeInstanceOf(WebAssembly.Module);
 		expect(await jpegDecoderWasm()).toBeInstanceOf(WebAssembly.Module);
 	});
 
 	it('returns the same module when asked twice', async () => {
-		// Compiling is memoised — three binaries is about 700 KB, and an upload
-		// should not pay for it more than once.
+		// Compiling is memoised — the binaries are about 850 KB together, and an
+		// upload should not pay for it more than once.
 		expect(await webpEncoderWasm()).toBe(await webpEncoderWasm());
 	});
 });

@@ -42,8 +42,11 @@ Where that module comes from is the only per-runtime part, and it sits behind th
 `#image-codec-wasm` subpath import (`apps/api/package.json`, `src/codecs/`):
 wrangler's bundler resolves the `.wasm` imports on Workers, and Node reads and
 compiles them off disk, memoized and deferred so an instance that never receives
-an upload doesn't pay for ~700 KB of codecs at startup. It is the same
-conditional-import pattern `apps/mcp` uses for its `#standards-md`.
+an upload doesn't pay for about 850 KB of codecs at startup. It is the same
+conditional-import pattern `apps/mcp` uses for its `#standards-md`. The same
+seam also hands out the WEBP decoder and the PNG encoder, which the
+[link-preview cards](./web-app/link-previews.md) use to shrink a lesson's
+picture and to write the finished card.
 
 The two halves are verified in different places, because no single runner covers
 both. The Node half runs in the API's Node test project; the Workers half is
@@ -138,8 +141,9 @@ class-B (read) ops/month. The design keeps usage well inside these:
   one object.
 - **Class B (reads)** stays low because `GET /images/:hash` responses are cached
   at Cloudflare's edge (the bytes are immutable, so they're safe to cache
-  forever). Repeat views of a popular lesson (and the og-image/prerender
-  browser) are served from cache and don't hit R2.
+  forever). Repeat views of a popular lesson (and the prerender browser, and
+  the lesson's [link-preview card](./web-app/link-previews.md)) are served from
+  cache and don't hit R2.
 - **Storage** is bounded by global content-hash dedup plus an 8 MB-per-image cap
   (`MAX_IMAGE_BYTES` in `apps/api/src/lib/images.js`, enforced by the Worker; the
   editor has no size check of its own, though the MCP server checks the same

@@ -14,7 +14,12 @@
 	// standard (apps/mcp/src/standards.md) and the built MCP Apps views
 	// (apps/mcp/src/views/*.html, served as `ui://` resources). Neither .md nor
 	// .html is one of the bundler's default Text globs, so both are declared here.
-	"rules": [{ "type": "Text", "globs": ["**/*.md", "**/*.html"], "fallthrough": true }],
+	// The link-preview cards (src/og/) import their fonts and the logo as
+	// bytes, so .woff and .png are declared as Data.
+	"rules": [
+		{ "type": "Text", "globs": ["**/*.md", "**/*.html"], "fallthrough": true },
+		{ "type": "Data", "globs": ["**/*.woff", "**/*.png"], "fallthrough": true },
+	],
 
 	"vars": {
 		"ALLOWED_HOSTNAMES": "spellingcreator.org",
@@ -45,8 +50,9 @@
 		"run_worker_first": true,
 	},
 
-	// Browser Rendering binding — headless Chromium used to prerender pages for
-	// crawlers/social scrapers via @cloudflare/puppeteer.
+	// Browser Rendering binding — headless Chromium used to prerender "/" for
+	// crawlers via @cloudflare/puppeteer (routes/render.js). Link-preview images
+	// no longer need it: they are drawn with Satori and resvg (src/og/).
 	"browser": {
 		"binding": "BROWSER",
 	},

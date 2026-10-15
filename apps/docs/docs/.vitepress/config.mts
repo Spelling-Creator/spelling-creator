@@ -256,6 +256,10 @@ export default defineConfig({
               link: "/developers/web-app/server-rendering",
             },
             {
+              text: "Link previews",
+              link: "/developers/web-app/link-previews",
+            },
+            {
               text: "Design system",
               link: "/developers/web-app/design-system",
             },

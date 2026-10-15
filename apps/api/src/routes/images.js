@@ -1,6 +1,6 @@
 // Lesson images in the object store, addressed by their content hash. GET/HEAD is
-// public (published lessons and the og-image/prerender browser load them); PUT is
-// authenticated and verifies the body against the hash.
+// public (published lessons, the prerender browser and the link-preview cards
+// load them); PUT is authenticated and verifies the body against the hash.
 
 import { verifySupabaseUser } from '../lib/supabase.js';
 import { IMAGE_HASH_RE, MAX_IMAGE_BYTES, sha256Hex, putImageObject } from '../lib/images.js';
@@ -9,8 +9,8 @@ import { imageStore, responseCache } from '../platform/index.js';
 
 /**
  * GET/HEAD /images/:hash — serve a lesson image by its content hash. Public:
- * published lessons are viewed by anyone, and the og-image/prerender headless
- * browser fetches these too. Content-addressed, so the bytes for a given hash
+ * published lessons are viewed by anyone, and the prerender browser and the
+ * link-preview cards (routes/og.js) fetch these too. Content-addressed, so the bytes for a given hash
  * never change — the response is immutable and cached forever. 404 when the
  * object isn't present.
  */
@@ -24,8 +24,8 @@ export async function handleImageGet(request, env, ctx, hash) {
 	if (!IMAGE_HASH_RE.test(hash)) return new Response('Invalid image id.', { status: 400, headers: ACAO });
 
 	// Content-addressed and immutable: the bytes for a given hash never change, so
-	// cache the response. Repeat reads — every public lesson view, the
-	// og-image/prerender browser, export byte-fetches — are then served from cache
+	// cache the response. Repeat reads — every public lesson view, the prerender
+	// browser, a preview card, export byte-fetches — are then served from cache
 	// and DON'T each cost an object-store read operation (key to staying in
 	// Cloudflare's free tier under traffic).
 	const cache = responseCache(env);

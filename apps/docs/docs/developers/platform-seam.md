@@ -78,7 +78,7 @@ Cloudflare's Cache API keys by `Request`, which is a Workers shape; a string key
 is something any host can implement, including by not implementing it at all.
 Every method is best-effort: a cache that fails must change how much work a
 handler did, never what it returned. Its users are image bytes, crawler
-prerender snapshots and og-image screenshots.
+prerender snapshots and [link-preview cards](./web-app/link-previews.md).
 
 ## The conformance suite
 
@@ -283,11 +283,17 @@ host.
 ## What this is not
 
 The seam covers storage, not compute. Durable Objects (live collaboration and the
-remote MCP session), Browser Rendering (crawler prerendering and og-image
-screenshots) and Workers AI are all still Cloudflare-specific and are not behind
-it. Those routes are registered by the Worker entry (`src/index.js`) rather than
-by the shared route table in `src/app.js`, so another host simply doesn't have
-them.
+remote MCP session), Browser Rendering (crawler prerendering) and Workers AI are
+all still Cloudflare-specific and are not behind it. Those routes are registered
+by the Worker entry (`src/index.js`) rather than by the shared route table in
+`src/app.js`, so another host simply doesn't have them.
+
+Link-preview images used to be on that list, as screenshots from Browser
+Rendering, and are no longer: they are drawn with Satori and a rasterizer of
+this repo's own, both plain JavaScript that runs anywhere, and the one per-host
+difference (how Satori's wasm module, the fonts and the logo are loaded) sits
+behind a subpath import of its own, `#og-runtime`, like `#image-codec-wasm`.
+See [Link previews](./web-app/link-previews.md).
 
 The rich-text sanitizer used to be on that list (it was built on `HTMLRewriter`)
 and is no longer: it parses with parse5, which runs in every runtime. That one

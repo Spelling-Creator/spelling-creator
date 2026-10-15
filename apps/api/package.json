@@ -7,6 +7,10 @@
 		"#image-codec-wasm": {
 			"workerd": "./src/codecs/wasm.workerd.js",
 			"default": "./src/codecs/wasm.node.js"
+		},
+		"#og-runtime": {
+			"workerd": "./src/og/runtime.workerd.js",
+			"default": "./src/og/runtime.node.js"
 		}
 	},
 	"scripts": {
@@ -20,6 +24,8 @@
 	"dependencies": {
 		"@cloudflare/puppeteer": "^1.4.0",
 		"@cloudflare/workers-oauth-provider": "^0.10.3",
+		"@fontsource/fraunces": "^5.3.0",
+		"@fontsource/public-sans": "^5.3.0",
 		"@hono/node-server": "^2.1.1",
 		"@jsquash/jpeg": "^1.6.0",
 		"@jsquash/png": "^3.1.1",
@@ -30,6 +36,7 @@
 		"glin-profanity": "^3.3.0",
 		"hono": "^4.13.2",
 		"parse5": "^8.0.1",
+		"satori": "^0.32.0",
 		"yjs": "^13.6.32"
 	},
 	"devDependencies": {

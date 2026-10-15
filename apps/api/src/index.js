@@ -3,7 +3,7 @@
 // The route table itself lives in src/app.js, shared with the Node entry
 // (src/node/server.js). What is added here is everything only this host can
 // serve: live collaboration and the remote MCP endpoint (Durable Objects), and
-// crawler prerendering plus og-image screenshots (Browser Rendering).
+// crawler prerendering (Browser Rendering).
 //
 // Those extras are registered before `registerFrontend`, because the frontend
 // catch-all answers every unmatched GET and would otherwise swallow them.
@@ -11,7 +11,7 @@
 import { createApp, cors, registerFrontend, req, urlOf } from './app.js';
 
 import { CollabRoom } from './collab-room.js';
-import { ogImage, handleFrontend } from './routes/render.js';
+import { handleFrontend } from './routes/render.js';
 import { handleCollab, handleCollabAgent } from './routes/collab.js';
 import { HubMcp, registerOAuthConsentRoutes, buildOAuthProvider } from './routes/mcp.js';
 
@@ -21,9 +21,6 @@ import { HubMcp, registerOAuthConsentRoutes, buildOAuthProvider } from './routes
 export { CollabRoom, HubMcp };
 
 const app = createApp();
-
-// Open Graph preview image: a headless-Chromium screenshot of an in-site page.
-app.get('/og-image', (c) => ogImage(req(c), c.env, c.executionCtx, urlOf(c)));
 
 // An AI assistant taking part in a session over HTTP (the MCP server can't hold
 // a socket between tool calls). Registered first: its GET would otherwise be

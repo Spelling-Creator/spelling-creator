@@ -1,5 +1,5 @@
-// The Node half of `#image-codec-wasm` (see package.json's "imports" and
-// ../imageConvert.js).
+// The Node half of `#image-codec-wasm` (see package.json's "imports",
+// ../imageConvert.js and ../og/picture.js).
 //
 // Node has no wasm-module loader for imports, so each codec's binary is read off
 // disk and compiled here. The result is the same `WebAssembly.Module` the
@@ -7,11 +7,11 @@
 // the same thing on both hosts and never falls back to fetching the binary
 // itself.
 //
-// Compiling is deferred and memoised rather than done at import time: the three
-// binaries are about 700 KB together, and an instance that never receives an
-// image upload should not pay for them at startup. A failed compile clears its
-// slot so the next upload retries, matching how imageConvert.js treats a failed
-// init.
+// Compiling is deferred and memoised rather than done at import time: the
+// binaries are about 850 KB together, and an instance that never receives an
+// image upload or a link-preview request should not pay for them at startup. A
+// failed compile clears its slot so the next call retries, matching how
+// imageConvert.js treats a failed init.
 
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -50,5 +50,8 @@ function compile(specifier) {
 }
 
 export const webpEncoderWasm = () => compile('@jsquash/webp/codec/enc/webp_enc_simd.wasm');
-export const pngDecoderWasm = () => compile('@jsquash/png/codec/pkg/squoosh_png_bg.wasm');
+export const webpDecoderWasm = () => compile('@jsquash/webp/codec/dec/webp_dec.wasm');
+// One squoosh module decodes and encodes PNG; @jsquash/png's decode.js and
+// encode.js each instantiate it for themselves.
+export const pngCodecWasm = () => compile('@jsquash/png/codec/pkg/squoosh_png_bg.wasm');
 export const jpegDecoderWasm = () => compile('@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm');

@@ -27,8 +27,8 @@ const DEFAULT_DESCRIPTION =
  * @param {string} [props.title]        Page title; appended to the site name.
  * @param {string} [props.description]  Meta/OG description (falls back to the site default).
  * @param {string} [props.image]        Absolute URL for the OG/Twitter preview
- *   image. Leave undefined to default to a live screenshot of the current page
- *   (rendered by the Worker's /og-image endpoint); pass null to opt out entirely.
+ *   image. Leave undefined to default to the card the API draws for the current
+ *   page (its /og-image endpoint); pass null to opt out entirely.
  * @param {string} [props.type]         OG type: "website" (default) or "article".
  */
 export function DocumentMeta({ title, description, image, type = "website" }) {
@@ -38,9 +38,9 @@ export function DocumentMeta({ title, description, image, type = "website" }) {
   const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
   const desc = description || DEFAULT_DESCRIPTION;
 
-  // Default the preview image to a screenshot of this page: the Worker's
-  // /og-image endpoint renders the path with headless Chromium. Pass `null` to
-  // opt out.
+  // Default the preview image to the card the API draws for this page: its
+  // /og-image endpoint reads the path's lesson or profile and renders a
+  // 1200x630 PNG (apps/api/src/og/). Pass `null` to opt out.
   const ogImage =
     image === undefined
       ? `${origin}/og-image?path=${encodeURIComponent(pathname)}`
@@ -59,8 +59,8 @@ export function DocumentMeta({ title, description, image, type = "website" }) {
       {ogImage && (
         <>
           <meta property="og:image" content={ogImage} />
-          {/* The screenshot is a fixed-size PNG; advertise its dimensions/type
-              so scrapers can lay out the large-image card without fetching it. */}
+          {/* The card is a fixed-size PNG; advertise its dimensions/type so
+              scrapers can lay out the large-image card without fetching it. */}
           <meta property="og:image:width" content="1200" />
           <meta property="og:image:height" content="630" />
           <meta property="og:image:type" content="image/png" />

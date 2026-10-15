@@ -22,6 +22,8 @@ import { configureCore } from '@spelling-creator/core/config';
 import { fetchLesson, fetchPublishedLessons } from '@spelling-creator/core/lessons';
 import { fetchUserProfile } from '@spelling-creator/core/users';
 
+import { coreConfig } from '../lib/coreConfig.js';
+
 // The app compiled for workerd — see apps/web/vite.config.js and
 // src/entry-server.jsx. This is a build artifact, so `pnpm build` in apps/web
 // has to have run before the Worker is bundled; the root `pnpm deploy` chains
@@ -75,34 +77,6 @@ export function shouldServerRender(request, url) {
 	const accept = request.headers.get('accept') || '';
 	if (!accept.includes('text/html')) return false;
 	return matchRoute(url) !== null;
-}
-
-// The build-time configuration the browser passes to core from import.meta.env
-// (see apps/web/src/main.jsx); here it comes from the Worker's own bindings so
-// that core's fetches resolve and `hasSupabase()` agrees with what the client
-// will compute — a page that renders signed-out chrome on the server and
-// signed-out chrome on the client's first pass is a page that hydrates cleanly.
-function coreConfig(env, url) {
-	return {
-		// This Worker *is* the API, so the origin serving the page is always the
-		// right one to fetch from — no configuration, and it follows the request
-		// into local dev and any preview deployment.
-		apiUrl: url.origin,
-		supabaseUrl: env.SUPABASE_URL,
-		supabaseAnonKey: env.SUPABASE_ANON_KEY,
-		googleClientId: '',
-		turnstileSiteKey: '',
-		// The two settings a self-hosted instance changes about sign-in. Nothing
-		// rendered here reads them today — the login page is not one of the public
-		// read routes, and a server render is always signed out — but the SPA is
-		// configured with them and this is the same core module, so leaving them
-		// out would mean the server quietly holding a different configuration from
-		// the client it hydrates into. `configureCore` merges, so an unset value
-		// here would also persist between requests. Both default the same way core
-		// does when the host doesn't set them.
-		authMode: env.AUTH_MODE || 'magic-link',
-		usernameDomain: env.USERNAME_DOMAIN || '',
-	};
 }
 
 // The built index.html, which carries the hashed script/style tags, the PWA

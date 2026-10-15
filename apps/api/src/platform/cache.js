@@ -1,9 +1,9 @@
 // ResponseCache — the HTTP response cache in front of the expensive reads.
 //
 // Three things use it: immutable image bytes (so a public lesson view doesn't
-// cost an object-store read per visitor), crawler prerender snapshots, and
-// og-image screenshots (both of which cost a headless browser). All three are
-// keyed by a URL string and hold a whole Response.
+// cost an object-store read per visitor), crawler prerender snapshots (which
+// cost a headless browser), and link-preview cards (which cost a lesson fetch
+// and a render). All three are keyed by a URL string and hold a whole Response.
 //
 // Cloudflare's `caches.default` keys entries by `Request`, which is a Workers
 // shape — so this interface keys by string instead, and the Cloudflare adapter

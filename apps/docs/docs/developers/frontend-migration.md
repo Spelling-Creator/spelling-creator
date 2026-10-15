@@ -148,6 +148,14 @@ screenshot. Probably an improvement for a lesson, but a visual change.
 > component in `apps/web/src/lib/seo.jsx`). But `prerender()`,
 > `shouldPrerender()` and `CRAWLER_UA` **stay**: they still cover `/`, whose
 > content is auth-gated, and they are the fallback when an SSR attempt fails.
+> So the `browser` binding and `@cloudflare/puppeteer` stay with them.
+>
+> The Satori replacement for `ogImage()` did ship, later and mostly as
+> described: drawn cards, embedded fonts, served from the shared route table so
+> the Node host has link previews too. The one departure is resvg, whose wasm
+> build does not fit a free-plan Worker; a small rasterizer of our own draws
+> the SVG subset Satori writes instead. See
+> [Link previews](web-app/link-previews.md).
 > Satori was not attempted, so `ogImage()`, the `browser` binding and
 > `nodejs_compat` are all untouched. Both remain open follow-ups.
 

@@ -8,11 +8,10 @@
 // isn't web-standard.
 //
 // What is NOT here is the handful of things that genuinely need Cloudflare: live
-// collaboration and the remote MCP endpoint (both Durable Objects), crawler
-// prerendering and og-image screenshots (Browser Rendering). The Worker entry
-// registers those itself. A self-hosted instance does without them, which is why
-// they are absent rather than stubbed — a stub would be a promise the host can't
-// keep.
+// collaboration and the remote MCP endpoint (both Durable Objects), and crawler
+// prerendering (Browser Rendering). The Worker entry registers those itself. A
+// self-hosted instance does without them, which is why they are absent rather
+// than stubbed — a stub would be a promise the host can't keep.
 //
 // Route order is load-bearing in two ways, and both are why registration is a
 // function rather than a module-level side effect. Deeper paths must come before
@@ -40,6 +39,7 @@ import { handleFollow, handleFollowList, handleFollowingFeed } from './routes/fo
 import { handleModeration } from './routes/moderation.js';
 import { handleAdminMigrateImages, handleAdminBackfillWebp } from './routes/admin.js';
 import { handleSitemap, handleRobots, handleLessonsFeed } from './routes/seo.js';
+import { handleOgImage } from './routes/og.js';
 import { handleSpellingWords } from './routes/spelling-words.js';
 import { handleDiagnostics, handleHealth } from './routes/diagnostics.js';
 
@@ -161,6 +161,10 @@ export function createApp() {
 
 	// Atom feed of the latest published lessons across the hub ("RSS" in the UI).
 	app.get('/feed.xml', (c) => handleLessonsFeed(req(c), c.env, urlOf(c), cors(c)));
+
+	// The picture a link preview shows for an in-site path: a card laid out
+	// with Satori and drawn by src/og/. Every page's og:image tag points here.
+	app.get('/og-image', (c) => handleOgImage(req(c), c.env, c.executionCtx, urlOf(c)));
 
 	// Aggregated list of every spelling word taught across the hub, for the
 	// homepage's floating-words animation. Rebuilt at most once every couple of days

@@ -156,15 +156,15 @@ schemas (`buildLessonCourseSchema`, `buildLessonListSchema`).
 ## What SSR replaced, and what it didn't
 
 `apps/api/src/routes/render.js` uses headless Chromium (the `BROWSER` binding in
-`apps/api/wrangler.jsonc`) for two unrelated jobs:
+`apps/api/wrangler.jsonc`) for one job now, `prerender()`: an HTML snapshot for
+about 30 crawler user-agents (`CRAWLER_UA`). SSR replaces this for the routes
+above. It's still used for `/` (whose content is auth-gated, so an anonymous
+render is only ever the marketing splash) and for any SSR attempt that fails.
+The Node host has no Chromium and skips this step.
 
-- **`prerender()`**: an HTML snapshot for about 30 crawler user-agents
-  (`CRAWLER_UA`). SSR replaces this for the routes above. It's still used for
-  `/` (whose content is auth-gated, so an anonymous render is only ever the
-  marketing splash) and for any SSR attempt that fails. The Node host has no
-  Chromium and skips this step.
-- **`ogImage()`**: live 1200x630 screenshots for link previews. **Unaffected.**
-  SSR cannot take a screenshot, so the binding stays.
+The same file used to take the 1200x630 screenshots behind `/og-image`, which
+SSR could not replace. Those are drawn cards now, with no browser involved, and
+live in the shared route table; see [Link previews](./link-previews.md).
 
 ## Build order
 
