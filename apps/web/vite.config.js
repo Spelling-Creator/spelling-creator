@@ -254,9 +254,9 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         globPatterns: ["**/*.{html,js,css,woff2,svg,png,ico}"],
         // dist/docs is the VitePress site, copied in by `pnpm build:docs` after
         // this build. It has its own hashed assets and its own pages; nothing
-        // there belongs in the app's precache. (`pnpm build` empties dist first,
-        // so this normally matches nothing — it's a guard against a rebuild that
-        // runs the other way round.)
+        // there belongs in the app's precache. (Vite empties dist first, so this
+        // normally matches nothing. It's a guard for when it doesn't: a
+        // Turborepo cache hit restores dist over what is already there.)
         globIgnores: ["docs/**"],
         // The vendor chunk is over Workbox's 2 MiB default on its own.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

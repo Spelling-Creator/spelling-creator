@@ -23,9 +23,9 @@ import { fetchLesson, fetchPublishedLessons } from '@spelling-creator/core/lesso
 import { fetchUserProfile } from '@spelling-creator/core/users';
 
 // The app compiled for workerd — see apps/web/vite.config.js and
-// src/entry-server.jsx. This is a build artifact, so `pnpm build` in apps/web
-// has to have run before the Worker is bundled; the root `pnpm deploy` chains
-// them in that order.
+// src/entry-server.jsx. This is a build artifact, so apps/web's `build:ssr` has
+// to have run before the Worker is tested, run or bundled; turbo.json makes
+// those tasks depend on it.
 import { render } from '../../../web/dist-ssr/entry-server.js';
 
 // The three public read routes, taken from the app's route table in routes/spa.js

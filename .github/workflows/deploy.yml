@@ -18,6 +18,7 @@ on:
       - "apps/docs/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "turbo.json"
       - ".gitattributes"
       - ".github/workflows/deploy.yml"
     branches:
@@ -91,14 +92,13 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Build web app
-        run: pnpm --filter @spelling-creator/web build
-
-      # Build the VitePress docs and copy them into apps/web/dist/docs so they
-      # ship in the same assets bundle and are served at /docs. Runs AFTER the
-      # web build because Vite empties apps/web/dist on each build.
-      - name: Build docs
-        run: pnpm --filter @spelling-creator/docs build
+      # Builds both halves of the web app and the VitePress docs, then copies the
+      # docs into apps/web/dist/docs so they ship in the same assets bundle and
+      # are served at /docs. Turborepo runs the copy after the web build, which
+      # matters because Vite empties apps/web/dist each time. There is no cache
+      # to restore here (see the note in ci.yml), so everything really builds.
+      - name: Build web app and docs
+        run: pnpm build:docs
 
       # dist is the static assets bundle (docs included); dist-ssr is the server
       # renderer that apps/api/src/routes/ssr.js imports, so the Worker can't be

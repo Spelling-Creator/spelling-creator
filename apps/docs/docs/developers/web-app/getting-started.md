@@ -19,7 +19,9 @@ pnpm dev:web:stub # run against the local stub API instead (http://127.0.0.1:518
 ```
 
 Inside `apps/web` the same scripts are plain `pnpm dev`, `pnpm build` and
-`pnpm preview`. The stub mode reads `apps/web/.env.stub` and talks to
+`pnpm preview`, except that `pnpm build` there is the client only. The SSR
+bundle is its own `pnpm build:ssr`, and the root `pnpm build` runs both through
+[Turborepo](../getting-started.md#turborepo). The stub mode reads `apps/web/.env.stub` and talks to
 `apps/stub-api` (start it with `pnpm dev:stub`); see [Stub API](../stub-api.md).
 
 The PWA service worker is a production concern and is switched off under

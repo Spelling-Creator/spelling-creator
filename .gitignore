@@ -27,6 +27,7 @@ logs/
 
 # Caches
 .cache/
+.turbo/
 
 # Document import experiment runs (packages/core/scripts/extract-eval)
 packages/core/scripts/extract-eval/out-*/

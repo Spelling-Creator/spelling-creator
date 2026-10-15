@@ -35,6 +35,7 @@ jobs:
           version: 12.4.1
 
       - name: Setup Node.js
+        id: node
         uses: actions/setup-node@v7
         with:
           node-version: 26
@@ -50,27 +51,45 @@ jobs:
       - name: Lint and format check
         run: pnpm lint
 
-      # Runs every workspace's `test` script: core, web and stub-api (vitest), api
-      # (vitest under @cloudflare/vitest-pool-workers) and mcp (node --test).
-      # apps/docs has no test script and is skipped.
-      - name: Test
-        run: pnpm -r test
+      # Turborepo's cache, carried from earlier runs, so a task whose inputs have
+      # not changed is replayed instead of run. Each run saves under its own
+      # commit and restores the newest earlier one; pull requests can read the
+      # caches main saved. deploy.yml deliberately has no cache: this job checks
+      # out Git LFS files as pointers, and turbo hashes a pointer and its real
+      # file the same, so a build cached here must never be what ships.
+      #
+      # Turborepo's hashes leave out the Node version and this workflow (which
+      # also pins pnpm), so both go into the key instead. Bumping either starts
+      # from an empty cache, rather than replaying test passes from the old one.
+      - name: Restore Turborepo cache
+        uses: actions/cache@v6
+        with:
+          path: .turbo/cache
+          key: turbo-node${{ steps.node.outputs.node-version }}-${{ hashFiles('.github/workflows/ci.yml') }}-${{ github.sha }}
+          restore-keys: turbo-node${{ steps.node.outputs.node-version }}-${{ hashFiles('.github/workflows/ci.yml') }}-
 
-      # No VITE_* secrets here: they are injected only for the real deploy, and a
-      # pull request from a fork could not read them anyway. The build still
-      # type-checks nothing but does resolve every import and run the full bundler,
-      # which is what catches a bad module path or a broken chunk boundary.
-      - name: Build web app
-        run: pnpm --filter @spelling-creator/web build
+      # One turbo run, which orders the tasks itself (turbo.json):
+      #
+      # - every workspace's `test`: core, web and stub-api (vitest), api (vitest
+      #   under @cloudflare/vitest-pool-workers), mcp and cli (node --test).
+      #   apps/docs has no test script and is skipped.
+      # - the web app (client and SSR halves), the docs and the CLI `build`. No
+      #   VITE_* secrets here: they are injected only for the real deploy, and a
+      #   pull request from a fork could not read them anyway. The build still
+      #   resolves every import and runs the full bundler, which is what catches
+      #   a bad module path or a broken chunk boundary.
+      # - the Worker `bundle`, without deploying (no credentials needed). This is
+      #   the only step that runs wrangler's own module resolution, so it is what
+      #   catches a `.wasm` or Text import that the test runner cannot resolve for
+      #   itself (see apps/api/vitest.workers.config.js), and more generally a
+      #   dependency that bundles fine under Vite but not for workerd.
+      #
+      # --summarize records the run's task hashes for the prune step below.
+      - name: Test and build
+        run: pnpm exec turbo run test build build:ssr bundle --summarize
 
-      - name: Build docs
-        run: pnpm --filter @spelling-creator/docs build
-
-      # Bundle the Worker without deploying (no credentials needed). This is the
-      # only step that runs wrangler's own module resolution, so it is what
-      # catches a `.wasm` or Text import that the test runner cannot resolve for
-      # itself (see apps/api/vitest.workers.config.js) — and, more generally, a
-      # dependency that bundles fine under Vite but not for workerd. Depends on
-      # the web build above for apps/web/dist and dist-ssr.
-      - name: Bundle Worker
-        run: pnpm --filter @spelling-creator/api bundle
+      # Turborepo never evicts from its cache, so this drops every entry the run
+      # above did not use before the cache is saved. Without it each commit's
+      # saved cache would be bigger than the last.
+      - name: Prune Turborepo cache
+        run: node scripts/prune-turbo-cache.mjs
