@@ -6,16 +6,18 @@
 //
 // Supabase is the upstream identity: each grant's `props` carries a Supabase
 // session captured at consent time (see routes/oauth.js), which `tokenExchangeCallback`
-// below rotates in step with the MCP client's own OAuth token refresh — so
-// `this.props.supabaseAccessToken` is normally already fresh by the time a tool
-// call needs it, with no extra network round trip. `grantAuth` (in
-// @spelling-creator/mcp/worker) is the defense-in-depth fallback for a
-// connection that outlives that cadence.
+// below rotates in step with the MCP client's own OAuth token refresh. That
+// callback is the only thing that ever spends the session's refresh token.
+// Supabase refresh tokens are single-use, and one spent anywhere else leaves the
+// grant holding a used token; Supabase sees it come back on the next refresh,
+// treats it as stolen and revokes the whole session. So each MCP access token
+// carries only the Supabase access token, and `HubMcp` reads it from whichever
+// MCP token the current request arrived with.
 
-import { OAuthProvider, GrantType } from '@cloudflare/workers-oauth-provider';
+import { OAuthProvider, OAuthError, GrantType } from '@cloudflare/workers-oauth-provider';
 import { McpAgent } from 'agents/mcp';
 import { buildMcpServer, durableSessionStore, grantAuth } from '@spelling-creator/mcp/worker';
-import { refreshSupabaseSession } from '@spelling-creator/mcp/auth';
+import { refreshSupabaseSession, sessionHasEnded } from '@spelling-creator/mcp/auth';
 import { handleAuthorize, handleOAuthRequest, handleOAuthApprove } from './oauth.js';
 
 // Our own MCP access tokens live noticeably shorter than a Supabase JWT's ~1h
@@ -31,16 +33,43 @@ export function mcpConfig(env) {
 	};
 }
 
+// What an MCP access token carries: the grant's props minus the Supabase
+// refresh token, which stays in the grant for `tokenExchangeCallback` alone.
+function sessionEnded() {
+	return new OAuthError('invalid_grant', {
+		description: 'The Spelling Creator sign-in behind this connection has ended. Reconnect to sign in again.',
+	});
+}
+
+function accessTokenPropsOf(props) {
+	const { supabaseRefreshToken: _kept, ...carried } = props;
+	return carried;
+}
+
 export class HubMcp extends McpAgent {
+	// McpAgent only reads props when this object starts, but one connection
+	// outlives many MCP access tokens, so a long-lived object would keep using
+	// the first one's Supabase token after it expired. Every request reaches the
+	// object through `setName` (McpAgent.serve looks it up by name), passing that
+	// request's props, so this is where the current ones are picked up.
+	async setName(name, props) {
+		if (props && props.supabaseAccessToken !== this.props?.supabaseAccessToken) {
+			await this.updateProps(props);
+		}
+		return super.setName(name, props);
+	}
+
 	async init() {
 		const config = mcpConfig(this.env);
 		// This object hibernates between tool calls and `init` runs again on the
 		// way back, so anything the tools must remember across calls lives in its
 		// storage rather than in the server they build. Today that is one thing:
 		// which live collaboration session the connection is taking part in.
-		this.server = buildMcpServer(config, grantAuth(config, this.props), {
-			sessionStore: durableSessionStore(this.ctx.storage),
-		});
+		this.server = buildMcpServer(
+			config,
+			grantAuth(() => this.props),
+			{ sessionStore: durableSessionStore(this.ctx.storage) },
+		);
 	}
 }
 
@@ -77,18 +106,36 @@ export function buildOAuthProvider(app, env) {
 		accessTokenTTL: MCP_ACCESS_TOKEN_TTL,
 		async tokenExchangeCallback(options) {
 			if (options.grantType !== GrantType.REFRESH_TOKEN) {
-				return { accessTokenTTL: MCP_ACCESS_TOKEN_TTL };
+				return {
+					accessTokenProps: accessTokenPropsOf(options.props),
+					accessTokenTTL: MCP_ACCESS_TOKEN_TTL,
+				};
 			}
 			// Rides along with the MCP client's own refresh cadence: mint a fresh
 			// Supabase session now, so tool calls over the next ~45 minutes' worth
 			// of connections don't each need their own refresh round trip.
-			const session = await refreshSupabaseSession(config, options.props.supabaseRefreshToken);
+			//
+			// A grant whose Supabase session can never refresh again (none stored,
+			// or Supabase says it has ended) is answered with `invalid_grant`, which
+			// makes the client ask the user to reconnect. A 500 would look like a
+			// blip worth retrying and leave the connector "connected" while every
+			// tool call fails. Anything else is rethrown, since it may well pass.
+			if (!options.props.supabaseRefreshToken) throw sessionEnded();
+			let session;
+			try {
+				session = await refreshSupabaseSession(config, options.props.supabaseRefreshToken);
+			} catch (error) {
+				if (sessionHasEnded(error)) throw sessionEnded();
+				throw error;
+			}
+			const newProps = {
+				...options.props,
+				supabaseAccessToken: session.accessToken,
+				supabaseRefreshToken: session.refreshToken,
+			};
 			return {
-				newProps: {
-					...options.props,
-					supabaseAccessToken: session.accessToken,
-					supabaseRefreshToken: session.refreshToken,
-				},
+				newProps,
+				accessTokenProps: accessTokenPropsOf(newProps),
 				accessTokenTTL: MCP_ACCESS_TOKEN_TTL,
 			};
 		},

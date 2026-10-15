@@ -8,15 +8,12 @@
 // McpAgent + OAuthProvider) and apps/api/src/routes/oauth.js for the consent
 // flow that backs it. This module supplies the two remote-specific pieces:
 //
-//   1. `grantAuth` — the OAuth grant's `props` (captured once, at consent time)
-//      carry a Supabase refresh token for the connection's lifetime. This wraps
-//      that in the same getAccessToken()/forceRefresh() shape api.js expects,
-//      so the whole client works unchanged. It's a defense-in-depth fallback:
-//      the primary refresh path is apps/api's `tokenExchangeCallback`, which
-//      rotates the Supabase session in step with the MCP client's own OAuth
-//      token refresh and keeps `props.supabaseAccessToken` fresh; this only
-//      does a live network refresh if that cached access token has gone stale
-//      mid-session.
+//   1. `grantAuth` — hands api.js the Supabase access token carried by the MCP
+//      access token the client sent with the current request, in the same
+//      getAccessToken()/forceRefresh() shape the stdio provider has, so the
+//      whole client works unchanged. It never refreshes anything itself:
+//      Supabase refresh tokens are single-use, and the only thing allowed to
+//      spend the grant's one is apps/api's `tokenExchangeCallback`.
 //   2. `buildMcpServer` — construct a fully-wired McpServer for one connection,
 //      given any auth provider (this one, or the stdio one from auth.js).
 //
@@ -29,55 +26,43 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createApi } from "./api.js";
 import { registerTools, SERVER_INFO } from "./tools.js";
 import { LESSON_STANDARDS } from "./standards.js";
-import {
-  EXPIRY_SKEW_SECONDS,
-  jwtExpiry,
-  nowSeconds,
-  refreshSupabaseSession,
-} from "./auth.js";
+import { jwtExpiry, nowSeconds } from "./auth.js";
 
 /**
- * Auth provider seeded from an OAuth grant's `props` (see apps/api/src/routes/mcp.js).
- * Holds tokens in memory only, for this connection's lifetime — the durable
- * copy lives in the grant's encrypted props, rotated by `tokenExchangeCallback`.
- * @param {{ supabaseUrl: string, supabaseAnonKey: string }} config
- * @param {{ supabaseAccessToken?: string, supabaseRefreshToken?: string }} props
+ * Auth provider for a remote connection (see apps/api/src/routes/mcp.js).
+ *
+ * `getProps` returns the props of the MCP access token on the request being
+ * served, read fresh on every call because one connection outlives many of
+ * those tokens. Each carries a Supabase access token minted when the client
+ * last refreshed, which outlives the MCP token itself, so it is always still
+ * good while the client is.
+ *
+ * There is deliberately no refresh here. If this spent the grant's Supabase
+ * refresh token, the grant would be left holding a used one, Supabase would
+ * see it come back on the client's next OAuth refresh, and revoke the whole
+ * session, leaving a connection that stays "connected" but fails every call.
+ * @param {() => { supabaseAccessToken?: string } | undefined} getProps
  */
-export function grantAuth(config, props) {
-  let accessToken = props?.supabaseAccessToken || "";
-  let refreshToken = props?.supabaseRefreshToken || "";
-
-  async function refresh() {
-    if (!refreshToken) {
-      throw new Error(
-        "This connection's Supabase session is missing. Reconnect and approve access again.",
-      );
-    }
-    const session = await refreshSupabaseSession(config, refreshToken);
-    accessToken = session.accessToken;
-    refreshToken = session.refreshToken;
-    return accessToken;
-  }
-
+export function grantAuth(getProps) {
   async function getAccessToken() {
-    if (!accessToken && !refreshToken) {
+    const accessToken = getProps()?.supabaseAccessToken;
+    if (!accessToken) {
       throw new Error(
         "No Supabase session on this connection. Reconnect and approve access again.",
       );
     }
-    const exp = accessToken ? jwtExpiry(accessToken) : null;
-    const expired =
-      !accessToken ||
-      (exp !== null && exp - EXPIRY_SKEW_SECONDS <= nowSeconds());
-    if (expired && refreshToken) {
-      return refresh();
+    const exp = jwtExpiry(accessToken);
+    if (exp !== null && exp <= nowSeconds()) {
+      throw new Error(
+        "This connection's sign-in has expired. Reconnect and approve access again.",
+      );
     }
     return accessToken;
   }
 
+  // A 401 from the hub can't be fixed from here; let api.js report it.
   async function forceRefresh() {
-    if (!refreshToken) return null;
-    return refresh();
+    return null;
   }
 
   return { getAccessToken, forceRefresh };

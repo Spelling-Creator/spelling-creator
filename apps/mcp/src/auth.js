@@ -38,11 +38,32 @@ export function nowSeconds() {
   return Math.floor(Date.now() / 1000);
 }
 
+// The codes GoTrue answers a refresh with when the session behind the token is
+// gone for good, so no retry can bring it back. Other refusals, such as a
+// rejected `apikey`, say nothing about the session and are left out on purpose.
+const SESSION_ENDED_CODES = new Set([
+  "refresh_token_not_found",
+  "refresh_token_already_used",
+  "session_not_found",
+  "session_expired",
+  "user_banned",
+]);
+
+/**
+ * Whether an error from `refreshSupabaseSession` means the user has to sign in
+ * again, as opposed to something worth retrying later.
+ * @param {unknown} error
+ */
+export function sessionHasEnded(error) {
+  return SESSION_ENDED_CODES.has(error?.errorCode);
+}
+
 /**
  * Trade a Supabase refresh token for a fresh session. Pure network call, no
- * mutable state — shared by the stdio auth provider (below), the remote
- * per-connection auth provider (worker.js), and the Worker's OAuth token
- * endpoint (apps/api), which all need the exact same GoTrue call.
+ * mutable state — shared by the stdio auth provider (below) and the Worker's
+ * OAuth token endpoint (apps/api), which both need the exact same GoTrue call.
+ * A refusal throws an error carrying GoTrue's HTTP `status` and, when it sent
+ * one, its `errorCode`; see `sessionHasEnded` for what to make of those.
  * @param {{ supabaseUrl: string, supabaseAnonKey: string }} config
  * @param {string} refreshToken
  */
@@ -63,11 +84,18 @@ export async function refreshSupabaseSession(config, refreshToken) {
   );
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(
+    const error = new Error(
       `Could not refresh the Supabase session (${res.status}). ` +
         "The refresh token may have been revoked — sign in again. " +
         (detail ? `Details: ${detail}` : ""),
     );
+    error.status = res.status;
+    try {
+      error.errorCode = JSON.parse(detail).error_code;
+    } catch {
+      // Not JSON (a gateway error page, say), so there is no code to read.
+    }
+    throw error;
   }
   const data = await res.json();
   if (!data.access_token) {

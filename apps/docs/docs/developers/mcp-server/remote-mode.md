@@ -50,13 +50,14 @@ only supplies the remote-specific pieces the Worker composes:
 
 - **`src/worker.js`** (`@spelling-creator/mcp/worker`): `buildMcpServer`
   (build a connection-scoped `McpServer` given any auth provider), `grantAuth`
-  (an auth provider seeded from an OAuth grant's `props`, with the same
-  `getAccessToken()`/`forceRefresh()` shape the stdio auth provider has) and
+  (an auth provider that reads the Supabase access token from the current
+  request's MCP token, with the same `getAccessToken()`/`forceRefresh()` shape
+  the stdio auth provider has, but which never refreshes anything) and
   `durableSessionStore` (the live-session handle, kept in a Durable Object's
   storage so it survives hibernation).
 - **`src/auth.js`** (`@spelling-creator/mcp/auth`): `refreshSupabaseSession`,
-  the plain Supabase refresh-token exchange shared by the stdio server,
-  `grantAuth`'s fallback, and the Worker's token refresh (below).
+  the plain Supabase refresh-token exchange shared by the stdio server and the
+  Worker's token refresh (below).
 
 On the Worker side (`apps/api`):
 
@@ -70,9 +71,27 @@ On the Worker side (`apps/api`):
   Supabase session captured at consent time, and a `tokenExchangeCallback`
   rotates it in step with the MCP client's own OAuth token refresh. MCP access
   tokens live 45 minutes (`MCP_ACCESS_TOKEN_TTL`), a little shorter than
-  Supabase's roughly one-hour JWT, so a tool call's Supabase access token is
-  normally already fresh with no extra round trip. `grantAuth` is the
-  defense-in-depth fallback for a connection that outlives that cadence.
+  Supabase's roughly one-hour JWT, so the Supabase access token an MCP token
+  carries is still good for as long as the MCP token is.
+
+  That callback is the only code that spends the Supabase refresh token, and it
+  stays in the grant: each MCP access token carries the Supabase access token
+  alone. Supabase refresh tokens are single-use, and when a used one is sent
+  again Supabase treats it as stolen and revokes the whole session. So if the
+  Durable Object refreshed on its own, the grant would be left holding a used
+  token, the client's next refresh would kill the session, and the connector
+  would stay "connected" while every tool call failed until the user
+  reconnected by hand. For the same reason `HubMcp` overrides `setName` (the
+  call every request reaches it through) to pick up the props of each new MCP
+  token, since `McpAgent` on its own only reads them when the object starts.
+  When the session can never refresh again (the grant has no refresh token,
+  or Supabase answers with one of the codes `sessionHasEnded` in
+  `src/auth.js` lists, such as `refresh_token_already_used`), the callback
+  answers `invalid_grant` rather than a 500, so the client asks the user to
+  reconnect instead of retrying. Other failures, such as Supabase being
+  unreachable or rejecting the anon key, stay 500s, because they say nothing
+  about the user's session and making everyone reconnect would not fix them.
+
 - **`src/routes/oauth.js`** implements the consent flow's three endpoints:
   `GET /authorize` (parse the client's request, stash it, redirect to the
   consent page), `GET /oauth/request` (the consent page's data for a state
