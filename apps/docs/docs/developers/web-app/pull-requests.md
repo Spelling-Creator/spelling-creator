@@ -23,11 +23,7 @@ Pull requests are built on the per-lesson git repository described in
 
 ## The shape of it
 
-```
-        fork                    propose                     review & merge
-lesson ───────▶ your copy ──────────────────▶ pull request ────────────────▶ lesson
-                (edit freely)                 (a snapshot)                   (+ merge commit)
-```
+![A lesson is forked into your copy, which you edit freely. Proposing turns your copy into a pull request, a snapshot. Reviewing and merging it brings the changes back into the lesson as a merge commit.](../../diagrams/pull-request-flow.drawio.svg)
 
 1. **Fork** the lesson from its page. You get a genuine clone of its git
    repository: full history, shared ancestry (see

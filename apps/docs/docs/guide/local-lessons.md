@@ -18,26 +18,14 @@ of overwriting the one on screen.
 
 ## The page
 
-```text
-Lessons on this device                          + New lesson
-─────────────────────────────────────────────────────────
-  Domestic Cats                                ✓  ⋯
-  6 sections · 108 blocks · edited just now       Published
-
-  Domestic Cats (copy)                             ⋯
-  6 sections · 108 blocks · edited 2 minutes ago
-
-  Hummingbirds                                     ⋯
-  1 section · 6 blocks · edited 1 day ago       Cloud draft
-─────────────────────────────────────────────────────────
-```
+![The Lessons on this device page, with a New lesson button and three lessons. Domestic Cats has a tick and the Published label, Domestic Cats (copy) has no label, and Hummingbirds is a Cloud draft. Each lesson has a menu button.](../diagrams/lessons-on-this-device.drawio.svg)
 
 Click a lesson to open it in the editor. The tick marks the lesson the editor
 had open last, which is the one it goes back to. The label on the right (shown
 on wider screens) says where else the lesson exists: **Published** on the hub,
 or a private **Cloud draft**. A lesson with no label is only on this device.
 
-The `⋯` menu on each lesson has three actions:
+The menu on each lesson (the three dots) has three actions:
 
 | Action                      | What it does                                                                                       |
 | --------------------------- | -------------------------------------------------------------------------------------------------- |

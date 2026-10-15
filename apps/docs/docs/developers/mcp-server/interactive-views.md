@@ -60,13 +60,7 @@ What a tool **says** does branch, and it's worth knowing why. See
 
 ## How it fits together
 
-```text
-   MCP server                    Host (Claude)                  View (iframe)
-   ──────────                    ─────────────                  ─────────────
-   tool + ui:// resource   ──▶   fetches the resource     ──▶   renders
-                                 renders the sandbox
-   tools/call              ◀──   proxies the call         ◀──   user picks something
-```
+![The MCP server offers a tool with a ui:// resource. The host fetches the resource and renders it in a sandboxed iframe, the view. When the user picks something in the view, the host proxies it back to the server as a tools/call.](../../diagrams/mcp-app-views.drawio.svg)
 
 Three things follow from that shape, and they're the whole design:
 

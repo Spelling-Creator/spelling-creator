@@ -73,17 +73,20 @@ signature locally. That needs no JWT secret and keeps working if the project
 moves to asymmetric signing keys. The author of anything written is always
 taken from the verified user, never from the request body.
 
-```
- Browser --magic link / password (Supabase JS)--> Supabase Auth
- Browser --GET /lessons, GET /lessons/:id--------> API --> Postgres   (public; drafts and shadowbanned lessons need a Bearer JWT)
- Browser --GET /lessons/mine (Bearer)------------> API --verify JWT--> Postgres (own lessons and drafts)
- Browser --POST /lessons (Bearer)----------------> API --verify JWT, ban check--> Postgres (publish or save draft)
- Browser --PUT /lessons/:id (Bearer)-------------> API --verify JWT, author or trusted--> Postgres
- Browser --DELETE /lessons/:id (Bearer)----------> API --verify JWT, author only--> Postgres
- Browser --GET /lessons/:id/comments-------------> API --> Postgres   (same visibility rule as the lesson)
- Browser --POST /lessons/:id/comments (Bearer)---> API --verify JWT, ban check, sanitize, profanity check--> Postgres
- Browser --PATCH /lessons/:id/comments/:cid (Bearer)--> API --verify JWT, author only, same checks--> Postgres
-```
+![The browser signs in with Supabase Auth directly, using Supabase JS. Everything else goes to the API with the session JWT as a Bearer token. The API verifies the JWT with Supabase Auth, then reads and writes Postgres after its checks.](../../diagrams/hub-api-sessions.drawio.svg)
+
+What the API checks before it touches Postgres, route by route:
+
+| Route                              | Needs a JWT                              | Checks                                           |
+| ---------------------------------- | ---------------------------------------- | ------------------------------------------------ |
+| `GET /lessons`, `GET /lessons/:id` | Only for drafts and shadowbanned lessons | None, beyond who may read the lesson             |
+| `GET /lessons/mine`                | Yes                                      | Returns your own lessons and drafts              |
+| `POST /lessons`                    | Yes                                      | Ban check, then publishes or saves a draft       |
+| `PUT /lessons/:id`                 | Yes                                      | The author or a trusted collaborator             |
+| `DELETE /lessons/:id`              | Yes                                      | The author only                                  |
+| `GET /lessons/:id/comments`        | The same visibility rule as the lesson   | None, beyond who may read the lesson             |
+| `POST /lessons/:id/comments`       | Yes                                      | Ban check, sanitizing and the profanity check    |
+| `PATCH /lessons/:id/comments/:cid` | Yes                                      | The author only, plus the same checks as posting |
 
 ## Comments
 

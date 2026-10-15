@@ -197,6 +197,18 @@ alpha or to 2.x once that ships. See
 - **Demo videos** are embedded with the `<DemoVideo>` component from
   `.vitepress/theme/`, and the video files live in `apps/docs/docs/public/` under
   Git LFS.
+- **Diagrams are draw.io, not ASCII art.** Each one is a single
+  `apps/docs/docs/diagrams/*.drawio.svg`: an SVG the page shows with a normal
+  Markdown image, with the editable diagram embedded in it. Open one in
+  [draw.io](https://www.drawio.com) or the
+  [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
+  extension for VS Code, edit it, then run `pnpm --filter @spelling-creator/docs diagrams`
+  (it needs the draw.io desktop app) to export it again like the rest. That
+  strips the PNG copies draw.io adds of every label, which are most of the file
+  and stay light in dark mode. Colors are `light-dark()` pairs taken from the
+  VitePress theme, so a diagram follows the site's light and dark switch; reuse
+  the styles of an existing diagram for a new one. Write alt text that says what
+  the diagram shows, since it's also what `llms.txt` and screen readers get.
 
 ## Code quality
 
