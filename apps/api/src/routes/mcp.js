@@ -17,7 +17,7 @@
 import { OAuthProvider, OAuthError, GrantType } from '@cloudflare/workers-oauth-provider';
 import { McpAgent } from 'agents/mcp';
 import { buildMcpServer, durableSessionStore, grantAuth } from '@spelling-creator/mcp/worker';
-import { refreshSupabaseSession } from '@spelling-creator/mcp/auth';
+import { refreshSupabaseSession, sessionHasEnded } from '@spelling-creator/mcp/auth';
 import { handleAuthorize, handleOAuthRequest, handleOAuthApprove } from './oauth.js';
 
 // Our own MCP access tokens live noticeably shorter than a Supabase JWT's ~1h
@@ -35,6 +35,12 @@ export function mcpConfig(env) {
 
 // What an MCP access token carries: the grant's props minus the Supabase
 // refresh token, which stays in the grant for `tokenExchangeCallback` alone.
+function sessionEnded() {
+	return new OAuthError('invalid_grant', {
+		description: 'The Spelling Creator sign-in behind this connection has ended. Reconnect to sign in again.',
+	});
+}
+
 function accessTokenPropsOf(props) {
 	const { supabaseRefreshToken: _kept, ...carried } = props;
 	return carried;
@@ -108,19 +114,18 @@ export function buildOAuthProvider(app, env) {
 			// Rides along with the MCP client's own refresh cadence: mint a fresh
 			// Supabase session now, so tool calls over the next ~45 minutes' worth
 			// of connections don't each need their own refresh round trip.
+			//
+			// A grant whose Supabase session can never refresh again (none stored,
+			// or Supabase says it has ended) is answered with `invalid_grant`, which
+			// makes the client ask the user to reconnect. A 500 would look like a
+			// blip worth retrying and leave the connector "connected" while every
+			// tool call fails. Anything else is rethrown, since it may well pass.
+			if (!options.props.supabaseRefreshToken) throw sessionEnded();
 			let session;
 			try {
 				session = await refreshSupabaseSession(config, options.props.supabaseRefreshToken);
 			} catch (error) {
-				// Supabase refusing the refresh token means the session is gone for
-				// good. Saying so as `invalid_grant` makes the client ask the user to
-				// reconnect, where a 500 would look like a blip worth retrying and
-				// leave the connector "connected" while every tool call fails.
-				if ([400, 401, 403].includes(error.status)) {
-					throw new OAuthError('invalid_grant', {
-						description: 'The Spelling Creator sign-in behind this connection has ended. Reconnect to sign in again.',
-					});
-				}
+				if (sessionHasEnded(error)) throw sessionEnded();
 				throw error;
 			}
 			const newProps = {

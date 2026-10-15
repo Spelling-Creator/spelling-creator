@@ -84,9 +84,13 @@ On the Worker side (`apps/api`):
   reconnected by hand. For the same reason `HubMcp` overrides `setName` (the
   call every request reaches it through) to pick up the props of each new MCP
   token, since `McpAgent` on its own only reads them when the object starts.
-  If Supabase does refuse a refresh, the callback answers `invalid_grant`
-  rather than a 500, so the client asks the user to reconnect instead of
-  retrying.
+  When the session can never refresh again (the grant has no refresh token,
+  or Supabase answers with one of the codes `sessionHasEnded` in
+  `src/auth.js` lists, such as `refresh_token_already_used`), the callback
+  answers `invalid_grant` rather than a 500, so the client asks the user to
+  reconnect instead of retrying. Other failures, such as Supabase being
+  unreachable or rejecting the anon key, stay 500s, because they say nothing
+  about the user's session and making everyone reconnect would not fix them.
 
 - **`src/routes/oauth.js`** implements the consent flow's three endpoints:
   `GET /authorize` (parse the client's request, stash it, redirect to the
