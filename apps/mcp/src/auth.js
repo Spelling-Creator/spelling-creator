@@ -40,9 +40,10 @@ export function nowSeconds() {
 
 /**
  * Trade a Supabase refresh token for a fresh session. Pure network call, no
- * mutable state — shared by the stdio auth provider (below), the remote
- * per-connection auth provider (worker.js), and the Worker's OAuth token
- * endpoint (apps/api), which all need the exact same GoTrue call.
+ * mutable state — shared by the stdio auth provider (below) and the Worker's
+ * OAuth token endpoint (apps/api), which both need the exact same GoTrue call.
+ * A refusal throws an error carrying GoTrue's HTTP `status`, so a caller can
+ * tell a dead session (4xx) from Supabase being briefly unreachable.
  * @param {{ supabaseUrl: string, supabaseAnonKey: string }} config
  * @param {string} refreshToken
  */
@@ -63,11 +64,13 @@ export async function refreshSupabaseSession(config, refreshToken) {
   );
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(
+    const error = new Error(
       `Could not refresh the Supabase session (${res.status}). ` +
         "The refresh token may have been revoked — sign in again. " +
         (detail ? `Details: ${detail}` : ""),
     );
+    error.status = res.status;
+    throw error;
   }
   const data = await res.json();
   if (!data.access_token) {
