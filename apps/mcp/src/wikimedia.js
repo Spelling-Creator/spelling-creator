@@ -25,15 +25,16 @@ import {
   rankPages,
   wikidataPickPages,
 } from "@spelling-creator/core/wikimedia";
+import pkg from "../package.json" with { type: "json" };
 
 // Wikimedia's User-Agent policy (https://meta.wikimedia.org/wiki/User-Agent_policy)
 // throttles or 403s requests with a generic/missing UA — Node's fetch defaults to
 // just "node", which trips this, especially from shared/datacenter egress (e.g.
 // the Cloudflare Worker this server also runs on for remote MCP connections).
 // Exported for the other Wikimedia service this server calls, Wikidata, which
-// has the same policy (see check_facts in tools.js).
-export const USER_AGENT =
-  "SpellingCreatorMCP/0.6.0 (https://spellingcreator.org; MCP server for the Spelling Creator hub)";
+// has the same policy (see check_facts in tools.js). The version is read from
+// package.json, like SERVER_INFO's, since a hand-kept copy here fell behind.
+export const USER_AGENT = `SpellingCreatorMCP/${pkg.version} (https://spellingcreator.org; MCP server for the Spelling Creator hub)`;
 
 function toHit(page, info) {
   const { author, license, credit } = extmetaCredit(info.extmetadata);

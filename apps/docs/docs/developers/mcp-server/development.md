@@ -80,6 +80,8 @@ most.
 `apps/mcp/package.json` and `apps/mcp/manifest.json` carry the same version,
 and both are bumped whenever the MCP server changes (not for web-only or
 core-only work). `SERVER_INFO.version` in `src/tools.js`, what the server
-reports to clients during the MCP handshake, is read from `package.json` (a
-JSON import), so there is nothing to bump there. `test/version.test.js` fails
-if `manifest.json` falls out of step.
+reports to clients during the MCP handshake, and the `SpellingCreatorMCP/…`
+User-Agent in `src/wikimedia.js`, sent to Wikimedia Commons and Wikidata, are
+both read from `package.json` (a JSON import), so there is nothing to bump
+there. `test/version.test.js` fails if `manifest.json` or either of those falls
+out of step.
