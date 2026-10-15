@@ -8,10 +8,9 @@
   "scripts": {
     "dev": "vite",
     "dev:stub": "vite --mode stub --host 127.0.0.1 --port 5180 --strictPort",
-    "build": "vite build && vite build --ssr src/entry-server.jsx --outDir dist-ssr",
+    "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
-    "build:client": "vite build",
     "build:ssr": "vite build --ssr src/entry-server.jsx --outDir dist-ssr"
   },
   "dependencies": {

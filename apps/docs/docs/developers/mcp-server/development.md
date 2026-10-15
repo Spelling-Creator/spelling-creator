@@ -14,7 +14,7 @@ The tests run on Node's built-in runner against a fake hub (`test/fake-hub.js`)
 and cover the tool surface end to end (`smoke`), validation, fact checking,
 images, forking and proposals, version history, live sessions, elicitation
 (the confirm prompts) and the views. CI runs them with every other package's
-tests (`pnpm -r test` in `.github/workflows/ci.yml`).
+tests (`turbo run test` in `.github/workflows/ci.yml`).
 
 ## Where things live
 

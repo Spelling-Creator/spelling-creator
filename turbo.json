@@ -1,0 +1,92 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  // Plain interleaved logs, like running the scripts by hand.
+  "ui": "stream",
+  // Tasks see the whole environment, as they did under pnpm. Only the variables
+  // listed in a task's `env` go into its cache key, so those lists are what has
+  // to be complete.
+  "envMode": "loose",
+  // A changed patch changes what is installed, which no package's own files show.
+  "globalDependencies": ["patches/**"],
+  "tasks": {
+    // Most workspaces run from source, so there is no `build` for a task to depend
+    // on and pick up a dependency's changes through. This task has no script
+    // anywhere: depending on it folds every workspace dependency's files into the
+    // hash, so editing packages/core reruns the web build and the API tests.
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "build": {
+      "dependsOn": ["transit"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["transit"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+
+    // Vite bakes the VITE_* values into the bundle, from the environment or from
+    // apps/web/.env. That file is gitignored, so it is not a default input.
+    "@spelling-creator/web#build": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["VITE_*"],
+      "outputs": ["dist/**"]
+    },
+    "@spelling-creator/web#build:ssr": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["VITE_*"],
+      "outputs": ["dist-ssr/**"]
+    },
+
+    // VitePress builds into doc_build. Putting it in apps/web/dist/docs is a
+    // separate step that is never cached, because a cache hit on the web build
+    // restores dist without the docs in it.
+    "@spelling-creator/docs#build": {
+      "outputs": ["doc_build/**"]
+    },
+    "@spelling-creator/docs#copy-to-web": {
+      "dependsOn": ["build", "@spelling-creator/web#build"],
+      "cache": false
+    },
+
+    // routes/ssr.js imports apps/web/dist-ssr, and wrangler will not start or
+    // bundle without apps/web/dist as its assets directory.
+    "@spelling-creator/api#test": {
+      "dependsOn": ["transit", "@spelling-creator/web#build:ssr"]
+    },
+    "@spelling-creator/api#dev": {
+      "dependsOn": [
+        "@spelling-creator/web#build",
+        "@spelling-creator/web#build:ssr"
+      ],
+      "cache": false,
+      "persistent": true
+    },
+    "@spelling-creator/api#bundle": {
+      "dependsOn": [
+        "transit",
+        "@spelling-creator/web#build",
+        "@spelling-creator/web#build:ssr"
+      ],
+      "outputs": ["dist/**"]
+    },
+    "@spelling-creator/api#deploy": {
+      "dependsOn": [
+        "@spelling-creator/docs#copy-to-web",
+        "@spelling-creator/web#build:ssr"
+      ],
+      "cache": false
+    },
+
+    // The CLI's test script builds it first, so it must not run alongside its
+    // own `build` writing the same dist.
+    "@spelling-creator/cli#test": {
+      "dependsOn": ["transit", "build"]
+    }
+  }
+}

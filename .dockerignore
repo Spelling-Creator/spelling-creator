@@ -12,6 +12,7 @@ apps/web/dist
 apps/web/dist-ssr
 apps/docs/doc_build
 apps/api/dist
+.turbo
 
 .git
 .github

@@ -84,11 +84,14 @@ ENV VITE_API_URL=$VITE_API_URL \
     VITE_AUTH_MODE=$VITE_AUTH_MODE \
     VITE_USERNAME_DOMAIN=$VITE_USERNAME_DOMAIN
 
-# The web build emits both halves: dist (the SPA) and dist-ssr (the server bundle
-# routes/ssr.js imports). Docs must come second — the SPA build empties dist, so
-# building docs first would delete them again.
+# The web app has two halves: dist (the SPA) and dist-ssr (the server bundle
+# routes/ssr.js imports). The docs are copied into dist/docs last, because the
+# SPA build empties dist. These are the steps `pnpm build:docs` runs through
+# Turborepo, spelled out, since the image has no .git and no use for a cache.
 RUN pnpm --filter @spelling-creator/web build \
- && pnpm --filter @spelling-creator/docs build
+ && pnpm --filter @spelling-creator/web build:ssr \
+ && pnpm --filter @spelling-creator/docs build \
+ && pnpm --filter @spelling-creator/docs copy-to-web
 
 # Drop the build-only dependencies now that the bundles exist — wrangler pulls in
 # workerd, and vite, vitepress and the rest are several hundred megabytes the

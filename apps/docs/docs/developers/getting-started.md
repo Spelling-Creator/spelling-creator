@@ -19,7 +19,7 @@ title: Getting started
 pnpm install            # install all workspace deps
 
 pnpm dev:web            # run the frontend (Vite)
-pnpm dev:api            # build the SSR bundle, then run the Worker locally (wrangler dev)
+pnpm dev:api            # build the web app, then run the Worker locally (wrangler dev)
 pnpm dev:mcp            # run the MCP server over stdio
 pnpm dev:docs           # run this documentation site (VitePress)
 pnpm mcp:login          # sign the MCP server in and store a refresh token
@@ -28,17 +28,56 @@ pnpm dev:stub           # run the stub API instead of a real backend
 pnpm dev:web:stub       # run the frontend against it, on port 5180
 
 pnpm build              # build the frontend: apps/web/dist and apps/web/dist-ssr
-pnpm build:docs         # build the docs into apps/web/dist/docs
+pnpm build:docs         # build the docs into apps/web/dist/docs (and the web app first)
 pnpm preview            # serve the built frontend (vite preview)
 pnpm run deploy         # build both, then deploy the Worker (wrangler deploy)
 
-pnpm test               # every workspace's test suite (pnpm -r test)
+pnpm test               # every workspace's test suite
 pnpm fmt                # format everything (oxfmt)
 pnpm lint               # check formatting, then lint (oxfmt --check + oxlint)
 ```
 
 `deploy` needs `pnpm run`: a bare `pnpm deploy` is pnpm's own built-in command
 for copying a workspace package to a directory, not this script.
+
+### Turborepo
+
+The build, test, deploy and `dev:api` scripts run their tasks through
+[Turborepo](https://turborepo.dev), configured in `turbo.json` at the root.
+It does two things for us:
+
+- **It runs tasks in the right order.** The Worker imports the web app's SSR
+  bundle and serves `apps/web/dist` as its assets, so the API's `test`, `dev`,
+  `bundle` and `deploy` tasks depend on the web build. The docs are copied into
+  `apps/web/dist/docs` only after the web build, because Vite empties `dist`
+  each time. Each package's scripts do one thing, and `turbo.json` holds the
+  order between them.
+- **It skips work that is already done.** A task whose inputs have not changed
+  since its last run is replayed from `.turbo/cache` (gitignored): its log is
+  printed again and its outputs are put back, in milliseconds. Run with
+  `--force` to ignore the cache, for example
+  `pnpm exec turbo run test --force`.
+
+Most workspaces run from source and have no build of their own, so `turbo.json`
+has a `transit` task with no script anywhere. Tasks depend on it so that a
+change to a workspace dependency (usually `packages/core`) counts as a change
+to them too. Without it, editing `packages/core` would leave the web build and
+the API tests cached.
+
+The web build tasks list the `VITE_*` variables and `apps/web/.env*` as inputs,
+because Vite bakes them into the bundle. A build with different values is a
+different build, not a cache hit.
+
+A script run straight from a package (`pnpm --filter @spelling-creator/api test`,
+or `pnpm test` inside `apps/api`) does not build what it depends on first. Use
+the root scripts, or `pnpm exec turbo run <task>`, from a clean checkout.
+
+Turborepo hashes a Git LFS file by its pointer, so a checkout with pointers
+and one with the real images look the same to it. That is why only CI keeps a
+cache and the deploy workflow always builds fresh (see
+[Continuous integration](#continuous-integration)). If you ever build without
+the LFS files pulled, run `pnpm build --force` after `git lfs pull` so the
+cached build with broken images is replaced.
 
 The two stub commands give you a working hub with no Supabase or Cloudflare
 account; see [Stub API](./stub-api.md). To run the API as a plain Node process
@@ -179,11 +218,13 @@ alpha or to 2.x once that ships. See
 - **Moved pages keep working.** `REDIRECTS` in the config maps an old path to
   its new one, and the build writes a small forwarding page at each old URL.
   Add an entry whenever you move or rename a page.
-- **`base` is `/docs/`** and the output goes to `apps/docs/doc_build`, which
-  `pnpm build:docs` then copies into `apps/web/dist/docs`. Run it **after** the
-  web build: Vite empties `apps/web/dist` each time, so a `pnpm build` after
-  `pnpm build:docs` deletes the docs again. `pnpm run deploy` and the deploy
-  workflow both run the two in that order for you. `cleanUrls` is on, and
+- **`base` is `/docs/`** and the output goes to `apps/docs/doc_build`. The
+  package's `copy-to-web` script then copies it into `apps/web/dist/docs`, which
+  has to happen **after** the web build because Vite empties `apps/web/dist`
+  each time. `pnpm build:docs` runs the web build, the docs build and the copy
+  in that order through [Turborepo](#turborepo), and so do `pnpm run deploy`
+  and the deploy workflow. A `pnpm build` on its own afterwards can still
+  delete the docs again, so run `pnpm build:docs` last. `cleanUrls` is on, and
   Cloudflare's default `auto-trailing-slash` asset handling resolves
   `/docs/intro` to `intro.html`.
 - **`llms.txt` and `llms-full.txt`** come from
@@ -264,12 +305,17 @@ there is nothing to disable there.
 
 `.github/workflows/ci.yml` runs on every pull request and on `main` after a
 merge (and by hand through `workflow_dispatch`): install (with
-`--frozen-lockfile`), `pnpm lint`, `pnpm -r test`, the web and docs builds, and
-finally `pnpm --filter @spelling-creator/api bundle`, which bundles the Worker
-with `wrangler deploy --dry-run`. That last step is the only one that runs
-wrangler's own module resolution, so it catches an import that bundles under
-Vite but not for workerd. CI checks out Git LFS files as pointers, since no test
-reads them.
+`--frozen-lockfile`), `pnpm lint`, then one
+`turbo run test build build:ssr bundle`. That covers every test suite, the web,
+docs and CLI builds, and the Worker's `bundle`, which bundles it with
+`wrangler deploy --dry-run`. The bundle is the only step that runs wrangler's
+own module resolution, so it catches an import that bundles under Vite but not
+for workerd. CI checks out Git LFS files as pointers, since no test reads them.
+
+CI keeps the Turborepo cache between runs with `actions/cache`, saved under each
+commit and restored from the newest earlier one, so a pull request that only
+touches the docs replays every test suite instead of running it. Pull requests
+can read the caches that runs on `main` saved.
 
 `apps/api`'s own suite runs **twice, in two runtimes**, because the API is meant
 to run in two. The `workers` project runs everything inside workerd: the hosted
@@ -281,7 +327,7 @@ self-hosting bug, and the cheapest moment to find one is when it is introduced.
 The configs are `apps/api/vitest.workers.config.js` and
 `apps/api/vitest.node.config.js`.
 
-`pnpm test` is `pnpm -r test`, which runs each workspace's own suite:
+`pnpm test` is `turbo run test`, which runs each workspace's own suite:
 `packages/core` and `apps/api` under vitest (the API's workerd project through
 `@cloudflare/vitest-pool-workers`, so its platform-adapter tests run against real
 R2 and KV), `apps/web` and `apps/stub-api` under vitest too, and `apps/mcp`
@@ -293,12 +339,12 @@ in a real React root, say) opts in with a `// @vitest-environment happy-dom`
 comment on its first line; `src/lib/collab.test.js` is an example, driving the
 live-collaboration hook against a stub WebSocket.
 
-`apps/api`'s `test` script builds `apps/web`'s SSR bundle first, the same way its
-`dev`, `start` and `deploy` scripts do. That is not incidental: `routes/ssr.js`
-imports the built bundle _statically_, deliberately, so that a missing one is a
-build failure rather than a runtime surprise, and the Node entry's tests reach
-it through `createHandler`. Building it here is what lets `pnpm test` work from a
-clean checkout in any order.
+`apps/api`'s `test` task depends on `apps/web`'s `build:ssr` in `turbo.json`, as
+its `dev`, `bundle` and `deploy` tasks do. That is not incidental:
+`routes/ssr.js` imports the built bundle _statically_, deliberately, so that a
+missing one is a build failure rather than a runtime surprise, and the Node
+entry's tests reach it through `createHandler`. The dependency is what lets
+`pnpm test` work from a clean checkout.
 
 The CI build runs without the `VITE_*` secrets: they are injected only for the
 real deploy, and a pull request from a fork could not read them anyway. It still
@@ -306,12 +352,17 @@ resolves every import and runs the full bundler, which is what catches a bad
 module path or a broken chunk boundary.
 
 `.github/workflows/deploy.yml` is separate and triggers only on a push to `main`
-that touches the web app, the API, the MCP server, the docs, the lockfile or the
-workspace config (or by hand). It runs in two jobs: `build` pulls the Git LFS
-files, lints and builds, and hands `apps/web/dist` and `apps/web/dist-ssr` on as
-an artifact; `deploy` is the only job that can read the Cloudflare token, and
-runs `wrangler deploy`. By then the change has already been merged; CI is what
-gates the merge.
+that touches the web app, the API, the MCP server, the docs, the lockfile, the
+workspace config or `turbo.json` (or by hand). It runs in two jobs: `build`
+pulls the Git LFS files, lints and builds, and hands `apps/web/dist` and
+`apps/web/dist-ssr` on as an artifact; `deploy` is the only job that can read
+the Cloudflare token, and runs `wrangler deploy`. By then the change has already
+been merged; CI is what gates the merge.
+
+The deploy workflow restores no Turborepo cache, on purpose. CI's cache was
+built from LFS pointers, and Turborepo cannot tell those apart from the real
+files (see [Turborepo](#turborepo)), so reusing it could ship a build with
+broken images.
 
 ## Dependency updates
 
@@ -363,8 +414,7 @@ freeze each package on a version that can pick up an advisory of its own later,
 and it overrides direct dependants _downwards_ too: `apps/mcp` asks for esbuild
 `^0.28.2`, so an exact `0.28.1` here would drag it below its own declared range.
 
-`pnpm -r test`, `pnpm build` and `pnpm --filter @spelling-creator/api bundle`
-between them exercise every package the overrides touch, so an override that
+`pnpm test`, `pnpm build` and the Worker's `bundle` task between them exercise every package the overrides touch, so an override that
 breaks its parent fails locally rather than in a deploy.
 
 `allowBuilds` in the same file lists which dependencies may run install scripts.

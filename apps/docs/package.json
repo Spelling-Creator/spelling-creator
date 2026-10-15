@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vitepress dev docs",
     "start": "vitepress dev docs",
-    "build": "vitepress build docs && node -e \"const fs=require('fs');fs.rmSync('../web/dist/docs',{recursive:true,force:true});fs.cpSync('doc_build','../web/dist/docs',{recursive:true})\"",
+    "build": "vitepress build docs",
+    "copy-to-web": "node -e \"const fs=require('fs');fs.rmSync('../web/dist/docs',{recursive:true,force:true});fs.cpSync('doc_build','../web/dist/docs',{recursive:true})\"",
     "preview": "vitepress preview docs",
     "diagrams": "node scripts/diagrams.mjs"
   },

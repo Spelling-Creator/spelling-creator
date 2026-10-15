@@ -172,12 +172,14 @@ The server imports a build artifact, so `apps/web` must be built before the
 Worker is bundled:
 
 ```bash
-pnpm build     # client -> apps/web/dist, server -> apps/web/dist-ssr
-pnpm deploy    # runs the above, then build:docs, then the API's deploy
+pnpm build          # client -> apps/web/dist, server -> apps/web/dist-ssr
+pnpm run deploy     # runs the above, then the docs build, then the API's deploy
 ```
 
-The API package's `dev`, `start`, `test` and `deploy` scripts each run
-`pnpm --filter @spelling-creator/web build:ssr` first. In the Workers test
+`apps/web`'s `build` script is the client only and `build:ssr` is the server.
+In `turbo.json`, the API's `test` task depends on `build:ssr`, and its `dev`,
+`bundle` and `deploy` tasks on both (see
+[Turborepo](../getting-started.md#turborepo)). In the Workers test
 project, the pool runs against a test-only entry
 (`apps/api/src/collab-room.test-worker.js`) that doesn't import the route table;
 the Node tests do import `ssr.js`, which is why the bundle has to exist.
@@ -194,6 +196,7 @@ that list disagree.
 
 `pnpm dev:web` (the Vite dev server) does **not** server-render; there is no
 Worker in front of it, so every route arrives as the plain SPA shell and mounts
-with `createRoot`. To exercise SSR, run `pnpm build` and then `pnpm dev:api`,
-which serves the built assets in `apps/web/dist` through the real Worker (its
-`dev` script rebuilds the server bundle, but not the client).
+with `createRoot`. To exercise SSR, run `pnpm dev:api`. It builds both halves
+of the web app (replayed from the Turborepo cache when nothing changed), then
+serves the built assets in `apps/web/dist` through the real Worker. It does not
+watch `apps/web`, so run it again after changing the app.
