@@ -249,7 +249,7 @@ chunk. It is heavy (about half a megabyte compressed with its font), so:
   speech. A lesson without a formula never loads MathJax.
 - `core/browser/formulaEngine.js` makes a renderer for a MathJax DOM adaptor
   (the browser's, or the lite one in tests): `render({ format, source,
-display })` gives the MathML tree and string and the typeset SVG as a node,
+  display })` gives the MathML tree and string and the typeset SVG as a node,
   and `error` when the source didn't parse (MathJax's `noerrors` and
   `noundefined` show the problem in red in place of the formula). The TeX
   parser has only the `base` and `ams` packages, so `\href` and `\require`
@@ -334,7 +334,7 @@ document on each keystroke.
   formulas from prompts and steps as well as text blocks. The Sources list closes
   the document under a "Sources" line, written with its own paragraph styles so
   the PDF can style it and the importer can recognize it (`S2C Sources
-Heading` and `S2C Source Entry`; the footnote locator and note are the
+  Heading` and `S2C Source Entry`; the footnote locator and note are the
   character styles `S2C Footnote Locator` and `S2C Footnote Note`, all defined in
   `lessonLayout.js`; the `S2C` prefix is a historical name kept so Word round
   trips keep working). The PDF goes through

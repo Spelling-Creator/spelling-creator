@@ -498,7 +498,7 @@ A lesson is **sections** of **blocks**. Block types:
   optional `caption`, which says what the picture shows. Pass `credit` through unchanged
   when editing a lesson.
 - **`vakt`**: a regulation activity: `{ "type": "vakt", "text": "Bob likes to do jumping
-jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pairs) and an
+  jacks. Let's do 3 of those." }`, optionally with `links` (`{ url, label? }` pairs) and an
   `image` from `add_image`, which takes the same optional `size` and `align` an image block
   does, defaulting to medium and centered rather than full width. Write the activity
   **alone**; the `VAKT:` label is added when the lesson is rendered. These are **optional

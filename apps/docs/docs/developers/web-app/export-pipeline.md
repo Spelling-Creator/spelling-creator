@@ -331,7 +331,7 @@ exactly the same import as a JSON one.
   each run of whitespace to one space and trims an element's edges, as the
   format says. Marks nest `<b>`, `<i>`, `<u>`, then the read-aloud hint
   innermost (`<phoneme>`, `<sub>` or `<say-as>`); a pause is `<break
-strength="medium"/>` (short) or `"strong"` (long). Reading accepts the marks
+  strength="medium"/>` (short) or `"strong"` (long). Reading accepts the marks
   in any nesting, and keeps the words of an element it doesn't know.
 - Parsing is `@xmldom/xmldom`, which never resolves external entities or
   fetches anything. A file with a DOCTYPE is refused anyway, as the format
