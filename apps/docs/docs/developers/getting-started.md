@@ -28,9 +28,9 @@ pnpm dev:stub           # run the stub API instead of a real backend
 pnpm dev:web:stub       # run the frontend against it, on port 5180
 
 pnpm build              # build the frontend: apps/web/dist and apps/web/dist-ssr
-pnpm build:docs         # build the docs into apps/web/dist/docs (and the web app first)
+pnpm build:docs         # build the whole site: the frontend, then the docs into apps/web/dist/docs
 pnpm preview            # serve the built frontend (vite preview)
-pnpm run deploy         # build both, then deploy the Worker (wrangler deploy)
+pnpm run deploy         # rebuild the whole site from scratch, then deploy the Worker (wrangler deploy)
 
 pnpm test               # every workspace's test suite
 pnpm fmt                # format everything (oxfmt)
@@ -47,8 +47,8 @@ The build, test, deploy and `dev:api` scripts run their tasks through
 It does two things for us:
 
 - **It runs tasks in the right order.** The Worker imports the web app's SSR
-  bundle and serves `apps/web/dist` as its assets, so the API's `test`, `dev`,
-  `bundle` and `deploy` tasks depend on the web build. The docs are copied into
+  bundle and serves `apps/web/dist` as its assets, so the API's `test` and
+  `bundle` tasks depend on the web build. The docs are copied into
   `apps/web/dist/docs` only after the web build, because Vite empties `dist`
   each time. Each package's scripts do one thing, and `turbo.json` holds the
   order between them.
@@ -69,15 +69,27 @@ because Vite bakes them into the bundle. A build with different values is a
 different build, not a cache hit.
 
 A script run straight from a package (`pnpm --filter @spelling-creator/api test`,
-or `pnpm test` inside `apps/api`) does not build what it depends on first. Use
-the root scripts, or `pnpm exec turbo run <task>`, from a clean checkout.
+or `pnpm test` inside `apps/api` or `apps/cli`) does not build what it depends
+on first. Use the root scripts, or `pnpm exec turbo run <task>`, from a clean
+checkout.
+
+`wrangler dev` and `wrangler deploy` are not Turborepo tasks. Turborepo runs a
+task without a terminal to prompt in, and wrangler can need one: to log you in,
+or to ask which Cloudflare account to use. So `pnpm dev:api` and
+`pnpm run deploy` build through Turborepo first, then run wrangler in your
+terminal as usual.
+
+A cache hit puts a task's outputs back over whatever is already there, without
+emptying the folder first the way Vite does. After switching branches,
+`apps/web/dist` can hold leftover files from another build. That does no harm
+locally, but it must never ship, so `pnpm run deploy` builds with `--force`.
 
 Turborepo hashes a Git LFS file by its pointer, so a checkout with pointers
-and one with the real images look the same to it. That is why only CI keeps a
-cache and the deploy workflow always builds fresh (see
-[Continuous integration](#continuous-integration)). If you ever build without
-the LFS files pulled, run `pnpm build --force` after `git lfs pull` so the
-cached build with broken images is replaced.
+and one with the real images look the same to it. That is the other reason
+`pnpm run deploy` ignores the cache, and why the deploy workflow restores none
+(see [Continuous integration](#continuous-integration)). If you ever build
+without the LFS files pulled, run `pnpm build --force` after `git lfs pull` so
+the cached build with broken images is replaced.
 
 The two stub commands give you a working hub with no Supabase or Cloudflare
 account; see [Stub API](./stub-api.md). To run the API as a plain Node process
@@ -221,8 +233,8 @@ alpha or to 2.x once that ships. See
 - **`base` is `/docs/`** and the output goes to `apps/docs/doc_build`. The
   package's `copy-to-web` script then copies it into `apps/web/dist/docs`, which
   has to happen **after** the web build because Vite empties `apps/web/dist`
-  each time. `pnpm build:docs` runs the web build, the docs build and the copy
-  in that order through [Turborepo](#turborepo), and so do `pnpm run deploy`
+  each time. `pnpm build:docs` runs both halves of the web build, the docs build
+  and the copy in that order through [Turborepo](#turborepo), and so do `pnpm run deploy`
   and the deploy workflow. A `pnpm build` on its own afterwards can still
   delete the docs again, so run `pnpm build:docs` last. `cleanUrls` is on, and
   Cloudflare's default `auto-trailing-slash` asset handling resolves
@@ -315,7 +327,16 @@ for workerd. CI checks out Git LFS files as pointers, since no test reads them.
 CI keeps the Turborepo cache between runs with `actions/cache`, saved under each
 commit and restored from the newest earlier one, so a pull request that only
 touches the docs replays every test suite instead of running it. Pull requests
-can read the caches that runs on `main` saved.
+can read the caches that runs on `main` saved. Two details keep that honest:
+
+- **The cache key includes the Node version and a hash of `ci.yml`.** Turborepo
+  does not hash the runtime, so without this a pull request that bumps Node or
+  pnpm would replay the old passes without running a single suite on the new
+  version.
+- **Turborepo never evicts anything from its cache.** The run uses
+  `--summarize`, and `scripts/prune-turbo-cache.mjs` then deletes every entry
+  that run did not use before the cache is saved. Otherwise each commit's
+  saved cache would be bigger than the last.
 
 `apps/api`'s own suite runs **twice, in two runtimes**, because the API is meant
 to run in two. The `workers` project runs everything inside workerd: the hosted
@@ -340,7 +361,8 @@ comment on its first line; `src/lib/collab.test.js` is an example, driving the
 live-collaboration hook against a stub WebSocket.
 
 `apps/api`'s `test` task depends on `apps/web`'s `build:ssr` in `turbo.json`, as
-its `dev`, `bundle` and `deploy` tasks do. That is not incidental:
+its `bundle` task does, and `pnpm dev:api` and `pnpm run deploy` build it before
+starting wrangler. That is not incidental:
 `routes/ssr.js` imports the built bundle _statically_, deliberately, so that a
 missing one is a build failure rather than a runtime surprise, and the Node
 entry's tests reach it through `createHandler`. The dependency is what lets

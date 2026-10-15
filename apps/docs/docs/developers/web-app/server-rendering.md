@@ -177,9 +177,10 @@ pnpm run deploy     # runs the above, then the docs build, then the API's deploy
 ```
 
 `apps/web`'s `build` script is the client only and `build:ssr` is the server.
-In `turbo.json`, the API's `test` task depends on `build:ssr`, and its `dev`,
-`bundle` and `deploy` tasks on both (see
-[Turborepo](../getting-started.md#turborepo)). In the Workers test
+In `turbo.json`, the API's `test` task depends on `build:ssr` and its `bundle`
+task on both, and `pnpm dev:api` and `pnpm run deploy` build both before
+starting wrangler (see [Turborepo](../getting-started.md#turborepo)). In the
+Workers test
 project, the pool runs against a test-only entry
 (`apps/api/src/collab-room.test-worker.js`) that doesn't import the route table;
 the Node tests do import `ssr.js`, which is why the bundle has to exist.

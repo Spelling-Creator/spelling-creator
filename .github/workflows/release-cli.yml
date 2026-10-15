@@ -53,9 +53,10 @@ jobs:
       - name: Type-check
         run: pnpm --filter @spelling-creator/cli typecheck
 
-      # Builds the bundle and runs the tests against it.
+      # Builds the bundle and runs the tests against it (turbo.json orders the
+      # two). No Turborepo cache is restored here, so both really run.
       - name: Test
-        run: pnpm --filter @spelling-creator/cli test
+        run: pnpm exec turbo run test --filter=@spelling-creator/cli
 
       # pnpm pack runs the package's prepack (a fresh build) and rewrites the
       # workspace:* devDependency on core to a plain version.

@@ -23,10 +23,6 @@
     "test": {
       "dependsOn": ["transit"]
     },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
 
     // Vite bakes the VITE_* values into the bundle, from the environment or from
     // apps/web/.env. That file is gitignored, so it is not a default input.
@@ -54,18 +50,13 @@
       "cache": false
     },
 
-    // routes/ssr.js imports apps/web/dist-ssr, and wrangler will not start or
-    // bundle without apps/web/dist as its assets directory.
+    // routes/ssr.js imports apps/web/dist-ssr, and wrangler will not bundle
+    // without apps/web/dist as its assets directory. `wrangler dev` and
+    // `wrangler deploy` are not tasks here: they can prompt (to log in, or to
+    // pick an account), and turbo gives a task no terminal to prompt in. The
+    // root dev:api and deploy scripts build through turbo, then run wrangler.
     "@spelling-creator/api#test": {
       "dependsOn": ["transit", "@spelling-creator/web#build:ssr"]
-    },
-    "@spelling-creator/api#dev": {
-      "dependsOn": [
-        "@spelling-creator/web#build",
-        "@spelling-creator/web#build:ssr"
-      ],
-      "cache": false,
-      "persistent": true
     },
     "@spelling-creator/api#bundle": {
       "dependsOn": [
@@ -75,16 +66,8 @@
       ],
       "outputs": ["dist/**"]
     },
-    "@spelling-creator/api#deploy": {
-      "dependsOn": [
-        "@spelling-creator/docs#copy-to-web",
-        "@spelling-creator/web#build:ssr"
-      ],
-      "cache": false
-    },
 
-    // The CLI's test script builds it first, so it must not run alongside its
-    // own `build` writing the same dist.
+    // The CLI's tests spawn the built bundle, so what is tested is what ships.
     "@spelling-creator/cli#test": {
       "dependsOn": ["transit", "build"]
     }

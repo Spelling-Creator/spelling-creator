@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev:web": "pnpm --filter @spelling-creator/web dev",
-    "dev:api": "turbo run build build:ssr --filter=@spelling-creator/web && pnpm --filter @spelling-creator/api dev",
+    "dev:api": "pnpm build && pnpm --filter @spelling-creator/api dev",
     "dev:mcp": "pnpm --filter @spelling-creator/mcp start",
     "dev:docs": "pnpm --filter @spelling-creator/docs dev",
     "dev:stub": "pnpm --filter @spelling-creator/stub-api start",
@@ -15,9 +15,9 @@
     "mcp:login": "pnpm --filter @spelling-creator/mcp login",
     "cli": "node apps/cli/src/cli.ts",
     "build": "turbo run build build:ssr --filter=@spelling-creator/web",
-    "build:docs": "turbo run copy-to-web --filter=@spelling-creator/docs",
+    "build:docs": "turbo run build build:ssr copy-to-web --filter=@spelling-creator/web --filter=@spelling-creator/docs",
     "preview": "pnpm --filter @spelling-creator/web preview",
-    "deploy": "turbo run deploy --filter=@spelling-creator/api",
+    "deploy": "pnpm build:docs --force && pnpm --filter @spelling-creator/api deploy",
     "test": "turbo run test",
     "lint": "oxfmt --check . && oxlint",
     "fmt": "oxfmt ."

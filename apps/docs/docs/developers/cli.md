@@ -189,9 +189,12 @@ into one ESM file, `dist/cli.js`, that the package's `bin` points at.
 `@spelling-creator/core` is a workspace package that isn't published to npm,
 so the core modules the CLI uses are bundled in; they import nothing from npm
 themselves, so the bundle adds no dependencies. The CLI's own dependencies
-(yargs, mammoth) and Node's builtins stay external. `pnpm test` builds first
-and spawns the bundle, so what is tested is what is published, and `prepack`
-builds again whenever the package is packed.
+(yargs, mammoth) and Node's builtins stay external. The tests spawn the bundle,
+so what is tested is what is published. `turbo.json` makes the CLI's `test`
+task depend on its `build`, so the root `pnpm test` (or
+`pnpm exec turbo run test --filter=@spelling-creator/cli`) builds first; a
+plain `pnpm test` inside `apps/cli` tests whatever `dist` already holds.
+`prepack` builds again whenever the package is packed.
 
 Rolldown rather than Vite or tsdown because the job is small and plain: Vite
 brings a dev server and an app's conventions, and tsdown adds declaration

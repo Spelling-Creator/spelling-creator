@@ -98,7 +98,7 @@ jobs:
       # matters because Vite empties apps/web/dist each time. There is no cache
       # to restore here (see the note in ci.yml), so everything really builds.
       - name: Build web app and docs
-        run: pnpm exec turbo run build:ssr copy-to-web
+        run: pnpm build:docs
 
       # dist is the static assets bundle (docs included); dist-ssr is the server
       # renderer that apps/api/src/routes/ssr.js imports, so the Worker can't be

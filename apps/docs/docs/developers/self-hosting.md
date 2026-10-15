@@ -10,6 +10,7 @@ against Postgres and any S3-compatible object store, which is what this page is
 about.
 
 ```bash
+pnpm build:docs     # build the SPA, its server-rendering bundle and the docs
 node apps/api/src/node/server.js
 # or: pnpm --filter @spelling-creator/api start:node
 ```
