@@ -16,6 +16,9 @@
 // the app, not an instance of it, and the preview a scraper caches has no
 // theme toggle. Light is the one that reads on every platform's chrome.
 
+import { LOGO_PNG } from './logo.js';
+import { placeholderPng } from './placeholder.js';
+
 const SITE_NAME = 'Spelling Lesson Maker';
 const HUB_TITLE = 'Lesson hub';
 const HUB_DESCRIPTION = 'Browse and copy community-made spelling lessons, then print or export them.';
@@ -30,6 +33,9 @@ const BORDER = '#d5daed';
 
 const SERIF = 'Fraunces';
 const SANS = 'Public Sans';
+
+/** The key the lesson picture's placeholder carries (see ./placeholder.js and ./render.js). */
+export const PICTURE_KEY = 'picture';
 
 /** The card's size: the standard Open Graph and Twitter large-image shape. */
 export const CARD_WIDTH = 1200;
@@ -69,23 +75,22 @@ function frame(...children) {
 	);
 }
 
-// The app icon. It is the PNG the web app ships as apps/web/public/icons/
-// icon-192.png (copied to ./logo.png and handed over by the runtime seam)
-// rather than the SVG one, because the SVG draws its letter with strokes and
-// the rasterizer only fills; see ./raster.js.
-function logoImage(logo, size) {
-	return h('img', { src: logo, width: size, height: size, style: { width: size, height: size } });
+// The app icon: the PNG one (see ./logo.js) rather than the SVG, because the
+// SVG draws its letter with strokes and the rasterizer only fills; see
+// ./raster.js.
+function logoImage(size) {
+	return h('img', { src: LOGO_PNG, width: size, height: size, style: { width: size, height: size } });
 }
 
 /** The logo and site name on the left, the host on the right. */
-function brandRow(host, logo) {
+function brandRow(host) {
 	return h(
 		'div',
 		{ style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 44 } },
 		h(
 			'div',
 			{ style: { display: 'flex', alignItems: 'center' } },
-			logoImage(logo, 44),
+			logoImage(44),
 			text(SITE_NAME, { marginLeft: 16, fontSize: 26, fontWeight: 600 }),
 		),
 		text(host, { fontSize: 24, color: MUTED }),
@@ -153,11 +158,12 @@ function plural(count, noun) {
  * @param {string} [lesson.author]
  * @param {number} [lesson.sectionCount]
  * @param {string} [lesson.createdAt]
- * @param {ArrayBuffer | null} [lesson.picture] PNG bytes (see ./picture.js).
+ * @param {import('./picture.js').Picture | null} [lesson.picture] The decoded
+ *   picture. The tree carries a placeholder for it (see ./placeholder.js); the
+ *   same picture goes to `renderCard`, which draws the pixels in its place.
  * @param {string} lesson.host The site's host name, for the brand row.
- * @param {ArrayBuffer} lesson.logo The app icon as PNG bytes (`logoPng()` from the runtime seam).
  */
-export function lessonCard({ title, author, sectionCount, createdAt, picture, host, logo }) {
+export function lessonCard({ title, author, sectionCount, createdAt, picture, host }) {
 	const name = (title || '').trim() || 'Untitled Lesson';
 	const by = (author || '').trim();
 	const column = h(
@@ -179,7 +185,7 @@ export function lessonCard({ title, author, sectionCount, createdAt, picture, ho
 				'div',
 				{ style: { display: 'flex', marginLeft: 48, padding: edge, borderRadius: 24 + edge, backgroundColor: BORDER } },
 				h('img', {
-					src: picture,
+					src: placeholderPng(picture.width, picture.height, PICTURE_KEY),
 					width: inner,
 					height: inner,
 					style: { width: inner, height: inner, borderRadius: 24, objectFit: 'cover' },
@@ -187,7 +193,7 @@ export function lessonCard({ title, author, sectionCount, createdAt, picture, ho
 			),
 		);
 	}
-	return frame(brandRow(host, logo), h('div', { style: { display: 'flex', alignItems: 'center', flex: 1, marginTop: 36 } }, ...children));
+	return frame(brandRow(host), h('div', { style: { display: 'flex', alignItems: 'center', flex: 1, marginTop: 36 } }, ...children));
 }
 
 // Up to two initials, from the first letters of the first two words.
@@ -207,9 +213,8 @@ function initials(name) {
  * @param {number} [profile.lessonCount]
  * @param {number} [profile.followerCount]
  * @param {string} profile.host
- * @param {ArrayBuffer} profile.logo
  */
-export function profileCard({ displayName, bio, lessonCount, followerCount, host, logo }) {
+export function profileCard({ displayName, bio, lessonCount, followerCount, host }) {
 	const name = (displayName || '').trim() || 'Anonymous';
 	const line = (bio || '').replace(/\s+/g, ' ').trim() || `Lessons by ${name} on ${SITE_NAME}.`;
 	const avatar = h(
@@ -239,19 +244,16 @@ export function profileCard({ displayName, bio, lessonCount, followerCount, host
 		metaLine([line], { lineClamp: 2 }),
 		metaLine([plural(lessonCount, 'lesson'), plural(followerCount, 'follower')], { marginTop: 12, fontWeight: 600 }),
 	);
-	return frame(
-		brandRow(host, logo),
-		h('div', { style: { display: 'flex', alignItems: 'center', flex: 1, marginTop: 36 } }, avatar, column),
-	);
+	return frame(brandRow(host), h('div', { style: { display: 'flex', alignItems: 'center', flex: 1, marginTop: 36 } }, avatar, column));
 }
 
 /**
  * The hub listing: a title and the page's description.
- * @param {{host: string, logo: ArrayBuffer}} opts
+ * @param {{host: string}} opts
  */
-export function hubCard({ host, logo }) {
+export function hubCard({ host }) {
 	return frame(
-		brandRow(host, logo),
+		brandRow(host),
 		h(
 			'div',
 			{ style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1, marginTop: 36 } },
@@ -265,14 +267,14 @@ export function hubCard({ host, logo }) {
  * The home page, and any path that is not a page with a card of its own: the
  * site itself. The brand row would repeat the title here, so the logo moves
  * beside it instead.
- * @param {{host: string, logo: ArrayBuffer}} opts
+ * @param {{host: string}} opts
  */
-export function homeCard({ host, logo }) {
+export function homeCard({ host }) {
 	return frame(
 		h(
 			'div',
 			{ style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 } },
-			logoImage(logo, 96),
+			logoImage(96),
 			heading(SITE_NAME, 72),
 			metaLine([HOME_DESCRIPTION], { fontSize: 32, lineClamp: 3 }),
 		),

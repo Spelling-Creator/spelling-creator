@@ -1,14 +1,13 @@
-// A lesson's picture, in the form the card draws: a PNG no larger than the
-// slot it fills.
+// A lesson's picture, in the form the card draws: decoded RGBA, no larger
+// than twice the slot it fills.
 //
 // Lesson images are stored as WEBP (see ../imageConvert.js), with PNG and JPEG
 // passing through from before that conversion existed. Whatever the format,
 // the picture is decoded here with the same @jsquash codec family the upload
-// path uses, shrunk to twice the size it is drawn at, and encoded as PNG. One
-// format on the way out keeps the rasterizer (./raster.js) to one decoder,
-// and shrinking first keeps the SVG Satori embeds the bytes into small. A GIF
-// or an SVG is left out: there is no decoder for the one and no reason to
-// risk the other.
+// path uses and shrunk to twice the size it is drawn at. The decoded pixels go
+// straight to the rasterizer; Satori gets a placeholder of the same size (see
+// ./placeholder.js) rather than a re-encoded PNG. A GIF or an SVG is left out:
+// there is no decoder for the one and no reason to risk the other.
 //
 // The limits are about memory, not taste. A Worker has 128 MB, a decoded image
 // is four bytes per pixel, and an 8 MB upload can hold a great many pixels.
@@ -18,7 +17,14 @@
 // Nothing here throws to its caller: a picture that cannot be loaded means a
 // card without a picture, never a link without a preview.
 
-import { jpegDecoder, pngDecoder, pngEncoder, webpDecoder } from './codecs.js';
+import { jpegDecoder, pngDecoder, webpDecoder } from './codecs.js';
+
+/**
+ * @typedef {object} Picture
+ * @property {number} width
+ * @property {number} height
+ * @property {Uint8ClampedArray} data Straight-alpha RGBA.
+ */
 
 /** Longest side of the picture handed to the card, in pixels. Twice the slot it is drawn in. */
 export const PICTURE_SIDE = 880;
@@ -62,7 +68,8 @@ export function webpDimensions(bytes) {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	const chunk = ascii(bytes, 12, 4);
 	if (chunk === 'VP8X') {
-		// 24-bit little-endian canvas width minus one, then height minus one.
+		// 24-bit little-endian canvas width minus one at bytes 24 to 26, then
+		// height minus one at bytes 27 to 29.
 		const width = (view.getUint16(24, true) | (bytes[26] << 16)) + 1;
 		const height = (view.getUint16(27, true) | (bytes[29] << 16)) + 1;
 		return { width, height };
@@ -102,7 +109,9 @@ export function jpegDimensions(bytes) {
 	if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	let at = 2;
-	while (at + 9 < bytes.length) {
+	// A frame header is nine bytes from its marker: marker, length, precision,
+	// height, width. The loop runs while all nine are there.
+	while (at + 9 <= bytes.length) {
 		if (bytes[at] !== 0xff) return null;
 		const marker = bytes[at + 1];
 		if (marker === 0xff) {
@@ -119,11 +128,15 @@ export function jpegDimensions(bytes) {
 
 /**
  * Shrink RGBA pixels so the longest side is at most `maxSide`, averaging each
- * block of source pixels into one. Returns the input untouched when it is
- * already small enough.
+ * block of source pixels into one. The average is alpha-weighted: a
+ * transparent pixel contributes its transparency but not its color, so the
+ * (usually black) color stored under a transparent edge does not darken the
+ * opaque pixels next to it. Returns the input untouched when it is already
+ * small enough.
  *
- * @param {{width: number, height: number, data: Uint8ClampedArray | Uint8Array}} image
+ * @param {Picture} image
  * @param {number} maxSide
+ * @returns {Picture}
  */
 export function downscale(image, maxSide) {
 	const { width, height, data } = image;
@@ -146,18 +159,21 @@ export function downscale(image, maxSide) {
 			for (let yy = y0; yy < y1; yy += 1) {
 				let i = (yy * width + x0) * 4;
 				for (let xx = x0; xx < x1; xx += 1) {
-					r += data[i];
-					g += data[i + 1];
-					b += data[i + 2];
-					a += data[i + 3];
+					const alpha = data[i + 3];
+					r += data[i] * alpha;
+					g += data[i + 1] * alpha;
+					b += data[i + 2] * alpha;
+					a += alpha;
 					i += 4;
 					n += 1;
 				}
 			}
 			const o = (y * w + x) * 4;
-			out[o] = r / n;
-			out[o + 1] = g / n;
-			out[o + 2] = b / n;
+			if (a > 0) {
+				out[o] = r / a;
+				out[o + 1] = g / a;
+				out[o + 2] = b / a;
+			}
 			out[o + 3] = a / n;
 		}
 	}
@@ -176,33 +192,27 @@ function sniff(bytes) {
 }
 
 /**
- * Turn image bytes (WEBP, PNG or JPEG) into a PNG no larger than PICTURE_SIDE
- * on its longest side.
+ * Decode image bytes (WEBP, PNG or JPEG) and shrink them to at most
+ * PICTURE_SIDE on the longest side.
  * @param {Uint8Array} bytes
- * @returns {Promise<ArrayBuffer | null>} Null for a format with no decoder, or an image too large to decode safely.
+ * @returns {Promise<Picture | null>} Null for a format with no decoder, or an image too large to decode safely.
  */
-export async function toCardPng(bytes) {
+export async function toCardPicture(bytes) {
 	const found = sniff(bytes);
 	if (!found) return null;
 	const { size, decoder } = found;
 	if (size.width > MAX_SIDE || size.height > MAX_SIDE || size.width * size.height > MAX_PIXELS) return null;
 	const decoded = await (await decoder())(bytes);
-	const small = downscale(decoded, PICTURE_SIDE);
-	// The encoder reads `data.buffer` whole, so the pixels must own their buffer
-	// exactly: a view into something larger would encode the wrong bytes.
-	const pixels = small.data.byteOffset === 0 && small.data.byteLength === small.data.buffer.byteLength ? small.data : small.data.slice();
-	return await (
-		await pngEncoder()
-	)({ width: small.width, height: small.height, data: pixels });
+	return downscale(decoded, PICTURE_SIDE);
 }
 
 /**
- * Fetch a lesson image by hash and return bytes the card can draw, or null.
+ * Fetch a lesson image by hash and return it decoded and shrunk, or null.
  *
  * @param {string} origin The site's origin; images are served at /images/:hash.
  * @param {string} hash
  * @param {{fetch?: typeof fetch}} [opts] The fetch to use (tests substitute one).
- * @returns {Promise<ArrayBuffer | null>}
+ * @returns {Promise<Picture | null>}
  */
 export async function loadPicture(origin, hash, { fetch: fetchFn = fetch } = {}) {
 	try {
@@ -212,7 +222,7 @@ export async function loadPicture(origin, hash, { fetch: fetchFn = fetch } = {})
 		if (declared > MAX_BYTES) return null;
 		const bytes = new Uint8Array(await res.arrayBuffer());
 		if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return null;
-		return await toCardPng(bytes);
+		return await toCardPicture(bytes);
 	} catch (err) {
 		console.warn('Could not load a lesson picture for its preview card:', hash, err?.message || err);
 		return null;

@@ -21,6 +21,8 @@ import decodeJpeg, { init as initJpegDecode } from '@jsquash/jpeg/decode.js';
 
 import { jpegDecoderWasm, pngCodecWasm, webpEncoderWasm } from '#image-codec-wasm';
 
+import { once } from './lib/once.js';
+
 // Quality for the WEBP encoder (0–100). 80 is the usual "visually lossless
 // enough" sweet spot and what most image pipelines default to.
 const WEBP_QUALITY = 80;
@@ -30,30 +32,11 @@ const WEBP_QUALITY = 80;
 // to flatten animations or rasterise vectors.
 const CONVERTIBLE = new Set(['image/png', 'image/jpeg', 'image/jpg']);
 
-// Init is per-isolate and idempotent; guard each codec so concurrent uploads
-// don't double-initialise. A failed init is retried on the next call.
-let webpReady = null;
-let pngReady = null;
-let jpegReady = null;
-
-function guardInit(promise, reset) {
-	return promise.catch((e) => {
-		reset();
-		throw e;
-	});
-}
-function ensureWebp() {
-	if (!webpReady) webpReady = guardInit(webpEncoderWasm().then(initWebpEncode), () => (webpReady = null));
-	return webpReady;
-}
-function ensurePng() {
-	if (!pngReady) pngReady = guardInit(pngCodecWasm().then(initPngDecode), () => (pngReady = null));
-	return pngReady;
-}
-function ensureJpeg() {
-	if (!jpegReady) jpegReady = guardInit(jpegDecoderWasm().then(initJpegDecode), () => (jpegReady = null));
-	return jpegReady;
-}
+// Init is per-isolate and idempotent; `once` guards each codec so concurrent
+// uploads don't double-initialize, and a failed init is retried on the next call.
+const ensureWebp = once(() => webpEncoderWasm().then(initWebpEncode));
+const ensurePng = once(() => pngCodecWasm().then(initPngDecode));
+const ensureJpeg = once(() => jpegDecoderWasm().then(initJpegDecode));
 
 async function decode(bytes, mime) {
 	if (mime === 'image/png') {

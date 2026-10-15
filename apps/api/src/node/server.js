@@ -7,8 +7,8 @@
 // PostgREST and an S3-compatible object store. What it does not serve is the
 // three things that need Cloudflare specifically: live collaboration and the
 // remote MCP endpoint (Durable Objects), and crawler prerendering (Browser
-// Rendering). See /docs/developers/self-hosting for what that costs in practice
-// — briefly, the MCP server still works over stdio, and SSR already covers the
+// Rendering). See /docs/developers/self-hosting for what that costs in practice.
+// Briefly, the MCP server still works over stdio, and SSR already covers the
 // pages a crawler cares about. Link-preview images are in the shared route
 // table (routes/og.js) and work here like anywhere else.
 //

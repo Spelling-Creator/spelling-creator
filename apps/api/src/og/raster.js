@@ -80,8 +80,19 @@ function unescapeXml(value) {
 export function parseXml(xml) {
 	const root = { name: '#document', attrs: {}, children: [] };
 	const stack = [root];
+	// Every '<' must belong to a tag this parser understood. One it could not
+	// match would otherwise be skipped silently, along with the element and
+	// whatever it contained, which is the one failure this file is built to
+	// avoid: a glyph quietly missing from a card.
+	let consumed = 0;
+	const checkGap = (upTo) => {
+		const at = xml.indexOf('<', consumed);
+		if (at !== -1 && at < upTo) throw new Error(`Malformed SVG: could not parse the tag at "${xml.slice(at, at + 40)}".`);
+	};
 	for (const match of xml.matchAll(TAG_RE)) {
 		const [whole, name, rawAttrs, selfClosing] = match;
+		checkGap(match.index);
+		consumed = match.index + whole.length;
 		if (!name) continue; // a comment, a processing instruction, CDATA
 		if (whole[1] === '/') {
 			const open = stack.pop();
@@ -96,6 +107,7 @@ export function parseXml(xml) {
 		stack[stack.length - 1].children.push(node);
 		if (!selfClosing) stack.push(node);
 	}
+	checkGap(xml.length);
 	if (stack.length !== 1) throw new Error(`Malformed SVG: <${stack[stack.length - 1].name}> is never closed.`);
 	const svg = root.children.find((child) => child.name === 'svg');
 	if (!svg) throw new Error('Not an SVG document.');
@@ -296,8 +308,9 @@ export function flattenPath(d) {
 				break;
 			}
 			case 'Z':
+				// A subpath with fewer than three points encloses nothing.
 				if (poly) {
-					polys.push(poly);
+					if (poly.length >= 6) polys.push(poly);
 					poly = null;
 				}
 				x = startX;
@@ -609,7 +622,7 @@ class Canvas {
 // ---------------------------------------------------------------------------
 
 /**
- * Average the source pixels in a box centred on (sx, sy) of the given size,
+ * Average the source pixels in a box centered on (sx, sy) of the given size,
  * or sample bilinearly when the box is smaller than a pixel. Returns
  * premultiplied RGBA in 0..1.
  */
@@ -648,9 +661,11 @@ function sample(image, sx, sy, boxW, boxH, out) {
 		out[3] = a;
 		return;
 	}
-	const x0 = Math.max(0, Math.floor(sx - boxW / 2));
+	// The box is clamped to the image on both sides, and its start to the last
+	// pixel, so it always holds at least one pixel and never reads past the end.
+	const x0 = Math.min(width - 1, Math.max(0, Math.floor(sx - boxW / 2)));
 	const x1 = Math.min(width, Math.max(x0 + 1, Math.ceil(sx + boxW / 2)));
-	const y0 = Math.max(0, Math.floor(sy - boxH / 2));
+	const y0 = Math.min(height - 1, Math.max(0, Math.floor(sy - boxH / 2)));
 	const y1 = Math.min(height, Math.max(y0 + 1, Math.ceil(sy + boxH / 2)));
 	let r = 0;
 	let g = 0;

@@ -101,9 +101,10 @@ for strokes, transforms and text elements so a change to a card that strays
 is caught there rather than as a render failure. The two places it mattered:
 the picture's border is a filled box behind the picture rather than a CSS
 border (Satori writes a border as a stroked path), and the logo is the PNG
-icon the web app ships (`src/og/logo.png`, a copy of
-`apps/web/public/icons/icon-192.png`) rather than the SVG one, whose letter is
-drawn with strokes.
+icon the web app ships rather than the SVG one, whose letter is drawn with
+strokes. The PNG is a base64 constant in `src/og/logo.js` rather than a file:
+PNG files in this repo live in Git LFS, which a plain checkout leaves as text
+pointers, and a constant is the same bytes on every host.
 
 The same rasterizer runs on both hosts. A self-hosted instance could use the
 native `@resvg/resvg-js` binding, but one renderer that the tests exercise
@@ -130,20 +131,22 @@ it off disk in `runtime.node.js`, and pass both modules to `init` in
 
 ### The runtime seam
 
-Where that module, the fonts and the logo come from is the one thing the two
-hosts do differently, so it sits behind the `#og-runtime` subpath import in
+Where that module and the fonts come from is the one thing the two hosts do
+differently, so it sits behind the `#og-runtime` subpath import in
 `apps/api/package.json`, the same arrangement as `#image-codec-wasm` (see
 [Lesson images](../lesson-images.md)):
 
-| Host    | Module                      | How it loads them                                                                                                                             |
-| ------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| workerd | `src/og/runtime.workerd.js` | Static imports. wrangler hands a `.wasm` import over compiled, and a `.woff` or `.png` as an ArrayBuffer (the Data rule in `wrangler.jsonc`). |
-| Node    | `src/og/runtime.node.js`    | Read off disk, the wasm compiled, each resolved through Node's own module resolution so the paths hold wherever pnpm put the packages.        |
+| Host    | Module                      | How it loads them                                                                                                                      |
+| ------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| workerd | `src/og/runtime.workerd.js` | Static imports. wrangler hands a `.wasm` import over compiled, and a `.woff` as an ArrayBuffer (the Data rule in `wrangler.jsonc`).    |
+| Node    | `src/og/runtime.node.js`    | Read off disk, the wasm compiled, each resolved through Node's own module resolution so the paths hold wherever pnpm put the packages. |
 
 `src/og/fonts.js` is the one list of font files; both halves read it, and the
 workerd half pairs its static imports with that list by position. The codecs
 a card uses come through `#image-codec-wasm`, wrapped once in
-`src/og/codecs.js`.
+`src/og/codecs.js`. Everything loaded this way goes through `lib/once.js`:
+the first caller starts the work, concurrent callers share the one promise,
+and a failure clears the slot so the next request retries.
 
 ## The lesson's picture
 
@@ -152,11 +155,18 @@ with PNG and JPEG passing through from before that conversion existed.
 `apps/api/src/og/picture.js` fetches the lesson's first image block from
 `/images/:hash`, decodes it with the matching `@jsquash` codec (the same family
 the upload path uses, judged by the file's header rather than the server's
-content type), shrinks it to twice the size of the slot it is drawn in, and
-encodes it as PNG. One format on the way out keeps the rasterizer to one
-decoder, and shrinking first keeps the SVG Satori embeds the bytes into small.
-A GIF or an SVG is left out: there is no decoder for the one and no reason to
-risk the other.
+content type), and shrinks it to twice the size of the slot it is drawn in.
+The shrink is alpha-weighted, so the color stored under a transparent edge
+does not darken the opaque pixels next to it. A GIF or an SVG is left out:
+there is no decoder for the one and no reason to risk the other.
+
+The decoded pixels go straight to the rasterizer. Satori needs an `<img>`
+source it can read a size from, and would base64 a real PNG into its SVG for
+the rasterizer to decode again, so the card hands it a placeholder instead
+(`src/og/placeholder.js`): a tiny PNG with the picture's width and height and
+a key in a `tEXt` chunk. When the rasterizer meets that key it draws the
+decoded picture it was given, which saves an encode, a megabyte of base64 and
+a decode per card.
 
 The limits are about memory. A Worker has 128 MB, a decoded image is four
 bytes per pixel, and an 8 MB upload can hold a great many of them. The
@@ -174,6 +184,11 @@ like the screenshots were. Rendering is cheap now; the cache is about not
 repeating the lesson fetch for every scraper that follows the same link. A
 lesson edited within the hour can show its old title in a preview until then,
 and the scrapers themselves cache for longer than that anyway.
+
+The site card standing in for a page that could not be read is the one
+response that is not cached, and it goes out with `Cache-Control: no-cache`.
+An API hiccup at the moment a link is first shared would otherwise pin the
+generic card to that lesson for an hour.
 
 ## Tests
 

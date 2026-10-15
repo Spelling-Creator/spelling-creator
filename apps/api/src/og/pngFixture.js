@@ -55,7 +55,7 @@ export async function encodePngBytes({ width, height, data }) {
 	new DataView(ihdr.buffer).setUint32(0, width);
 	new DataView(ihdr.buffer).setUint32(4, height);
 	ihdr[8] = 8; // bit depth
-	ihdr[9] = 6; // colour type: RGBA
+	ihdr[9] = 6; // color type: RGBA
 	return concat([
 		new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
 		chunk('IHDR', ihdr),

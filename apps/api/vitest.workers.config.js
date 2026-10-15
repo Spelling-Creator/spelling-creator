@@ -37,8 +37,8 @@ export default defineWorkersConfig({
 		exclude: [
 			...configDefaults.exclude,
 			'src/imageConvert.test.js',
-			// Same limitation: the link-preview cards import Satori's layout engine,
-			// resvg and the fonts out of node_modules.
+			// Same limitation: the link-preview cards import Satori's layout engine
+			// and the fonts out of node_modules.
 			'src/og/**',
 			// The Node entry point and its filesystem-backed asset server. There is
 			// nothing here for workerd to run — this host is the other one.

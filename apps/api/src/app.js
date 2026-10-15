@@ -11,7 +11,7 @@
 // collaboration and the remote MCP endpoint (both Durable Objects), and crawler
 // prerendering (Browser Rendering). The Worker entry registers those itself. A
 // self-hosted instance does without them, which is why they are absent rather
-// than stubbed — a stub would be a promise the host can't keep.
+// than stubbed: a stub would be a promise the host can't keep.
 //
 // Route order is load-bearing in two ways, and both are why registration is a
 // function rather than a module-level side effect. Deeper paths must come before

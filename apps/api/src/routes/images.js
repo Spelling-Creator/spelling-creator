@@ -24,8 +24,8 @@ export async function handleImageGet(request, env, ctx, hash) {
 	if (!IMAGE_HASH_RE.test(hash)) return new Response('Invalid image id.', { status: 400, headers: ACAO });
 
 	// Content-addressed and immutable: the bytes for a given hash never change, so
-	// cache the response. Repeat reads — every public lesson view, the prerender
-	// browser, a preview card, export byte-fetches — are then served from cache
+	// cache the response. Repeat reads (every public lesson view, the prerender
+	// browser, a preview card, export byte-fetches) are then served from cache
 	// and DON'T each cost an object-store read operation (key to staying in
 	// Cloudflare's free tier under traffic).
 	const cache = responseCache(env);

@@ -1,0 +1,89 @@
+// The app icon, for the brand row of a card: apps/web/public/icons/icon-192.png
+// as a base64 string, decoded once at import.
+//
+// A string constant rather than a file for two reasons. The rasterizer only
+// fills, and the SVG icon draws its letter with strokes, so the card needs the
+// PNG; and PNG files in this repo live in Git LFS, which a plain checkout (CI,
+// a container build without LFS) leaves as text pointers. A constant is the
+// same bytes everywhere, with no file to resolve on either host.
+//
+// Regenerate after changing the icon:
+//   base64 -i apps/web/public/icons/icon-192.png | tr -d '\n'
+
+const LOGO_BASE64 =
+	'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';
+
+function decode(base64) {
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+	return bytes.buffer;
+}
+
+/** The icon as PNG bytes, the form Satori takes for an <img> source. */
+export const LOGO_PNG = decode(LOGO_BASE64);

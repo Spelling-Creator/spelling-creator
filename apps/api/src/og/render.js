@@ -5,8 +5,8 @@
 // Satori's standalone build is used on both hosts. Its default entry carries
 // the layout engine as a base64 string and compiles it at runtime, which the
 // Workers sandbox forbids; the standalone one takes a compiled module from us.
-// Where that module, the fonts and the logo come from is the one part that
-// differs per host, and it lives behind `#og-runtime` (see package.json and
+// Where that module and the fonts come from is the one part that differs per
+// host, and it lives behind `#og-runtime` (see package.json and
 // ./runtime.*.js), the same arrangement as `#image-codec-wasm`.
 //
 // Satori is held at 0.32, the last release whose standalone build runs on
@@ -21,35 +21,14 @@ import satori, { init } from 'satori/standalone';
 
 import { fontFiles, layoutWasm } from '#og-runtime';
 
+import { once } from '../lib/once.js';
 import { CARD_HEIGHT, CARD_WIDTH } from './card.js';
 import { jpegDecoder, pngDecoder, pngEncoder } from './codecs.js';
+import { PICTURE_KEY } from './card.js';
+import { placeholderKey } from './placeholder.js';
 import { rasterize } from './raster.js';
 
-/** @type {Promise<void> | null} */
-let ready = null;
-
-// Per isolate, once. A failed init clears the slot so the next request retries
-// rather than failing forever on a transient error.
-function ensureReady() {
-	if (!ready) {
-		ready = layoutWasm()
-			.then((module) => init(module))
-			.catch((e) => {
-				ready = null;
-				throw e;
-			});
-	}
-	return ready;
-}
-
-// The images Satori embeds in its SVG are the ones the card was handed: the
-// logo and a lesson picture, both PNG (see ./picture.js). JPEG is accepted in
-// case a caller hands one straight through.
-async function decodeImage(bytes, type) {
-	if (type === 'image/png') return (await pngDecoder())(bytes);
-	if (type === 'image/jpeg' || type === 'image/jpg') return (await jpegDecoder())(bytes);
-	throw new Error(`A card cannot draw a ${type} image; give it a PNG.`);
-}
+const ensureReady = once(async () => init(await layoutWasm()));
 
 /**
  * Lay a card tree out as SVG. Exported for the tests, which check what the
@@ -64,11 +43,27 @@ export async function renderSvg(tree) {
 
 /**
  * Render a card tree (see ./card.js) to PNG bytes.
+ *
  * @param {object} tree
+ * @param {object} [opts]
+ * @param {import('./picture.js').Picture | null} [opts.picture] The decoded
+ *   lesson picture the tree's placeholder stands for (see ./placeholder.js).
  * @returns {Promise<Uint8Array>}
  */
-export async function renderCard(tree) {
+export async function renderCard(tree, { picture = null } = {}) {
 	const svg = await renderSvg(tree);
+	// The images in the SVG are the logo, a PNG, and the picture's placeholder,
+	// which stands for pixels already in hand. JPEG is accepted in case a
+	// caller hands one straight through.
+	const decodeImage = async (bytes, type) => {
+		if (placeholderKey(bytes) === PICTURE_KEY) {
+			if (!picture) throw new Error('The card has a picture placeholder but no picture was given.');
+			return picture;
+		}
+		if (type === 'image/png') return (await pngDecoder())(bytes);
+		if (type === 'image/jpeg' || type === 'image/jpg') return (await jpegDecoder())(bytes);
+		throw new Error(`A card cannot draw a ${type} image; give it a PNG.`);
+	};
 	const image = await rasterize(svg, { decodeImage });
 	return new Uint8Array(await (await pngEncoder())(image));
 }

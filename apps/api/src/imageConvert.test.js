@@ -107,7 +107,7 @@ describe('#image-codec-wasm', () => {
 	});
 
 	it('returns the same module when asked twice', async () => {
-		// Compiling is memoised — the binaries are about 850 KB together, and an
+		// Compiling is memoized: the binaries are about 850 KB together, and an
 		// upload should not pay for it more than once.
 		expect(await webpEncoderWasm()).toBe(await webpEncoderWasm());
 	});

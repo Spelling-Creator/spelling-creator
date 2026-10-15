@@ -155,9 +155,8 @@ screenshot. Probably an improvement for a lesson, but a visual change.
 > the Node host has link previews too. The one departure is resvg, whose wasm
 > build does not fit a free-plan Worker; a small rasterizer of our own draws
 > the SVG subset Satori writes instead. See
-> [Link previews](web-app/link-previews.md).
-> Satori was not attempted, so `ogImage()`, the `browser` binding and
-> `nodejs_compat` are all untouched. Both remain open follow-ups.
+> [Link previews](web-app/link-previews.md). The `browser` binding stays for
+> the prerender, and `nodejs_compat` stays because other dependencies need it.
 
 ## Options considered
 

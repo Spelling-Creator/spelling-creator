@@ -16,7 +16,7 @@
 export function coreConfig(env, url) {
 	return {
 		// This Worker *is* the API, so the origin serving the page is always the
-		// right one to fetch from — no configuration, and it follows the request
+		// right one to fetch from: no configuration, and it follows the request
 		// into local dev and any preview deployment.
 		apiUrl: url.origin,
 		supabaseUrl: env.SUPABASE_URL,
@@ -24,8 +24,8 @@ export function coreConfig(env, url) {
 		googleClientId: '',
 		turnstileSiteKey: '',
 		// The two settings a self-hosted instance changes about sign-in. Nothing
-		// rendered on the server reads them today — the login page is not one of
-		// the public read routes, and a server render is always signed out — but
+		// rendered on the server reads them today (the login page is not one of
+		// the public read routes, and a server render is always signed out), but
 		// the SPA is configured with them and this is the same core module, so
 		// leaving them out would mean the server quietly holding a different
 		// configuration from the client it hydrates into. `configureCore` merges,
