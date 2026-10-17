@@ -51,6 +51,14 @@ board opens it with no query string. The Worker verifies the host's Supabase JWT
 applies the join limits, and forwards the upgrade to the `PracticeRoom` Durable
 Object for that code with the role in an `X-Practice-Role` header. The token
 never reaches the room, and a client-supplied copy of the header is dropped.
+`practiceRoom(env, code)` is the one place a code becomes a room address, and it
+folds case again, so no path can split one session across two objects.
+
+The token is in the query because a browser can't set a header on a WebSocket,
+the same trade `/collab` makes. It is a Supabase access token, which expires
+within the hour, and it travels over TLS to Cloudflare's edge, which terminates
+the connection itself. Anyone running a proxy in front of a hub should keep
+query strings out of its access logs for `/practice` and `/collab`.
 
 Messages are JSON text frames, one object each, with a `type`. Every other field
 is optional, so either side can add fields later without breaking the other, and
@@ -134,8 +142,13 @@ carries exactly what the host last said.
   sent `removed` and closed, and the state is deleted. A board that joins the code
   afterwards is told there is no session. The lesson stays open on the board, so
   the speller can carry on alone.
-- **A board leaving** only changes the host's `boards` count. A refused board
-  is never counted, even while its socket is still closing.
+- **A board leaving** only changes the host's `boards` count.
+- **A socket on its way out is retired at once.** A refused board, the boards of
+  a host who has left, and that host are marked (`retire`) the moment the room
+  is done with them, and nothing counts or addresses a marked socket. A socket
+  stays in the room's list until its close handshake finishes, and without the
+  mark a board from an ended session could be counted for, or sent the state of,
+  a new host who took the code over in that window.
 - **The last state is in storage**, not memory, so a board that joins after the
   object has been evicted while its sockets hibernated is still caught up. It is
   a row in the object's SQLite database, written synchronously, so storing it
@@ -144,18 +157,25 @@ carries exactly what the host last said.
 
 ## Limits
 
-| Limit                      | Value                                                    | Where                                                                                         |
-| -------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Sessions started, per user | 5 per minute (token bucket)                              | `takeJoinToken` in `lib/joinLimit.js`, keyed `practice-rl:user:<uid>` by `routes/practice.js` |
-| Board joins, per address   | 10 per minute (token bucket)                             | the same, keyed `practice-rl:ip:<ip>` from the platform seam's `clientIp`                     |
-| Boards per session         | 10                                                       | `MAX_BOARDS` in `practice-room.js`                                                            |
-| Messages per connection    | 30 `text` or `state`, 5 `answer` and 5 `step` per second | `RATE` in `practice-room.js`                                                                  |
-| One frame                  | 32 KB                                                    | `MAX_MESSAGE_BYTES`                                                                           |
+| Limit                         | Value                                                    | Where                                                                                         |
+| ----------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Sessions started, per user    | 5 per minute (token bucket)                              | `takeJoinToken` in `lib/joinLimit.js`, keyed `practice-rl:user:<uid>` by `routes/practice.js` |
+| Board joins, per address      | 10 per minute (token bucket)                             | the same, keyed `practice-rl:ip:<ip>` from the platform seam's `clientIp`                     |
+| Boards per session            | 10                                                       | `MAX_BOARDS` in `practice-room.js`                                                            |
+| Messages per connection       | 30 `text` or `state`, 5 `answer` and 5 `step` per second | `RATE` in `practice-room.js`                                                                  |
+| Anything else, per connection | 10 per second, shared                                    | `RATE.other`: `join`, unknown types and frames that aren't JSON                               |
+| One frame                     | 32 KB                                                    | `MAX_MESSAGE_BYTES`                                                                           |
 
 Over-budget messages are dropped, and a connection that exceeds its budget 100
 times (`MAX_VIOLATIONS`) is closed as abusive. Boards are anonymous, which is why
 their joins are limited by address where a collaboration join is limited by user;
-the limit is what keeps guessing a code from being cheap.
+the limit is what keeps guessing a code from being cheap. A board join with no
+address is refused with `400` rather than put in a bucket shared with every other
+such join, where one client could spend everyone's. Cloudflare's edge always sets
+the address, so in practice this only turns away a request that bypassed it.
+
+A stored bucket that doesn't parse is treated as no bucket, so a corrupt row
+starts a fresh one instead of failing every join until it expires.
 
 Refusals the Worker makes before the upgrade (an invalid code, a host who isn't
 signed in, a rate limit, a missing binding) are HTTP statuses (`400`, `401`,
@@ -202,14 +222,29 @@ user, since the host files the answers. The WebSocket base comes from
 `apiWsUrl()` in `@spelling-creator/core/config`, the same helper live
 collaboration uses.
 
+## Deploying
+
+The room needs the `PRACTICE_ROOM` binding and the `v3` migration in
+`apps/api/wrangler.jsonc`, both of which ship with the code. Wrangler applies
+the migration on the next `wrangler deploy` (`pnpm deploy`), with nothing to run
+by hand. Three things follow from it being a Durable Object migration:
+
+- **Use `wrangler deploy`.** A gradual rollout made with
+  `wrangler versions upload` can't apply a Durable Object migration.
+- **Leave an applied migration alone.** Cloudflare records which tags have run,
+  so editing or removing `v3` later makes the next deploy fail. A later change to
+  the classes is a new tag.
+- **Roll forward, not back.** A rollback to a version from before the migration
+  isn't offered, so undoing this release means deploying a fix.
+
 ## Where the code lives
 
-| File                                            | What it does                                                                                        |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `apps/api/src/practice-room.js`                 | The `PracticeRoom` Durable Object: roles, the stored state, relay, validation, limits               |
-| `apps/api/src/routes/practice.js`               | `handlePractice`, `handlePracticeInfo` and `parsePracticeCode`: the gate, limits, forwarding        |
-| `apps/api/src/lib/joinLimit.js`                 | The join token bucket, shared with `/collab`                                                        |
-| `apps/web/src/lib/practiceLink.js`              | `usePracticeHost`, `usePracticeAvailable` and `newPracticeCode`                                     |
-| `apps/web/src/components/LetterboardLink.jsx`   | The tablet button and popover in interactive mode's top bar                                         |
-| `apps/web/src/components/InteractiveLesson.jsx` | Where the board's text, answers and moves are applied                                               |
-| `apps/stub-api/src/practice.js`                 | The same room on the local [stub API](../stub-api.md), so a session can be tried without Cloudflare |
+| File                                            | What it does                                                                                             |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/practice-room.js`                 | The `PracticeRoom` Durable Object: roles, the stored state, relay, validation, limits                    |
+| `apps/api/src/routes/practice.js`               | `handlePractice`, `handlePracticeInfo`, `parsePracticeCode` and `practiceRoom`: gate, limits, forwarding |
+| `apps/api/src/lib/joinLimit.js`                 | The join token bucket, shared with `/collab`                                                             |
+| `apps/web/src/lib/practiceLink.js`              | `usePracticeHost`, `usePracticeAvailable` and `newPracticeCode`                                          |
+| `apps/web/src/components/LetterboardLink.jsx`   | The tablet button and popover in interactive mode's top bar                                              |
+| `apps/web/src/components/InteractiveLesson.jsx` | Where the board's text, answers and moves are applied                                                    |
+| `apps/stub-api/src/practice.js`                 | The same room on the local [stub API](../stub-api.md), so a session can be tried without Cloudflare      |

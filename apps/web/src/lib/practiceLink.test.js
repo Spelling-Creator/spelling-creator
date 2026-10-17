@@ -38,9 +38,16 @@ class StubSocket {
     this.sent.push(data);
   }
 
+  // Like a browser, closing finishes later: the close event arrives on a later
+  // turn, after whatever the caller did next.
   close() {
+    if (this.closed) return;
     this.closed = true;
-    this.readyState = 3;
+    this.readyState = 2;
+    setTimeout(() => {
+      this.readyState = 3;
+      this.onclose?.();
+    }, 0);
   }
 
   open() {
@@ -282,6 +289,29 @@ describe("hosting a letterboard session", () => {
     expect(handle.link.status).toBe("idle");
     expect(handle.link.code).toBeNull();
     expect(handle.link.error).toBeNull();
+  });
+
+  it("keeps a session started straight after ending one", async () => {
+    handle = mount();
+    const first = await startAndHello(handle);
+
+    // End, and start again before the first socket has finished closing.
+    act(() => handle.link.stop());
+    act(() => handle.link.start());
+    const second = StubSocket.instances.at(-1);
+    expect(second).not.toBe(first);
+    act(() => second.open());
+    act(() => second.receive({ type: "hello", boards: 0 }));
+
+    // The first socket's late close and a stray last message arrive now. Neither
+    // may end the new session or reach interactive mode.
+    act(() => first.receive({ type: "text", text: "stale" }));
+    await settle();
+    expect(first.closed).toBe(true);
+    expect(second.closed).toBe(false);
+    expect(handle.link.status).toBe("live");
+    expect(handle.link.error).toBeNull();
+    expect(handle.texts).toEqual([]);
   });
 
   it("says so when the room drops the connection", async () => {

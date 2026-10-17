@@ -151,7 +151,11 @@ export function createCollab({ log = () => {} } = {}) {
     upgrade(req, socket, head, url) {
       const code = sessionCode(url.pathname, "/collab/");
       if (!code) return refuseUpgrade(socket);
-      wss.handleUpgrade(req, socket, head, (ws) => join(ws, url, code));
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        // Survivable, as in practice.js: an unheard socket error ends the process.
+        ws.on("error", (err) => log(`collab ${code}: ${err.message}`));
+        join(ws, url, code);
+      });
     },
     close: () => wss.close(),
   };

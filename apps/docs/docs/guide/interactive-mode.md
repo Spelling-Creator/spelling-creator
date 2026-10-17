@@ -72,7 +72,7 @@ same step as this screen, and whatever is spelled on it appears in the answer
 box here as it is spelled.
 
 To set it up, sign in, open the lesson in interactive mode and press the tablet
-button in the top bar (**Letterboard**), then **Start a session**. A six-letter
+button in the top bar (**Letterboard**), then **Start a session**. A six-character
 code appears. On the tablet, open the board's lessons sheet, choose **Join a
 letterboard session** and type the code (capitals don't matter). The popover
 says when a board is following.

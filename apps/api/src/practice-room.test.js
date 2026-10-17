@@ -207,6 +207,32 @@ describe('PracticeRoom', () => {
 		expect(await host.nextOf('boards')).toEqual({ type: 'boards', count: 9 });
 	});
 
+	it('stops counting or addressing the boards of a host who left', async () => {
+		const code = 'left-behind';
+		const stub = env.PRACTICE_ROOM.get(env.PRACTICE_ROOM.idFromName(code));
+		const host = await join(code, 'host');
+		await host.nextOf('hello');
+		const board = await join(code, 'board');
+		await board.nextOf('hello');
+
+		host.close();
+		await board.nextOf('removed');
+		// Marked on its way out the moment the host went, however long its own
+		// close takes, so a new host taking the code over meanwhile never has it.
+		expect(await runInDurableObject(stub, (room) => room.boards().length)).toBe(0);
+		const next = await join(code, 'host');
+		expect(await next.nextOf('hello')).toEqual({ type: 'hello', boards: 0 });
+	});
+
+	it('budgets messages of no known type, and closes a board that floods them', async () => {
+		const host = await join('flood', 'host');
+		await host.nextOf('hello');
+		const board = await join('flood', 'board');
+		await board.nextOf('hello');
+		for (let i = 0; i < 150; i++) board.send(i % 2 ? 'not json' : { type: 'made-up' });
+		expect((await board.closedWith()).code).toBe(1008);
+	});
+
 	it('starts a new session in a used object clean', async () => {
 		const first = await join('reused', 'host');
 		await first.nextOf('hello');

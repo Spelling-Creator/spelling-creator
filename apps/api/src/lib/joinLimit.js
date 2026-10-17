@@ -27,8 +27,7 @@ const DEFAULT_WINDOW_SECONDS = 60;
  */
 export async function takeJoinToken(kv, key, { message, cors, limit = DEFAULT_LIMIT, windowSeconds = DEFAULT_WINDOW_SECONDS }) {
 	const now = Math.floor(Date.now() / 1000);
-	const raw = await kv.get(key);
-	let entry = raw ? JSON.parse(raw) : { tokens: limit, last: now };
+	const entry = readBucket(await kv.get(key)) || { tokens: limit, last: now };
 	entry.tokens = Math.min(limit, entry.tokens + ((now - entry.last) * limit) / windowSeconds);
 	entry.last = now;
 	if (entry.tokens < 1) {
@@ -41,4 +40,19 @@ export async function takeJoinToken(kv, key, { message, cors, limit = DEFAULT_LI
 	entry.tokens -= 1;
 	await kv.put(key, JSON.stringify(entry), { expirationTtl: windowSeconds * 2 });
 	return null;
+}
+
+// A stored bucket, or null for none. A row that isn't one (corrupt, or written
+// by something else under the same key) counts as none and starts a fresh,
+// full bucket: failing every join with a 500 until the row expired would be
+// worse than briefly forgetting how many joins came before.
+function readBucket(raw) {
+	if (!raw) return null;
+	let entry;
+	try {
+		entry = JSON.parse(raw);
+	} catch {
+		return null;
+	}
+	return entry && Number.isFinite(entry.tokens) && Number.isFinite(entry.last) ? entry : null;
 }

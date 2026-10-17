@@ -153,11 +153,14 @@ export function usePracticeHost({
   const [boards, setBoards] = useState(0);
   const [error, setError] = useState(null);
 
+  // The current session's socket. Every handler checks it still holds its own
+  // socket before acting: closing is asynchronous, so a socket we ended (End
+  // session, then Start again at once) still fires its close and maybe a last
+  // message after a new one has taken its place, and those must not end or feed
+  // the new session. The same check is what keeps a teardown we caused from
+  // being reported as a disconnection.
   const wsRef = useRef(null);
   const pingRef = useRef(null);
-  // True while we're tearing down on purpose, so the close handler doesn't
-  // report a disconnection we caused.
-  const closingRef = useRef(false);
   // Whether the room has said hello: a close before that is a refused join.
   const helloRef = useRef(false);
   // The latest callbacks, for the long-lived message handler.
@@ -178,7 +181,6 @@ export function usePracticeHost({
   };
 
   function cleanup() {
-    closingRef.current = true;
     if (pingRef.current) {
       clearInterval(pingRef.current);
       pingRef.current = null;
@@ -243,7 +245,6 @@ export function usePracticeHost({
     setStatus("connecting");
     setCode(next);
     setBoards(0);
-    closingRef.current = false;
     helloRef.current = false;
 
     const params = new URLSearchParams({ create: "1", token: accessToken });
@@ -258,30 +259,35 @@ export function usePracticeHost({
     }
     wsRef.current = ws;
 
+    // Whether this handler's socket is still the session's (see wsRef).
+    const current = () => wsRef.current === ws;
+
     ws.onopen = () => {
+      if (!current()) return;
       if (pingRef.current) clearInterval(pingRef.current);
       pingRef.current = setInterval(() => {
-        const sock = wsRef.current;
-        if (sock && sock.readyState === WebSocket.OPEN) {
-          try {
-            sock.send("ping");
-          } catch {
-            /* the close handler cleans up */
-          }
+        if (!current() || ws.readyState !== WebSocket.OPEN) return;
+        try {
+          ws.send("ping");
+        } catch {
+          /* the close handler cleans up */
         }
       }, PING_MS);
     };
-    ws.onmessage = (ev) => handleMessage(ev.data);
+    ws.onmessage = (ev) => {
+      if (current()) handleMessage(ev.data);
+    };
     ws.onclose = () => {
-      if (closingRef.current) return;
-      wsRef.current = null;
+      // Ours to report only if nothing replaced or ended it first.
+      if (!current()) return;
       // The Worker refuses an upgrade before the socket opens (an expired
       // sign-in, too many sessions started, a missing binding), which surfaces
       // here as a close without a hello. A browser is never told the status, so
       // the message names no single cause: "refused" says only that the hub
-      // said no.
-      setError(helloRef.current ? "disconnected" : "refused");
+      // said no. Read before cleanup, which forgets the hello.
+      const wasLive = helloRef.current;
       cleanup();
+      setError(wasLive ? "disconnected" : "refused");
       setStatus("idle");
       setCode(null);
       setBoards(0);

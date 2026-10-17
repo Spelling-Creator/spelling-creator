@@ -278,6 +278,23 @@ describe("letterboard sessions", () => {
     expect(await json("GET", "/practice")).toEqual({ available: true });
   });
 
+  it("survives a bad frame from a board", async () => {
+    const host = await connect(
+      `/practice/BADFRM?create=1&token=${tokenFor("maya")}`,
+    );
+    await host.next("hello");
+    const board = await connect("/practice/BADFRM");
+    await board.next("hello");
+    // A text frame that isn't UTF-8 is a protocol error the server has to
+    // handle on that socket, not throw.
+    const closed = new Promise((resolve) => board.on("close", resolve));
+    board.send(Buffer.from([0xff, 0xfe]), { binary: false });
+    await closed;
+    expect(await host.next("boards")).toMatchObject({ type: "boards" });
+    expect((await call("GET", "/practice")).status).toBe(200);
+    host.close();
+  });
+
   it("refuses a malformed code without falling over", async () => {
     // A bad escape used to throw inside the upgrade listener and end the process.
     for (const path of ["/practice/%ZZ", "/collab/%ZZ"]) {

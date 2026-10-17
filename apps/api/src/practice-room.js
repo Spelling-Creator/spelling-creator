@@ -41,8 +41,10 @@ const MAX_ID_LENGTH = 100;
 const MAX_STEP = 100_000;
 // Per-connection message budgets, in messages per second (token bucket). `text`
 // is the board's sentence, sent on every letter; `state` is the host's answer box,
-// sent on every keystroke. The two moves are human taps.
-const RATE = { text: 30, state: 30, answer: 5, step: 5 };
+// sent on every keystroke. The two moves are human taps. Everything else (a
+// board's one `join`, a type added later, a frame that isn't JSON at all) shares
+// the `other` budget: dropped either way, but never free to send without limit.
+const RATE = { text: 30, state: 30, answer: 5, step: 5, other: 10 };
 // A connection that keeps exceeding its budget this often is closed as abusive.
 const MAX_VIOLATIONS = 100;
 
@@ -103,22 +105,35 @@ export class PracticeRoom extends DurableObject {
 		return ws.deserializeAttachment() || null;
 	}
 
+	// A socket on its way out: refused, left behind by a host who has gone, or the
+	// departed host itself. It stays in getWebSockets() until its close handshake
+	// finishes, so it is marked, and everything that counts or addresses
+	// participants skips it. Otherwise a board from an ended session would be
+	// counted for, and sent the state of, a new host who took the code over in
+	// that window, and a refused board would count against MAX_BOARDS.
+	retire(ws, s = this.state(ws)) {
+		if (!s || s.done) return;
+		try {
+			ws.serializeAttachment({ ...s, done: true });
+		} catch {
+			/* already fully closed, so already out of getWebSockets() */
+		}
+	}
+
 	hostSocket() {
 		for (const ws of this.ctx.getWebSockets()) {
 			const s = this.state(ws);
-			if (s && s.host) return ws;
+			if (s && s.host && !s.done) return ws;
 		}
 		return null;
 	}
 
-	// The boards in the session. A refused socket stays in getWebSockets() until
-	// its close handshake finishes, so it is left out here: otherwise it would be
-	// counted for the host and against MAX_BOARDS while it is on its way out.
+	// The boards in the session, leaving out any on their way out (see retire).
 	boards() {
 		const out = [];
 		for (const ws of this.ctx.getWebSockets()) {
 			const s = this.state(ws);
-			if (s && !s.host && !s.refused) out.push(ws);
+			if (s && !s.host && !s.done) out.push(ws);
 		}
 		return out;
 	}
@@ -158,19 +173,20 @@ export class PracticeRoom extends DurableObject {
 	}
 
 	// ----- rate limiting ---------------------------------------------------------
+	// `type` is the message's own type, or null for a frame that didn't parse.
 	rateOk(id, type) {
-		const perSec = RATE[type];
-		if (!perSec) return true;
+		const bucket = Object.hasOwn(RATE, type) ? type : 'other';
+		const perSec = RATE[bucket];
 		let b = this.buckets.get(id);
 		if (!b) {
 			b = {};
 			this.buckets.set(id, b);
 		}
 		const now = Date.now();
-		let s = b[type];
+		let s = b[bucket];
 		if (!s) {
 			s = { tokens: perSec, last: now };
-			b[type] = s;
+			b[bucket] = s;
 		}
 		s.tokens = Math.min(perSec, s.tokens + ((now - s.last) / 1000) * perSec);
 		s.last = now;
@@ -212,7 +228,7 @@ export class PracticeRoom extends DurableObject {
 			// failed connection. The contract names `error` for exactly this.
 			const refusal = !existingHost ? NO_SESSION : this.boards().length >= MAX_BOARDS ? FULL : null;
 			if (refusal) {
-				server.serializeAttachment({ id: -1, host: false, refused: true });
+				server.serializeAttachment({ id: -1, host: false, done: true });
 				this.send(server, { type: 'error', message: refusal });
 				this.close(server, REFUSED_CLOSE, refusal);
 				return new Response(null, { status: 101, webSocket: client });
@@ -239,22 +255,26 @@ export class PracticeRoom extends DurableObject {
 
 	// ----- messages --------------------------------------------------------------
 	async webSocketMessage(ws, message) {
-		if (typeof message !== 'string' || message.length > MAX_MESSAGE_BYTES) return;
 		const s = this.state(ws);
-		if (!s || s.refused) return;
+		if (!s || s.done) return;
 
-		let msg;
-		try {
-			msg = JSON.parse(message);
-		} catch {
-			return;
+		// Parsed before the budget is checked, since the budget is per type, but
+		// counted against `other` when it doesn't parse: junk is not free either.
+		let msg = null;
+		if (typeof message === 'string' && message.length <= MAX_MESSAGE_BYTES) {
+			try {
+				msg = JSON.parse(message);
+			} catch {
+				msg = null;
+			}
 		}
-		if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
+		const valid = msg && typeof msg === 'object' && typeof msg.type === 'string';
 
-		if (!this.rateOk(s.id, msg.type)) {
+		if (!this.rateOk(s.id, valid ? msg.type : null)) {
 			if (this.abusive(s.id)) this.close(ws, REFUSED_CLOSE, 'Rate limit exceeded.');
 			return;
 		}
+		if (!valid) return;
 
 		if (s.host) this.fromHost(msg);
 		else this.fromBoard(msg);
@@ -309,13 +329,15 @@ export class PracticeRoom extends DurableObject {
 	// is dropped so a later session in this object starts clean.
 	async onGone(ws) {
 		const s = this.state(ws);
-		if (!s || s.refused) return;
+		if (!s || s.done) return;
+		this.retire(ws, s);
 		this.buckets.delete(s.id);
 		this.violations.delete(s.id);
 		if (s.host) {
 			const bye = { type: 'removed', message: HOST_LEFT };
 			for (const board of this.boards()) {
 				this.send(board, bye);
+				this.retire(board);
 				this.close(board, 1000, 'host left');
 			}
 			this.clearState();

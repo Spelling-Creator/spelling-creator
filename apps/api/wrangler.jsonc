@@ -94,6 +94,10 @@
 			{ "name": "MCP_OBJECT", "class_name": "HubMcp" },
 		],
 	},
+	// Applied by `wrangler deploy` (never by `wrangler versions upload`, which
+	// can't run them). Cloudflare records each tag it has applied, so an entry is
+	// never edited or removed once deployed: a change to the classes is a new tag
+	// at the end.
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["CollabRoom"] },
 		{ "tag": "v2", "new_sqlite_classes": ["HubMcp"] },

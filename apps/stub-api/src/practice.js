@@ -98,7 +98,14 @@ export function createPractice({ log = () => {} } = {}) {
       // lower case reaches the same room.
       const code = sessionCode(url.pathname, "/practice/")?.toUpperCase();
       if (!code) return refuseUpgrade(socket);
-      wss.handleUpgrade(req, socket, head, (ws) => join(ws, url, code));
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        // A bad frame (a protocol error, an oversized message) is emitted as an
+        // error on this socket, and an error nobody listens for ends the whole
+        // process. ws closes the socket itself afterwards, so its close handler
+        // does the cleanup; this only has to make the error survivable.
+        ws.on("error", (err) => log(`practice ${code}: ${err.message}`));
+        join(ws, url, code);
+      });
     },
     close: () => wss.close(),
   };

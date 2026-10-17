@@ -104,7 +104,17 @@ export async function handlePractice(request, env, url, cors) {
 		});
 		if (limited) return limited;
 	} else {
-		const ip = clientIp(env, request) || 'unknown';
+		// An anonymous join is only limited by where it comes from, so one with no
+		// address is refused rather than put in a shared bucket, where one client
+		// could spend everyone else's joins. On Cloudflare the edge always sets
+		// the address, so this only turns away a request that skipped it.
+		const ip = clientIp(env, request);
+		if (!ip) {
+			return new Response("Can't tell where this request came from, so it can't join.", {
+				status: 400,
+				headers: cors,
+			});
+		}
 		const limited = await takeJoinToken(kv, `practice-rl:ip:${ip}`, {
 			message: 'Too many attempts to join a letterboard session. Please wait a moment.',
 			cors,
@@ -122,6 +132,15 @@ export async function handlePractice(request, env, url, cors) {
 	forward.pathname = `/practice/${code}`;
 	forward.search = '';
 
-	const stub = env.PRACTICE_ROOM.get(env.PRACTICE_ROOM.idFromName(code));
-	return stub.fetch(new Request(forward.toString(), { method: 'GET', headers }));
+	return practiceRoom(env, code).fetch(new Request(forward.toString(), { method: 'GET', headers }));
+}
+
+/**
+ * The room for a code: the one place a code becomes a Durable Object address.
+ * Case is folded here as well as in parsePracticeCode, so no later path into
+ * the room can split one session across two objects by spelling its code
+ * differently.
+ */
+export function practiceRoom(env, code) {
+	return env.PRACTICE_ROOM.get(env.PRACTICE_ROOM.idFromName(code.toUpperCase()));
 }
