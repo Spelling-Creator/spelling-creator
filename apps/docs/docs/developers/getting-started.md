@@ -8,7 +8,8 @@ title: Getting started
 
 - **Node.js**: `apps/web` and `apps/docs` declare `^20.19.0 || >=22.12.0`
   (Vite 8 and VitePress need it). CI and the deploy workflow run Node 26, and the
-  Docker image uses Node 24. Node 20 is past end of life, so use 22 or newer.
+  Docker image uses Node 24. For development use 24 or newer, because
+  [portless](#local-urls), which serves the dev servers, needs it.
 - **pnpm**: the root `package.json` pins `"packageManager": "pnpm@12.4.1"`.
   `corepack enable` picks that version up for you.
 - **Git LFS**, before you clone (see [below](#git-lfs)).
@@ -25,7 +26,7 @@ pnpm dev:docs           # run this documentation site (VitePress)
 pnpm mcp:login          # sign the MCP server in and store a refresh token
 
 pnpm dev:stub           # run the stub API instead of a real backend
-pnpm dev:web:stub       # run the frontend against it, on port 5180
+pnpm dev:web:stub       # run the frontend against it
 
 pnpm build              # build the frontend: apps/web/dist and apps/web/dist-ssr
 pnpm build:docs         # build the whole site: the frontend, then the docs into apps/web/dist/docs
@@ -39,6 +40,43 @@ pnpm lint               # check formatting, then lint (oxfmt --check + oxlint)
 
 `deploy` needs `pnpm run`: a bare `pnpm deploy` is pnpm's own built-in command
 for copying a workspace package to a directory, not this script.
+
+### Local URLs
+
+The dev and preview servers run through
+[portless](https://github.com/vercel-labs/portless), so each one has a fixed
+`https://*.localhost` name instead of a port number:
+
+| Command                                        | URL                                                     |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev:web`                                 | `https://spelling-creator.localhost`                    |
+| `pnpm dev:api`                                 | `https://api.spelling-creator.localhost`                |
+| `pnpm dev:docs`                                | `https://docs.spelling-creator.localhost/docs/`         |
+| `pnpm dev:stub`                                | `https://api.stub.spelling-creator.localhost`           |
+| `pnpm dev:web:stub`                            | `https://stub.spelling-creator.localhost`               |
+| `pnpm preview`                                 | `https://preview.spelling-creator.localhost`            |
+| `pnpm --filter @spelling-creator/docs preview` | `https://preview.docs.spelling-creator.localhost/docs/` |
+
+portless is a root dev dependency, so `pnpm install` brings it. The first
+server you start also starts its proxy on port 443 and creates a local
+certificate authority for the HTTPS, which asks for your password once to
+trust it and bind the port. After that, `portless list` shows what is running
+and `portless doctor` checks the setup.
+
+Each server is given a free port in the `PORT` variable. portless adds the
+matching `--port` and `--host` to Vite by itself; VitePress doesn't read
+`PORT`, so its scripts pass it on in a small `sh -c`. wrangler doesn't either,
+and it also needs telling that it is behind HTTPS, or the Worker builds
+`http://` links (the OAuth metadata among them) from the plain http requests
+the proxy sends it; `apps/api/scripts/dev.sh` handles both. In a git worktree,
+every name gets the branch as a prefix (for example
+`https://my-branch.spelling-creator.localhost`), so two checkouts can run at
+once. A server that needs another's address asks `portless get <name>`, which
+applies the same prefix. That is how the stub-mode app finds the stub API.
+
+`PORTLESS=0` in front of a command skips portless and runs the server on its
+usual port: Vite on 5173, wrangler and the stub on 8787, the docs on 5173 (4173
+for the preview).
 
 ### Turborepo
 
@@ -125,7 +163,9 @@ gitignored except the `.env.example` files and `apps/web/.env.stub`.
   one.
 - `apps/web/.env.stub`: committed, because it holds nothing but local URLs. It
   points the app at the stub API for `pnpm dev:web:stub`, including the stub's
-  stand-in Turnstile widget (`VITE_TURNSTILE_SCRIPT_URL`).
+  stand-in Turnstile widget (`VITE_TURNSTILE_SCRIPT_URL`). Its URLs are the
+  stub's `PORTLESS=0` address; under portless, `vite.config.js` swaps in the
+  stub's portless URL.
 - `apps/api/.env`: Worker secrets for `wrangler dev`, such as
   `SUPABASE_SERVICE_ROLE_KEY`, `TURNSTILE_SECRET_KEY`, `PIXABAY_API_KEY`,
   `ADMIN_MIGRATE_TOKEN` and the AI provider keys below. Plain settings

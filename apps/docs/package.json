@@ -5,11 +5,11 @@
   "license": "AGPL-3.0-only",
   "author": "playforge-coding",
   "scripts": {
-    "dev": "vitepress dev docs",
-    "start": "vitepress dev docs",
+    "dev": "portless run --name docs.spelling-creator sh -c 'vitepress dev docs --port ${PORT:-5173} --host ${HOST:-localhost}'",
+    "start": "pnpm run dev",
     "build": "vitepress build docs",
     "copy-to-web": "node -e \"const fs=require('fs');fs.rmSync('../web/dist/docs',{recursive:true,force:true});fs.cpSync('doc_build','../web/dist/docs',{recursive:true})\"",
-    "preview": "vitepress preview docs",
+    "preview": "portless run --name preview.docs.spelling-creator sh -c 'vitepress preview docs --port ${PORT:-4173}'",
     "diagrams": "node scripts/diagrams.mjs"
   },
   "devDependencies": {

@@ -157,7 +157,8 @@ describe("notifications", () => {
       as: "maya",
       body: {
         email: "daniel@example.com",
-        link: "http://localhost:5180/editor/collaborate?join=abc",
+        // The second origin /split uses, which is the app all the same.
+        link: "http://127.0.0.1:5173/editor/collaborate?join=abc",
         message: "Join me?",
       },
     });
@@ -170,6 +171,23 @@ describe("notifications", () => {
       link: "/editor/collaborate?join=abc",
       read: false,
     });
+  });
+
+  it("keeps a link to anywhere else as the full URL", async () => {
+    await call("POST", "/notifications/send-link", {
+      as: "maya",
+      body: {
+        email: "daniel@example.com",
+        link: "https://example.com/penguins",
+        message: "Read this",
+      },
+    });
+    const { notifications } = await json("GET", "/notifications", {
+      as: "daniel",
+    });
+    expect(notifications.find((n) => n.body === "Read this").link).toBe(
+      "https://example.com/penguins",
+    );
   });
 });
 

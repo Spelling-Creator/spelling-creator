@@ -12,11 +12,14 @@ From the repository root:
 
 ```bash
 pnpm install
-pnpm dev:web      # start the web app's dev server (http://localhost:5173)
+pnpm dev:web      # start the web app's dev server (https://spelling-creator.localhost)
 pnpm build        # production build: the client into apps/web/dist, the SSR bundle into apps/web/dist-ssr
-pnpm preview      # preview the production build
-pnpm dev:web:stub # run against the local stub API instead (http://127.0.0.1:5180)
+pnpm preview      # preview the production build (https://preview.spelling-creator.localhost)
+pnpm dev:web:stub # run against the local stub API instead (https://stub.spelling-creator.localhost)
 ```
+
+The servers get those names from portless; see
+[Local URLs](../getting-started.md#local-urls).
 
 Inside `apps/web` the same scripts are plain `pnpm dev`, `pnpm build` and
 `pnpm preview`, except that `pnpm build` there is the client only. The SSR
@@ -40,7 +43,7 @@ place that reads them, and hands them to `configureCore` in
 ```bash
 VITE_API_URL=https://your-worker.example.workers.dev   # apps/api Worker endpoint (AI, Pixabay, lesson hub)
 VITE_TURNSTILE_SITE_KEY=0x...                           # Cloudflare Turnstile site key
-VITE_TURNSTILE_SCRIPT_URL=http://localhost:8787/turnstile/v0/api.js  # load Turnstile from here instead of Cloudflare (stub mode only)
+VITE_TURNSTILE_SCRIPT_URL=https://api.stub.spelling-creator.localhost/turnstile/v0/api.js  # load Turnstile from here instead of Cloudflare (stub mode only)
 VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com     # OAuth client for Save to Google Docs
 VITE_SUPABASE_URL=https://xxxx.supabase.co              # Supabase project URL (sign-in)
 VITE_SUPABASE_ANON_KEY=eyJ...                           # Supabase anon (public) key
@@ -57,9 +60,9 @@ never receive mail (see `packages/core/src/username.js`).
 
 `VITE_TURNSTILE_SCRIPT_URL` is the one setting `main.jsx` doesn't read. When
 it's set, `vite.config.js` swaps it in for Cloudflare's Turnstile script in
-`index.html`. Only `apps/web/.env.stub` sets it, to load the stub API's
-stand-in widget (see [Stub API](../stub-api.md#ai-and-turnstile)); a real
-instance leaves it unset.
+`index.html`. Only stub mode sets it (`apps/web/.env.stub`, or the stub's
+portless URL under portless), to load the stub API's stand-in widget (see
+[Stub API](../stub-api.md#ai-and-turnstile)); a real instance leaves it unset.
 
 There is no `apps/web/.env.example`; the list above is the full set. The root
 `.env.example` is for the Docker Compose setup (see

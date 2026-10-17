@@ -25,7 +25,11 @@ export const DEFAULT_DATA_DIR = path.join(
  * @param {object} [opts]
  * @param {number} [opts.port]        0 picks a free port. Default 8787, the port `wrangler dev` uses.
  * @param {string} [opts.appOrigin]   Where the web app runs, for links in feeds and /split.
- *                                    Default http://localhost:5180, where `pnpm dev:web:stub` serves it.
+ *                                    Default http://localhost:5173, Vite's own port, for when
+ *                                    `pnpm dev:web:stub` runs without portless (cli.js passes the
+ *                                    portless URL otherwise).
+ * @param {string} [opts.peerOrigin]  The second origin /split loads the app from (see split.js).
+ *                                    Default appOrigin's port on 127.0.0.1.
  * @param {string} [opts.dataDir]     The hub snapshot and image cache. Default apps/stub-api/.cache.
  * @param {string} [opts.hubUrl]      Where to snapshot published lessons from. Default the live hub.
  * @param {number} [opts.now]         "Now", for the seeded dates. Default the real time.
@@ -38,7 +42,8 @@ export const DEFAULT_DATA_DIR = path.join(
  */
 export async function startStub({
   port = 8787,
-  appOrigin = "http://localhost:5180",
+  appOrigin = "http://localhost:5173",
+  peerOrigin = `http://127.0.0.1:${new URL(appOrigin).port}`,
   dataDir = DEFAULT_DATA_DIR,
   hubUrl = DEFAULT_HUB_URL,
   now = Date.now(),
@@ -64,7 +69,14 @@ export async function startStub({
     log,
   });
   const server = http.createServer(
-    createHandler(state, { appOrigin, dataDir, hubUrl, ai: aiRoutes, log }),
+    createHandler(state, {
+      appOrigin,
+      peerOrigin,
+      dataDir,
+      hubUrl,
+      ai: aiRoutes,
+      log,
+    }),
   );
   // The two WebSocket rooms, each claiming its own path prefix; anything else
   // asking to upgrade is dropped.

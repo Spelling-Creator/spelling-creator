@@ -88,7 +88,10 @@ claude mcp add --transport http spelling-creator https://spellingcreator.org/mcp
 If you didn't use the `login` helper, pass the token in the client's `env`
 block, for example `"env": { "SUPABASE_REFRESH_TOKEN": "..." }`. To work
 against a local API (`pnpm dev:api`), also set
-`SPELLING_CREATOR_API_URL=http://localhost:8787`.
+`SPELLING_CREATOR_API_URL=https://api.spelling-creator.localhost`, and
+`NODE_EXTRA_CA_CERTS` to the full path of `~/.portless/ca.pem` so Node trusts
+the local HTTPS certificate (see
+[Local URLs](../getting-started.md#local-urls)).
 
 Then ask the assistant something like: _"Make a lesson about domestic cats with
 a reading passage, a spelling list and some questions, and save it as a

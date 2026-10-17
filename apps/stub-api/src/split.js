@@ -1,13 +1,14 @@
 // GET /split: the app twice, side by side, signed in as two different people.
-// Made for showing live collaboration. The left pane loads the app from
-// localhost and the right from 127.0.0.1, which are different origins, so each
-// keeps its own storage and its own session.
+// Made for showing live collaboration. The left pane loads the app from its own
+// origin and the right from a second one, so each keeps its own storage and its
+// own session. Under portless the second is https://peer.stub.spelling-creator.localhost,
+// an alias apps/web/vite.config.js registers for the same dev server. Without
+// it, the pair is localhost and 127.0.0.1 on the same port.
 //
 //   /split?left=/editor&right=/editor&leftName=Maya%20Rivera&rightName=Daniel%20Okafor
 //
 // Each side still has to be signed in: sign in on each, or seed the sessions
-// (see sessions.js). The app's dev server must listen on 127.0.0.1 for the right
-// pane to load; `pnpm dev:web:stub` does.
+// (see sessions.js).
 
 const esc = (s) =>
   String(s)
@@ -15,11 +16,10 @@ const esc = (s) =>
     .replace(/</g, "&lt;")
     .replace(/"/g, "&quot;");
 
-export function splitPage(url, appOrigin) {
+export function splitPage(url, appOrigin, peerOrigin) {
   const param = (name, fallback) => url.searchParams.get(name) || fallback;
-  const left = param("left", "/editor");
-  const right = param("right", "/editor");
-  const port = new URL(appOrigin).port;
+  const left = new URL(appOrigin).origin + param("left", "/editor");
+  const right = new URL(peerOrigin).origin + param("right", "/editor");
   const pane = (who, color) =>
     `<div class="who"><span class="dot" style="background:${color}"></span>${esc(who)}</div>`;
   return `<!doctype html>
@@ -49,8 +49,8 @@ export function splitPage(url, appOrigin) {
 <div class="stage">
   ${pane(param("leftName", "Maya Rivera"), "#4f46e5")}
   ${pane(param("rightName", "Daniel Okafor"), "#0d9488")}
-  <iframe id="left" src="http://localhost:${port}${esc(left)}" allow="clipboard-read; clipboard-write"></iframe>
-  <iframe id="right" src="http://127.0.0.1:${port}${esc(right)}" allow="clipboard-read; clipboard-write"></iframe>
+  <iframe id="left" src="${esc(left)}" allow="clipboard-read; clipboard-write"></iframe>
+  <iframe id="right" src="${esc(right)}" allow="clipboard-read; clipboard-write"></iframe>
 </div>
 </body>
 </html>`;

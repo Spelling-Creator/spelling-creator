@@ -5,7 +5,7 @@
 //
 //   import { sessionFor, storageKey } from "@spelling-creator/stub-api/sessions";
 //   await context.addInitScript(([k, v]) => localStorage.setItem(k, v), [
-//     storageKey("http://localhost:8787"),
+//     storageKey("https://api.stub.spelling-creator.localhost"),
 //     JSON.stringify(sessionFor("daniel")),
 //   ]);
 

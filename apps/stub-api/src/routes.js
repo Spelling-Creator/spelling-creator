@@ -29,11 +29,18 @@ const stripTags = (html) => html.replace(/<[^>]+>/g, "").trim();
 
 /**
  * @param {object} state  From seed(), with `packs` and `pullPacks` from buildGit().
- * @param {{ appOrigin: string, dataDir: string, hubUrl: string, ai: object, log: Function }} opts
+ * @param {{ appOrigin: string, peerOrigin: string, dataDir: string, hubUrl: string, ai: object, log: Function }} opts
  *   `ai` is createAi() from ./ai.js.
  * @returns {(req, res) => Promise<void>}
  */
-export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
+export function createHandler(
+  state,
+  { appOrigin, peerOrigin, dataDir, hubUrl, ai, log },
+) {
+  // Both origins the app is served from (the second for /split).
+  const appOrigins = new Set(
+    [appOrigin, peerOrigin].map((o) => new URL(o).origin),
+  );
   const routes = [];
   const on = (method, pattern, fn) =>
     routes.push({ method, re: new RegExp(`^${pattern}$`), fn });
@@ -108,7 +115,11 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
 
   // ---------------------------------------------------------------- misc
   on("GET", "/split", (ctx) =>
-    ctx.send(200, splitPage(ctx.url, appOrigin), "text/html; charset=utf-8"),
+    ctx.send(
+      200,
+      splitPage(ctx.url, appOrigin, peerOrigin),
+      "text/html; charset=utf-8",
+    ),
   );
   on("GET", "/mod/whoami", (ctx) => ctx.json(200, { role: null }));
   // Whether letterboard sessions can be hosted here; they can (src/practice.js).
@@ -337,10 +348,9 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
       type: "link",
       title: `${byId[ctx.user].displayName} sent you a link`,
       body: b.message || null,
-      link:
-        url.port === new URL(appOrigin).port
-          ? url.pathname + url.search
-          : url.toString(),
+      link: appOrigins.has(url.origin)
+        ? url.pathname + url.search
+        : url.toString(),
       read: false,
       createdAt: new Date().toISOString(),
     };
