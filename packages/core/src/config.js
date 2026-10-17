@@ -58,9 +58,10 @@ export function apiUrl() {
 }
 
 /**
- * The same base as `apiUrl`, for opening a WebSocket: `https://` becomes
- * `wss://` and `http://` becomes `ws://`. One place for the mapping, so live
- * collaboration and letterboard sessions always reach the same host.
+ * The same base as `apiUrl`, for opening a WebSocket: an `https` API gets the
+ * secure `wss` scheme, and only a plain `http` API gets plain `ws`. One place
+ * for the mapping, so live collaboration and letterboard sessions always reach
+ * the same host.
  *
  * Returns "" when no API is configured, like `apiUrl`.
  *
@@ -69,6 +70,12 @@ export function apiUrl() {
 export function apiWsUrl() {
   const base = apiUrl();
   if (base.startsWith("https://")) return `wss://${base.slice(8)}`;
+  // The socket keeps the API's own scheme. A plain http API is a local one in
+  // practice (the stub at localhost:8787, `wrangler dev`), and every request
+  // to it already carries the same session token in the clear, so upgrading
+  // only the socket would protect nothing and break local development. Any
+  // https API, the hosted hub included, is answered above.
+  // nosemgrep: javascript.lang.security.detect-insecure-websocket
   if (base.startsWith("http://")) return `ws://${base.slice(7)}`;
   return base;
 }
