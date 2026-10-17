@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -7,6 +6,14 @@ import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import {
+  STUB,
+  addAlias,
+  aliasName,
+  portlessUrl,
+  removeAliasSync,
+  underPortless,
+} from "../../scripts/portless.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -179,36 +186,31 @@ function turnstileScriptOverride() {
   };
 }
 
-// The package scripts serve the app through portless (https://github.com/vercel-labs/portless),
-// which gives each dev server a named https://*.localhost URL and sets
-// PORTLESS_URL for it. `portless get` works out another server's URL the same
-// way, worktree prefix included.
-const portlessGet = (name) =>
-  execFileSync("portless", ["get", name], { encoding: "utf8" }).trim();
-
-// `pnpm dev:web:stub` under portless. Does two things:
+// `pnpm dev:web:stub` under portless (https://github.com/vercel-labs/portless),
+// which serves the app at a named https://*.localhost URL. Does two things:
 //
-// - Points the app at the stub API's portless URL (`pnpm dev:stub` serves it as
-//   api.stub.spelling-creator) instead of .env.stub's localhost:8787, which is
-//   only for running without portless. This runs in the `config` hook because
-//   that is before Vite reads the .env files, and Vite never lets a .env file
-//   override a variable already in the environment.
+// - Points the app at the stub API's portless URL instead of .env.stub's
+//   localhost:8787, which is only for running without portless. This runs in
+//   the `config` hook because that is before Vite reads the .env files, and
+//   Vite never lets a .env file override a variable already in the environment.
 // - Gives the stub API's /split page its second origin. /split shows the app
 //   twice, from two origins so each pane keeps its own session (see
 //   apps/stub-api/src/split.js). Portless names this server once, so the second
-//   is an alias to the same port, registered once Vite is listening and removed
-//   when it stops. It is named from `portless get`, so it matches what the stub
-//   asks for in a worktree too.
+//   is an alias to the same port, added once Vite is listening.
+//
+// The names and lookups are shared with the stub, in scripts/portless.mjs.
 function portlessStub(mode) {
-  if (mode !== "stub" || !process.env.PORTLESS_URL) return null;
-  const peer = "peer.stub.spelling-creator";
-  const host = new URL(portlessGet(peer)).hostname;
-  const name = host.slice(0, host.indexOf(peer) + peer.length);
+  if (mode !== "stub" || !underPortless()) return null;
+  let alias;
   return {
     name: "portless-stub",
     apply: "serve",
-    config() {
-      const api = portlessGet("api.stub.spelling-creator");
+    async config() {
+      const [api, peer] = await Promise.all([
+        portlessUrl(STUB.api),
+        aliasName(STUB.peer),
+      ]);
+      alias = peer;
       process.env.VITE_API_URL = api;
       process.env.VITE_SUPABASE_URL = api;
       process.env.VITE_TURNSTILE_SCRIPT_URL = `${api}/turnstile/v0/api.js`;
@@ -216,33 +218,40 @@ function portlessStub(mode) {
     configureServer(server) {
       const http = server.httpServer;
       if (!http) return;
-      const remove = () => {
-        try {
-          execFileSync("portless", ["alias", "--remove", name], {
-            stdio: "ignore",
-          });
-        } catch {
-          // Already gone, or the proxy has been stopped.
-        }
+      // The alias is a static route that portless never cleans up by itself,
+      // so it goes when this process does, however that happens. Signals
+      // that would end Vite without an "exit" event exit properly instead.
+      // Only a SIGKILL leaves it behind, pointing at a dead port until the
+      // next start replaces it.
+      const remove = () => removeAliasSync(alias);
+      const signals = {
+        SIGINT: () => process.exit(130),
+        SIGHUP: () => process.exit(129),
+        SIGTERM: () => process.exit(143),
       };
-      // Ctrl+C (and closing the terminal) ends Vite without closing the
-      // server, so those remove the alias themselves before exiting the way
-      // the signal would have.
-      const onSigint = () => (remove(), process.exit(130));
-      const onSighup = () => (remove(), process.exit(129));
-      http.once("listening", () => {
-        const port = String(http.address().port);
-        execFileSync("portless", ["alias", name, port, "--force"], {
-          stdio: "ignore",
-        });
-        process.once("SIGINT", onSigint);
-        process.once("SIGHUP", onSighup);
+      let closed = false;
+      http.once("listening", async () => {
+        try {
+          await addAlias(alias, http.address().port);
+        } catch (err) {
+          server.config.logger.warn(
+            `Could not add the portless alias ${alias}, so /split's right pane won't load: ${err.message}`,
+          );
+          return;
+        }
+        // Closed (by a restart) while the alias was being added.
+        if (closed) return remove();
+        process.once("exit", remove);
+        for (const [signal, fn] of Object.entries(signals))
+          process.once(signal, fn);
       });
       // A restart (after a config change) closes this server and calls
       // configureServer again for the next one.
       http.once("close", () => {
-        process.off("SIGINT", onSigint);
-        process.off("SIGHUP", onSighup);
+        closed = true;
+        process.off("exit", remove);
+        for (const [signal, fn] of Object.entries(signals))
+          process.off(signal, fn);
         remove();
       });
     },
@@ -392,6 +401,15 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
       devOptions: { enabled: false },
     }),
   ],
+  // Stub mode with PORTLESS=0. The stub builds links and /split's two origins
+  // (localhost and 127.0.0.1) from this address, so it is pinned rather than
+  // left to drift to another port, and kept off 5173 so it never collides with
+  // an ordinary dev server. Under portless, the --port, --strictPort and
+  // --host it passes take precedence over all three.
+  server:
+    mode === "stub" && !underPortless()
+      ? { host: "127.0.0.1", port: 5180, strictPort: true }
+      : undefined,
   resolve: {
     // "@/..." mirrors shadcn/ui's default alias convention. New shadcn-sourced
     // code uses it; pre-existing app code keeps its relative imports. Kept in

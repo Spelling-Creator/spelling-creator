@@ -108,6 +108,29 @@ describe("AI routes", () => {
     expect(res.status).toBe(403);
   });
 
+  // Through the portless proxy every request comes from this machine, and the
+  // proxy appends the address it saw to X-Forwarded-For.
+  const viaProxy = (forwardedFor) =>
+    fetch(`${stub.url}/stub-model/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Forwarded-For": forwardedFor,
+      },
+      body: JSON.stringify({ messages: [{ content: "Hello" }] }),
+    });
+
+  it("refuses the AI routes to the network through a proxy too", async () => {
+    // The first entry is the client's own claim; the last is the proxy's.
+    const res = await viaProxy("127.0.0.1, 192.168.1.20");
+    expect(res.status).toBe(403);
+  });
+
+  it("answers the AI routes through a proxy for this machine", async () => {
+    const res = await viaProxy("::1");
+    expect(res.status).not.toBe(403);
+  });
+
   it("serves a stand-in Turnstile script", async () => {
     const res = await fetch(`${stub.url}/turnstile/v0/api.js`);
     expect(res.headers.get("content-type")).toMatch(/javascript/);

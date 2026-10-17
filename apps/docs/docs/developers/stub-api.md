@@ -35,7 +35,13 @@ ordinary `pnpm dev:web` at `https://spelling-creator.localhost`.
 email address. Its API URLs are the stub's `PORTLESS=0` address
 (`http://localhost:8787`). Under portless, `vite.config.js` asks
 `portless get api.stub.spelling-creator` for the stub's URL and uses that
-instead, and the stub asks the same way for the app's.
+instead, and the stub asks the same way for the app's (both through
+`scripts/portless.mjs`). With `PORTLESS=0` the app is on
+`http://localhost:5180`, pinned there because the stub builds links to it.
+
+The stub only sends CORS headers to the app's own origins, the way the real API
+only answers its own hostnames, so no other page open in your browser can read
+it.
 
 ## Who's in it
 
@@ -137,7 +143,10 @@ That needs [Claude Code](https://claude.com/claude-code) installed and signed
 in. Each `claude -p` runs in a fresh temporary directory, outside the repo, with
 no tools, settings or MCP servers, and is given up on after three minutes. Since
 it runs on your own Claude account, the AI routes only answer requests from
-your own machine, even if the stub can be reached from your network. Each
+your own machine, even if the stub can be reached from your network. Behind the
+portless proxy every request arrives from the proxy on this machine, so the
+stub checks the address the proxy says it saw (the last `X-Forwarded-For`
+entry) instead. Each
 answer is saved as it arrives, so asking the same thing again replays
 it, with or without `STUB_AI`. That makes a run repeatable: the first one fills
 the saved answers, and every later one gets the same lesson ideas, text, fixes
@@ -161,10 +170,11 @@ by side: the left pane from `https://stub.spelling-creator.localhost` and the
 right from `https://peer.stub.spelling-creator.localhost`. Those are different
 origins, so each pane has its own storage and can be signed in as someone
 different. The second name is a portless alias for the same Vite server, which
-`vite.config.js` adds when the server starts and removes when it stops. With
-`PORTLESS=0` the pair is `localhost` and `127.0.0.1` on Vite's port, and the
-right pane only loads if Vite listens on `127.0.0.1`
-(`PORTLESS=0 pnpm dev:web:stub --host 127.0.0.1`). Sign in as Maya on the left and Daniel on the right, and you can try
+`vite.config.js` adds when the server starts and removes when the process
+exits, however it exits short of being killed outright (then the next start
+replaces it). With `PORTLESS=0` the pair is `http://localhost:5180` and
+`http://127.0.0.1:5180`. Sign in as Maya on the left and Daniel on the right,
+and you can try
 **Collaborate** with both sides in view. `?left=` and `?right=` set each pane's
 starting path, and `?leftName=` and `?rightName=` the labels above them.
 
@@ -202,8 +212,9 @@ too, so ask `portless get api.stub.spelling-creator` for it rather than
 writing it out.
 
 `startStub` takes `port` (default 8787), `appOrigin` (where the app runs,
-default `http://localhost:5173`, Vite's port without portless), `peerOrigin`
-(the right pane of `/split`, default `appOrigin`'s port on `127.0.0.1`),
+default `http://localhost:5180`, where it is without portless), `peerOrigin`
+(the right pane of `/split`, default the same address on `127.0.0.1`; an
+`appOrigin` without a port, such as a portless one, has to come with its own),
 `dataDir` (the snapshot, image cache and saved
 AI answers, default `apps/stub-api/.cache`), `hubUrl` (where to snapshot from,
 default the live hub at `https://spellingcreator.org`), `now` (the time the

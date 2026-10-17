@@ -19,17 +19,33 @@ export const DEFAULT_DATA_DIR = path.join(
   ".cache",
 );
 
+// /split's second origin without portless: the same dev server reached as
+// 127.0.0.1 instead of localhost. That is only the same server when the port
+// is written out; a named origin such as a portless one has no such twin, so
+// it has to come with its own peerOrigin.
+function defaultPeerOrigin(appOrigin) {
+  const url = new URL(appOrigin);
+  if (!url.port) {
+    throw new Error(
+      `startStub: appOrigin ${appOrigin} has no port, so it needs a peerOrigin too`,
+    );
+  }
+  url.hostname = "127.0.0.1";
+  return url.origin;
+}
+
 /**
  * Start the stub. Resolves once it is listening.
  *
  * @param {object} [opts]
  * @param {number} [opts.port]        0 picks a free port. Default 8787, the port `wrangler dev` uses.
  * @param {string} [opts.appOrigin]   Where the web app runs, for links in feeds and /split.
- *                                    Default http://localhost:5173, Vite's own port, for when
- *                                    `pnpm dev:web:stub` runs without portless (cli.js passes the
- *                                    portless URL otherwise).
+ *                                    Default http://localhost:5180, where `pnpm dev:web:stub`
+ *                                    serves it without portless (cli.js passes the portless URL
+ *                                    otherwise).
  * @param {string} [opts.peerOrigin]  The second origin /split loads the app from (see split.js).
- *                                    Default appOrigin's port on 127.0.0.1.
+ *                                    Default the same address on 127.0.0.1, which needs appOrigin
+ *                                    to name its port; any other appOrigin needs a peerOrigin.
  * @param {string} [opts.dataDir]     The hub snapshot and image cache. Default apps/stub-api/.cache.
  * @param {string} [opts.hubUrl]      Where to snapshot published lessons from. Default the live hub.
  * @param {number} [opts.now]         "Now", for the seeded dates. Default the real time.
@@ -42,8 +58,8 @@ export const DEFAULT_DATA_DIR = path.join(
  */
 export async function startStub({
   port = 8787,
-  appOrigin = "http://localhost:5173",
-  peerOrigin = `http://127.0.0.1:${new URL(appOrigin).port}`,
+  appOrigin = "http://localhost:5180",
+  peerOrigin = defaultPeerOrigin(appOrigin),
   dataDir = DEFAULT_DATA_DIR,
   hubUrl = DEFAULT_HUB_URL,
   now = Date.now(),

@@ -7,7 +7,11 @@
 // (see ai.js). `pnpm dev:stub` runs this through portless, which sets PORT and
 // PORTLESS_URL; without PORTLESS_URL it falls back to port 8787.
 
-import { execFileSync } from "node:child_process";
+import {
+  STUB,
+  portlessUrl,
+  underPortless,
+} from "../../../scripts/portless.mjs";
 import { startStub, DEFAULT_DATA_DIR } from "./server.js";
 import { loadHub, DEFAULT_HUB_URL } from "./snapshot.js";
 import { PEOPLE } from "./people.js";
@@ -17,21 +21,18 @@ const log = (line) =>
 const dataDir = process.env.STUB_DATA_DIR || DEFAULT_DATA_DIR;
 const hubUrl = process.env.HUB_URL || DEFAULT_HUB_URL;
 
-// Under portless, `pnpm dev:web:stub` is at a named URL too, and `portless get`
-// works it out the same way `portless run` named it, worktree prefix included.
-const portlessUrl = (name) =>
-  process.env.PORTLESS_URL
-    ? execFileSync("portless", ["get", name], { encoding: "utf8" }).trim()
-    : undefined;
-
 if (process.argv[2] === "snapshot") {
   await loadHub({ dataDir, hubUrl, refresh: true, log });
 } else {
+  // Under portless, `pnpm dev:web:stub` and its /split alias have named URLs
+  // too (see scripts/portless.mjs).
+  const [appUrl, peerUrl] = underPortless()
+    ? await Promise.all([portlessUrl(STUB.app), portlessUrl(STUB.peer)])
+    : [];
   const stub = await startStub({
     port: Number(process.env.PORT || 8787),
-    appOrigin: process.env.APP_ORIGIN || portlessUrl("stub.spelling-creator"),
-    peerOrigin:
-      process.env.PEER_ORIGIN || portlessUrl("peer.stub.spelling-creator"),
+    appOrigin: process.env.APP_ORIGIN || appUrl,
+    peerOrigin: process.env.PEER_ORIGIN || peerUrl,
     dataDir,
     hubUrl,
     ai: process.env.STUB_AI || "",

@@ -450,7 +450,7 @@ export function createHandler(
 
   // ---------------------------------------------------------------- dispatch
   return async function handle(req, res) {
-    cors(req, res);
+    cors(req, res, appOrigins);
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       return res.end();
@@ -492,7 +492,7 @@ export function createHandler(
     if (
       req.method === "POST" &&
       (url.pathname === "/" || url.pathname.startsWith("/stub-model/")) &&
-      !LOOPBACK.has(req.socket.remoteAddress)
+      !LOOPBACK.has(clientAddress(req))
     ) {
       return ctx.send(
         403,
@@ -518,12 +518,27 @@ export function createHandler(
 
 const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
-// The app runs on another origin (Vite's port), so every response carries CORS
-// headers, including PATCH (comment edits) and the git headers the history
-// client reads.
-function cors(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+// Where a request really came from. Through the portless proxy the socket is
+// always the proxy's own loopback connection, and the proxy appends the address
+// it saw to X-Forwarded-For, so the last entry is the real one (anything before
+// it was written by the client). Only a loopback socket's header is believed:
+// a request straight from the network could have written its own.
+export function clientAddress(req) {
+  const socket = req.socket.remoteAddress;
+  const forwarded = req.headers["x-forwarded-for"];
+  if (!forwarded || !LOOPBACK.has(socket)) return socket;
+  return forwarded.split(",").at(-1).trim();
+}
+
+// The app runs on another origin, so responses carry CORS headers, including
+// PATCH (comment edits) and the git headers the history client reads. Only the
+// app's own origins get them, as only the instance's own hostnames do on the
+// real API, so no other page in a browser can read the stub or call its AI
+// routes. (A letterboard joins over a WebSocket, which CORS doesn't cover.)
+function cors(req, res, appOrigins) {
   res.setHeader("Vary", "Origin");
+  if (!appOrigins.has(req.headers.origin)) return;
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, PATCH, DELETE, OPTIONS",

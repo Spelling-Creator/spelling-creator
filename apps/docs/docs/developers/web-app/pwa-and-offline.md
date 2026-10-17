@@ -299,8 +299,12 @@ pnpm build
 pnpm preview
 ```
 
-`localhost` counts as a secure context, so the worker registers there without
-TLS. Chrome DevTools' **Application** panel (**Service Workers** and
+The preview runs at `https://preview.spelling-creator.localhost`, served over
+HTTPS by portless with its own local certificate (see
+[Local URLs](../getting-started.md#local-urls)), so it is a secure context and
+the worker registers. It is a different origin from the dev server and from the
+old `http://localhost:4173`, so a worker registered at one of those has no
+effect here. Chrome DevTools' **Application** panel (**Service Workers** and
 **Manifest**) is the fastest way to check registration, and its **Offline**
 checkbox to check the fallback. Remember to **Unregister** (or tick _Update on
 reload_) between builds; otherwise the previous worker keeps serving the
