@@ -15,13 +15,13 @@ and `pnpm login` (variables already in the environment win). The annotated
 template is `apps/mcp/.env.example`; the code that reads them is
 `apps/mcp/src/config.js`.
 
-| Variable                             | Default                                                                                                  | Purpose                                                                          |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `SPELLING_CREATOR_API_URL`           | `https://spellingcreator.org`                                                                            | Worker API base (use `http://localhost:8787` against `pnpm dev:api`).            |
-| `SUPABASE_REFRESH_TOKEN`             | (none)                                                                                                   | Long-lived credential; refreshed automatically.                                  |
-| `SUPABASE_ACCESS_TOKEN`              | (none)                                                                                                   | Short-lived session JWT (about 1 hour), used as-is.                              |
-| `SPELLING_CREATOR_SESSION_FILE`      | `$XDG_CONFIG_HOME/spelling-creator-mcp/session.json`, else `~/.config/spelling-creator-mcp/session.json` | Where the `login` helper saves the session and where rotated tokens are written. |
-| `SUPABASE_URL` / `SUPABASE_ANON_KEY` | the production project                                                                                   | Override only for a fork.                                                        |
+| Variable                             | Default                                                                                                  | Purpose                                                                                                         |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `SPELLING_CREATOR_API_URL`           | `https://spellingcreator.org`                                                                            | Worker API base (use `https://api.spelling-creator.localhost` against `pnpm dev:api`; see [setup](./setup.md)). |
+| `SUPABASE_REFRESH_TOKEN`             | (none)                                                                                                   | Long-lived credential; refreshed automatically.                                                                 |
+| `SUPABASE_ACCESS_TOKEN`              | (none)                                                                                                   | Short-lived session JWT (about 1 hour), used as-is.                                                             |
+| `SPELLING_CREATOR_SESSION_FILE`      | `$XDG_CONFIG_HOME/spelling-creator-mcp/session.json`, else `~/.config/spelling-creator-mcp/session.json` | Where the `login` helper saves the session and where rotated tokens are written.                                |
+| `SUPABASE_URL` / `SUPABASE_ANON_KEY` | the production project                                                                                   | Override only for a fork.                                                                                       |
 
 ## Which credential wins
 

@@ -16,19 +16,32 @@ to see any hub feature end to end.
 ## Running it
 
 ```bash
-pnpm dev:stub           # the stub, on http://localhost:8787
-pnpm dev:web:stub       # the app, on http://localhost:5180, pointed at it
+pnpm dev:stub           # the stub, on https://api.stub.spelling-creator.localhost
+pnpm dev:web:stub       # the app, on https://stub.spelling-creator.localhost, pointed at it
 ```
 
-Then open `http://localhost:5180/login` and sign in as anyone below, with any
-password. The username alone is enough (`maya`), and so is `maya@example.com`.
+Then open `https://stub.spelling-creator.localhost/login` and sign in as anyone
+below, with any password of eight characters or more. The username alone is
+enough (`maya`), and so is `maya@example.com`.
+
+Both run through portless (see [Local URLs](./getting-started.md#local-urls)),
+which is why they have names rather than ports. Because the names don't
+change, the stub can build links into the app, and it never collides with an
+ordinary `pnpm dev:web` at `https://spelling-creator.localhost`.
 
 `dev:web:stub` runs Vite with `--mode stub`, which reads `apps/web/.env.stub`
-(committed, since it holds nothing but local URLs). That file also sets
+(committed, since it holds nothing but local URLs). That file sets
 `VITE_AUTH_MODE=both`, which is what lets the sign-in field take a username or an
-email address. It uses port 5180 rather than Vite's usual 5173 so it never
-collides with an ordinary `pnpm dev:web`, and it fails rather than drifting to
-another port (`--strictPort`), because the stub builds links to that address.
+email address. Its API URLs are the stub's `PORTLESS=0` address
+(`http://localhost:8787`). Under portless, `vite.config.js` asks
+`portless get api.stub.spelling-creator` for the stub's URL and uses that
+instead, and the stub asks the same way for the app's (both through
+`scripts/portless.mjs`). With `PORTLESS=0` the app is on
+`http://localhost:5180`, pinned there because the stub builds links to it.
+
+The stub only sends CORS headers to the app's own origins, the way the real API
+only answers its own hostnames, so no other page open in your browser can read
+it.
 
 ## Who's in it
 
@@ -72,8 +85,10 @@ Works: the hub and search, lesson pages and all their tabs, comments and
 ratings, publishing and drafts, forking, version history, proposals and merging,
 profiles and following, the home page's feeds, notifications including **Send
 link**, sign-in and sign-out, live collaboration with cursors and chat,
-letterboard sessions from interactive mode (a board on the same network joins
-with the stub's address as its hub), and the
+letterboard sessions from interactive mode (a board joins with the stub's
+address as its hub: `https://api.stub.spelling-creator.localhost` on the same
+computer, or, from another device on the network, `http://<your-ip>:8787`
+after starting the stub with `PORTLESS_APP_PORT=8787 pnpm dev:stub`), and the
 AI features: lesson ideas, suggested text and questions, **Fix with AI** and
 fact checking (see [AI and Turnstile](#ai-and-turnstile) below). Wikimedia image
 search works too, since it talks to Wikimedia directly.
@@ -128,7 +143,10 @@ That needs [Claude Code](https://claude.com/claude-code) installed and signed
 in. Each `claude -p` runs in a fresh temporary directory, outside the repo, with
 no tools, settings or MCP servers, and is given up on after three minutes. Since
 it runs on your own Claude account, the AI routes only answer requests from
-your own machine, even if the stub can be reached from your network. Each
+your own machine, even if the stub can be reached from your network. Behind the
+portless proxy every request arrives from the proxy on this machine, so the
+stub checks the address the proxy says it saw (the last `X-Forwarded-For`
+entry) instead. Each
 answer is saved as it arrives, so asking the same thing again replays
 it, with or without `STUB_AI`. That makes a run repeatable: the first one fills
 the saved answers, and every later one gets the same lesson ideas, text, fixes
@@ -147,10 +165,16 @@ records and Wikipedia, so it needs a network connection.
 
 ## Two people at once
 
-`http://localhost:8787/split` shows the app twice, side by side: the left pane
-from `localhost:5180` and the right from `127.0.0.1:5180`. Those are different
+`https://api.stub.spelling-creator.localhost/split` shows the app twice, side
+by side: the left pane from `https://stub.spelling-creator.localhost` and the
+right from `https://peer.stub.spelling-creator.localhost`. Those are different
 origins, so each pane has its own storage and can be signed in as someone
-different. Sign in as Maya on the left and Daniel on the right, and you can try
+different. The second name is a portless alias for the same Vite server, which
+`vite.config.js` adds when the server starts and removes when the process
+exits, however it exits short of being killed outright (then the next start
+replaces it). With `PORTLESS=0` the pair is `http://localhost:5180` and
+`http://127.0.0.1:5180`. Sign in as Maya on the left and Daniel on the right,
+and you can try
 **Collaborate** with both sides in view. `?left=` and `?right=` set each pane's
 starting path, and `?leftName=` and `?rightName=` the labels above them.
 
@@ -176,20 +200,31 @@ import { sessionFor, storageKey } from "@spelling-creator/stub-api/sessions";
 
 await context.addInitScript(
   ([key, value]) => localStorage.setItem(key, value),
-  [storageKey("http://localhost:8787"), JSON.stringify(sessionFor("maya"))],
+  [
+    storageKey("https://api.stub.spelling-creator.localhost"),
+    JSON.stringify(sessionFor("maya")),
+  ],
 );
 ```
 
+`storageKey` takes the stub's URL. In a git worktree that has the branch prefix
+too, so ask `portless get api.stub.spelling-creator` for it rather than
+writing it out.
+
 `startStub` takes `port` (default 8787), `appOrigin` (where the app runs,
-default `http://localhost:5180`), `dataDir` (the snapshot, image cache and saved
+default `http://localhost:5180`, where it is without portless), `peerOrigin`
+(the right pane of `/split`, default the same address on `127.0.0.1`; an
+`appOrigin` without a port, such as a portless one, has to come with its own),
+`dataDir` (the snapshot, image cache and saved
 AI answers, default `apps/stub-api/.cache`), `hubUrl` (where to snapshot from,
 default the live hub at `https://spellingcreator.org`), `now` (the time the
 seeded dates count back from, default the real time), `ai` (`"claude"` to ask
 Claude when no answer is saved), `aiModel` (default `"sonnet"`),
 `aiReplayDelayMs` (how long a saved answer takes, default 1200) and `log`. From
 the command line the same settings are the `PORT`, `APP_ORIGIN`,
-`STUB_DATA_DIR`, `HUB_URL`, `STUB_AI` and `STUB_AI_MODEL` environment
-variables. The package also exports the made-up people as
+`PEER_ORIGIN`, `STUB_DATA_DIR`, `HUB_URL`, `STUB_AI` and `STUB_AI_MODEL`
+environment variables. Under portless, `PORT` comes from portless, and
+`APP_ORIGIN` and `PEER_ORIGIN` default to the app's two portless URLs. The package also exports the made-up people as
 `@spelling-creator/stub-api/people`.
 
 ## Where the code lives

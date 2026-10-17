@@ -157,7 +157,8 @@ describe("notifications", () => {
       as: "maya",
       body: {
         email: "daniel@example.com",
-        link: "http://localhost:5180/editor/collaborate?join=abc",
+        // The second origin /split uses, which is the app all the same.
+        link: "http://127.0.0.1:5180/editor/collaborate?join=abc",
         message: "Join me?",
       },
     });
@@ -170,6 +171,52 @@ describe("notifications", () => {
       link: "/editor/collaborate?join=abc",
       read: false,
     });
+  });
+
+  it("keeps a link to anywhere else as the full URL", async () => {
+    await call("POST", "/notifications/send-link", {
+      as: "maya",
+      body: {
+        email: "daniel@example.com",
+        link: "https://example.com/penguins",
+        message: "Read this",
+      },
+    });
+    const { notifications } = await json("GET", "/notifications", {
+      as: "daniel",
+    });
+    expect(notifications.find((n) => n.body === "Read this").link).toBe(
+      "https://example.com/penguins",
+    );
+  });
+});
+
+describe("the app's origins", () => {
+  const withOrigin = (origin) =>
+    fetch(`${stub.url}/lessons`, { headers: { Origin: origin } });
+
+  it("lets both of the app's origins read it", async () => {
+    for (const origin of ["http://localhost:5180", "http://127.0.0.1:5180"]) {
+      const res = await withOrigin(origin);
+      expect(res.headers.get("access-control-allow-origin")).toBe(origin);
+    }
+  });
+
+  it("sends no CORS headers to any other page", async () => {
+    const res = await withOrigin("https://example.com");
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("shows the app in /split from both origins", async () => {
+    const html = await (await call("GET", "/split?right=/hub")).text();
+    expect(html).toContain('src="http://localhost:5180/editor"');
+    expect(html).toContain('src="http://127.0.0.1:5180/hub"');
+  });
+
+  it("wants a peerOrigin when appOrigin has no port to share", async () => {
+    await expect(
+      startStub({ port: 0, dataDir, appOrigin: "https://stub.example" }),
+    ).rejects.toThrow(/needs a peerOrigin/);
   });
 });
 

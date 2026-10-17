@@ -442,4 +442,7 @@ Drive contents. The menu item is hidden unless `VITE_GOOGLE_CLIENT_ID` is set
 (`hasGoogleDrive()`; see [Getting started](./getting-started.md)). The OAuth
 client must list every origin the app is served from (for example
 `http://localhost:5173` and the production URL) under **Authorized JavaScript
-origins**, and the Google Drive API must be enabled for the project.
+origins**, and the Google Drive API must be enabled for the project. Google
+doesn't accept `.localhost` subdomains there, so to try this locally, run the
+dev server without portless (`PORTLESS=0 pnpm dev:web`), which serves it on
+`http://localhost:5173`.

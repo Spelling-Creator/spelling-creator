@@ -9,7 +9,7 @@
     "./people": "./src/people.js"
   },
   "scripts": {
-    "start": "node src/cli.js",
+    "start": "portless run --name api.stub.spelling-creator node src/cli.js",
     "snapshot": "node src/cli.js snapshot",
     "test": "vitest run"
   },

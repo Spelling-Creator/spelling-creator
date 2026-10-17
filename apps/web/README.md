@@ -36,9 +36,9 @@ The docs source is in `apps/docs/docs/guide` and
 
 ```bash
 pnpm install
-pnpm dev      # start the dev server (http://localhost:5173)
+pnpm dev      # start the dev server (https://spelling-creator.localhost, through portless)
 pnpm build    # production build into dist/
-pnpm preview  # preview the production build
+pnpm preview  # preview the production build (https://preview.spelling-creator.localhost)
 ```
 
 See **[Getting started](https://spellingcreator.org/docs/developers/web-app/getting-started)**

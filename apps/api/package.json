@@ -11,7 +11,7 @@
 	},
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "portless run --name api.spelling-creator sh scripts/dev.sh",
 		"test": "vitest run",
 		"bundle": "wrangler deploy --dry-run --outdir dist",
 		"start:node": "node src/node/server.js"

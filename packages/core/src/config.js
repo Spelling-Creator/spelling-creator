@@ -71,7 +71,7 @@ export function apiWsUrl() {
   const base = apiUrl();
   if (base.startsWith("https://")) return `wss://${base.slice(8)}`;
   // The socket keeps the API's own scheme. A plain http API is a local one in
-  // practice (the stub at localhost:8787, `wrangler dev`), and every request
+  // practice (the stub or `wrangler dev` run with PORTLESS=0), and every request
   // to it already carries the same session token in the clear, so upgrading
   // only the socket would protect nothing and break local development. Any
   // https API, the hosted hub included, is answered above.

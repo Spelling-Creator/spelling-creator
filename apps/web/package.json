@@ -6,10 +6,10 @@
   "author": "playforge-coding",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:stub": "vite --mode stub --host 127.0.0.1 --port 5180 --strictPort",
+    "dev": "portless run --name spelling-creator vite",
+    "dev:stub": "portless run --name stub.spelling-creator vite --mode stub",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "portless run --name preview.spelling-creator vite preview",
     "test": "vitest run --passWithNoTests",
     "build:ssr": "vite build --ssr src/entry-server.jsx --outDir dist-ssr"
   },
@@ -61,7 +61,7 @@
     "workbox-window": "^7.4.1"
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=24"
   },
   "packageManager": "pnpm@12.4.1"
 }

@@ -29,11 +29,18 @@ const stripTags = (html) => html.replace(/<[^>]+>/g, "").trim();
 
 /**
  * @param {object} state  From seed(), with `packs` and `pullPacks` from buildGit().
- * @param {{ appOrigin: string, dataDir: string, hubUrl: string, ai: object, log: Function }} opts
+ * @param {{ appOrigin: string, peerOrigin: string, dataDir: string, hubUrl: string, ai: object, log: Function }} opts
  *   `ai` is createAi() from ./ai.js.
  * @returns {(req, res) => Promise<void>}
  */
-export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
+export function createHandler(
+  state,
+  { appOrigin, peerOrigin, dataDir, hubUrl, ai, log },
+) {
+  // Both origins the app is served from (the second for /split).
+  const appOrigins = new Set(
+    [appOrigin, peerOrigin].map((o) => new URL(o).origin),
+  );
   const routes = [];
   const on = (method, pattern, fn) =>
     routes.push({ method, re: new RegExp(`^${pattern}$`), fn });
@@ -108,7 +115,11 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
 
   // ---------------------------------------------------------------- misc
   on("GET", "/split", (ctx) =>
-    ctx.send(200, splitPage(ctx.url, appOrigin), "text/html; charset=utf-8"),
+    ctx.send(
+      200,
+      splitPage(ctx.url, appOrigin, peerOrigin),
+      "text/html; charset=utf-8",
+    ),
   );
   on("GET", "/mod/whoami", (ctx) => ctx.json(200, { role: null }));
   // Whether letterboard sessions can be hosted here; they can (src/practice.js).
@@ -337,10 +348,9 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
       type: "link",
       title: `${byId[ctx.user].displayName} sent you a link`,
       body: b.message || null,
-      link:
-        url.port === new URL(appOrigin).port
-          ? url.pathname + url.search
-          : url.toString(),
+      link: appOrigins.has(url.origin)
+        ? url.pathname + url.search
+        : url.toString(),
       read: false,
       createdAt: new Date().toISOString(),
     };
@@ -440,7 +450,7 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
 
   // ---------------------------------------------------------------- dispatch
   return async function handle(req, res) {
-    cors(req, res);
+    cors(req, res, appOrigins);
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       return res.end();
@@ -482,7 +492,7 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
     if (
       req.method === "POST" &&
       (url.pathname === "/" || url.pathname.startsWith("/stub-model/")) &&
-      !LOOPBACK.has(req.socket.remoteAddress)
+      !LOOPBACK.has(clientAddress(req))
     ) {
       return ctx.send(
         403,
@@ -508,12 +518,27 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
 
 const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
-// The app runs on another origin (Vite's port), so every response carries CORS
-// headers, including PATCH (comment edits) and the git headers the history
-// client reads.
-function cors(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+// Where a request really came from. Through the portless proxy the socket is
+// always the proxy's own loopback connection, and the proxy appends the address
+// it saw to X-Forwarded-For, so the last entry is the real one (anything before
+// it was written by the client). Only a loopback socket's header is believed:
+// a request straight from the network could have written its own.
+export function clientAddress(req) {
+  const socket = req.socket.remoteAddress;
+  const forwarded = req.headers["x-forwarded-for"];
+  if (!forwarded || !LOOPBACK.has(socket)) return socket;
+  return forwarded.split(",").at(-1).trim();
+}
+
+// The app runs on another origin, so responses carry CORS headers, including
+// PATCH (comment edits) and the git headers the history client reads. Only the
+// app's own origins get them, as only the instance's own hostnames do on the
+// real API, so no other page in a browser can read the stub or call its AI
+// routes. (A letterboard joins over a WebSocket, which CORS doesn't cover.)
+function cors(req, res, appOrigins) {
   res.setHeader("Vary", "Origin");
+  if (!appOrigins.has(req.headers.origin)) return;
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, PATCH, DELETE, OPTIONS",

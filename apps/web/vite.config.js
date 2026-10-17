@@ -1,10 +1,19 @@
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import {
+  STUB,
+  addAlias,
+  aliasName,
+  portlessUrl,
+  removeAliasSync,
+  underPortless,
+} from "../../scripts/portless.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -155,12 +164,16 @@ const TURNSTILE_SCRIPT =
 
 // Load Turnstile from somewhere other than Cloudflare when
 // VITE_TURNSTILE_SCRIPT_URL is set. Only `pnpm dev:web:stub` sets it (in
-// .env.stub), to load the stub API's stand-in widget, so the AI features work
-// locally with no Cloudflare account. Unset, index.html is left as it is.
-function turnstileScriptOverride(mode) {
-  const url = loadEnv(mode, __dirname, "VITE_").VITE_TURNSTILE_SCRIPT_URL;
+// .env.stub, or portlessStub below), to load the stub API's stand-in widget, so
+// the AI features work locally with no Cloudflare account. Unset, index.html is
+// left as it is.
+function turnstileScriptOverride() {
+  let url;
   return {
     name: "turnstile-script-override",
+    configResolved(config) {
+      url = config.env.VITE_TURNSTILE_SCRIPT_URL;
+    },
     transformIndexHtml(html) {
       if (!url) return html;
       if (!html.includes(TURNSTILE_SCRIPT)) {
@@ -173,13 +186,86 @@ function turnstileScriptOverride(mode) {
   };
 }
 
+// `pnpm dev:web:stub` under portless (https://github.com/vercel-labs/portless),
+// which serves the app at a named https://*.localhost URL. Does two things:
+//
+// - Points the app at the stub API's portless URL instead of .env.stub's
+//   localhost:8787, which is only for running without portless. This runs in
+//   the `config` hook because that is before Vite reads the .env files, and
+//   Vite never lets a .env file override a variable already in the environment.
+// - Gives the stub API's /split page its second origin. /split shows the app
+//   twice, from two origins so each pane keeps its own session (see
+//   apps/stub-api/src/split.js). Portless names this server once, so the second
+//   is an alias to the same port, added once Vite is listening.
+//
+// The names and lookups are shared with the stub, in scripts/portless.mjs.
+function portlessStub(mode) {
+  if (mode !== "stub" || !underPortless()) return null;
+  let alias;
+  return {
+    name: "portless-stub",
+    apply: "serve",
+    async config() {
+      const [api, peer] = await Promise.all([
+        portlessUrl(STUB.api),
+        aliasName(STUB.peer),
+      ]);
+      alias = peer;
+      process.env.VITE_API_URL = api;
+      process.env.VITE_SUPABASE_URL = api;
+      process.env.VITE_TURNSTILE_SCRIPT_URL = `${api}/turnstile/v0/api.js`;
+    },
+    configureServer(server) {
+      const http = server.httpServer;
+      if (!http) return;
+      // The alias is a static route that portless never cleans up by itself,
+      // so it goes when this process does, however that happens. Signals
+      // that would end Vite without an "exit" event exit properly instead.
+      // Only a SIGKILL leaves it behind, pointing at a dead port until the
+      // next start replaces it.
+      const remove = () => removeAliasSync(alias);
+      const signals = {
+        SIGINT: () => process.exit(130),
+        SIGHUP: () => process.exit(129),
+        SIGTERM: () => process.exit(143),
+      };
+      let closed = false;
+      http.once("listening", async () => {
+        try {
+          await addAlias(alias, http.address().port);
+        } catch (err) {
+          server.config.logger.warn(
+            `Could not add the portless alias ${alias}, so /split's right pane won't load: ${err.message}`,
+          );
+          return;
+        }
+        // Closed (by a restart) while the alias was being added.
+        if (closed) return remove();
+        process.once("exit", remove);
+        for (const [signal, fn] of Object.entries(signals))
+          process.once(signal, fn);
+      });
+      // A restart (after a config change) closes this server and calls
+      // configureServer again for the next one.
+      http.once("close", () => {
+        closed = true;
+        process.off("exit", remove);
+        for (const [signal, fn] of Object.entries(signals))
+          process.off(signal, fn);
+        remove();
+      });
+    },
+  };
+}
+
 // `VITE_`-prefixed env vars from apps/web/.env are exposed to client code as
 // `import.meta.env.VITE_*` natively — no config needed. src/main.jsx is the
 // only place in the app that reads them (see packages/core/src/config.js).
 export default defineConfig(({ isSsrBuild, mode }) => ({
   plugins: [
     isSsrBuild && stubUnreachableOnServer(),
-    turnstileScriptOverride(mode),
+    portlessStub(mode),
+    turnstileScriptOverride(),
     dropOnnxWasmAssets(),
     react(),
     // The React Compiler runs as a Babel pass. This used to pass
@@ -315,6 +401,15 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
       devOptions: { enabled: false },
     }),
   ],
+  // Stub mode with PORTLESS=0. The stub builds links and /split's two origins
+  // (localhost and 127.0.0.1) from this address, so it is pinned rather than
+  // left to drift to another port, and kept off 5173 so it never collides with
+  // an ordinary dev server. Under portless, the --port, --strictPort and
+  // --host it passes take precedence over all three.
+  server:
+    mode === "stub" && !underPortless()
+      ? { host: "127.0.0.1", port: 5180, strictPort: true }
+      : undefined,
   resolve: {
     // "@/..." mirrors shadcn/ui's default alias convention. New shadcn-sourced
     // code uses it; pre-existing app code keeps its relative imports. Kept in
