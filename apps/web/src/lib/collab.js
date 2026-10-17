@@ -36,7 +36,7 @@
 // roster so cursors and chat can be labelled without shipping a name in every
 // packet.
 
-import { apiUrl, hasApi } from "@spelling-creator/core/config";
+import { apiWsUrl, hasApi } from "@spelling-creator/core/config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { newId } from "@spelling-creator/core/id";
@@ -73,11 +73,7 @@ const decoder = new TextDecoder();
 
 // The wss:// base for the collaboration endpoint, derived from the API URL.
 function wsBase() {
-  if (!hasApi()) return null;
-  const base = apiUrl();
-  if (base.startsWith("https://")) return `wss://${base.slice(8)}`;
-  if (base.startsWith("http://")) return `ws://${base.slice(7)}`;
-  return base;
+  return hasApi() ? apiWsUrl() : null;
 }
 
 // A short label for someone we don't have a name for yet.

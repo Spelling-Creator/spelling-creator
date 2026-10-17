@@ -9,7 +9,8 @@ import { loadHub, DEFAULT_HUB_URL } from "./snapshot.js";
 import { seed } from "./seed.js";
 import { buildGit } from "./git.js";
 import { createHandler } from "./routes.js";
-import { attachCollab } from "./collab.js";
+import { createCollab } from "./collab.js";
+import { createPractice } from "./practice.js";
 import { createAi } from "./ai.js";
 
 export const DEFAULT_DATA_DIR = path.join(
@@ -65,7 +66,15 @@ export async function startStub({
   const server = http.createServer(
     createHandler(state, { appOrigin, dataDir, hubUrl, ai: aiRoutes, log }),
   );
-  const collab = attachCollab(server, { log });
+  // The two WebSocket rooms, each claiming its own path prefix; anything else
+  // asking to upgrade is dropped.
+  const sockets = [createCollab({ log }), createPractice({ log })];
+  server.on("upgrade", (req, socket, head) => {
+    const url = new URL(req.url, "http://stub");
+    const room = sockets.find((s) => url.pathname.startsWith(s.path));
+    if (!room) return socket.destroy();
+    room.upgrade(req, socket, head, url);
+  });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, resolve);
@@ -77,7 +86,7 @@ export async function startStub({
     port: actual,
     state,
     async close() {
-      collab.close();
+      for (const room of sockets) room.close();
       server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
     },

@@ -111,6 +111,9 @@ export function createHandler(state, { appOrigin, dataDir, hubUrl, ai, log }) {
     ctx.send(200, splitPage(ctx.url, appOrigin), "text/html; charset=utf-8"),
   );
   on("GET", "/mod/whoami", (ctx) => ctx.json(200, { role: null }));
+  // Whether letterboard sessions can be hosted here; they can (src/practice.js).
+  on("GET", "/practice", (ctx) => ctx.json(200, { available: true }));
+
   on("GET", "/spelling-words.json", (ctx) =>
     ctx.json(200, {
       words: [

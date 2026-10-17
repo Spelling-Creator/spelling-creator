@@ -9,8 +9,9 @@
 //
 // The same goes double for CollabRoom: it's a Durable Object holding the live session's
 // Yjs document in SQLite and handing it to late joiners, so the only test worth having
-// runs it as a real Durable Object. `main` points at a test-only entry exporting just
-// that class (see src/collab-room.test-worker.js) — the production entry would drag in
+// runs it as a real Durable Object. PracticeRoom, the letterboard relay, is tested the
+// same way. `main` points at a test-only entry exporting just those classes (see
+// src/collab-room.test-worker.js), because the production entry would drag in
 // Puppeteer and the whole route table for no benefit.
 
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
@@ -53,6 +54,7 @@ export default defineWorkersConfig({
 					compatibilityFlags: ['nodejs_compat'],
 					durableObjects: {
 						COLLAB_ROOM: { className: 'CollabRoom', useSQLite: true },
+						PRACTICE_ROOM: { className: 'PracticeRoom', useSQLite: true },
 					},
 					// A bucket and a namespace for the platform-adapter conformance suite
 					// (src/platform/cloudflare.test.js) to run against. Deliberately not

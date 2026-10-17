@@ -21,6 +21,29 @@
     "paceOption_one": "Normal speed",
     "paceOption_other": "{{rate}} times normal speed"
   },
+  "letterboard": {
+    "open": "Letterboard",
+    "title": "Letterboard session",
+    "description": "On the tablet, open Spelling Creator Board, choose Join a letterboard session and enter this code. The board follows this lesson step by step, and what is spelled on it appears in the answer box here.",
+    "signIn": "Sign in to run this lesson with a letterboard.",
+    "start": "Start a session",
+    "starting": "Starting the session...",
+    "codeLabel": "Session code",
+    "copyCode": "Copy code",
+    "copiedCode": "Copied!",
+    "boards_zero": "No board has joined yet.",
+    "boards_one": "{{count}} board is following.",
+    "boards_other": "{{count}} boards are following.",
+    "stop": "End session",
+    "dismiss": "Dismiss",
+    "errors": {
+      "notConfigured": "The lesson hub is not configured, so a letterboard can't join.",
+      "signIn": "Sign in to run this lesson with a letterboard.",
+      "couldNotStart": "Couldn't start the session. Check your connection and try again.",
+      "refused": "The hub turned the session down. Starting several in a row can do this, so wait a minute and try again.",
+      "disconnected": "The letterboard session was disconnected. The board keeps the lesson, so the speller can carry on there."
+    }
+  },
   "answers": {
     "show": "Show answers",
     "hide": "Hide answers",

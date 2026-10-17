@@ -81,6 +81,7 @@ src/
     InteractiveLesson.jsx full-screen step-by-step walkthrough of a lesson, with a field per question, autosaved progress you can come back to, and optional read-aloud (see interactive-mode.md)
     SpeechVoiceSelect.jsx the read-aloud voice picker (natural voices, then the browser's), shared by the walkthrough's popover and the settings page
     MyLessonAnswers.jsx   the reader's own saved answers on the lesson page, private to them
+    LetterboardLink.jsx   the tablet button in the walkthrough's top bar: start a letterboard session, show its code, end it (see letterboard-sync.md)
     SectionCard.jsx       a named section with its content blocks + add buttons; measures the pointer against its own rows during a block drag, but the drag itself is owned by EditorPage (blocks can move between sections)
     ContentBlock.jsx      a single text, spelling, image, VAKT or question block; owns BLOCK_LAYOUT, the responsive content/controls split (see mobile-layout.md)
     IconActionButton.jsx  the icon + tooltip button behind every block/section control; the tooltip doubles as its aria-label
@@ -112,6 +113,7 @@ src/
     lessonChecks.js        the lesson checks as the editor shows them (the checks themselves are in core)
     factCheck.js           fact checking as the editor shows it
     collab.js              useCollaboration hook (one WebSocket to the CollabRoom Durable Object; doc sync, cursors, chat)
+    practiceLink.js        usePracticeHost hook (one WebSocket to the PracticeRoom Durable Object; the step out, the letterboard's sentence and answers in)
     useSelectionBroadcast.js broadcasts the local editor selection to peers
     useDragAutoScroll.js   scrolls the page while a block drag hovers near a window edge (the browser only auto-scrolls a native drag while the pointer keeps moving)
     useScrollAnchor.js     keeps a section/block still on screen while the move buttons reorder it, plus scrollToElement/idSelector (see navigating-large-lessons.md)

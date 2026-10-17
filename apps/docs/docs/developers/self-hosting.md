@@ -193,13 +193,19 @@ well and bundles both.
 
 ## What you don't get
 
-Three features need Cloudflare specifically, and are simply not registered on
+Four features need Cloudflare specifically, and are simply not registered on
 this host rather than stubbed; a stub would be a promise the process can't keep.
 
 - **Live collaboration.** A Durable Object per session, which is the part that
   gives one authoritative room per share code globally. Everything else about the
   editor works; `/collab` is not registered here, so it reaches the frontend
   fall-through and answers 404.
+- **Letterboard sessions.** Also a Durable Object per session code (see
+  [Letterboard sync](./web-app/letterboard-sync.md)). Interactive mode works as
+  it does anywhere, without the tablet button in its top bar: the page asks
+  `GET /practice` first, which answers 404 here, so it never offers a session
+  that can't start. The letterboard app's read-only lesson browsing, which only
+  needs `GET /lessons`, is unaffected.
 - **The remote MCP endpoint.** Also a Durable Object, plus a KV-backed OAuth 2.1
   server. The MCP server itself is unaffected and still runs
   [over stdio](./mcp-server/setup.md), which is how most people use it anyway.

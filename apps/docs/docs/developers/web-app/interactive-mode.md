@@ -13,6 +13,9 @@ questions one after another, each with a field to type an answer into. At the
 end, a signed-in user's answers are filed privately to their account; an
 unfinished run-through is kept in the browser so it can be resumed.
 
+A letterboard tablet can follow the walkthrough and answer into it; that is its
+own page, [Letterboard sync](./letterboard-sync.md).
+
 The route only decides when it is open. `InteractiveLesson` is still a dialog,
 deliberately: it is a focus mode with its own bottom bars and its own idea of the
 viewport. `LessonPractice` renders it with `open` and navigates back to the
@@ -435,7 +438,8 @@ What the numbers decided:
 | `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning.                        |
 | `packages/core/src/lessonResponses.js`             | Client for the three endpoints above.                                                          |
 | `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                                        |
-| `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough, the reveal, speech controls, resume and summary.                  |
+| `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough, the reveal, speech controls, resume, summary and the letterboard. |
+| `apps/web/src/lib/practiceLink.js`                 | The letterboard session's host side (see [Letterboard sync](./letterboard-sync.md)).           |
 | `apps/web/src/pages/lesson/LessonPractice.jsx`     | The Practice tab route that opens it.                                                          |
 | `apps/web/src/components/MyLessonAnswers.jsx`      | The private "Your answers" panel on the lesson page.                                           |
 | `apps/web/src/pages/lesson/LessonLayout.jsx`       | Start vs. **Continue lesson** on the lesson page's button.                                     |

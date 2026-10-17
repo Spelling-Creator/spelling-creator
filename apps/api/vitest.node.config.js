@@ -32,8 +32,9 @@ export default defineConfig({
 			...configDefaults.exclude,
 			// Runs against real R2/KV bindings via `cloudflare:test`.
 			'src/platform/cloudflare.test.js',
-			// A Durable Object; there is no Node equivalent to run it against.
+			// Durable Objects; there is no Node equivalent to run them against.
 			'src/collab-room.test.js',
+			'src/practice-room.test.js',
 		],
 	},
 });

@@ -80,18 +80,24 @@
 	// WebSocket and enforces per-room/per-connection limits. See src/collab-room.js
 	// and handleCollab in src/index.js. SQLite-backed (the room caches the doc).
 	//
+	// PracticeRoom keeps a letterboard tablet in step with a Practice page: one
+	// per share code, a host and its boards over WebSockets, the host's last state
+	// kept for late boards. See src/practice-room.js and routes/practice.js.
+	//
 	// HubMcp is one remote MCP connection's tool server (routes/mcp.js), addressed
 	// per-session by the Agents SDK; MCP_OBJECT is the binding name the SDK looks
 	// for by default (McpAgent.serve()'s `binding` option).
 	"durable_objects": {
 		"bindings": [
 			{ "name": "COLLAB_ROOM", "class_name": "CollabRoom" },
+			{ "name": "PRACTICE_ROOM", "class_name": "PracticeRoom" },
 			{ "name": "MCP_OBJECT", "class_name": "HubMcp" },
 		],
 	},
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["CollabRoom"] },
 		{ "tag": "v2", "new_sqlite_classes": ["HubMcp"] },
+		{ "tag": "v3", "new_sqlite_classes": ["PracticeRoom"] },
 	],
 
 	// R2 bucket holding lesson images as binary objects, keyed by their SHA-256

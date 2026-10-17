@@ -58,6 +58,22 @@ export function apiUrl() {
 }
 
 /**
+ * The same base as `apiUrl`, for opening a WebSocket: `https://` becomes
+ * `wss://` and `http://` becomes `ws://`. One place for the mapping, so live
+ * collaboration and letterboard sessions always reach the same host.
+ *
+ * Returns "" when no API is configured, like `apiUrl`.
+ *
+ * @returns {string}
+ */
+export function apiWsUrl() {
+  const base = apiUrl();
+  if (base.startsWith("https://")) return `wss://${base.slice(8)}`;
+  if (base.startsWith("http://")) return `ws://${base.slice(7)}`;
+  return base;
+}
+
+/**
  * Whether a backend is configured at all. Callers that cannot degrade use this
  * to fail early with a clear message instead of fetching from "/…".
  * @returns {boolean}

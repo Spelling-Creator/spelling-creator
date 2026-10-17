@@ -5,11 +5,13 @@
 // It serves the route table from src/app.js, the built SPA from disk, and
 // server-rendered HTML for the public read routes, against Postgres over
 // PostgREST and an S3-compatible object store. What it does not serve is the
-// three things that need Cloudflare specifically: live collaboration and the
-// remote MCP endpoint (Durable Objects), and crawler prerendering plus og-image
-// screenshots (Browser Rendering). See /docs/developers/self-hosting for what that
-// costs in practice — briefly, the MCP server still works over stdio, and SSR
-// already covers the pages a crawler cares about.
+// four things that need Cloudflare specifically: live collaboration, letterboard
+// sessions and the remote MCP endpoint (Durable Objects), and crawler
+// prerendering plus og-image screenshots (Browser Rendering). See
+// /docs/developers/self-hosting for what that costs in practice. Briefly: the
+// MCP server still works over stdio, the Practice page hides its letterboard
+// button when GET /practice isn't answered, and SSR already covers the pages a
+// crawler cares about.
 //
 // Configuration is environment variables and nothing else, listed in
 // src/node/platform.js and in the docs. The process is stateless: run as many as

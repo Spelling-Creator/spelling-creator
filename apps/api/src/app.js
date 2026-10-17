@@ -8,9 +8,9 @@
 // isn't web-standard.
 //
 // What is NOT here is the handful of things that genuinely need Cloudflare: live
-// collaboration and the remote MCP endpoint (both Durable Objects), crawler
-// prerendering and og-image screenshots (Browser Rendering). The Worker entry
-// registers those itself. A self-hosted instance does without them, which is why
+// collaboration, letterboard sessions and the remote MCP endpoint (all Durable
+// Objects), crawler prerendering and og-image screenshots (Browser Rendering).
+// The Worker entry registers those itself. A self-hosted instance does without them, which is why
 // they are absent rather than stubbed — a stub would be a promise the host can't
 // keep.
 //
