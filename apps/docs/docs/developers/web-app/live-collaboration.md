@@ -168,7 +168,7 @@ abuse-resistant:
 
 | Limit                               | Value                                                               | Where                                                                                         |
 | ----------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Joins (socket or agent), per user   | 5 per minute (token bucket)                                         | `takeJoinToken` in `routes/collab.js`                                                         |
+| Joins (socket or agent), per user   | 5 per minute (token bucket)                                         | `takeJoinToken` in `lib/joinLimit.js`, keyed `collab-rl:<uid>` by `routes/collab.js`          |
 | Concurrently hosted rooms, per user | 6                                                                   | `handleCollab` in `routes/collab.js` (a KV counter with a 2 hour TTL so a leaked count heals) |
 | Participants per room               | 10, host included                                                   | `MAX_PARTICIPANTS` in `collab-room.js`                                                        |
 | Messages per connection             | 30 document updates, 15 cursor moves and 2 chat messages per second | `RATE` in `collab-room.js`                                                                    |

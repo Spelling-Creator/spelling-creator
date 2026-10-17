@@ -336,6 +336,10 @@ export default defineConfig({
               link: "/developers/web-app/interactive-mode",
             },
             {
+              text: "Letterboard sync",
+              link: "/developers/web-app/letterboard-sync",
+            },
+            {
               text: "Hub & accounts",
               link: "/developers/web-app/hub-and-accounts",
             },

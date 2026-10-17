@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   apiUrl,
+  apiWsUrl,
   configureCore,
   googleClientId,
   hasApi,
@@ -34,6 +35,17 @@ describe("configureCore", () => {
 
     configureCore({ apiUrl: "https://api.example.com" });
     expect(apiUrl()).toBe("https://api.example.com");
+  });
+
+  it("gives the WebSocket form of the API base", () => {
+    configureCore({ apiUrl: "https://api.example.com/" });
+    expect(apiWsUrl()).toBe("wss://api.example.com");
+
+    configureCore({ apiUrl: "http://localhost:8787" });
+    expect(apiWsUrl()).toBe("ws://localhost:8787");
+
+    configureCore({ apiUrl: "" });
+    expect(apiWsUrl()).toBe("");
   });
 
   it("degrades to an empty string rather than throwing when unconfigured", () => {

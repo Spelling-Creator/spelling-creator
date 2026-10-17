@@ -71,7 +71,9 @@ Restarting the stub puts the hub back the way it started.
 Works: the hub and search, lesson pages and all their tabs, comments and
 ratings, publishing and drafts, forking, version history, proposals and merging,
 profiles and following, the home page's feeds, notifications including **Send
-link**, sign-in and sign-out, live collaboration with cursors and chat, and the
+link**, sign-in and sign-out, live collaboration with cursors and chat,
+letterboard sessions from interactive mode (a board on the same network joins
+with the stub's address as its hub), and the
 AI features: lesson ideas, suggested text and questions, **Fix with AI** and
 fact checking (see [AI and Turnstile](#ai-and-turnstile) below). Wikimedia image
 search works too, since it talks to Wikimedia directly.
@@ -192,20 +194,21 @@ variables. The package also exports the made-up people as
 
 ## Where the code lives
 
-| File               | What it does                                                                |
-| ------------------ | --------------------------------------------------------------------------- |
-| `src/cli.js`       | The `start` and `snapshot` commands, reading the environment variables.     |
-| `src/server.js`    | `startStub`: loads the snapshot, seeds the hub, starts HTTP and WebSockets. |
-| `src/routes.js`    | The API routes, plus the Supabase Auth endpoints sign-in uses.              |
-| `src/seed.js`      | Who wrote what, ratings, comments, follows, notifications.                  |
-| `src/git.js`       | Lesson histories and the proposal, as real packfiles.                       |
-| `src/collab.js`    | The collaboration room, a trimmed copy of the Worker's `CollabRoom`.        |
-| `src/people.js`    | The made-up people.                                                         |
-| `src/sessions.js`  | Signed-in sessions for scripts.                                             |
-| `src/snapshot.js`  | Reading and caching the live hub's published lessons and images.            |
-| `src/split.js`     | The side-by-side page.                                                      |
-| `src/ai.js`        | The AI routes: the Worker's handler, saved answers and `claude -p`.         |
-| `src/turnstile.js` | The stand-in Turnstile script.                                              |
+| File               | What it does                                                                 |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `src/cli.js`       | The `start` and `snapshot` commands, reading the environment variables.      |
+| `src/server.js`    | `startStub`: loads the snapshot, seeds the hub, starts HTTP and WebSockets.  |
+| `src/routes.js`    | The API routes, plus the Supabase Auth endpoints sign-in uses.               |
+| `src/seed.js`      | Who wrote what, ratings, comments, follows, notifications.                   |
+| `src/git.js`       | Lesson histories and the proposal, as real packfiles.                        |
+| `src/collab.js`    | The collaboration room, a trimmed copy of the Worker's `CollabRoom`.         |
+| `src/practice.js`  | The letterboard session room, a trimmed copy of the Worker's `PracticeRoom`. |
+| `src/people.js`    | The made-up people.                                                          |
+| `src/sessions.js`  | Signed-in sessions for scripts.                                              |
+| `src/snapshot.js`  | Reading and caching the live hub's published lessons and images.             |
+| `src/split.js`     | The side-by-side page.                                                       |
+| `src/ai.js`        | The AI routes: the Worker's handler, saved answers and `claude -p`.          |
+| `src/turnstile.js` | The stand-in Turnstile script.                                               |
 
 Reading the hub is public; writing, and anything that is yours, needs a session,
 as on the real API, and the stub answers 401 without one. When a route the app

@@ -211,3 +211,100 @@ describe("live collaboration", () => {
     guest.close();
   });
 });
+
+describe("letterboard sessions", () => {
+  // Opens a socket and collects its JSON messages, so a test can wait for one.
+  const connect = (path) => {
+    const ws = new WebSocket(`${stub.url.replace("http", "ws")}${path}`);
+    ws.messages = [];
+    ws.on("message", (data) => ws.messages.push(JSON.parse(data.toString())));
+    ws.next = async (type) => {
+      for (let i = 0; i < 100; i++) {
+        const found = ws.messages.find((m) => m.type === type);
+        if (found) return found;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      throw new Error(`no message of type ${type}`);
+    };
+    return new Promise((resolve) => ws.on("open", () => resolve(ws)));
+  };
+
+  it("relays between a signed-in host and an anonymous board, either way", async () => {
+    const host = await connect(
+      `/practice/k7pm2x?create=1&token=${tokenFor("maya")}`,
+    );
+    expect(await host.next("hello")).toEqual({ type: "hello", boards: 0 });
+    host.send(
+      JSON.stringify({ type: "state", lessonId: PENGUINS, step: 2, text: "" }),
+    );
+
+    // The board types the code in capitals and gets the host's last state.
+    const board = await connect("/practice/K7PM2X");
+    expect(await board.next("hello")).toEqual({
+      type: "hello",
+      lessonId: PENGUINS,
+      step: 2,
+      text: "",
+    });
+    expect(await host.next("boards")).toEqual({ type: "boards", count: 1 });
+
+    board.send(JSON.stringify({ type: "text", text: "fis", extra: true }));
+    expect(await host.next("text")).toEqual({ type: "text", text: "fis" });
+    host.send(
+      JSON.stringify({
+        type: "state",
+        lessonId: PENGUINS,
+        step: 2,
+        text: "fis",
+      }),
+    );
+    expect(await board.next("state")).toEqual({
+      type: "state",
+      lessonId: PENGUINS,
+      step: 2,
+      text: "fis",
+    });
+
+    host.close();
+    expect(await board.next("removed")).toMatchObject({ type: "removed" });
+  });
+
+  it("tells a board when nobody is hosting the code", async () => {
+    const board = await connect("/practice/NOBODY");
+    expect(await board.next("error")).toMatchObject({ type: "error" });
+  });
+
+  it("says it can host letterboard sessions", async () => {
+    expect(await json("GET", "/practice")).toEqual({ available: true });
+  });
+
+  it("survives a bad frame from a board", async () => {
+    const host = await connect(
+      `/practice/BADFRM?create=1&token=${tokenFor("maya")}`,
+    );
+    await host.next("hello");
+    const board = await connect("/practice/BADFRM");
+    await board.next("hello");
+    // A text frame that isn't UTF-8 is a protocol error the server has to
+    // handle on that socket, not throw.
+    const closed = new Promise((resolve) => board.on("close", resolve));
+    board.send(Buffer.from([0xff, 0xfe]), { binary: false });
+    await closed;
+    expect(await host.next("boards")).toMatchObject({ type: "boards" });
+    expect((await call("GET", "/practice")).status).toBe(200);
+    host.close();
+  });
+
+  it("refuses a malformed code without falling over", async () => {
+    // A bad escape used to throw inside the upgrade listener and end the process.
+    for (const path of ["/practice/%ZZ", "/collab/%ZZ"]) {
+      const ws = new WebSocket(`${stub.url.replace("http", "ws")}${path}`);
+      const status = await new Promise((resolve) => {
+        ws.on("unexpected-response", (_req, res) => resolve(res.statusCode));
+        ws.on("error", () => resolve("error"));
+      });
+      expect(status).toBe(400);
+    }
+    expect((await call("GET", "/practice")).status).toBe(200);
+  });
+});

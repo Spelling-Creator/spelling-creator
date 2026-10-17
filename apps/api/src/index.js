@@ -11,14 +11,17 @@
 import { createApp, cors, registerFrontend, req, urlOf } from './app.js';
 
 import { CollabRoom } from './collab-room.js';
+import { PracticeRoom } from './practice-room.js';
 import { ogImage, handleFrontend } from './routes/render.js';
 import { handleCollab, handleCollabAgent } from './routes/collab.js';
+import { handlePractice, handlePracticeInfo } from './routes/practice.js';
 import { HubMcp, registerOAuthConsentRoutes, buildOAuthProvider } from './routes/mcp.js';
 
 // Re-export the Durable Object classes so Wrangler can bind them (the
-// migrations in wrangler.jsonc register COLLAB_ROOM -> CollabRoom and
-// MCP_OBJECT -> HubMcp). See routes/collab.js and routes/mcp.js.
-export { CollabRoom, HubMcp };
+// migrations in wrangler.jsonc register COLLAB_ROOM -> CollabRoom,
+// PRACTICE_ROOM -> PracticeRoom and MCP_OBJECT -> HubMcp). See routes/collab.js,
+// routes/practice.js and routes/mcp.js.
+export { CollabRoom, PracticeRoom, HubMcp };
 
 const app = createApp();
 
@@ -35,6 +38,13 @@ app.all('/collab/:code/agent/*', (c) => handleCollabAgent(req(c), c.env, urlOf(c
 // registered before the GET/HEAD frontend fall-through below would shadow it.
 app.get('/collab', (c) => handleCollab(req(c), c.env, urlOf(c), cors(c)));
 app.get('/collab/*', (c) => handleCollab(req(c), c.env, urlOf(c), cors(c)));
+
+// Letterboard session WebSocket: a Practice page hosting, a letterboard tablet
+// following. Same reasoning as /collab for registering it here, before the
+// frontend fall-through. The bare path is the capability check the Practice
+// page makes before offering its letterboard button, so it comes first.
+app.get('/practice', (c) => handlePracticeInfo(c.env, cors(c)));
+app.get('/practice/*', (c) => handlePractice(req(c), c.env, urlOf(c), cors(c)));
 
 // Consent screen backing the remote MCP OAuth flow. `/authorize`, `/token`, and
 // `/register` are also reserved paths (the OAuthProvider wrap below implements

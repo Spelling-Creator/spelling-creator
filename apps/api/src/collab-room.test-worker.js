@@ -1,13 +1,15 @@
-// Test-only Worker entry. The CollabRoom tests drive the Durable Object directly
-// through its stub, which requires the class to be exported from a Worker entry
-// that Miniflare can load. The real entry (src/index.js) drags in Puppeteer,
-// Supabase and the whole route table — none of which the room itself needs, and
-// all of which would have to be stubbed to load it here.
+// Test-only Worker entry. The room tests drive the Durable Objects directly
+// through their stubs, which requires the classes to be exported from a Worker
+// entry that Miniflare can load. The real entry (src/index.js) drags in Puppeteer,
+// Supabase and the whole route table. The rooms themselves need none of that,
+// and all of it would have to be stubbed to load it here.
 //
-// Driving the DO directly also deliberately bypasses handleCollab's Supabase JWT
-// gate: authentication is the Worker's job, not the room's, so these tests are
-// about the room's own behaviour (merging, relaying, admission, persistence).
+// Driving the DOs directly also deliberately bypasses the Worker's Supabase JWT
+// gates (handleCollab, handlePractice): authentication is the Worker's job, not
+// the room's, so these tests are about each room's own behavior (merging,
+// relaying, admission, persistence).
 export { CollabRoom } from './collab-room.js';
+export { PracticeRoom } from './practice-room.js';
 
 export default {
 	fetch() {

@@ -43,6 +43,14 @@
 // feedback.
 //
 // Speech is optional and off until asked for; see lib/useSpeech.js.
+//
+// A letterboard tablet can follow along. The partner starts a session from the
+// tablet button in the top bar and reads its code onto the tablet; the board then
+// shows the same step, what the speller spells on it lands in the answer box
+// here, and Done on the board answers the question. See lib/practiceLink.js and
+// the board's contract (docs/live-sync.md in the Spelling Creator Board repo).
+// This page stays the authority: a board asking to move is a request, and the
+// state sent back after every change is where everyone is.
 
 import {
   useEffect,
@@ -112,7 +120,9 @@ import InlineText from "./InlineText.jsx";
 import { DOWNLOAD_MB } from "@spelling-creator/core/browser/readAloud";
 import { SPEECH_RATES } from "../lib/speechPrefs.js";
 import { useSpeech } from "../lib/useSpeech.js";
+import { usePracticeAvailable, usePracticeHost } from "../lib/practiceLink.js";
 import { useAuth } from "../lib/auth.jsx";
+import LetterboardLink from "./LetterboardLink.jsx";
 
 // The speaker toggle, a replay button, and a popover for voice and pace. Renders
 // nothing at all when the browser has no speech synthesis — a reader on a browser
@@ -1093,27 +1103,33 @@ export default function InteractiveLesson({
     }
   };
 
-  const finish = () => {
+  // `answersNow` is for an answer that arrives and finishes the lesson in the
+  // same breath (a letterboard's Done on the last question): the state update
+  // hasn't rendered yet, so the responses are rebuilt from the answers as they
+  // will be rather than read from this render's memo.
+  const finish = (answersNow = answers) => {
+    const responsesNow =
+      answersNow === answers ? responses : collectResponses(steps, answersNow);
     speech.stop();
     setSpokenKey(null);
     setPhase("summary");
     // A read-through of a lesson with no questions has nothing to store, and
     // answers already stored unchanged have nothing to store again. Either way
     // the run-through is over, so there is nothing to come back to.
-    if (responses.length === 0) {
+    if (responsesNow.length === 0) {
       forgetProgress();
       return;
     }
-    if (savedFingerprint === JSON.stringify(responses)) {
+    if (savedFingerprint === JSON.stringify(responsesNow)) {
       forgetProgress();
       return;
     }
-    save(responses);
+    save(responsesNow);
   };
 
-  const goNext = () => {
+  const goNext = (answersNow) => {
     setResumed(false);
-    if (isLastStep) finish();
+    if (isLastStep) finish(answersNow);
     else setIndex((current) => current + 1);
   };
 
@@ -1167,6 +1183,51 @@ export default function InteractiveLesson({
     } else close();
   };
 
+  // The letterboard session, if the partner starts one. What goes to the board
+  // is where this page is: the lesson, the step and the answer box (empty on a
+  // content step, where there is no box). What comes back is applied here, and
+  // the state effect in the hook then tells every board the result.
+  const onQuestion = phase === "running" && step?.kind === "question";
+  const letterboardAvailable = usePracticeAvailable(open);
+  const link = usePracticeHost({
+    accessToken,
+    lessonId: open ? lesson?.id : undefined,
+    step: phase === "summary" ? Math.max(0, steps.length - 1) : index,
+    text: onQuestion ? answers[answerKey(step)] || "" : "",
+    // The sentence as it is spelled. The board's words are the source while a
+    // board is spelling, so this replaces the box rather than adding to it.
+    onText: (text) => {
+      if (!onQuestion) return;
+      setAnswers((current) => ({ ...current, [answerKey(step)]: text }));
+    },
+    // Done on the board: that is the answer to this question, and we move on.
+    // On a content step there is nothing to record, so Done just moves on.
+    onAnswer: (text) => {
+      if (phase !== "running") return;
+      let next = answers;
+      if (step?.kind === "question") {
+        next = { ...answers, [answerKey(step)]: text };
+        setAnswers(next);
+      }
+      goNext(next);
+    },
+    // Previous or Next on the board. Agreed to whenever it names a real step;
+    // anything past the end stops at the last step. From the summary it goes
+    // back into the lesson, as the Back button there does.
+    onStep: (target) => {
+      if (phase === "quit" || steps.length === 0) return;
+      setResumed(false);
+      if (phase === "summary") setPhase("running");
+      setIndex(Math.min(Math.max(0, target), steps.length - 1));
+    },
+  });
+
+  // A session doesn't outlive the walkthrough it was started from.
+  const { stop: stopLink } = link;
+  useEffect(() => {
+    if (!open) stopLink();
+  }, [open, stopLink]);
+
   const empty = steps.length === 0;
   const progress =
     empty || phase === "summary" ? 100 : ((index + 1) / steps.length) * 100;
@@ -1219,6 +1280,13 @@ export default function InteractiveLesson({
                     : step?.sectionName || t("untitledSection")}
               </p>
             </div>
+            {/* Only where the hub can relay: without a hub, or on a self-hosted
+                one with no letterboard room, there is nothing for a board to
+                join, so the button would be a dead end. A session already
+                running stays reachable whatever the check says. */}
+            {(letterboardAvailable || link.active) && (
+              <LetterboardLink link={link} signedIn={Boolean(user)} />
+            )}
             {revealable && (
               <AnswerToggle shown={showAnswers} onToggle={setShowAnswers} />
             )}
@@ -1357,7 +1425,7 @@ export default function InteractiveLesson({
                   <ArrowLeftIcon data-icon="inline-start" />
                   {t("nav.back")}
                 </Button>
-                <Button size="lg" onClick={goNext}>
+                <Button size="lg" onClick={() => goNext()}>
                   {isLastStep ? t("nav.finish") : t("nav.next")}
                   {isLastStep ? <CheckIcon /> : <ArrowRightIcon />}
                 </Button>

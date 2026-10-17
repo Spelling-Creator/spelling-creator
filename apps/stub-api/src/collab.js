@@ -13,22 +13,17 @@ import {
   frameWithSlot,
 } from "@spelling-creator/core/collabFrames";
 import { personFromToken } from "./people.js";
+import { refuseUpgrade, sessionCode } from "./sessionCode.js";
 
 const text = (s) => new TextEncoder().encode(s);
 const helloFrame = (slot, host) =>
   Uint8Array.from([T.HELLO, (slot >> 8) & 0xff, slot & 0xff, host ? 1 : 0]);
 const slotOf = (payload) => (payload[0] << 8) | payload[1];
 
-/** Serve /collab/<code>?token=…[&create=1] upgrades on `server`. */
-export function attachCollab(server, { log = () => {} } = {}) {
+/** Serve /collab/<code>?token=…[&create=1] upgrades (see server.js for the dispatch). */
+export function createCollab({ log = () => {} } = {}) {
   const rooms = new Map(); // code -> { ydoc, sockets: Set<WebSocket> }
   const wss = new WebSocketServer({ noServer: true });
-
-  server.on("upgrade", (req, socket, head) => {
-    const url = new URL(req.url, "http://stub");
-    if (!url.pathname.startsWith("/collab/")) return socket.destroy();
-    wss.handleUpgrade(req, socket, head, (ws) => join(ws, url));
-  });
 
   function presence(room) {
     const entry = (s) => ({
@@ -60,8 +55,7 @@ export function attachCollab(server, { log = () => {} } = {}) {
       if (w !== from && w.state.admitted) w.send(frame);
   }
 
-  function join(ws, url) {
-    const code = decodeURIComponent(url.pathname.slice("/collab/".length));
+  function join(ws, url, code) {
     const person = personFromToken(url.searchParams.get("token") || "");
     if (!person) {
       ws.send(frameBytes(T.ERROR, text("Sign in to collaborate.")));
@@ -152,5 +146,17 @@ export function attachCollab(server, { log = () => {} } = {}) {
     });
   }
 
-  return { close: () => wss.close() };
+  return {
+    path: "/collab/",
+    upgrade(req, socket, head, url) {
+      const code = sessionCode(url.pathname, "/collab/");
+      if (!code) return refuseUpgrade(socket);
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        // Survivable, as in practice.js: an unheard socket error ends the process.
+        ws.on("error", (err) => log(`collab ${code}: ${err.message}`));
+        join(ws, url, code);
+      });
+    },
+    close: () => wss.close(),
+  };
 }

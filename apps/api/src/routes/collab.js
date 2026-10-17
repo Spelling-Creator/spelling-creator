@@ -11,6 +11,7 @@
 
 import { verifySupabaseUser } from '../lib/supabase.js';
 import { displayNameOf } from '../lib/auth.js';
+import { takeJoinToken as takeToken } from '../lib/joinLimit.js';
 import { rateLimitStore } from '../platform/index.js';
 
 // The assistant label is arbitrary text from the connecting client (an MCP
@@ -30,7 +31,10 @@ export function clampLabel(raw) {
 	return text.length <= ASSISTANT_LABEL_MAX ? text : `${text.slice(0, ASSISTANT_LABEL_MAX - 3).trimEnd()}...`;
 }
 
-const CODE_RE = /^[A-Za-z0-9_-]{1,128}$/;
+// What a session share code may be. Exported because letterboard sessions
+// (routes/practice.js) hold their codes to the same rule, and the letterboard
+// app promises its users exactly that.
+export const SESSION_CODE_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 /**
  * The agent endpoints, parsed: /collab/<code>/agent[/update|/chat]. Null for
@@ -47,32 +51,19 @@ export function parseAgentPath(pathname) {
 	} catch {
 		return null;
 	}
-	if (!CODE_RE.test(code)) return null;
+	if (!SESSION_CODE_RE.test(code)) return null;
 	return { code, action: m[2] || 'session' };
 }
 
 // Connection rate limit (token bucket): at most 5 joins/min per user. Shared by
 // a socket join and an agent join; both are a request to be let into a room.
-// Returns a 429 Response when the user is over budget, else null.
-async function takeJoinToken(kv, userId, cors) {
-	const JOIN_LIMIT = 5;
-	const JOIN_WINDOW = 60;
-	const now = Math.floor(Date.now() / 1000);
-	const rlKey = `collab-rl:${userId}`;
-	const raw = await kv.get(rlKey);
-	let entry = raw ? JSON.parse(raw) : { tokens: JOIN_LIMIT, last: now };
-	entry.tokens = Math.min(JOIN_LIMIT, entry.tokens + ((now - entry.last) * JOIN_LIMIT) / JOIN_WINDOW);
-	entry.last = now;
-	if (entry.tokens < 1) {
-		const retryAfter = Math.ceil((1 - entry.tokens) * (JOIN_WINDOW / JOIN_LIMIT));
-		return new Response('Too many collaboration attempts. Please wait a moment.', {
-			status: 429,
-			headers: { ...cors, 'Retry-After': String(retryAfter) },
-		});
-	}
-	entry.tokens -= 1;
-	await kv.put(rlKey, JSON.stringify(entry), { expirationTtl: JOIN_WINDOW * 2 });
-	return null;
+// Returns a 429 Response when the user is over budget, else null. The bucket
+// itself is lib/joinLimit.js, which the letterboard sessions share.
+function takeJoinToken(kv, userId, cors) {
+	return takeToken(kv, `collab-rl:${userId}`, {
+		message: 'Too many collaboration attempts. Please wait a moment.',
+		cors,
+	});
 }
 
 // The identity headers the room trusts, from the verified user. Built fresh
@@ -108,7 +99,7 @@ export async function handleCollab(request, env, url, cors) {
 	}
 
 	const code = decodeURIComponent(url.pathname.slice('/collab/'.length)).trim();
-	if (!CODE_RE.test(code)) {
+	if (!SESSION_CODE_RE.test(code)) {
 		return new Response('Invalid session code.', { status: 400, headers: cors });
 	}
 

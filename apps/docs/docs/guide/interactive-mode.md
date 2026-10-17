@@ -63,6 +63,43 @@ A bar across the top shows which step you're on and how many questions have
 been answered. **Back** and **Next** move between steps, and the last step's
 button is **Finish**.
 
+## With a letterboard
+
+A speller who spells on a tablet can answer from
+[Spelling Creator Board](https://github.com/playforge-coding/spelling-creator-board),
+the companion letterboard app, while the lesson runs here. The board shows the
+same step as this screen, and whatever is spelled on it appears in the answer
+box here as it is spelled.
+
+To set it up, sign in, open the lesson in interactive mode and press the tablet
+button in the top bar (**Letterboard**), then **Start a session**. A six-character
+code appears. On the tablet, open the board's lessons sheet, choose **Join a
+letterboard session** and type the code (capitals don't matter). The popover
+says when a board is following.
+
+While a session is running:
+
+- **This screen leads.** Moving with **Back** and **Next** here moves the board.
+  Previous and Next on the board ask this screen to move, and it follows them
+  too, so either side can drive.
+- **Spelling lands here.** Each letter spelled on the board appears in the
+  answer box as it is spelled, and Done on the board enters it as the answer and
+  moves to the next step, as **Next** would. Answers are saved to the account
+  signed in here, exactly as if they had been typed; the board itself has no
+  account and keeps nothing.
+- **A late board catches up.** A tablet that joins partway through lands on the
+  current step with the sentence so far.
+- **Only one screen can host** a code. If the connection drops, the board keeps
+  the lesson so the speller can carry on there, and this screen says so. Press
+  **Start a session** again for a new code.
+- **End session** in the popover ends it; so does leaving interactive mode. The
+  board is told the session has ended and keeps the lesson open.
+
+The button only appears when the app is connected to a hub that can relay
+between the two screens. Spelling Creator's own hub can; a self-hosted one may
+not, and then the button doesn't show. The lesson text and the answers travel through
+the hub for the length of the session and are not stored there.
+
 ## Showing the answers
 
 The eye button in the top bar (**Show answers**) shows the answer the lesson's
