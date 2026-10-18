@@ -20,10 +20,9 @@
 # origin, and it is also the reverse proxy the docs recommend putting in front of
 # the app. On Supabase's own hosting that job is done by Kong.
 #
-# Not production-ready as written: it terminates no TLS, and the credentials come
-# from .env with example values. Both are deliberate — a compose file that
-# pretended to be a deployment would be worse than one that is obviously a
-# starting point.
+# HTTPS is automatic once PUBLIC_URL is an https:// address on a domain that
+# points here (see `gateway` below). What it does not do for you is back up the
+# postgres-data and storage-data volumes, which hold every account and lesson.
 
 name: spelling-creator
 
@@ -88,9 +87,10 @@ services:
 
       ALLOWED_HOSTNAMES: ${PUBLIC_HOSTNAME:?missing, see .env.example}
       # One proxy (the gateway) sits in front of this process, so the client IP
-      # is the last entry in x-forwarded-for. Raise this if you add a CDN — the
+      # is the last entry in x-forwarded-for, and x-forwarded-proto says whether
+      # the browser used https. Raise this if you add a CDN or a tunnel: the
       # entries to the left of your own proxies are attacker-controlled.
-      TRUSTED_PROXY_COUNT: 1
+      TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
 
       # Gates GET /_diagnostics, which reports what each dependency is doing and
       # why it is failing. The same report is printed to this container's log at
@@ -140,15 +140,58 @@ services:
         condition: service_started
 
   # Joins PostgREST and GoTrue under one origin, and fronts the app. This is the
-  # piece with no Supabase equivalent to install — it is just a reverse proxy.
+  # piece with no Supabase equivalent to install: it is just a reverse proxy.
+  #
+  # It also does HTTPS. When PUBLIC_URL starts with https://, Caddy gets and
+  # renews a certificate for its hostname from Let's Encrypt by itself, and
+  # redirects plain http to it. That needs the hostname's DNS pointing at this
+  # machine and ports 80 and 443 reachable from the internet, so set PUBLIC_PORT
+  # to 80 and PUBLIC_HTTPS_PORT to 443. With an http:// PUBLIC_URL (the default,
+  # for trying it out on localhost) it serves plain http and asks for nothing.
+  #
+  # Already behind something that terminates TLS (a tunnel, a CDN, another
+  # proxy)? Set SITE_ADDRESS=:80 so Caddy doesn't try to get a certificate too,
+  # and raise TRUSTED_PROXY_COUNT on the app to count that hop.
   gateway:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
       - "${PUBLIC_PORT:-8080}:80"
+      - "${PUBLIC_HTTPS_PORT:-8443}:443"
+      # HTTP/3, which Caddy serves over UDP on the same port.
+      - "${PUBLIC_HTTPS_PORT:-8443}:443/udp"
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?missing, see .env.example}
+      SITE_ADDRESS: ${SITE_ADDRESS:-}
+    # Works out what Caddy should serve from PUBLIC_URL, so there is one setting
+    # to change rather than two to keep in step: the bare hostname of an https
+    # URL (which is what turns on Caddy's automatic HTTPS), otherwise plain :80.
+    # The doubled dollars are compose's escape for a literal one.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -z "$$SITE_ADDRESS" ]; then
+          case "$$PUBLIC_URL" in
+            https://*)
+              host=$${PUBLIC_URL#https://}
+              SITE_ADDRESS=$${host%%[:/]*}
+              ;;
+            *) SITE_ADDRESS=:80 ;;
+          esac
+        fi
+        export SITE_ADDRESS
+        echo "gateway: serving $$SITE_ADDRESS"
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
+    # Certificates and the keys behind them. Kept on a volume so a restart
+    # doesn't ask Let's Encrypt for a new one each time, which would run into
+    # its rate limits within a day.
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
     depends_on:
       - app
       - postgrest
@@ -410,8 +453,11 @@ configs:
       create event trigger pgrst_watch on ddl_command_end execute procedure public.pgrst_watch();
 
   caddyfile:
+    # SITE_ADDRESS is set by the gateway's entrypoint above. Caddy's reverse_proxy
+    # passes X-Forwarded-Proto on, which is how the app knows a request arrived
+    # over https and builds its links with it.
     content: |
-      :80 {
+      {$$SITE_ADDRESS} {
         # PostgREST and GoTrue under the paths the API and the SPA expect. The
         # prefixes are stripped because both upstreams serve from their own root.
         handle_path /rest/v1/* {
@@ -429,4 +475,6 @@ configs:
 volumes:
   postgres-data:
   storage-data:
+  caddy-data:
+  caddy-config:
   # ollama-data:

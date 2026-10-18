@@ -26,6 +26,7 @@ import { serverRender, shouldServerRender } from '../routes/ssr.js';
 import { serveApp } from '../routes/spa.js';
 import { assetServer } from './assets.js';
 import { withBrowserConfig } from './browserConfig.js';
+import { withForwardedScheme } from './forwardedScheme.js';
 import { nodePlatform } from './platform.js';
 import { installSelfFetch, servingSelf } from './selfFetch.js';
 
@@ -90,7 +91,11 @@ export function createHandler(processEnv = process.env) {
 	// answered in-process, as a subrequest is on the Worker, rather than over a
 	// network address that may not lead back here (see selfFetch.js).
 	installSelfFetch();
-	return servingSelf((request) => app.fetch(request, env, ctx));
+	const serve = servingSelf((request) => app.fetch(request, env, ctx));
+	// The scheme is settled first, so that the origin every route builds links
+	// from, and the one self-requests are matched against, is the one the browser
+	// actually used (see forwardedScheme.js).
+	return (request) => serve(withForwardedScheme(request, processEnv));
 }
 
 /**

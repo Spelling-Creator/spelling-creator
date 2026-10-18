@@ -38,6 +38,23 @@ function s3Config(env) {
 }
 
 /**
+ * How many proxies sit in front of this process, from `TRUSTED_PROXY_COUNT`.
+ *
+ * Read without `||`, which would fold an explicit 0 into the default. An unset
+ * or blank value is the default of 1; anything that isn't a whole number of hops
+ * falls back to it too, since a typo should not quietly turn the forwarded
+ * headers off. Only the literal 0 does that, and only on purpose.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @returns {number}
+ */
+export function trustedProxyHops(env) {
+	const setting = String(env.TRUSTED_PROXY_COUNT ?? '').trim();
+	const configured = setting === '' ? 1 : Number(setting);
+	return Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : 1;
+}
+
+/**
  * The IP a request arrived from, according to this deployment's proxy.
  *
  * `x-forwarded-for` is a list, appended to by each hop, and the *client* can put
@@ -59,13 +76,7 @@ function s3Config(env) {
  */
 function clientIpFrom(env) {
 	const header = (env.CLIENT_IP_HEADER || 'x-forwarded-for').toLowerCase();
-	// Read without `||`, which would fold an explicit 0 into the default. An unset
-	// or blank value is the default of 1; anything that isn't a whole number of
-	// hops falls back to it too, since a typo should not quietly turn the header
-	// off — only the literal 0 does that, and only on purpose.
-	const setting = String(env.TRUSTED_PROXY_COUNT ?? '').trim();
-	const configured = setting === '' ? 1 : Number(setting);
-	const hops = Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : 1;
+	const hops = trustedProxyHops(env);
 	return (request) => {
 		if (hops === 0) return '';
 		const raw = request.headers.get(header) || '';

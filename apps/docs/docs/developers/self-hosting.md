@@ -161,10 +161,43 @@ anyway.
 setting, the SPA's included, is environment, so changing one is
 `docker compose up -d` and never a rebuild.
 
-The compose file terminates no TLS and takes its credentials from `.env` with
-example values, both deliberately. It is a starting point, not a deployment; a
-compose file that pretended otherwise would be worse than one that is obviously
-an example.
+### HTTPS
+
+The gateway is [Caddy](https://caddyserver.com), which gets and renews
+certificates by itself. Turning it on is a matter of giving the instance its
+real address in `.env`:
+
+```bash
+PUBLIC_URL=https://spelling.example.org
+PUBLIC_HOSTNAME=spelling.example.org
+PUBLIC_PORT=80
+PUBLIC_HTTPS_PORT=443
+```
+
+then `docker compose up -d`. When `PUBLIC_URL` starts with `https://`, the
+gateway serves its hostname over HTTPS with a certificate from Let's Encrypt,
+and redirects plain http to it. With an `http://` address (the default, for
+trying it out on `localhost`) it serves plain http and needs nothing.
+
+Let's Encrypt checks that the domain is yours by connecting to it, so two things
+have to be true first: the domain's DNS points at this machine, and ports 80
+and 443 reach it from the internet. Certificates are kept on the `caddy-data`
+volume, so restarts reuse them rather than asking for new ones, which would hit
+Let's Encrypt's rate limits within a day. `docker compose logs gateway` shows
+what it is doing.
+
+If something in front of the gateway already terminates TLS (a tunnel, a CDN,
+another reverse proxy), set `SITE_ADDRESS=:80` so the gateway serves plain http
+behind it instead of trying for a certificate of its own, and
+`TRUSTED_PROXY_COUNT=2` to count the extra hop.
+
+The app learns that a request arrived over https from the `X-Forwarded-Proto`
+header the gateway sends (see [`TRUSTED_PROXY_COUNT`](#the-server-itself)),
+which is what keeps the links it builds, in the sitemap, the feed and
+server-rendered pages, on `https://`.
+
+What the stack does not do for you is back up the `postgres-data` and
+`storage-data` volumes, which hold every account, lesson and image.
 
 ## When something doesn't work
 
@@ -348,6 +381,15 @@ lets a banned visitor choose the address their ban is keyed on.
 A `CLIENT_IP_HEADER` other than `x-forwarded-for` (nginx's `x-real-ip`, say) is
 taken as a single value, and `TRUSTED_PROXY_COUNT` doesn't apply to it.
 
+The same count decides whether `x-forwarded-proto` is believed. The process
+reads the scheme of each request from its own socket, which behind a proxy that
+terminates TLS is always plain http, so it takes the scheme the proxy reports
+instead, and builds its absolute URLs (the sitemap, the feed, `robots.txt`, the
+canonical and `og:` links in server-rendered pages) from that. With
+`TRUSTED_PROXY_COUNT=0` the header is ignored, for the same reason as above.
+Caddy sends it by default; with nginx, add
+`proxy_set_header X-Forwarded-Proto $scheme;`.
+
 ### How the browser gets its settings
 
 The SPA needs a few settings of its own: where to sign in, which sign-in modes
@@ -505,7 +547,8 @@ nothing, since the browser talks to Wikimedia directly.
 **Put a reverse proxy in front.** The process serves static files itself so that
 it _can_ run alone, but Caddy or nginx will do it better: ranges, compression,
 and a real response cache, which is the one platform service this host
-deliberately implements as a no-op. Terminate TLS there too.
+deliberately implements as a no-op. Terminate TLS there too, and have it send
+`X-Forwarded-Proto` (see [The server itself](#the-server-itself)).
 
 If you do let the proxy serve `apps/web/dist`, send everything it has no file
 for to the app rather than reaching for the usual SPA rule
