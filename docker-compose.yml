@@ -1,12 +1,17 @@
 # A worked example of a self-hosted Spelling Creator, for adapting rather than
 # running as-is. See /docs/developers/self-hosting for what each piece is for.
 #
-#   cp .env.example .env     # then edit it — the defaults are not secrets
+# This file is all you need; there is no repository to clone. In an empty
+# directory:
+#
+#   docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+#   chmod 600 .env           # it holds the service-role key
+#   # set PUBLIC_URL and PUBLIC_HOSTNAME in .env
 #   docker compose up -d
 #
 # There is no schema step to run by hand: the `schema` service below waits for
-# GoTrue to create auth.users, applies apps/api/schema.sql, and exits, and the
-# app waits for it to finish.
+# GoTrue to create auth.users, applies apps/api/schema.sql from the app image,
+# and exits, and the app waits for it to finish.
 #
 # The shape to understand before adapting: the app expects ONE origin that serves
 # both `/rest/v1/*` (PostgREST) and `/auth/v1/*` (GoTrue), because that is how
@@ -107,81 +112,37 @@ services:
       storage-init:
         condition: service_completed_successfully
 
-  # Applies apps/api/schema.sql once, then exits.
+  # Applies apps/api/schema.sql, then exits.
   #
   # This is a service rather than a step in the README because of an ordering
-  # trap that is very easy to lose an evening to. Every table in the schema
-  # references auth.users, which GoTrue creates on its first migration — so the
-  # schema cannot be applied until auth has started, and applying it early fails
-  # *every* statement. `psql` walks straight past errors and exits 0, so that
-  # failure is silent: you get an empty database, PostgREST reporting "0
-  # Relations", and the app answering 502 with no clue why.
+  # trap that is very easy to lose an evening to: the schema references
+  # auth.users, which only exists once GoTrue has migrated, and applying it
+  # early fails silently. apps/api/scripts/apply-schema.sh waits for that table
+  # and stops on the first real error; see the comments there.
   #
-  # Hence both halves below: wait for auth.users to exist, and run with
-  # ON_ERROR_STOP so a real failure stops here and says so.
+  # It runs from the app image, which carries both the script and schema.sql,
+  # so the schema always matches the app and nothing has to be mounted from a
+  # checkout. It runs on every `up`, and every statement is safe to re-run, so
+  # this is also how an upgrade applies new tables and columns.
+  #
+  # `build` is repeated from `app` so that `docker compose up --build` builds
+  # the image here too (from cache, so it costs nothing), rather than trying to
+  # pull a tag that only exists locally.
   schema:
-    image: postgres:17-alpine
+    image: ghcr.io/spelling-creator/spelling-creator:${IMAGE_TAG:-latest}
+    build: .
     restart: "no"
     environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGDATABASE: spelling
       PGPASSWORD: ${POSTGRES_PASSWORD:?missing, see .env.example}
-    volumes:
-      - ./apps/api/schema.sql:/schema.sql:ro
+    command: ["sh", "apps/api/scripts/apply-schema.sh"]
     depends_on:
       postgres:
         condition: service_healthy
       auth:
         condition: service_started
-    # List form with a literal block, so the script is one argument and needs no
-    # quote-escaping — the folded `sh -c "..."` spelling has to escape the inner
-    # quotes and is easy to get subtly wrong.
-    entrypoint:
-      - sh
-      - -c
-      - |
-        echo 'waiting for auth.users (GoTrue creates it on its first migration)...'
-        attempt=0
-        # Bounded, and loud about why it gave up. An unbounded wait cannot tell
-        # "not migrated yet" from "cannot reach the database at all", and both
-        # look identical from outside: a container that never finishes and an
-        # app that never starts. psql's own errors are left on stderr so they
-        # land in `docker compose logs schema`.
-        until [ "$(psql -h postgres -U postgres -d spelling -tAc "select to_regclass('auth.users')" | tr -d '[:space:]')" = "auth.users" ]; do
-          attempt=$$((attempt + 1))
-          if [ "$$attempt" -ge 60 ]; then
-            echo 'GAVE UP: auth.users did not appear within two minutes.'
-            echo ''
-            echo 'What this container can see:'
-            # Narrows it without a round trip. No auth schema at all means GoTrue
-            # never connected (check its logs for a connection refusal — the
-            # usual one is sslmode). An auth schema with no tables means it
-            # connected and its migration failed part way. Errors here instead
-            # mean this container cannot reach postgres either.
-            psql -h postgres -U postgres -d spelling -tAc \
-              "select 'auth schema exists: ' || count(*) from pg_namespace where nspname = 'auth'" || true
-            psql -h postgres -U postgres -d spelling -tAc \
-              "select 'tables in auth: ' || count(*) from pg_tables where schemaname = 'auth'" || true
-            echo ''
-            echo 'Then: docker compose logs auth'
-            exit 1
-          fi
-          if [ $$((attempt % 5)) -eq 0 ]; then
-            echo "  still waiting ($$((attempt * 2))s)"
-          fi
-          sleep 2
-        done
-        echo 'applying schema.sql'
-        psql -v ON_ERROR_STOP=1 -h postgres -U postgres -d spelling -f /schema.sql
-        echo 'granting the new tables to service_role'
-        # Belt and braces over the ALTER DEFAULT PRIVILEGES in the roles script.
-        # Default privileges only reach objects created afterwards by the role
-        # that set them, which makes them quietly conditional on how and by whom
-        # the schema was applied — and the failure is a table that exists, that
-        # PostgREST can see, and that the API is refused with 42501. That reads
-        # as an authentication problem and is not one. Granting explicitly here
-        # does not depend on any of it.
-        psql -v ON_ERROR_STOP=1 -h postgres -U postgres -d spelling -c \
-          "grant all on all tables in schema public to service_role;
-           grant all on all sequences in schema public to service_role;"
 
   # Joins PostgREST and GoTrue under one origin, and fronts the app. This is the
   # piece with no Supabase equivalent to install — it is just a reverse proxy.

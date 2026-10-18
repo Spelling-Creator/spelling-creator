@@ -128,6 +128,23 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
+# Two jobs this image does besides serving, so that self-hosting needs nothing
+# but the compose file:
+#
+# - psql, for the compose stack's `schema` service, which runs
+#   apps/api/scripts/apply-schema.sh from this image rather than mounting
+#   schema.sql from a checkout. A few megabytes.
+# - openssl, and a `generate-env` command on the PATH that prints a filled-in
+#   .env from .env.example (scripts/generate-env.sh --print):
+#
+#     docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+#
+#   The base image's entrypoint runs a first argument that names a command on
+#   the PATH instead of passing it to node, which is what makes that work.
+RUN apk add --no-cache postgresql-client openssl \
+ && printf '#!/bin/sh\nexec sh /app/scripts/generate-env.sh --print "$@"\n' > /usr/local/bin/generate-env \
+ && chmod +x /usr/local/bin/generate-env
+
 # `node` is a non-root user the base image already provides. Nothing here is
 # written to at runtime — the process is stateless — so it needs no ownership
 # beyond read access.

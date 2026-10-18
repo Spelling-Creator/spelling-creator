@@ -6,6 +6,10 @@
 #   ./scripts/generate-env.sh --force   # mints new credentials into an existing .env
 #   ./scripts/generate-env.sh --print   # writes nothing, prints a fresh set
 #
+# Without a clone, the app image carries it as `generate-env`, which prints:
+#
+#   docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+#
 # POSIX sh and openssl, deliberately: somebody self-hosting this has Docker and
 # nothing else, and asking them to install a Node toolchain to produce a config
 # file is a silly thing to ask. openssl ships with macOS and every Linux, and is
@@ -41,7 +45,7 @@ for arg in "$@"; do
 		--force) FORCE=1 ;;
 		--print) PRINT=1 ;;
 		-h | --help)
-			sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//'
+			sed -n '3,11p' "$0" | sed 's/^# \{0,1\}//'
 			exit 0
 			;;
 		*)
@@ -55,12 +59,8 @@ if ! command -v openssl >/dev/null 2>&1; then
 	cat >&2 <<-'MISSING'
 		openssl is required and was not found.
 
-		If you would rather not install it, any container with it will do:
-		  docker run --rm -v "$PWD:/w" -w /w --entrypoint sh \
-		    alpine/openssl:latest scripts/generate-env.sh
-
-		(--entrypoint sh matters: that image's entrypoint is openssl, so
-		without it Docker runs "openssl sh scripts/generate-env.sh".)
+		If you would rather not install it, the app image has it:
+		  docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
 	MISSING
 	exit 1
 fi
@@ -145,8 +145,21 @@ rewrite() {
 	done
 }
 
+fill_in_by_hand() {
+	printf 'Still to fill in by hand:\n'
+	printf '  PUBLIC_URL / PUBLIC_HOSTNAME  where this instance is reachable from a browser\n'
+	printf '\nSign-in is by username and password (AUTH_MODE=password), so no mail server is\n'
+	printf 'needed. Fill in SMTP_* only for AUTH_MODE=magic-link or both, or to let people\n'
+	printf 'reset their own passwords by email. Otherwise an admin does that from the\n'
+	printf 'moderation page.\n'
+	printf '\nThen start it with `docker compose up -d`.\n'
+}
+
+# The guidance goes to stderr here, because stdout is the .env itself: this is
+# what `generate-env > .env` runs in the app image.
 if [ "$PRINT" -eq 1 ]; then
 	rewrite "$TEMPLATE"
+	fill_in_by_hand >&2
 	exit 0
 fi
 
@@ -179,12 +192,7 @@ mv "$TMP" "$TARGET"
 printf 'Wrote %s\n\n' "$TARGET"
 if [ "$REWRITING" -eq 1 ]; then
 	printf 'Credentials replaced; everything else in the file was left as it was.\n'
+	printf '\nThen start it with `docker compose up -d`.\n'
 else
-	printf 'Still to fill in by hand:\n'
-	printf '  PUBLIC_URL / PUBLIC_HOSTNAME  where this instance is reachable from a browser\n'
-	printf '\nSign-in is by username and password (AUTH_MODE=password), so no mail server is\n'
-	printf 'needed. Fill in SMTP_* only for AUTH_MODE=magic-link or both, or to let people\n'
-	printf 'reset their own passwords by email — otherwise an admin does that from the\n'
-	printf 'moderation page.\n'
+	fill_in_by_hand
 fi
-printf '\nThen start it with `docker compose up -d`.\n'

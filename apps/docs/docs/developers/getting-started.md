@@ -201,8 +201,8 @@ gitignored except the `.env.example` files and `apps/web/.env.stub`.
   set these in their MCP client's config instead; see
   [MCP server configuration](./mcp-server/configuration.md).
 - `.env` at the root: only for the Docker Compose stack, generated from the
-  root `.env.example` by `scripts/generate-env.sh`. See
-  [Self-hosting](./self-hosting.md).
+  root `.env.example` by `scripts/generate-env.sh` (which the image also carries
+  as `generate-env`). See [Self-hosting](./self-hosting.md).
 
 ### AI providers
 

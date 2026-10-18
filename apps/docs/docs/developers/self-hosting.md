@@ -35,25 +35,54 @@ longer somewhere to point self-hosters. Nothing in the app knows which it is
 image and endpoint and nothing else. The service is named `storage` for its role
 rather than its implementation to keep that swap a one-line edit.
 
+You need Docker and nothing else: no clone, no Node, no Git LFS. In an empty
+directory:
+
 ```bash
-./scripts/generate-env.sh   # writes .env with every credential filled in
+curl -fsSLO https://raw.githubusercontent.com/Spelling-Creator/spelling-creator/main/docker-compose.yml
+docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+chmod 600 .env              # it holds the service-role key
 # then set PUBLIC_URL / PUBLIC_HOSTNAME in .env
 docker compose up -d
 ```
 
+`generate-env` prints a `.env` with every credential filled in, and what is left
+to set by hand goes to the terminal rather than into the file. The compose file
+pulls the same image to run the app and to apply the database schema, so those
+two can never be out of step.
+
 That pulls the published image, and only that: a tag that can't be pulled
 stops with an error rather than being built from whatever is on disk. `latest`
-follows `main`; to stay on one build until you choose to move, set `IMAGE_TAG`
-in `.env` to one of the `sha-<commit>` tags on the package page. Upgrading is
-then a matter of changing it and running
+follows `main`. To stay on one build until you choose to move, set `IMAGE_TAG`
+in `.env` to one of the `sha-<commit>` tags on the package page, and take the
+compose file from the same commit (replace `main` in the URL above with the
+commit), since a new version may also change the services around the app.
+Upgrading is then a matter of changing both and running
 `docker compose pull && docker compose up -d`.
 
 The image is public, so pulling it needs no login. If a pull is refused with
 "denied" or "unauthorized", the package's visibility has been changed on
 GitHub, which is something for the repository's maintainers to put back.
 
+### From a checkout
+
+The same steps work from a clone of the repository, where the generator can
+also write `.env` directly:
+
+```bash
+./scripts/generate-env.sh   # writes .env, refusing to overwrite one
+docker compose up -d        # pulls the published image
+```
+
+`--force` mints new credentials into an existing `.env`, keeping everything else
+in it, and `--print` writes nothing and prints a fresh set (that is what the
+image's `generate-env` runs). The script is POSIX `sh` and `openssl`, so it
+needs nothing installed; if `openssl` somehow isn't there, use the image's copy
+as above.
+
 To run your own changes instead, add `compose.build.yml`, which builds the
-checkout and tags it with the published image's name:
+checkout and tags it with the published image's name, so the `app` and `schema`
+services both run it:
 
 ```bash
 docker compose -f docker-compose.yml -f compose.build.yml up -d --build
@@ -66,20 +95,7 @@ in `.env`. Building needs Git LFS, because the images and videos the app ships
 are stored there, and the build stops with the fix if it finds pointer files
 where they should be.
 
-The generator refuses to overwrite an existing `.env`; `--force` mints new
-credentials into one anyway, and `--print` writes nothing and prints a fresh set.
-It is POSIX `sh` and `openssl`, so it needs nothing installed; asking someone
-whose only requirement is Docker to add a Node toolchain to produce a config file
-would be a silly thing to ask. If `openssl` somehow isn't there, any container
-has it:
-
-```bash
-docker run --rm -v "$PWD:/w" -w /w --entrypoint sh alpine/openssl:latest scripts/generate-env.sh
-```
-
-`--entrypoint sh` is not optional: that image's entrypoint is `openssl` itself,
-so without it Docker runs `openssl sh scripts/generate-env.sh` and the script
-never executes.
+### What the stack does for you
 
 Use the generator rather than copying `.env.example` by hand. `ANON_KEY` and
 `SERVICE_ROLE_KEY` are JWTs that must be signed with the same `JWT_SECRET`
@@ -91,11 +107,15 @@ generating a broken one is better still.
 
 That is the whole of it: there is no schema step to remember, because the
 ordering it depends on is not something to leave to a reader. A one-shot
-`schema` service waits for GoTrue to create `auth.users` on its first migration,
-then applies `apps/api/schema.sql` with `ON_ERROR_STOP`, grants the new tables to
-`service_role`, and the app waits for it to finish. A second one-shot service,
-`storage-init`, creates the two buckets (`lesson-images` and `lesson-git`) the
-same way.
+`schema` service runs `apps/api/scripts/apply-schema.sh` from the app image: it
+waits for GoTrue to create `auth.users` on its first migration (up to five
+minutes, since that first migration can be slow on a small machine), then
+applies `apps/api/schema.sql` with `ON_ERROR_STOP`, grants the new tables to
+`service_role`, and the app waits for it to finish. It runs on every
+`docker compose up`, and every statement in the schema is safe to re-run, so
+this is also how an upgrade brings in new tables and columns. A second one-shot
+service, `storage-init`, creates the two buckets (`lesson-images` and
+`lesson-git`) the same way.
 
 Both halves of the schema step matter. Every hub table references `auth.users`,
 so applying the schema before auth has migrated fails _every_ statement, and
