@@ -564,3 +564,18 @@
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
+
+/* The ALTCHA widget (src/lib/aiChallenge.jsx), on instances that use it
+   instead of Turnstile. Its own styles read these variables, so pointing them
+   at the app's tokens makes it look like the rest of the dialog and follow the
+   light and dark themes without a theme of its own. */
+altcha-widget {
+  --altcha-color-base: var(--card);
+  --altcha-color-base-content: var(--card-foreground);
+  --altcha-color-primary: var(--primary);
+  --altcha-color-primary-content: var(--primary-foreground);
+  --altcha-color-error: var(--destructive);
+  --altcha-border-color: var(--border);
+  --altcha-border-radius: var(--radius);
+  --altcha-max-width: 100%;
+}

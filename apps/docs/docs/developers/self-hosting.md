@@ -415,6 +415,7 @@ configuration, and why the settings both halves need are one variable each.
 | `SUPABASE_ANON_KEY`   | server and SPA | The key the browser signs in with.                                |
 | `AUTH_MODE`           | server and SPA | Which sign-in methods the login page offers.                      |
 | `USERNAME_DOMAIN`     | server and SPA | The domain usernames become addresses under.                      |
+| `AI_CHALLENGE`        | server and SPA | Which check the AI dialogs show; see [AI](#ai).                   |
 | `TURNSTILE_SITE_KEY`  | SPA            | The Turnstile widget the AI dialogs show.                         |
 | `GOOGLE_CLIENT_ID`    | SPA            | "Save to Google Docs".                                            |
 | `PUBLIC_SUPABASE_URL` | SPA            | Where the browser reaches `/auth/v1` and `/rest/v1`, if not here. |
@@ -536,10 +537,51 @@ three variables to go with it. An instance with no AI configured serves
 everything else; the suggestion buttons report that they are unavailable.
 
 Every AI request (suggestions, fact checks, AI fixes, and Pixabay image search,
-which goes through the same endpoint) is checked with
-[Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/)
-before anything else happens. Turnstile is a free service and works on any host,
-but the instance needs a widget of its own:
+which goes through the same endpoint) has to pass a check before anything else
+happens, so that nobody can script the instance's AI quota away. `AI_CHALLENGE`
+chooses which, and the server hands the same value to the SPA, so the browser
+always shows the widget the server expects:
+
+| `AI_CHALLENGE` | The check                                   | Needs                               |
+| -------------- | ------------------------------------------- | ----------------------------------- |
+| `turnstile`    | Cloudflare Turnstile (the hosted instance)  | A Turnstile widget of your own      |
+| `altcha`       | An ALTCHA proof of work, served by this API | Nothing                             |
+| `none`         | No check                                    | An instance only trusted people use |
+
+Unset, it is `turnstile`, which is what the hosted instance runs. The compose
+stack defaults to `altcha`, because it works with nothing to sign up for.
+Anything else reads as `turnstile`, so a typo fails closed: the AI features
+refuse until it is fixed rather than quietly running with no check. The
+dependency check in `docker compose logs app` says which one is in effect, on
+its `ai-challenge` line.
+
+Whichever is chosen, the per-address rate limiter still applies afterwards, 60
+requests a minute.
+
+#### ALTCHA
+
+[ALTCHA](https://altcha.org) is an open-source proof of work. When an AI dialog
+opens, the widget fetches a signed challenge from `GET /altcha/challenge` and
+solves it in the background, which takes about a second on a typical computer,
+so there is usually a token before anyone has finished reading the dialog. The
+server checks the signature and the solution (`apps/api/src/lib/altcha.js`), and
+accepts each solved challenge once: its nonce goes in the rate-limit store until
+the challenge would have expired, ten minutes after it was issued.
+
+It is a cost rather than a proof of a human. Every request makes the sender do
+some work, which is what makes scripting the AI endpoints expensive, without
+sending visitors or their addresses to a third party.
+
+Challenges are signed with `ALTCHA_HMAC_KEY`. It is optional: without it the
+key is derived from `SUPABASE_SERVICE_ROLE_KEY`, which every instance with a hub
+already has and which never leaves the server. Set it to keep the two
+independent, for example so that rotating the service-role key doesn't
+invalidate challenges that are already out.
+
+#### Turnstile
+
+[Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) is a free
+service and works on any host, but the instance needs a widget of its own:
 
 - `TURNSTILE_SITE_KEY`, so the SPA shows the challenge. Without it, the AI and
   image-search dialogs say they are unavailable.
@@ -547,9 +589,17 @@ but the instance needs a widget of its own:
 - `ALLOWED_HOSTNAMES` set to the hostname the app is served from, which the
   server compares with the hostname Turnstile reports.
 
-In the compose stack, fill in the two Turnstile keys in `.env`;
-`ALLOWED_HOSTNAMES` is already set from `PUBLIC_HOSTNAME`. Pixabay search also
-needs `PIXABAY_API_KEY`. Wikimedia Commons search needs
+In the compose stack, set `AI_CHALLENGE=turnstile` and fill in the two keys in
+`.env`; `ALLOWED_HOSTNAMES` is already set from `PUBLIC_HOSTNAME`.
+
+#### None
+
+No widget and no check: the SPA sends a placeholder token and the server lets
+every request through to the rate limiter. Only for an instance that just
+trusted people can reach, such as one on a home network. On anything public it
+lets anyone spend the instance's AI quota.
+
+Pixabay search also needs `PIXABAY_API_KEY`. Wikimedia Commons search needs
 nothing, since the browser talks to Wikimedia directly.
 
 ## Notes on running it

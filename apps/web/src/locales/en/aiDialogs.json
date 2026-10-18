@@ -27,7 +27,7 @@
     }
   },
   "aiLessonIdea": {
-    "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
+    "turnstileNotConfigured": "AI isn't set up here: this instance uses Turnstile but has no site key.",
     "verificationFailed": "Verification failed. Please try again.",
     "noIdeas": "No ideas came back. Try generating again.",
     "genericError": "Something went wrong.",
@@ -41,7 +41,7 @@
     "generateMore": "Generate more"
   },
   "aiQuestion": {
-    "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
+    "turnstileNotConfigured": "AI isn't set up here: this instance uses Turnstile but has no site key.",
     "verificationFailed": "Verification failed. Please try again.",
     "nameSectionFirst": "Give this section a name first, then try again.",
     "genericError": "Something went wrong.",
@@ -54,7 +54,7 @@
     "generate": "Generate"
   },
   "aiText": {
-    "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
+    "turnstileNotConfigured": "AI isn't set up here: this instance uses Turnstile but has no site key.",
     "verificationFailed": "Verification failed. Please try again.",
     "nameSectionFirst": "Give this section a name first, then try again.",
     "genericError": "Something went wrong.",

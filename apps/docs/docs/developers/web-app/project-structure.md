@@ -85,10 +85,10 @@ src/
     SectionCard.jsx       a named section with its content blocks + add buttons; measures the pointer against its own rows during a block drag, but the drag itself is owned by EditorPage (blocks can move between sections)
     ContentBlock.jsx      a single text, spelling, image, VAKT or question block; owns BLOCK_LAYOUT, the responsive content/controls split (see mobile-layout.md)
     IconActionButton.jsx  the icon + tooltip button behind every block/section control; the tooltip doubles as its aria-label
-    AiTextDialog.jsx       Turnstile-verified "Suggest text with AI" dialog
-    AiQuestionDialog.jsx   Turnstile-verified "suggest a question with AI" dialog
-    AiLessonIdeaDialog.jsx Turnstile-verified "suggest a whole lesson outline with AI" dialog
-    ImageSearchDialog.jsx  the "Search images" dialog: Pixabay (Turnstile-verified, through the Worker) and Wikimedia Commons (see images.md)
+    AiTextDialog.jsx       "Suggest text with AI" dialog, behind the AI check (lib/aiChallenge.jsx)
+    AiQuestionDialog.jsx   "suggest a question with AI" dialog, behind the AI check
+    AiLessonIdeaDialog.jsx "suggest a whole lesson outline with AI" dialog, behind the AI check
+    ImageSearchDialog.jsx  the "Search images" dialog: Pixabay (behind the AI check, through the Worker) and Wikimedia Commons (see images.md)
     CollaborateDialog.jsx  live-collaboration control panel (host/join, roster, trusted collaborators)
     CollabCursors.jsx      floating colored carets showing collaborators' selections
     CollabChat.jsx         in-session chat: a floating corner panel on desktop, a bottom sheet on mobile
@@ -126,6 +126,8 @@ src/
     speechPrefs.js         the read-aloud preferences (on/off, voice, pace) and the voice lists (the browser's, and the natural voices this device can run), shared by interactive mode and the settings page
     useSpeech.js           text-to-speech for interactive mode: the browser's voices over the Web Speech API, or a natural voice (Kokoro) played through Web Audio, with the browser's as the fallback
     auth.jsx               AuthProvider + useAuth (session, magic link, emailed code, password sign-in, sign out)
+    aiChallenge.jsx        useAiChallenge: the instance's check before an AI request (Turnstile, ALTCHA or none), shared by every AI dialog
+    altchaWidget.js        registers <altcha-widget>; loaded on demand by aiChallenge.jsx, stubbed out of the server build
     seo.jsx                <DocumentMeta> / <JsonLd>: React 19 hoists these into <head>, which is what makes them work under SSR
     ssr.jsx                the client/server handoff: SsrProvider, useServerData, useSiteOrigin
     pwa.jsx                registers the service worker; toasts when a new build is waiting
@@ -282,6 +284,7 @@ configureCore({
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   turnstileSiteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+  aiChallenge: import.meta.env.VITE_AI_CHALLENGE,
   authMode: import.meta.env.VITE_AUTH_MODE,
   usernameDomain: import.meta.env.VITE_USERNAME_DOMAIN,
 });
@@ -304,7 +307,7 @@ and `gitRemoteEnabled` constants are gone: every one was computed at module scop
 so under a lazily resolved config all of them would have read as `false`. They are
 now predicates: `hasSupabase()`, `hasGoogleDrive()` and `hasApi()` (the last
 replacing four names for one predicate), joined since by `hasTurnstile()`,
-`hasPasswordAuth()` and `hasMagicLinkAuth()`.
+`hasAiChallenge()`, `hasPasswordAuth()` and `hasMagicLinkAuth()`.
 
 ### Why version history splits the way it does
 

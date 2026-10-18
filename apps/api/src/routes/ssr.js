@@ -92,6 +92,9 @@ function coreConfig(env, url) {
 		supabaseAnonKey: env.SUPABASE_ANON_KEY,
 		googleClientId: '',
 		turnstileSiteKey: '',
+		// Set for the same reason as the two below: configureCore merges, so a
+		// value left out would carry over from whatever set it last.
+		aiChallenge: env.AI_CHALLENGE || 'turnstile',
 		// The two settings a self-hosted instance changes about sign-in. Nothing
 		// rendered here reads them today — the login page is not one of the public
 		// read routes, and a server render is always signed out — but the SPA is

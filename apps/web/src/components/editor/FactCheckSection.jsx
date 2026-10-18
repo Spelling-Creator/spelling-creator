@@ -1,7 +1,7 @@
 // The Check panel's fact check: the passages' numbers and dates, compared with
 // Wikidata, the Smithsonian's record of volcanoes and Wikipedia.
 //
-// Run on request, behind a Turnstile challenge, because it costs a model call
+// Run on request, behind the instance's AI check, because it costs a model call
 // and a round of lookups (see lib/factCheck.js). What it shows:
 //
 //   - Facts a source disagrees with, grouped by section. Each leads to its
@@ -16,10 +16,10 @@
 // is dropped from the list and counted instead, so fixing a number clears its
 // finding without checking again.
 //
-// Hidden entirely on an instance with no API or no Turnstile key, where it
-// could only ever fail.
+// Hidden entirely on an instance with no API, or one using Turnstile with no
+// site key, where it could only ever fail.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDownIcon,
@@ -38,12 +38,8 @@ import {
   lessonPassages,
   quoteStillThere,
 } from "@spelling-creator/core/factCheck";
-import {
-  hasApi,
-  hasTurnstile,
-  turnstileSiteKey,
-} from "@spelling-creator/core/config";
-import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
+import { hasAiChallenge } from "@spelling-creator/core/config";
+import { useAiChallenge } from "../../lib/aiChallenge.jsx";
 
 const ICONS = {
   disagrees: CircleAlertIcon,
@@ -138,43 +134,25 @@ export default function FactCheckSection({
   onChoose,
 }) {
   const { t } = useTranslation("checks");
-  const [token, setToken] = useState("");
   const [widgetError, setWidgetError] = useState("");
   const [showRest, setShowRest] = useState(false);
-  const widgetRef = useRef(null);
-  const widgetId = useRef(null);
-  const available = hasApi() && hasTurnstile();
+  const available = hasAiChallenge();
   const running = factCheck.status === "running";
 
   // The challenge, while the panel is open. Its token is good for one request,
-  // so the widget is reset after each check (below) for the next one.
+  // so the check is refreshed after each run (below) for the next one.
+  const {
+    token,
+    widget,
+    refresh: refreshChallenge,
+  } = useAiChallenge(open && available, {
+    onError: setWidgetError,
+    messages: { failed: t("facts.verificationFailed") },
+  });
+  // A failed check from an earlier opening is not news this time.
   useEffect(() => {
-    if (!open || !available) return;
-    let cancelled = false;
-    setToken("");
-    setWidgetError("");
-    whenTurnstileReady()
-      .then((turnstile) => {
-        if (cancelled || !widgetRef.current) return;
-        widgetId.current = turnstile.render(widgetRef.current, {
-          sitekey: turnstileSiteKey(),
-          callback: (tok) => setToken(tok),
-          "expired-callback": () => setToken(""),
-          "error-callback": () => {
-            setToken("");
-            setWidgetError(t("facts.verificationFailed"));
-          },
-        });
-      })
-      .catch((e) => setWidgetError(e.message));
-    return () => {
-      cancelled = true;
-      if (widgetId.current != null && window.turnstile) {
-        window.turnstile.remove(widgetId.current);
-      }
-      widgetId.current = null;
-    };
-  }, [open, available, t]);
+    if (open) setWidgetError("");
+  }, [open]);
 
   // Where each passage is now, so a finding can be placed and checked for
   // whether its words are still there.
@@ -202,11 +180,8 @@ export default function FactCheckSection({
 
   const check = () => {
     factCheck.run({ title, sections }, token);
-    setToken("");
     setShowRest(false);
-    if (widgetId.current != null && window.turnstile) {
-      window.turnstile.reset(widgetId.current);
-    }
+    refreshChallenge();
   };
 
   return (
@@ -301,7 +276,7 @@ export default function FactCheckSection({
         </Alert>
       )}
 
-      <div ref={widgetRef} />
+      {widget}
       {passages.size ? (
         <Button
           variant="outline"

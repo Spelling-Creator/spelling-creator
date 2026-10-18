@@ -182,7 +182,8 @@ gitignored except the `.env.example` files and `apps/web/.env.stub`.
 - `apps/web/.env`: `VITE_*` values that Vite substitutes into the client bundle
   at build time, read in `apps/web/src/main.jsx`: `VITE_API_URL`,
   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`,
-  `VITE_GOOGLE_CLIENT_ID`, `VITE_AUTH_MODE` and `VITE_USERNAME_DOMAIN`. The
+  `VITE_AI_CHALLENGE`, `VITE_GOOGLE_CLIENT_ID`, `VITE_AUTH_MODE` and
+  `VITE_USERNAME_DOMAIN`. The
   [web app's getting started page](./web-app/getting-started.md) explains each
   one. A self-hosted Node server supplies the same settings at runtime instead,
   and those win; see
@@ -193,10 +194,12 @@ gitignored except the `.env.example` files and `apps/web/.env.stub`.
   stub's `PORTLESS=0` address; under portless, `vite.config.js` swaps in the
   stub's portless URL.
 - `apps/api/.env`: Worker secrets for `wrangler dev`, such as
-  `SUPABASE_SERVICE_ROLE_KEY`, `TURNSTILE_SECRET_KEY`, `PIXABAY_API_KEY`,
-  `ADMIN_MIGRATE_TOKEN` and the AI provider keys below. Plain settings
-  (`ALLOWED_HOSTNAMES`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-  `SPELLING_CREATOR_API_URL`) are `vars` in `apps/api/wrangler.jsonc`.
+  `SUPABASE_SERVICE_ROLE_KEY`, `TURNSTILE_SECRET_KEY`, `ALTCHA_HMAC_KEY`,
+  `PIXABAY_API_KEY`, `ADMIN_MIGRATE_TOKEN` and the AI provider keys below. Plain
+  settings (`ALLOWED_HOSTNAMES`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+  `SPELLING_CREATOR_API_URL`) are `vars` in `apps/api/wrangler.jsonc`, and
+  `AI_CHALLENGE` can be added there too (it defaults to `turnstile`; see
+  [Self-hosting](./self-hosting.md#ai)).
 - `apps/mcp/.env`: optional, copied from `apps/mcp/.env.example`. Most people
   set these in their MCP client's config instead; see
   [MCP server configuration](./mcp-server/configuration.md).

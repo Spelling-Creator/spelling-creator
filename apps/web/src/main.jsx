@@ -15,6 +15,7 @@ const buildTime = {
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   turnstileSiteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+  aiChallenge: import.meta.env.VITE_AI_CHALLENGE,
   authMode: import.meta.env.VITE_AUTH_MODE,
   usernameDomain: import.meta.env.VITE_USERNAME_DOMAIN,
 };

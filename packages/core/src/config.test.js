@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  aiChallenge,
   apiUrl,
   apiWsUrl,
   configureCore,
   googleClientId,
+  hasAiChallenge,
   hasApi,
   hasGoogleDrive,
   hasMagicLinkAuth,
@@ -24,6 +26,7 @@ beforeEach(() => {
     supabaseAnonKey: "",
     googleClientId: "",
     turnstileSiteKey: "",
+    aiChallenge: "",
     authMode: "",
   });
 });
@@ -122,6 +125,41 @@ describe("the optional integrations", () => {
     expect(googleClientId()).toBe("123.apps.googleusercontent.com");
     expect(hasTurnstile()).toBe(true);
     expect(turnstileSiteKey()).toBe("0x4AAA");
+  });
+});
+
+describe("aiChallenge", () => {
+  it("defaults to Turnstile, and reads anything unknown as Turnstile too", () => {
+    // The server reads the same setting the same way, so the browser never
+    // shows one widget while the server expects another.
+    expect(aiChallenge()).toBe("turnstile");
+    configureCore({ aiChallenge: " ALTCHA " });
+    expect(aiChallenge()).toBe("altcha");
+    configureCore({ aiChallenge: "none" });
+    expect(aiChallenge()).toBe("none");
+    configureCore({ aiChallenge: "captcha" });
+    expect(aiChallenge()).toBe("turnstile");
+  });
+
+  it("makes the AI features available only when the check can be passed", () => {
+    expect(hasAiChallenge()).toBe(false);
+
+    // Turnstile needs a site key as well as an API.
+    configureCore({
+      apiUrl: "https://api.example.com",
+      aiChallenge: "turnstile",
+    });
+    expect(hasAiChallenge()).toBe(false);
+    configureCore({ turnstileSiteKey: "0x4AAA" });
+    expect(hasAiChallenge()).toBe(true);
+
+    // ALTCHA and none need only the API.
+    configureCore({ turnstileSiteKey: "", aiChallenge: "altcha" });
+    expect(hasAiChallenge()).toBe(true);
+    configureCore({ aiChallenge: "none" });
+    expect(hasAiChallenge()).toBe(true);
+    configureCore({ apiUrl: "" });
+    expect(hasAiChallenge()).toBe(false);
   });
 });
 

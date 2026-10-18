@@ -36,6 +36,7 @@ describe('browserConfig', () => {
 				SUPABASE_ANON_KEY: 'anon',
 				GOOGLE_CLIENT_ID: 'google',
 				TURNSTILE_SITE_KEY: 'turnstile',
+				AI_CHALLENGE: 'altcha',
 				AUTH_MODE: 'password',
 				USERNAME_DOMAIN: 'users.example.org',
 			}),
@@ -44,6 +45,7 @@ describe('browserConfig', () => {
 			supabaseAnonKey: 'anon',
 			googleClientId: 'google',
 			turnstileSiteKey: 'turnstile',
+			aiChallenge: 'altcha',
 			authMode: 'password',
 			usernameDomain: 'users.example.org',
 		});
@@ -55,6 +57,7 @@ describe('browserConfig', () => {
 			SUPABASE_SERVICE_ROLE_KEY: 'secret',
 			SUPABASE_URL: 'http://gateway',
 			TURNSTILE_SECRET_KEY: 'secret',
+			ALTCHA_HMAC_KEY: 'secret',
 			S3_SECRET_ACCESS_KEY: 'secret',
 		});
 		expect(config).toEqual({});

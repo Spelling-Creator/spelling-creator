@@ -105,6 +105,10 @@ const SSR_UNREACHABLE = [
   // Formulas (MathJax, its font and the speech rule engine), same story:
   // reached only through the dynamic import() in core/browser/formulas.js,
   // and the server shows a formula as its source.
+  // The ALTCHA widget (a custom element with its solver workers inlined),
+  // reached only through the dynamic import() in src/lib/aiChallenge.jsx, from
+  // an open AI dialog on an instance that uses ALTCHA.
+  "src/lib/altchaWidget.js",
   "../../packages/core/src/browser/formulaBrowser.js",
   "../../packages/core/src/browser/formulaEngine.js",
   "../../packages/core/src/browser/formulaSpeech.js",
@@ -343,7 +347,12 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         // there belongs in the app's precache. (Vite empties dist first, so this
         // normally matches nothing. It's a guard for when it doesn't: a
         // Turborepo cache hit restores dist over what is already there.)
-        globIgnores: ["docs/**"],
+        //
+        // The ALTCHA widget (src/lib/altchaWidget.js) is left out too. Only an
+        // instance whose AI check is ALTCHA ever loads it, so precaching it would
+        // cost every other install a download it never uses, and it is only
+        // needed for an AI request, which can't happen offline anyway.
+        globIgnores: ["docs/**", "**/altchaWidget-*.js"],
         // The vendor chunk is over Workbox's 2 MiB default on its own.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         cleanupOutdatedCaches: true,

@@ -1,4 +1,4 @@
-import { hasApi, hasTurnstile } from "@spelling-creator/core/config";
+import { hasAiChallenge, hasApi } from "@spelling-creator/core/config";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { DocumentMeta } from "../lib/seo.jsx";
@@ -3667,7 +3667,7 @@ export default function EditorPage() {
         onGoTo={goToFinding}
         onFix={quickFixFinding}
         onUndoFix={lastFix?.fixed === doc ? undoLessonFix : undefined}
-        onAiFix={hasApi() && hasTurnstile() ? setAiFixFinding : undefined}
+        onAiFix={hasAiChallenge() ? setAiFixFinding : undefined}
       />
 
       {/* Over the Check panel, so the list is still there once a fix is in. */}

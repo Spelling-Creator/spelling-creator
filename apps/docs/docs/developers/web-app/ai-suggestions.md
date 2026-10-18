@@ -9,7 +9,7 @@ For how to use these, see [AI writing help](../../guide/ai-writing-help.md).
 Three editor helpers ask the companion Worker (`apps/api`) to write something:
 lesson ideas, a block of section text, and a question. They share one endpoint,
 `POST /` on the Worker (`handleAi` in `apps/api/src/routes/ai.js`), told apart
-by a `mode` field, and the same Turnstile check and rate limiter as
+by a `mode` field, and the same AI check and rate limiter as
 [AI lesson fixes](./ai-lesson-fixes.md), [fact checking](./fact-checking.md)
 and the image search.
 
@@ -25,24 +25,30 @@ The dialogs are in `apps/web/src/components/`, the wrappers in
 
 ## The shared flow
 
-1. The dialog renders a
+1. The dialog shows the instance's AI check through `useAiChallenge`
+   (`apps/web/src/lib/aiChallenge.jsx`): a
    [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/)
-   widget. Its token is single-use, so the widget is reset after every request.
+   widget on the hosted instance, an [ALTCHA](https://altcha.org) proof of work
+   or nothing at all on a self-hosted one, chosen by `AI_CHALLENGE` (see
+   [Self-hosting](../self-hosting.md#ai)). Its token is single-use, so the
+   check is refreshed after every request.
 2. The wrapper POSTs the token and the mode's fields to `apiUrl()`.
-3. The Worker verifies the token server-side against its allowed hostnames
-   (`verifyTurnstile`, using Cloudflare's verified `hostname` rather than the
-   spoofable `Origin`), then charges the per-IP token bucket: 60 requests a
-   minute, refilled continuously, kept in the rate-limit KV store. A cached
-   answer is served before the charge and costs nothing. An empty bucket
-   answers 429 with `Retry-After`.
+3. The Worker verifies the token server-side with the same check
+   (`verifyAiChallenge` in `apps/api/src/lib/aiChallenge.js`; Turnstile's uses
+   Cloudflare's verified `hostname` rather than the spoofable `Origin`), then
+   charges the per-IP token bucket: 60 requests a minute, refilled continuously,
+   kept in the rate-limit KV store. A cached answer is served before the charge
+   and costs nothing. An empty bucket answers 429 with `Retry-After`.
 4. It calls `generateWithFallback` (see
    [Which model answers](#which-model-answers)) and returns JSON. Any provider
    failure becomes a 502 `Upstream AI error`.
 
 An unknown `mode` falls back to `text`.
 
-The web app needs `VITE_API_URL` and `VITE_TURNSTILE_SITE_KEY`, and the Worker
-`TURNSTILE_SECRET_KEY`, a rate-limit store and at least one AI provider. See
+The web app needs `VITE_API_URL`, and the Worker a rate-limit store and at
+least one AI provider. With Turnstile (the default) the app also needs
+`VITE_TURNSTILE_SITE_KEY` and the Worker `TURNSTILE_SECRET_KEY`; ALTCHA and
+none need nothing more. See
 [Getting started](./getting-started.md) and the monorepo
 [Getting started](../getting-started.md). To try them with none of that, run
 the [stub API](../stub-api.md#ai-and-turnstile), which runs this same handler

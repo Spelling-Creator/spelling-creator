@@ -53,7 +53,7 @@ list; nothing has to be kept in sync by hand. `injectRegister` is `null`:
 The precache is the built shell, matched by
 `globPatterns: ["**/*.{html,js,css,woff2,svg,png,ico}"]`: `index.html`, the
 JS/CSS chunks (lazy ones included), the self-hosted Fontsource `.woff2` files,
-and the icons. Two things are deliberately left out:
+and the icons. Three things are deliberately left out:
 
 - **`public/home/*.jpg`**, the homepage's feature screenshots (about 490 KB).
   Those are marketing images; they aren't worth an install-time download, so a
@@ -64,6 +64,11 @@ and the icons. Two things are deliberately left out:
   `pnpm build:docs` copies the VitePress output in _after_ the web build, and it
   has its own hashed assets and its own pages, none of which belong in the
   app's precache.
+- **The ALTCHA widget chunk** (`altchaWidget-*.js`, about 36 KB compressed).
+  Only an instance whose AI check is ALTCHA loads it (see
+  [Self-hosting](../self-hosting.md#ai)), so precaching it would cost every
+  other install a download it never uses, and it is only needed for an AI
+  request, which needs the network anyway.
 
 `maximumFileSizeToCacheInBytes` is raised to 4 MiB because the `vendor` chunk is
 over Workbox's 2 MiB default on its own. `cleanupOutdatedCaches` is on.

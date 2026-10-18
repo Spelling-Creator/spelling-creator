@@ -10,10 +10,11 @@
 // long passage is easy to miss side by side, and the author has to be able to
 // see exactly what a model did to their lesson before they accept it.
 //
-// Like the other AI dialogs it renders a Turnstile widget, and the token is
-// good for one request, so the widget is reset after each one for "Try again".
+// Like the other AI dialogs it shows the instance's AI check, and the token is
+// good for one request, so the check is refreshed after each one for "Try
+// again".
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { diffWordsWithSpace } from "diff";
 import { RotateCcwIcon, SparklesIcon } from "lucide-react";
@@ -36,8 +37,7 @@ import {
   QUESTION_TYPES,
   questionAnswerPlain,
 } from "@spelling-creator/core/questions";
-import { turnstileSiteKey } from "@spelling-creator/core/config";
-import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
+import { useAiChallenge } from "../../lib/aiChallenge.jsx";
 import { describeFinding } from "../../lib/lessonChecks.js";
 
 const texts = (items) =>
@@ -168,51 +168,28 @@ function blockHeading(t, doc, blockId) {
  */
 export default function AiFixDialog({ open, finding, doc, onApply, onClose }) {
   const { t, i18n } = useTranslation("checks");
-  const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fix, setFix] = useState(null);
-  const widgetRef = useRef(null);
-  const widgetId = useRef(null);
+  // The challenge, while the dialog is open.
+  const {
+    token,
+    widget,
+    refresh: refreshChallenge,
+  } = useAiChallenge(open, {
+    onError: setError,
+    messages: {
+      notConfigured: t("aiFix.turnstileNotConfigured"),
+      failed: t("aiFix.verificationFailed"),
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
-    setToken("");
     setError("");
     setBusy(false);
     setFix(null);
   }, [open, finding]);
-
-  // The challenge, while the dialog is open.
-  useEffect(() => {
-    if (!open) return;
-    if (!turnstileSiteKey()) {
-      setError(t("aiFix.turnstileNotConfigured"));
-      return;
-    }
-    let cancelled = false;
-    whenTurnstileReady()
-      .then((turnstile) => {
-        if (cancelled || !widgetRef.current) return;
-        widgetId.current = turnstile.render(widgetRef.current, {
-          sitekey: turnstileSiteKey(),
-          callback: (tok) => setToken(tok),
-          "expired-callback": () => setToken(""),
-          "error-callback": () => {
-            setToken("");
-            setError(t("aiFix.verificationFailed"));
-          },
-        });
-      })
-      .catch((e) => setError(e.message));
-    return () => {
-      cancelled = true;
-      if (widgetId.current != null && window.turnstile) {
-        window.turnstile.remove(widgetId.current);
-      }
-      widgetId.current = null;
-    };
-  }, [open, t]);
 
   // The fix checked against the lesson as it is now, not as it was sent.
   const preview = useMemo(
@@ -230,10 +207,7 @@ export default function AiFixDialog({ open, finding, doc, onApply, onClose }) {
       setError(e.message || t("aiFix.genericError"));
     } finally {
       setBusy(false);
-      setToken("");
-      if (widgetId.current != null && window.turnstile) {
-        window.turnstile.reset(widgetId.current);
-      }
+      refreshChallenge();
     }
   };
 
@@ -307,7 +281,7 @@ export default function AiFixDialog({ open, finding, doc, onApply, onClose }) {
             </>
           )}
 
-          <div ref={widgetRef} className={fix || busy ? "hidden" : ""} />
+          <div className={fix || busy ? "hidden" : ""}>{widget}</div>
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>

@@ -54,6 +54,9 @@ const BROWSER_SETTINGS = {
 	supabaseAnonKey: 'SUPABASE_ANON_KEY',
 	googleClientId: 'GOOGLE_CLIENT_ID',
 	turnstileSiteKey: 'TURNSTILE_SITE_KEY',
+	// Which check the AI dialogs show. The server reads it too, so the widget
+	// the browser shows is always the one the server expects.
+	aiChallenge: 'AI_CHALLENGE',
 	authMode: 'AUTH_MODE',
 	usernameDomain: 'USERNAME_DOMAIN',
 };

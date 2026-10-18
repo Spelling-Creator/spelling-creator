@@ -146,7 +146,7 @@ function FindingList({ findings, sections, kind, onChoose, onFix, onAiFix }) {
  * @param {Function} [props.onUndoFix] Take the last fix back. Given only while
  *                                   nothing else has changed since it.
  * @param {Function} [props.onAiFix] Ask AI to fix a finding. Without it (no
- *                                   API or no Turnstile key), no AI buttons.
+ *                                   API, or Turnstile with no key), no AI buttons.
  */
 export default function LessonChecksSheet({
   open,

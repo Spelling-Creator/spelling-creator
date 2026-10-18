@@ -73,8 +73,15 @@ services:
       AUTH_MODE: ${AUTH_MODE:-password}
       USERNAME_DOMAIN: ${USERNAME_DOMAIN:-}
 
-      # Optional: the AI features. Each AI request is checked with Cloudflare
-      # Turnstile, so they need a widget of your own; see "AI" in the docs.
+      # The check in front of the AI features and Pixabay search: altcha (a
+      # proof of work this instance serves itself, so it needs nothing set up),
+      # turnstile (Cloudflare's, with a widget of your own) or none. See "AI"
+      # in the docs. The SPA is told the same value, so the browser shows the
+      # matching widget.
+      AI_CHALLENGE: ${AI_CHALLENGE:-altcha}
+      # Signs ALTCHA challenges. Optional: without it the key is derived from
+      # SERVICE_ROLE_KEY, which never leaves the server.
+      ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:-}
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
 
