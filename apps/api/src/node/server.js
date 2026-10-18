@@ -27,6 +27,7 @@ import { serveApp } from '../routes/spa.js';
 import { assetServer } from './assets.js';
 import { withBrowserConfig } from './browserConfig.js';
 import { nodePlatform } from './platform.js';
+import { installSelfFetch, servingSelf } from './selfFetch.js';
 
 /**
  * The frontend fall-through for this host: server-render the public read routes,
@@ -85,7 +86,11 @@ export function createHandler(processEnv = process.env) {
 		passThroughOnException() {},
 	};
 
-	return (request) => app.fetch(request, env, ctx);
+	// Requests to our own origin (server rendering loading its page's data) are
+	// answered in-process, as a subrequest is on the Worker, rather than over a
+	// network address that may not lead back here (see selfFetch.js).
+	installSelfFetch();
+	return servingSelf((request) => app.fetch(request, env, ctx));
 }
 
 /**
