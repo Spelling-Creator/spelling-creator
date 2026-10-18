@@ -187,4 +187,4 @@ else
 	printf 'reset their own passwords by email — otherwise an admin does that from the\n'
 	printf 'moderation page.\n'
 fi
-printf '\nPUBLIC_URL is baked into the SPA at build time, so set it before `docker compose up -d --build`.\n'
+printf '\nThen start it with `docker compose up -d`.\n'

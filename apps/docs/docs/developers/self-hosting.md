@@ -23,9 +23,11 @@ route code runs on both hosts.
 
 ## With Docker
 
-The repository ships a `Dockerfile` and an example `docker-compose.yml` that
-stands the whole thing up: Postgres, PostgREST, GoTrue, RustFS and a Caddy
-gateway around the app.
+The app is published as a multi-platform image (amd64 and arm64) at
+`ghcr.io/spelling-creator/spelling-creator`, built from the repository's
+`Dockerfile` on every change to `main`. The example `docker-compose.yml` runs it
+with everything it needs around it: Postgres, PostgREST, GoTrue, RustFS and a
+Caddy gateway.
 
 The object store is RustFS rather than MinIO, whose community edition is no
 longer somewhere to point self-hosters. Nothing in the app knows which it is
@@ -36,8 +38,18 @@ rather than its implementation to keep that swap a one-line edit.
 ```bash
 ./scripts/generate-env.sh   # writes .env with every credential filled in
 # then set PUBLIC_URL / PUBLIC_HOSTNAME in .env
-docker compose up -d --build
+docker compose up -d
 ```
+
+That pulls the published image rather than building one. `latest` follows
+`main`; to stay on one build until you choose to move, set `IMAGE_TAG` in `.env`
+to one of the `sha-<commit>` tags on the package page. Upgrading is then a
+matter of changing it and running `docker compose pull && docker compose up -d`.
+
+To run your own changes instead, `docker compose up -d --build` builds the
+checkout and tags it with the same name. That needs Git LFS, because the images
+and videos the app ships are stored there, and the build stops with the fix if
+it finds pointer files where they should be.
 
 The generator refuses to overwrite an existing `.env`; `--force` mints new
 credentials into one anyway, and `--print` writes nothing and prints a fresh set.
@@ -61,9 +73,6 @@ in a way that points everywhere except at itself: PostgREST reports a signing
 error, GoTrue reports a permissions error, and the app answers 502. The
 dependency check below catches it directly (its `credentials` line), but not
 generating a broken one is better still.
-
-`PUBLIC_URL` is baked into the SPA at build time, so set it before the build, not
-after.
 
 That is the whole of it: there is no schema step to remember, because the
 ordering it depends on is not something to leave to a reader. A one-shot
@@ -100,11 +109,10 @@ joining the two upstream projects under one origin, doing the job Kong does on
 Supabase's own hosting. It is also the proxy that should sit in front of the app
 anyway.
 
-**The `VITE_*` values are build arguments, not runtime environment.** Vite
-substitutes them into the SPA bundle at build time, so they are baked into the
-image: an instance pointed at a different public URL needs `docker compose
-build`, not just a restart. That is a property of shipping a static SPA rather
-than a choice made here.
+**Nothing about an instance is baked into the image.** See
+[How the browser gets its settings](#how-the-browser-gets-its-settings): every
+setting, the SPA's included, is environment, so changing one is
+`docker compose up -d` and never a rebuild.
 
 The compose file terminates no TLS and takes its credentials from `.env` with
 example values, both deliberately. It is a starting point, not a deployment; a
@@ -268,8 +276,8 @@ compose stack the app and `storage-init` read it from the same variable.
 | `ALLOWED_HOSTNAMES`   | (none)                  | Comma-separated hostnames allowed to call the API cross-origin. |
 | `CLIENT_IP_HEADER`    | `x-forwarded-for`       |                                                                 |
 | `TRUSTED_PROXY_COUNT` | `1`                     | How many proxies sit in front of this process.                  |
-| `AUTH_MODE`           | `magic-link`            | Must match the SPA's `VITE_AUTH_MODE`; see [Sign-in](#sign-in). |
-| `USERNAME_DOMAIN`     | `users.noreply.invalid` | Must match the SPA's `VITE_USERNAME_DOMAIN`.                    |
+| `AUTH_MODE`           | `magic-link`            | How people sign in; see [Sign-in](#sign-in).                    |
+| `USERNAME_DOMAIN`     | `users.noreply.invalid` | The domain usernames become addresses under.                    |
 | `ADMIN_MIGRATE_TOKEN` | (none)                  | Gates `/_diagnostics` and the one-time admin backfills.         |
 
 `ALLOWED_HOSTNAMES` can stay unset when the SPA and the API share an origin, as
@@ -292,6 +300,48 @@ lets a banned visitor choose the address their ban is keyed on.
 
 A `CLIENT_IP_HEADER` other than `x-forwarded-for` (nginx's `x-real-ip`, say) is
 taken as a single value, and `TRUSTED_PROXY_COUNT` doesn't apply to it.
+
+### How the browser gets its settings
+
+The SPA needs a few settings of its own: where to sign in, which sign-in modes
+to offer, the Turnstile and Google client ids. On the hosted instance these are
+`VITE_*` values Vite substitutes into the bundle at build time. Here they come
+from the server's environment instead: as it serves `index.html`, the server
+writes them into the page, and `apps/web/src/main.jsx` prefers them to anything
+the build baked in. That is what lets one published image run with anyone's
+configuration, and why the settings both halves need are one variable each.
+
+| Variable              | Read by        | Becomes                                                           |
+| --------------------- | -------------- | ----------------------------------------------------------------- |
+| `SUPABASE_ANON_KEY`   | server and SPA | The key the browser signs in with.                                |
+| `AUTH_MODE`           | server and SPA | Which sign-in methods the login page offers.                      |
+| `USERNAME_DOMAIN`     | server and SPA | The domain usernames become addresses under.                      |
+| `TURNSTILE_SITE_KEY`  | SPA            | The Turnstile widget the AI dialogs show.                         |
+| `GOOGLE_CLIENT_ID`    | SPA            | "Save to Google Docs".                                            |
+| `PUBLIC_SUPABASE_URL` | SPA            | Where the browser reaches `/auth/v1` and `/rest/v1`, if not here. |
+
+Only these names are ever written into the page. Everything else in the
+environment, the service-role key above all, stays on the server.
+
+There is no API address to set. The server is the API and serves the page, so
+the page's own origin is always right; server rendering already works the same
+way. `PUBLIC_SUPABASE_URL` likewise defaults to the page's origin, which is the
+one-origin layout the compose stack's gateway gives PostgREST and GoTrue. Set it
+only if the browser reaches them somewhere else, such as a hosted Supabase
+project. It is separate from `SUPABASE_URL` because that is the address the
+_server_ uses, which in the compose stack is a service name no browser can
+resolve.
+
+A change reaches browsers that already have the app as well. The service worker
+serves the precached `index.html`, so the server also rewrites that entry's
+revision in `sw.js` with a hash of the settings. A new configuration then looks
+like a new build: the browser installs the new worker, fetches the new shell,
+and the app offers its usual reload prompt. The code is in
+`apps/api/src/node/browserConfig.js`.
+
+This only happens when the Node server serves the shell. If your reverse proxy
+serves `apps/web/dist` itself, the page arrives as built and the `VITE_*` values
+apply, so either let the app serve `/` and `/index.html` or build with them.
 
 ### Sign-in
 
@@ -317,11 +367,12 @@ whether the value contains an `@` rather than by a toggle to find.
 Under the hood a username is given to the identity service as an address under
 `USERNAME_DOMAIN`: it authenticates by address and has no notion of a username.
 The default domain (`users.noreply.invalid`) uses a top-level domain reserved by
-RFC 2606, so it can never resolve, and nothing is ever sent there. If you change
-it, set it in **both** places: the SPA bakes it in at build time as
-`VITE_USERNAME_DOMAIN`, and the server reads it at runtime to resolve the
-username an admin types into `POST /mod/password`. The two disagreeing is a
-password reset that answers "no account with that username". Two things follow
+RFC 2606, so it can never resolve, and nothing is ever sent there. The SPA uses
+it to sign people in and the server uses it to resolve the username an admin
+types into `POST /mod/password`. Both read the one `USERNAME_DOMAIN` variable
+(see [How the browser gets its settings](#how-the-browser-gets-its-settings)),
+which matters because the two disagreeing is a password reset that answers "no
+account with that username". Two things follow
 for free: usernames are unique, because the service will not register the same
 address twice; and signing in needs no lookup, so no public endpoint has to
 answer "which email belongs to this username?".
@@ -347,10 +398,7 @@ each one as a URL and fetches it, so the file has to be served from somewhere
 the `auth` container can reach.
 
 The compose file defaults to `password`, because an instance reaching for it is
-more likely to have no mail server than to have one. It passes the same
-`AUTH_MODE` and `USERNAME_DOMAIN` to the SPA build and to the server, so the two
-cannot disagree. `AUTH_MODE` is baked into the SPA at build time, so changing it
-means a rebuild.
+more likely to have no mail server than to have one. Changing it is a restart.
 
 Two things follow from running without mail, and both are worth deciding
 deliberately rather than discovering:
@@ -394,14 +442,15 @@ which goes through the same endpoint) is checked with
 before anything else happens. Turnstile is a free service and works on any host,
 but the instance needs a widget of its own:
 
-- `VITE_TURNSTILE_SITE_KEY` at build time, so the SPA shows the challenge.
-  Without it, the AI and image-search dialogs say they are unavailable.
-- `TURNSTILE_SECRET_KEY` at runtime, so the server can verify it.
+- `TURNSTILE_SITE_KEY`, so the SPA shows the challenge. Without it, the AI and
+  image-search dialogs say they are unavailable.
+- `TURNSTILE_SECRET_KEY`, so the server can verify it.
 - `ALLOWED_HOSTNAMES` set to the hostname the app is served from, which the
   server compares with the hostname Turnstile reports.
 
-The compose file sets none of these, so add them to use the AI features there.
-Pixabay search also needs `PIXABAY_API_KEY`. Wikimedia Commons search needs
+In the compose stack, fill in the two Turnstile keys in `.env`;
+`ALLOWED_HOSTNAMES` is already set from `PUBLIC_HOSTNAME`. Pixabay search also
+needs `PIXABAY_API_KEY`. Wikimedia Commons search needs
 nothing, since the browser talks to Wikimedia directly.
 
 ## Notes on running it

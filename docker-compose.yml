@@ -24,26 +24,26 @@ name: spelling-creator
 
 services:
   # The API + SPA + docs, all from the one image.
+  #
+  # `docker compose up` pulls the published image. `docker compose up --build`
+  # builds this checkout instead and tags it with the same name, which is the
+  # way to run local changes. Pin a build with IMAGE_TAG (sha-<commit>) rather
+  # than following `latest`.
+  #
+  # Nothing about this instance is baked into the image. The server writes the
+  # SPA's settings into the page from the environment below as it serves it, so
+  # changing one is a restart (`docker compose up -d`), never a rebuild.
   app:
-    build:
-      context: .
-      args:
-        # Baked into the SPA bundle at build time, so these are the URLs the
-        # BROWSER will use — the public address of the gateway, not the internal
-        # service names. Change them and you must rebuild, not just restart.
-        VITE_API_URL: ${PUBLIC_URL:?missing, see .env.example}
-        VITE_SUPABASE_URL: ${PUBLIC_URL:?missing, see .env.example}
-        VITE_SUPABASE_ANON_KEY: ${ANON_KEY:?missing, see .env.example}
-        # Defaults to password, because an instance reaching for this compose
-        # file is more likely to have no mail server than to have one, and a
-        # magic link it cannot send is not a way in.
-        VITE_AUTH_MODE: ${AUTH_MODE:-password}
-        VITE_USERNAME_DOMAIN: ${USERNAME_DOMAIN:-}
+    image: ghcr.io/spelling-creator/spelling-creator:${IMAGE_TAG:-latest}
+    build: .
     restart: unless-stopped
     environment:
-      # Server-side, these point at the gateway over the internal network.
+      # Server-side, these point at the gateway over the internal network. The
+      # browser reaches the same services at the page's own origin, which the
+      # gateway serves, so it needs no address of its own here.
       SUPABASE_URL: http://gateway
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?missing, see .env.example}
+      # Public by design: the browser signs in with it too.
       SUPABASE_ANON_KEY: ${ANON_KEY:?missing, see .env.example}
 
       S3_ENDPOINT: http://storage:9000
@@ -58,14 +58,18 @@ services:
       # storage-init below reads the same variable.
       S3_REGION: ${S3_REGION:-us-east-1}
 
-      # The sign-in settings, which the SPA bakes in at build time above and the
-      # server needs at runtime too — the same values, from the same variables,
-      # so the two halves cannot disagree. USERNAME_DOMAIN is the load-bearing
-      # one: POST /mod/password resolves the username an admin types into the
-      # address the identity service knows, and a server still on the default
-      # domain answers "no account with that username" for every reset.
+      # The sign-in settings, read by the server and handed to the SPA from the
+      # same variables, so the two halves cannot disagree. Defaults to password,
+      # because an instance reaching for this compose file is more likely to
+      # have no mail server than to have one, and a magic link it cannot send is
+      # not a way in. See "Sign-in" in the self-hosting docs.
       AUTH_MODE: ${AUTH_MODE:-password}
       USERNAME_DOMAIN: ${USERNAME_DOMAIN:-}
+
+      # Optional: the AI features. Each AI request is checked with Cloudflare
+      # Turnstile, so they need a widget of your own; see "AI" in the docs.
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
 
       ALLOWED_HOSTNAMES: ${PUBLIC_HOSTNAME:?missing, see .env.example}
       # One proxy (the gateway) sits in front of this process, so the client IP

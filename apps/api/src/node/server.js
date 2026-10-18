@@ -25,6 +25,7 @@ import { createApp, registerFrontend } from '../app.js';
 import { serverRender, shouldServerRender } from '../routes/ssr.js';
 import { serveApp } from '../routes/spa.js';
 import { assetServer } from './assets.js';
+import { withBrowserConfig } from './browserConfig.js';
 import { nodePlatform } from './platform.js';
 
 /**
@@ -62,10 +63,13 @@ export function createHandler(processEnv = process.env) {
 	// The Worker receives `env` from the runtime, already populated with bindings
 	// and vars. Here it is the process environment plus the two things the runtime
 	// would otherwise have supplied: the platform services and the asset server.
+	// The asset server writes the SPA's settings into the shell as it serves it
+	// (see browserConfig.js), which is what lets one published image run with
+	// anyone's configuration.
 	const env = {
 		...processEnv,
 		PLATFORM: nodePlatform(processEnv),
-		ASSETS: assetServer(processEnv.WEB_DIST || 'apps/web/dist'),
+		ASSETS: withBrowserConfig(assetServer(processEnv.WEB_DIST || 'apps/web/dist'), processEnv),
 	};
 
 	// `waitUntil` exists so a handler can finish background work after the response

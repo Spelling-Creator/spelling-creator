@@ -197,6 +197,13 @@ for the life of the tab. That check runs hourly (`UPDATE_CHECK_INTERVAL`), and
 only while `navigator.onLine`: an installed PWA's window can stay open for days,
 and without a poll it would only notice a deployment on a manual reload.
 
+On a self-hosted instance, a configuration change counts as a new build too.
+The Node server writes the instance's settings into `index.html` as it serves
+it, and suffixes the shell's precache revision in `sw.js` with a hash of them,
+so new settings change the worker and the shell together and arrive through
+this same prompt. See
+[How the browser gets its settings](../self-hosting.md#how-the-browser-gets-its-settings).
+
 ## Installing
 
 `src/lib/useInstallPrompt.js` captures Chromium's `beforeinstallprompt` event

@@ -184,7 +184,9 @@ gitignored except the `.env.example` files and `apps/web/.env.stub`.
   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TURNSTILE_SITE_KEY`,
   `VITE_GOOGLE_CLIENT_ID`, `VITE_AUTH_MODE` and `VITE_USERNAME_DOMAIN`. The
   [web app's getting started page](./web-app/getting-started.md) explains each
-  one.
+  one. A self-hosted Node server supplies the same settings at runtime instead,
+  and those win; see
+  [How the browser gets its settings](./self-hosting.md#how-the-browser-gets-its-settings).
 - `apps/web/.env.stub`: committed, because it holds nothing but local URLs. It
   points the app at the stub API for `pnpm dev:web:stub`, including the stub's
   stand-in Turnstile widget (`VITE_TURNSTILE_SCRIPT_URL`). Its URLs are the

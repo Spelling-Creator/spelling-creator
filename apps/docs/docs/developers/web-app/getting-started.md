@@ -38,7 +38,9 @@ Optional features are configured in `apps/web/.env`; Vite reads env files from
 the package holding `vite.config.js`, not from the monorepo root, and exposes
 only `VITE_`-prefixed vars to client code. `apps/web/src/main.jsx` is the only
 place that reads them, and hands them to `configureCore` in
-`packages/core/src/config.js`:
+`packages/core/src/config.js`. (A self-hosted Node server can also write these
+settings into the page at runtime, which takes precedence; see
+[How the browser gets its settings](../self-hosting.md#how-the-browser-gets-its-settings).)
 
 ```bash
 VITE_API_URL=https://your-worker.example.workers.dev   # apps/api Worker endpoint (AI, Pixabay, lesson hub)

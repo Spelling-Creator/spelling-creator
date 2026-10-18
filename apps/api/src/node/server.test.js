@@ -28,7 +28,7 @@ import { createHandler } from './server.js';
 /** A directory shaped like a built apps/web/dist. */
 async function buildFixture() {
 	const root = await mkdtemp(join(tmpdir(), 'spelling-assets-'));
-	await writeFile(join(root, 'index.html'), '<!doctype html><title>shell</title>');
+	await writeFile(join(root, 'index.html'), '<!doctype html><head><title>shell</title></head>');
 	await mkdir(join(root, 'assets'), { recursive: true });
 	await writeFile(join(root, 'assets', 'app-abc123.js'), 'console.log(1)');
 	await mkdir(join(root, 'docs'), { recursive: true });

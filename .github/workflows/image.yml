@@ -1,0 +1,160 @@
+name: Publish image
+
+# Builds the self-hosting image from the Dockerfile and publishes it to the
+# GitHub Container Registry as ghcr.io/spelling-creator/spelling-creator, so a
+# self-hosted instance can pull it instead of building it. See "With Docker" in
+# apps/docs/docs/developers/self-hosting.md.
+#
+# One image serves every instance because nothing instance-specific is baked
+# into it: the Node server writes the SPA's settings into the page at runtime
+# (apps/api/src/node/browserConfig.js). So this builds with no VITE_* values
+# and no secrets at all.
+#
+# Tags: `latest` follows main, and `sha-<commit>` pins one build.
+#
+# Both amd64 and arm64, because a home server is as likely to be a Raspberry Pi
+# or an ARM mini PC as an x86 box. Each is built natively on its own runner
+# rather than under QEMU on one, where the Vite build takes several times as
+# long. Each build pushes by digest, and the `merge` job joins the two digests
+# under the tags. This is Docker's documented pattern for native multi-platform
+# builds.
+on:
+  push:
+    branches:
+      - main
+    # What ends up in the image, plus this file.
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "patches/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".gitattributes"
+      - ".github/workflows/image.yml"
+  workflow_dispatch:
+
+# A newer push to main makes an in-progress build of an older one pointless.
+concurrency:
+  group: "publish-image"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/spelling-creator/spelling-creator
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Images and videos live in Git LFS and are part of the built app, so they
+      # are pulled here (the Dockerfile refuses to build with pointers). Cached
+      # the same way deploy.yml caches them, so a build that changes none of
+      # them downloads nothing from LFS.
+      - name: List LFS files
+        run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pushed by digest with no tag: a tag pointing at one architecture would
+      # be wrong for the other until the merge job replaced it.
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=image-${{ matrix.arch }}
+          cache-to: type=gha,scope=image-${{ matrix.arch }},mode=max
+
+      - name: Record the digest
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload the digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download the digests
+        uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out the tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+
+      - name: Tag the multi-platform image
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+
+      - name: Show the result
+        run: docker buildx imagetools inspect "${{ env.IMAGE }}:${{ steps.meta.outputs.version }}"

@@ -12,7 +12,9 @@
 //   configureCore({ apiUrl: import.meta.env.VITE_API_URL });
 //
 // A SvelteKit app would pass `PUBLIC_API_URL` here instead, and the Worker or a
-// test can pass whatever it likes. The reader functions resolve lazily, so import
+// test can pass whatever it likes. A self-hosted Node server writes its own
+// values into the page as `window.__CONFIG__`, which main.jsx merges over the
+// build's before calling this (see apps/api/src/node/browserConfig.js). The reader functions resolve lazily, so import
 // order doesn't matter — only that configureCore runs before the first *call*.
 
 import { DEFAULT_USERNAME_DOMAIN } from "./username.js";
