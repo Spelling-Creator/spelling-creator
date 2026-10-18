@@ -163,6 +163,45 @@ services:
     environment:
       PUBLIC_URL: ${PUBLIC_URL:?missing, see .env.example}
       SITE_ADDRESS: ${SITE_ADDRESS:-}
+      # The Caddyfile, which the entrypoint below writes out before starting
+      # Caddy. It lives here rather than under `configs:` because Compose only
+      # recreates a container when its own definition changes: a new Caddyfile
+      # in a config would be ignored by `docker compose up -d` until somebody
+      # thought to add --force-recreate, which is easy to miss on an upgrade.
+      #
+      # SITE_ADDRESS is filled in by the entrypoint. Caddy's reverse_proxy
+      # passes X-Forwarded-Proto on, which is how the app knows a request
+      # arrived over https and builds its links with it.
+      CADDYFILE: |
+        # PostgREST and GoTrue under the paths the API and the SPA expect. The
+        # prefixes are stripped because both upstreams serve from their own root.
+        (identity-and-data) {
+          handle_path /rest/v1/* {
+            reverse_proxy postgrest:3000
+          }
+          handle_path /auth/v1/* {
+            reverse_proxy auth:9999
+          }
+        }
+
+        # The public site, for browsers.
+        {$$SITE_ADDRESS} {
+          import identity-and-data
+          # Everything else is the app: the API, the SPA and the docs.
+          handle {
+            reverse_proxy app:8787
+          }
+        }
+
+        # The app's own server-side calls, which reach PostgREST and GoTrue as
+        # SUPABASE_URL=http://gateway over the internal network. A site of its
+        # own, because the public one only answers to its hostname once that is
+        # a real domain, and a request for "gateway" would match nothing. Plain
+        # http, since it never leaves the compose network, and only the two
+        # upstreams: nothing needs to reach the app this way.
+        http://gateway {
+          import identity-and-data
+        }
     # Works out what Caddy should serve from PUBLIC_URL, so there is one setting
     # to change rather than two to keep in step: the bare hostname of an https
     # URL (which is what turns on Caddy's automatic HTTPS), otherwise plain :80.
@@ -181,11 +220,9 @@ services:
           esac
         fi
         export SITE_ADDRESS
+        printf '%s\n' "$$CADDYFILE" > /etc/caddy/Caddyfile
         echo "gateway: serving $$SITE_ADDRESS"
         exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
-    configs:
-      - source: caddyfile
-        target: /etc/caddy/Caddyfile
     # Certificates and the keys behind them. Kept on a volume so a restart
     # doesn't ask Let's Encrypt for a new one each time, which would run into
     # its rate limits within a day.
@@ -451,41 +488,6 @@ configs:
         language plpgsql as 'begin notify pgrst, ''reload schema''; end;';
       drop event trigger if exists pgrst_watch;
       create event trigger pgrst_watch on ddl_command_end execute procedure public.pgrst_watch();
-
-  caddyfile:
-    # SITE_ADDRESS is set by the gateway's entrypoint above. Caddy's reverse_proxy
-    # passes X-Forwarded-Proto on, which is how the app knows a request arrived
-    # over https and builds its links with it.
-    content: |
-      # PostgREST and GoTrue under the paths the API and the SPA expect. The
-      # prefixes are stripped because both upstreams serve from their own root.
-      (identity-and-data) {
-        handle_path /rest/v1/* {
-          reverse_proxy postgrest:3000
-        }
-        handle_path /auth/v1/* {
-          reverse_proxy auth:9999
-        }
-      }
-
-      # The public site, for browsers.
-      {$$SITE_ADDRESS} {
-        import identity-and-data
-        # Everything else is the app: the API, the SPA and the docs.
-        handle {
-          reverse_proxy app:8787
-        }
-      }
-
-      # The app's own server-side calls, which reach PostgREST and GoTrue as
-      # SUPABASE_URL=http://gateway over the internal network. A site of its
-      # own, because the public one only answers to its hostname once that is a
-      # real domain, and a request for "gateway" would match nothing. Plain
-      # http, since it never leaves the compose network, and only the two
-      # upstreams: nothing needs to reach the app this way.
-      http://gateway {
-        import identity-and-data
-      }
 
 volumes:
   postgres-data:
