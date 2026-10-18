@@ -457,19 +457,34 @@ configs:
     # passes X-Forwarded-Proto on, which is how the app knows a request arrived
     # over https and builds its links with it.
     content: |
-      {$$SITE_ADDRESS} {
-        # PostgREST and GoTrue under the paths the API and the SPA expect. The
-        # prefixes are stripped because both upstreams serve from their own root.
+      # PostgREST and GoTrue under the paths the API and the SPA expect. The
+      # prefixes are stripped because both upstreams serve from their own root.
+      (identity-and-data) {
         handle_path /rest/v1/* {
           reverse_proxy postgrest:3000
         }
         handle_path /auth/v1/* {
           reverse_proxy auth:9999
         }
+      }
+
+      # The public site, for browsers.
+      {$$SITE_ADDRESS} {
+        import identity-and-data
         # Everything else is the app: the API, the SPA and the docs.
         handle {
           reverse_proxy app:8787
         }
+      }
+
+      # The app's own server-side calls, which reach PostgREST and GoTrue as
+      # SUPABASE_URL=http://gateway over the internal network. A site of its
+      # own, because the public one only answers to its hostname once that is a
+      # real domain, and a request for "gateway" would match nothing. Plain
+      # http, since it never leaves the compose network, and only the two
+      # upstreams: nothing needs to reach the app this way.
+      http://gateway {
+        import identity-and-data
       }
 
 volumes:
