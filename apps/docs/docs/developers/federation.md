@@ -171,9 +171,11 @@ from widening a prefix listing: see `apps/api/src/platform/postgrestFedifyKv.js`
 request that caused them and are not retried. For an instance with a handful of
 followers that is an honest trade against running a broker; for one with many,
 it is not, and the seam is where a Redis-backed queue would go. On the hosted
-instance the queue is a Cloudflare Queue, created once and bound in
-`wrangler.jsonc`; the Worker's `queue()` export works through its batches with
-`Federation.processQueuedTask`, acknowledging each message on success and
+instance the queue is a Cloudflare Queue bound in `wrangler.jsonc`, which the
+first deploy creates: wrangler provisions a named queue that does not exist
+yet, since its `experimental-provision` and `experimental-auto-create` flags
+are on by default. The Worker's `queue()` export works through its batches
+with `Federation.processQueuedTask`, acknowledging each message on success and
 retrying it alone on failure.
 
 The dependency check (`docker compose logs app`, or `GET /_diagnostics`)

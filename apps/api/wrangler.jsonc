@@ -32,15 +32,17 @@
 		"FEDERATION_ORIGIN": "https://spellingcreator.org",
 	},
 
-	// Outgoing ActivityPub deliveries. Without this binding they are sent from
-	// the request that caused them and never retried; with it, Fedify enqueues
-	// them and the Worker's `queue()` export (src/index.js) works through them
-	// with the queue's own retries. Create the queue once, then uncomment:
-	//   wrangler queues create spelling-creator-federation
-	// "queues": {
-	// 	"producers": [{ "binding": "FEDERATION_QUEUE", "queue": "spelling-creator-federation" }],
-	// 	"consumers": [{ "queue": "spelling-creator-federation", "max_retries": 10 }],
-	// },
+	// Outgoing ActivityPub deliveries. Fedify enqueues them here and the Worker's
+	// `queue()` export (src/index.js) works through them with the queue's own
+	// retries; without the binding they would be sent from the request that
+	// caused them and never retried. The queue is created by the first deploy:
+	// wrangler provisions a named queue that does not exist yet (its
+	// `experimental-provision` and `experimental-auto-create` flags are on by
+	// default), so there is nothing to run by hand.
+	"queues": {
+		"producers": [{ "binding": "FEDERATION_QUEUE", "queue": "spelling-creator-federation" }],
+		"consumers": [{ "queue": "spelling-creator-federation", "max_retries": 10 }],
+	},
 
 	// Serve the built web SPA as static assets. The Worker runs first on every
 	// request (run_worker_first) so it can intercept crawler navigations and
