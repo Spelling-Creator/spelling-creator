@@ -30,7 +30,9 @@ names a port only the gateway listens on. So the Node host answers any request
 to the origin it is currently serving in-process, with the app's own handler,
 and only sends other origins over the network (`apps/api/src/node/selfFetch.js`).
 Without that, every render there fails with "Could not reach the lesson hub" and
-falls back to the shell.
+falls back to the shell. The one exception is `/rest/v1` and `/auth/v1`, which
+the app never serves: on an origin that also fronts PostgREST and GoTrue, those
+still go over the network to them.
 
 A lesson's tabs (`/hub/:id/practice`, `/discussion`, `/proposals`,
 `/proposals/:prId`, `/history`; see [Pages & routing](./pages-and-routing.md#a-lessons-tabs))
