@@ -24,6 +24,9 @@ apps/api/dist
 **/.env
 **/.env.*
 **/.dev.vars
+# Except the compose stack's template, which holds no secrets and is what
+# `generate-env` in the image fills in.
+!.env.example
 .wrangler
 
 # Editor and OS noise.

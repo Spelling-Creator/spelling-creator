@@ -25,7 +25,10 @@ import { createApp, registerFrontend } from '../app.js';
 import { serverRender, shouldServerRender } from '../routes/ssr.js';
 import { serveApp } from '../routes/spa.js';
 import { assetServer } from './assets.js';
+import { withBrowserConfig } from './browserConfig.js';
+import { withForwardedScheme } from './forwardedScheme.js';
 import { nodePlatform } from './platform.js';
+import { installSelfFetch, servingSelf } from './selfFetch.js';
 
 /**
  * The frontend fall-through for this host: server-render the public read routes,
@@ -62,10 +65,13 @@ export function createHandler(processEnv = process.env) {
 	// The Worker receives `env` from the runtime, already populated with bindings
 	// and vars. Here it is the process environment plus the two things the runtime
 	// would otherwise have supplied: the platform services and the asset server.
+	// The asset server writes the SPA's settings into the shell as it serves it
+	// (see browserConfig.js), which is what lets one published image run with
+	// anyone's configuration.
 	const env = {
 		...processEnv,
 		PLATFORM: nodePlatform(processEnv),
-		ASSETS: assetServer(processEnv.WEB_DIST || 'apps/web/dist'),
+		ASSETS: withBrowserConfig(assetServer(processEnv.WEB_DIST || 'apps/web/dist'), processEnv),
 	};
 
 	// `waitUntil` exists so a handler can finish background work after the response
@@ -81,7 +87,15 @@ export function createHandler(processEnv = process.env) {
 		passThroughOnException() {},
 	};
 
-	return (request) => app.fetch(request, env, ctx);
+	// Requests to our own origin (server rendering loading its page's data) are
+	// answered in-process, as a subrequest is on the Worker, rather than over a
+	// network address that may not lead back here (see selfFetch.js).
+	installSelfFetch();
+	const serve = servingSelf((request) => app.fetch(request, env, ctx));
+	// The scheme is settled first, so that the origin every route builds links
+	// from, and the one self-requests are matched against, is the one the browser
+	// actually used (see forwardedScheme.js).
+	return (request) => serve(withForwardedScheme(request, processEnv));
 }
 
 /**

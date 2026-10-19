@@ -12,7 +12,9 @@
 //   configureCore({ apiUrl: import.meta.env.VITE_API_URL });
 //
 // A SvelteKit app would pass `PUBLIC_API_URL` here instead, and the Worker or a
-// test can pass whatever it likes. The reader functions resolve lazily, so import
+// test can pass whatever it likes. A self-hosted Node server writes its own
+// values into the page as `window.__CONFIG__`, which main.jsx merges over the
+// build's before calling this (see apps/api/src/node/browserConfig.js). The reader functions resolve lazily, so import
 // order doesn't matter — only that configureCore runs before the first *call*.
 
 import { DEFAULT_USERNAME_DOMAIN } from "./username.js";
@@ -23,6 +25,7 @@ const config = {
   supabaseAnonKey: "",
   googleClientId: "",
   turnstileSiteKey: "",
+  aiChallenge: "turnstile",
   authMode: "magic-link",
   usernameDomain: "",
 };
@@ -36,6 +39,7 @@ const config = {
  * @param {string} [next.supabaseAnonKey]  Supabase anon key.
  * @param {string} [next.googleClientId]   OAuth 2.0 Web client id, for "save to Google Docs".
  * @param {string} [next.turnstileSiteKey] Public Cloudflare Turnstile site key.
+ * @param {string} [next.aiChallenge]      'turnstile' (default), 'altcha', or 'none'.
  * @param {string} [next.authMode]         'magic-link' (default), 'password', or 'both'.
  */
 export function configureCore(next) {
@@ -131,9 +135,39 @@ export function turnstileSiteKey() {
   return config.turnstileSiteKey || "";
 }
 
-/** @returns {boolean} Whether the Turnstile-gated features are available. */
+/** @returns {boolean} Whether a Turnstile site key is configured. */
 export function hasTurnstile() {
   return turnstileSiteKey() !== "";
+}
+
+/**
+ * Which check this instance puts in front of the AI and image-search features.
+ * It has to match the server's AI_CHALLENGE, which is why a self-hosted server
+ * hands the SPA the same value at runtime.
+ *
+ *   'turnstile'  Cloudflare Turnstile. Needs a site key (the hosted instance).
+ *   'altcha'     ALTCHA proof of work, served by the instance's own API.
+ *   'none'       No check; the server lets every request through to its rate
+ *                limiter.
+ *
+ * Anything unrecognized reads as 'turnstile', the same way the server reads it.
+ *
+ * @returns {'turnstile' | 'altcha' | 'none'}
+ */
+export function aiChallenge() {
+  const mode = (config.aiChallenge || "").trim().toLowerCase();
+  return mode === "altcha" || mode === "none" ? mode : "turnstile";
+}
+
+/**
+ * Whether the challenge-gated features (the AI dialogs, AI fixes, fact checks
+ * and Pixabay search) can work here: there is an API to send them to, and the
+ * instance's check is one the browser can pass.
+ * @returns {boolean}
+ */
+export function hasAiChallenge() {
+  if (!hasApi()) return false;
+  return aiChallenge() === "turnstile" ? hasTurnstile() : true;
 }
 
 /**
@@ -148,7 +182,7 @@ export function hasTurnstile() {
  *   'password'    email and password. Needs no mail at all.
  *   'both'        offer either, the visitor chooses.
  *
- * Anything unrecognised reads as 'magic-link', so a typo degrades to the
+ * Anything unrecognized reads as 'magic-link', so a typo degrades to the
  * default rather than to an instance nobody can get into.
  *
  * @returns {'magic-link' | 'password' | 'both'}

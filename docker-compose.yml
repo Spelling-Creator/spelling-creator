@@ -1,12 +1,17 @@
 # A worked example of a self-hosted Spelling Creator, for adapting rather than
 # running as-is. See /docs/developers/self-hosting for what each piece is for.
 #
-#   cp .env.example .env     # then edit it — the defaults are not secrets
+# This file is all you need; there is no repository to clone. In an empty
+# directory:
+#
+#   docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+#     ghcr.io/spelling-creator/spelling-creator generate-env
+#   # set PUBLIC_URL and PUBLIC_HOSTNAME in .env
 #   docker compose up -d
 #
 # There is no schema step to run by hand: the `schema` service below waits for
-# GoTrue to create auth.users, applies apps/api/schema.sql, and exits, and the
-# app waits for it to finish.
+# GoTrue to create auth.users, applies apps/api/schema.sql from the app image,
+# and exits, and the app waits for it to finish.
 #
 # The shape to understand before adapting: the app expects ONE origin that serves
 # both `/rest/v1/*` (PostgREST) and `/auth/v1/*` (GoTrue), because that is how
@@ -15,35 +20,37 @@
 # origin, and it is also the reverse proxy the docs recommend putting in front of
 # the app. On Supabase's own hosting that job is done by Kong.
 #
-# Not production-ready as written: it terminates no TLS, and the credentials come
-# from .env with example values. Both are deliberate — a compose file that
-# pretended to be a deployment would be worse than one that is obviously a
-# starting point.
+# HTTPS is automatic once PUBLIC_URL is an https:// address on a domain that
+# points here (see `gateway` below). What it does not do for you is back up the
+# postgres-data and storage-data volumes, which hold every account and lesson.
 
 name: spelling-creator
 
 services:
   # The API + SPA + docs, all from the one image.
+  #
+  # `docker compose up` pulls the published image, and only ever that: a tag
+  # that can't be pulled is an error, never something built in its place. Pin a
+  # build with IMAGE_TAG (sha-<commit>) rather than following `latest`.
+  #
+  # To run local changes, build this checkout through compose.build.yml, which
+  # adds the build step and is only used when named:
+  #
+  #   docker compose -f docker-compose.yml -f compose.build.yml up -d --build
+  #
+  # Nothing about this instance is baked into the image. The server writes the
+  # SPA's settings into the page from the environment below as it serves it, so
+  # changing one is a restart (`docker compose up -d`), never a rebuild.
   app:
-    build:
-      context: .
-      args:
-        # Baked into the SPA bundle at build time, so these are the URLs the
-        # BROWSER will use — the public address of the gateway, not the internal
-        # service names. Change them and you must rebuild, not just restart.
-        VITE_API_URL: ${PUBLIC_URL:?missing, see .env.example}
-        VITE_SUPABASE_URL: ${PUBLIC_URL:?missing, see .env.example}
-        VITE_SUPABASE_ANON_KEY: ${ANON_KEY:?missing, see .env.example}
-        # Defaults to password, because an instance reaching for this compose
-        # file is more likely to have no mail server than to have one, and a
-        # magic link it cannot send is not a way in.
-        VITE_AUTH_MODE: ${AUTH_MODE:-password}
-        VITE_USERNAME_DOMAIN: ${USERNAME_DOMAIN:-}
+    image: ghcr.io/spelling-creator/spelling-creator:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
-      # Server-side, these point at the gateway over the internal network.
+      # Server-side, these point at the gateway over the internal network. The
+      # browser reaches the same services at the page's own origin, which the
+      # gateway serves, so it needs no address of its own here.
       SUPABASE_URL: http://gateway
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?missing, see .env.example}
+      # Public by design: the browser signs in with it too.
       SUPABASE_ANON_KEY: ${ANON_KEY:?missing, see .env.example}
 
       S3_ENDPOINT: http://storage:9000
@@ -58,20 +65,39 @@ services:
       # storage-init below reads the same variable.
       S3_REGION: ${S3_REGION:-us-east-1}
 
-      # The sign-in settings, which the SPA bakes in at build time above and the
-      # server needs at runtime too — the same values, from the same variables,
-      # so the two halves cannot disagree. USERNAME_DOMAIN is the load-bearing
-      # one: POST /mod/password resolves the username an admin types into the
-      # address the identity service knows, and a server still on the default
-      # domain answers "no account with that username" for every reset.
+      # The sign-in settings, read by the server and handed to the SPA from the
+      # same variables, so the two halves cannot disagree. Defaults to password,
+      # because an instance reaching for this compose file is more likely to
+      # have no mail server than to have one, and a magic link it cannot send is
+      # not a way in. See "Sign-in" in the self-hosting docs.
       AUTH_MODE: ${AUTH_MODE:-password}
       USERNAME_DOMAIN: ${USERNAME_DOMAIN:-}
 
+      # The check in front of the AI features and Pixabay search: altcha (a
+      # proof of work this instance serves itself, so it needs nothing set up),
+      # turnstile (Cloudflare's, with a widget of your own) or none. See "AI"
+      # in the docs. The SPA is told the same value, so the browser shows the
+      # matching widget.
+      AI_CHALLENGE: ${AI_CHALLENGE:-altcha}
+      # Signs ALTCHA challenges. Optional: without it the key is derived from
+      # SERVICE_ROLE_KEY, which never leaves the server.
+      ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:-}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+
+      # Optional, and handed to the SPA (see "How the browser gets its settings"
+      # in the docs). GOOGLE_CLIENT_ID turns on "Save to Google Docs".
+      # PUBLIC_SUPABASE_URL is only for pointing sign-in at an identity service
+      # somewhere other than this gateway, such as a hosted Supabase project.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      PUBLIC_SUPABASE_URL: ${PUBLIC_SUPABASE_URL:-}
+
       ALLOWED_HOSTNAMES: ${PUBLIC_HOSTNAME:?missing, see .env.example}
       # One proxy (the gateway) sits in front of this process, so the client IP
-      # is the last entry in x-forwarded-for. Raise this if you add a CDN — the
+      # is the last entry in x-forwarded-for, and x-forwarded-proto says whether
+      # the browser used https. Raise this if you add a CDN or a tunnel: the
       # entries to the left of your own proxies are attacker-controlled.
-      TRUSTED_PROXY_COUNT: 1
+      TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
 
       # Gates GET /_diagnostics, which reports what each dependency is doing and
       # why it is failing. The same report is printed to this container's log at
@@ -93,92 +119,144 @@ services:
       storage-init:
         condition: service_completed_successfully
 
-  # Applies apps/api/schema.sql once, then exits.
+  # Applies apps/api/schema.sql, then exits.
   #
   # This is a service rather than a step in the README because of an ordering
-  # trap that is very easy to lose an evening to. Every table in the schema
-  # references auth.users, which GoTrue creates on its first migration — so the
-  # schema cannot be applied until auth has started, and applying it early fails
-  # *every* statement. `psql` walks straight past errors and exits 0, so that
-  # failure is silent: you get an empty database, PostgREST reporting "0
-  # Relations", and the app answering 502 with no clue why.
+  # trap that is very easy to lose an evening to: the schema references
+  # auth.users, which only exists once GoTrue has migrated, and applying it
+  # early fails silently. apps/api/scripts/apply-schema.sh waits for that table
+  # and stops on the first real error; see the comments there.
   #
-  # Hence both halves below: wait for auth.users to exist, and run with
-  # ON_ERROR_STOP so a real failure stops here and says so.
+  # It runs from the app image, which carries both the script and schema.sql,
+  # so the schema always matches the app and nothing has to be mounted from a
+  # checkout. It runs on every `up`, and every statement is safe to re-run, so
+  # this is also how an upgrade applies new tables and columns.
   schema:
-    image: postgres:17-alpine
+    image: ghcr.io/spelling-creator/spelling-creator:${IMAGE_TAG:-latest}
     restart: "no"
     environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGDATABASE: spelling
       PGPASSWORD: ${POSTGRES_PASSWORD:?missing, see .env.example}
-    volumes:
-      - ./apps/api/schema.sql:/schema.sql:ro
+    command: ["sh", "apps/api/scripts/apply-schema.sh"]
     depends_on:
       postgres:
         condition: service_healthy
       auth:
         condition: service_started
-    # List form with a literal block, so the script is one argument and needs no
-    # quote-escaping — the folded `sh -c "..."` spelling has to escape the inner
-    # quotes and is easy to get subtly wrong.
-    entrypoint:
-      - sh
-      - -c
-      - |
-        echo 'waiting for auth.users (GoTrue creates it on its first migration)...'
-        attempt=0
-        # Bounded, and loud about why it gave up. An unbounded wait cannot tell
-        # "not migrated yet" from "cannot reach the database at all", and both
-        # look identical from outside: a container that never finishes and an
-        # app that never starts. psql's own errors are left on stderr so they
-        # land in `docker compose logs schema`.
-        until [ "$(psql -h postgres -U postgres -d spelling -tAc "select to_regclass('auth.users')" | tr -d '[:space:]')" = "auth.users" ]; do
-          attempt=$$((attempt + 1))
-          if [ "$$attempt" -ge 60 ]; then
-            echo 'GAVE UP: auth.users did not appear within two minutes.'
-            echo ''
-            echo 'What this container can see:'
-            # Narrows it without a round trip. No auth schema at all means GoTrue
-            # never connected (check its logs for a connection refusal — the
-            # usual one is sslmode). An auth schema with no tables means it
-            # connected and its migration failed part way. Errors here instead
-            # mean this container cannot reach postgres either.
-            psql -h postgres -U postgres -d spelling -tAc \
-              "select 'auth schema exists: ' || count(*) from pg_namespace where nspname = 'auth'" || true
-            psql -h postgres -U postgres -d spelling -tAc \
-              "select 'tables in auth: ' || count(*) from pg_tables where schemaname = 'auth'" || true
-            echo ''
-            echo 'Then: docker compose logs auth'
-            exit 1
-          fi
-          if [ $$((attempt % 5)) -eq 0 ]; then
-            echo "  still waiting ($$((attempt * 2))s)"
-          fi
-          sleep 2
-        done
-        echo 'applying schema.sql'
-        psql -v ON_ERROR_STOP=1 -h postgres -U postgres -d spelling -f /schema.sql
-        echo 'granting the new tables to service_role'
-        # Belt and braces over the ALTER DEFAULT PRIVILEGES in the roles script.
-        # Default privileges only reach objects created afterwards by the role
-        # that set them, which makes them quietly conditional on how and by whom
-        # the schema was applied — and the failure is a table that exists, that
-        # PostgREST can see, and that the API is refused with 42501. That reads
-        # as an authentication problem and is not one. Granting explicitly here
-        # does not depend on any of it.
-        psql -v ON_ERROR_STOP=1 -h postgres -U postgres -d spelling -c \
-          "grant all on all tables in schema public to service_role;
-           grant all on all sequences in schema public to service_role;"
 
   # Joins PostgREST and GoTrue under one origin, and fronts the app. This is the
-  # piece with no Supabase equivalent to install — it is just a reverse proxy.
+  # piece with no Supabase equivalent to install: it is just a reverse proxy.
+  #
+  # It also does HTTPS. When PUBLIC_URL starts with https://, Caddy gets and
+  # renews a certificate for its hostname from Let's Encrypt by itself, and
+  # redirects plain http to it. That needs the hostname's DNS pointing at this
+  # machine and ports 80 and 443 reachable from the internet, so set PUBLIC_PORT
+  # to 80 and PUBLIC_HTTPS_PORT to 443. With an http:// PUBLIC_URL (the default,
+  # for trying it out on localhost) it serves plain http and asks for nothing.
+  #
+  # Already behind something that terminates TLS (a tunnel, a CDN, another
+  # proxy)? Set SITE_ADDRESS=:80 so Caddy doesn't try to get a certificate too,
+  # and TRUSTED_PROXY_COUNT=2 to count that hop. Caddy then has to trust that
+  # hop as well, or it replaces the X-Forwarded-For and X-Forwarded-Proto it
+  # was sent with its own, and the app sees the tunnel's address for every
+  # visitor and http for every page. Behind a count above 1 it trusts private
+  # addresses (a tunnel on this machine or network); a CDN on the internet
+  # needs its own address ranges in GATEWAY_TRUSTED_PROXIES.
   gateway:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
       - "${PUBLIC_PORT:-8080}:80"
-    configs:
-      - source: caddyfile
-        target: /etc/caddy/Caddyfile
+      - "${PUBLIC_HTTPS_PORT:-8443}:443"
+      # HTTP/3, which Caddy serves over UDP on the same port.
+      - "${PUBLIC_HTTPS_PORT:-8443}:443/udp"
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?missing, see .env.example}
+      SITE_ADDRESS: ${SITE_ADDRESS:-}
+      TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
+      GATEWAY_TRUSTED_PROXIES: ${GATEWAY_TRUSTED_PROXIES:-}
+      # The Caddyfile, which the entrypoint below writes out before starting
+      # Caddy. It lives here rather than under `configs:` because Compose only
+      # recreates a container when its own definition changes: a new Caddyfile
+      # in a config would be ignored by `docker compose up -d` until somebody
+      # thought to add --force-recreate, which is easy to miss on an upgrade.
+      #
+      # SITE_ADDRESS is filled in by the entrypoint. Caddy's reverse_proxy
+      # passes X-Forwarded-Proto on, which is how the app knows a request
+      # arrived over https and builds its links with it.
+      CADDYFILE: |
+        # PostgREST and GoTrue under the paths the API and the SPA expect. The
+        # prefixes are stripped because both upstreams serve from their own root.
+        (identity-and-data) {
+          handle_path /rest/v1/* {
+            reverse_proxy postgrest:3000
+          }
+          handle_path /auth/v1/* {
+            reverse_proxy auth:9999
+          }
+        }
+
+        # The public site, for browsers.
+        {$$SITE_ADDRESS} {
+          import identity-and-data
+          # Everything else is the app: the API, the SPA and the docs.
+          handle {
+            reverse_proxy app:8787
+          }
+        }
+
+        # The app's own server-side calls, which reach PostgREST and GoTrue as
+        # SUPABASE_URL=http://gateway over the internal network. A site of its
+        # own, because the public one only answers to its hostname once that is
+        # a real domain, and a request for "gateway" would match nothing. Plain
+        # http, since it never leaves the compose network, and only the two
+        # upstreams: nothing needs to reach the app this way.
+        http://gateway {
+          import identity-and-data
+        }
+    # Works out what Caddy should serve from PUBLIC_URL, so there is one setting
+    # to change rather than two to keep in step: the bare hostname of an https
+    # URL (which is what turns on Caddy's automatic HTTPS), otherwise plain :80.
+    # The doubled dollars are compose's escape for a literal one.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        # Stop on the first failure, so a Caddyfile that couldn't be written
+        # is reported as that rather than as Caddy starting with no config.
+        set -e
+        if [ -z "$$SITE_ADDRESS" ]; then
+          case "$$PUBLIC_URL" in
+            https://*)
+              host=$${PUBLIC_URL#https://}
+              SITE_ADDRESS=$${host%%[:/]*}
+              ;;
+            *) SITE_ADDRESS=:80 ;;
+          esac
+        fi
+        export SITE_ADDRESS
+        # Which upstream proxies may set X-Forwarded-For and -Proto (see the
+        # comment above this service). None, unless something sits in front.
+        TRUSTED=$$GATEWAY_TRUSTED_PROXIES
+        if [ -z "$$TRUSTED" ] && [ "$$TRUSTED_PROXY_COUNT" -gt 1 ] 2>/dev/null; then
+          TRUSTED=private_ranges
+        fi
+        {
+          if [ -n "$$TRUSTED" ]; then
+            printf '{\n\tservers {\n\t\ttrusted_proxies static %s\n\t}\n}\n\n' "$$TRUSTED"
+          fi
+          printf '%s\n' "$$CADDYFILE"
+        } > /etc/caddy/Caddyfile
+        echo "gateway: serving $$SITE_ADDRESS$${TRUSTED:+, trusting proxies at $$TRUSTED}"
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    # Certificates and the keys behind them. Kept on a volume so a restart
+    # doesn't ask Let's Encrypt for a new one each time, which would run into
+    # its rate limits within a day.
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
     depends_on:
       - app
       - postgrest
@@ -439,24 +517,9 @@ configs:
       drop event trigger if exists pgrst_watch;
       create event trigger pgrst_watch on ddl_command_end execute procedure public.pgrst_watch();
 
-  caddyfile:
-    content: |
-      :80 {
-        # PostgREST and GoTrue under the paths the API and the SPA expect. The
-        # prefixes are stripped because both upstreams serve from their own root.
-        handle_path /rest/v1/* {
-          reverse_proxy postgrest:3000
-        }
-        handle_path /auth/v1/* {
-          reverse_proxy auth:9999
-        }
-        # Everything else is the app: the API, the SPA and the docs.
-        handle {
-          reverse_proxy app:8787
-        }
-      }
-
 volumes:
   postgres-data:
   storage-data:
+  caddy-data:
+  caddy-config:
   # ollama-data:

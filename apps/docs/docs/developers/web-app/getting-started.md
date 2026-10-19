@@ -38,11 +38,14 @@ Optional features are configured in `apps/web/.env`; Vite reads env files from
 the package holding `vite.config.js`, not from the monorepo root, and exposes
 only `VITE_`-prefixed vars to client code. `apps/web/src/main.jsx` is the only
 place that reads them, and hands them to `configureCore` in
-`packages/core/src/config.js`:
+`packages/core/src/config.js`. (A self-hosted Node server can also write these
+settings into the page at runtime, which takes precedence; see
+[How the browser gets its settings](../self-hosting.md#how-the-browser-gets-its-settings).)
 
 ```bash
 VITE_API_URL=https://your-worker.example.workers.dev   # apps/api Worker endpoint (AI, Pixabay, lesson hub)
 VITE_TURNSTILE_SITE_KEY=0x...                           # Cloudflare Turnstile site key
+VITE_AI_CHALLENGE=turnstile                             # the AI check: turnstile (default), altcha, or none
 VITE_TURNSTILE_SCRIPT_URL=https://api.stub.spelling-creator.localhost/turnstile/v0/api.js  # load Turnstile from here instead of Cloudflare (stub mode only)
 VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com     # OAuth client for Save to Google Docs
 VITE_SUPABASE_URL=https://xxxx.supabase.co              # Supabase project URL (sign-in)
@@ -58,6 +61,11 @@ or an address; the username is turned into a synthetic email address under
 `VITE_USERNAME_DOMAIN`, which defaults to a reserved `.invalid` domain that can
 never receive mail (see `packages/core/src/username.js`).
 
+`VITE_AI_CHALLENGE` says which check the AI dialogs and Pixabay search show
+before a request: Cloudflare Turnstile, an ALTCHA proof of work served by the
+API, or none. It has to match the Worker's `AI_CHALLENGE`; see
+[Self-hosting](../self-hosting.md#ai) for what each one does.
+
 `VITE_TURNSTILE_SCRIPT_URL` is the one setting `main.jsx` doesn't read. When
 it's set, `vite.config.js` swaps it in for Cloudflare's Turnstile script in
 `index.html`. Only stub mode sets it (`apps/web/.env.stub`, or the stub's
@@ -70,8 +78,8 @@ There is no `apps/web/.env.example`; the list above is the full set. The root
 
 The app degrades gracefully when a feature is unconfigured:
 
-- Without `VITE_TURNSTILE_SITE_KEY` the **AI** dialogs and Pixabay image search
-  still open but show "VITE_TURNSTILE_SITE_KEY is not configured.", and without
+- On a Turnstile instance without `VITE_TURNSTILE_SITE_KEY`, the **AI** dialogs
+  and Pixabay image search still open but say AI isn't set up, and without
   `VITE_API_URL` their requests fail. Wikimedia Commons search needs neither.
 - Without `VITE_API_URL` the **Lesson hub** shows "The lesson hub is not
   configured (VITE_API_URL is missing)."

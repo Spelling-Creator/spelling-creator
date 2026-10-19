@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { SparklesIcon } from "lucide-react";
 import {
@@ -14,14 +14,12 @@ import { Alert, AlertDescription } from "./ui/alert.jsx";
 import { Spinner } from "./ui/spinner.jsx";
 import { Badge } from "./ui/badge.jsx";
 import { suggestLessonIdeas } from "@spelling-creator/core/aiSuggest";
-import { turnstileSiteKey } from "@spelling-creator/core/config";
-import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
+import { useAiChallenge } from "../lib/aiChallenge.jsx";
 
 /**
  * Dialog that suggests lesson topic ideas for the lesson's age range via the
- * Worker. It renders a Cloudflare Turnstile widget; the verified token it
- * produces is sent with the request so the Worker can confirm the call came
- * from our domain.
+ * Worker. It shows the instance's AI check (see lib/aiChallenge.jsx), and the
+ * token it produces is sent with the request.
  *
  * Suggestions are listed for review; picking one calls `onSelect` with its
  * title (the editor adopts it as the lesson title). The age range is shown so
@@ -34,66 +32,33 @@ export default function AiLessonIdeaDialog({
   onSelect,
   onClose,
 }) {
-  const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ideas, setIdeas] = useState([]);
-  const widgetRef = useRef(null);
-  const widgetIdRef = useRef(null);
   const { t } = useTranslation("aiDialogs");
+  // Every token is single-use, so the check is refreshed after each AI call to
+  // have a fresh one ready for a possible regenerate.
+  const {
+    token,
+    widget,
+    refresh: refreshChallenge,
+    unavailable,
+  } = useAiChallenge(open, {
+    onError: setError,
+    messages: {
+      notConfigured: t("aiLessonIdea.turnstileNotConfigured"),
+      failed: t("aiLessonIdea.verificationFailed"),
+    },
+  });
 
   // Reset the form each time the dialog opens.
   useEffect(() => {
     if (open) {
-      setToken("");
       setError("");
       setBusy(false);
       setIdeas([]);
     }
   }, [open]);
-
-  // Mount the Turnstile widget while the dialog is open; tear it down on close.
-  useEffect(() => {
-    if (!open) return;
-    if (!turnstileSiteKey()) {
-      setError(t("aiLessonIdea.turnstileNotConfigured"));
-      return;
-    }
-
-    let cancelled = false;
-
-    whenTurnstileReady()
-      .then((turnstile) => {
-        if (cancelled || !widgetRef.current) return;
-        widgetIdRef.current = turnstile.render(widgetRef.current, {
-          sitekey: turnstileSiteKey(),
-          callback: (tok) => setToken(tok),
-          "expired-callback": () => setToken(""),
-          "error-callback": () => {
-            setToken("");
-            setError(t("aiLessonIdea.verificationFailed"));
-          },
-        });
-      })
-      .catch((e) => setError(e.message));
-
-    return () => {
-      cancelled = true;
-      if (widgetIdRef.current != null && window.turnstile) {
-        window.turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, [open, t]);
-
-  // The Turnstile token is single-use, so refresh the widget after each AI call
-  // to have a fresh one ready for a possible regenerate.
-  const refreshChallenge = () => {
-    setToken("");
-    if (widgetIdRef.current != null && window.turnstile) {
-      window.turnstile.reset(widgetIdRef.current);
-    }
-  };
 
   const handleGenerate = async () => {
     setBusy(true);
@@ -166,11 +131,11 @@ export default function AiLessonIdeaDialog({
             </div>
           )}
 
-          {/* The widget powers the initial generate and any regenerate. */}
-          <div ref={widgetRef} className="min-h-[65px]" />
-          {error && (
+          {/* The check powers the initial generate and any regenerate. */}
+          {widget}
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
         </div>

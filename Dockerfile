@@ -6,15 +6,17 @@
 # docker-compose.yml for a worked example with Postgres, PostgREST, GoTrue and
 # RustFS around it.
 #
-#   docker build -t spelling-creator \
-#     --build-arg VITE_API_URL=https://spelling.example.com \
-#     --build-arg VITE_SUPABASE_URL=https://spelling.example.com \
-#     --build-arg VITE_SUPABASE_ANON_KEY=... .
+# Most people never build this: .github/workflows/image.yml publishes it as
+# ghcr.io/spelling-creator/spelling-creator. To build it yourself:
 #
-# The VITE_* values are BUILD arguments, not runtime environment: Vite
-# substitutes them into the bundle at build time, so they are baked into the
-# image and an instance pointed at different URLs needs its own build. That is a
-# property of building a static SPA, not a choice made here.
+#   docker build -t spelling-creator .
+#
+# Nothing instance-specific goes in. The server writes the SPA's settings into
+# the page as it serves it, from its own environment (SUPABASE_ANON_KEY,
+# AUTH_MODE and the rest; see apps/api/src/node/browserConfig.js), so one image
+# runs with anyone's configuration. The VITE_* build arguments below still work
+# and act as fallbacks for anything the environment leaves unset, but nothing
+# needs them.
 
 # syntax=docker/dockerfile:1
 
@@ -64,7 +66,8 @@ RUN if find apps/web/public apps/docs/docs/public -type f -size -1k \
     fi
 
 # Read by Vite at build time and substituted into the bundle. Vite exposes any
-# environment variable with the VITE_ prefix, so these need no .env file.
+# environment variable with the VITE_ prefix, so these need no .env file. All
+# optional: the runtime configuration overrides them (see the top of this file).
 ARG VITE_API_URL=""
 ARG VITE_SUPABASE_URL=""
 ARG VITE_SUPABASE_ANON_KEY=""
@@ -111,12 +114,38 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 # ---------------------------------------------------------------------------
 FROM node:24-alpine AS runtime
 
+# `source` is what links the published package to the repository on GitHub, so
+# its page shows the README and its permissions follow the repository's.
+LABEL org.opencontainers.image.title="Spelling Creator" \
+      org.opencontainers.image.description="Make Spelling lessons, self-hosted: the lesson editor, hub and API in one image." \
+      org.opencontainers.image.source="https://github.com/Spelling-Creator/spelling-creator" \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
+
 ENV NODE_ENV=production \
     PORT=8787 \
     HOST=0.0.0.0 \
     WEB_DIST=/app/apps/web/dist
 
 WORKDIR /app
+
+# Two jobs this image does besides serving, so that self-hosting needs nothing
+# but the compose file:
+#
+# - psql, for the compose stack's `schema` service, which runs
+#   apps/api/scripts/apply-schema.sh from this image rather than mounting
+#   schema.sql from a checkout. A few megabytes.
+# - openssl, and a `generate-env` command on the PATH that writes a filled-in
+#   .env from .env.example into a mounted directory
+#   (scripts/generate-env-docker.sh):
+#
+#     docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+#       ghcr.io/spelling-creator/spelling-creator generate-env
+#
+#   The base image's entrypoint runs a first argument that names a command on
+#   the PATH instead of passing it to node, which is what makes that work. The
+#   link is made here, before the app is copied in, and resolves once it is.
+RUN apk add --no-cache postgresql-client openssl \
+ && ln -s /app/scripts/generate-env-docker.sh /usr/local/bin/generate-env
 
 # `node` is a non-root user the base image already provides. Nothing here is
 # written to at runtime — the process is stateless — so it needs no ownership

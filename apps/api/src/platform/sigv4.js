@@ -19,32 +19,11 @@
 // single-chunk signed payloads, no session-token edge cases beyond passing one
 // through.
 
+import { hex, hmac, sha256Hex } from '../lib/crypto.js';
+
 const enc = new TextEncoder();
 
 const ALGORITHM = 'AWS4-HMAC-SHA256';
-
-/** Lowercase hex of a byte array. */
-function hex(buffer) {
-	return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** Lowercase hex SHA-256 of bytes or a string. */
-export async function sha256Hex(data) {
-	const bytes = typeof data === 'string' ? enc.encode(data) : data;
-	return hex(await crypto.subtle.digest('SHA-256', bytes));
-}
-
-/** HMAC-SHA256, returning raw bytes so the key-derivation chain can feed itself. */
-async function hmac(key, message) {
-	const cryptoKey = await crypto.subtle.importKey(
-		'raw',
-		typeof key === 'string' ? enc.encode(key) : key,
-		{ name: 'HMAC', hash: 'SHA-256' },
-		false,
-		['sign'],
-	);
-	return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message)));
-}
 
 /**
  * Percent-encode per RFC 3986 as AWS defines it: unreserved characters pass

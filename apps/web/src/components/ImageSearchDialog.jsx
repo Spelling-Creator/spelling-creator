@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { SearchIcon } from "lucide-react";
 import {
@@ -29,8 +29,7 @@ import {
   decodeDataUrl,
   storeImageBytes,
 } from "@spelling-creator/core/browser/imageRef";
-import { turnstileSiteKey } from "@spelling-creator/core/config";
-import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
+import { useAiChallenge } from "../lib/aiChallenge.jsx";
 
 // The image sources the dialog can search. Each provider hides where its search,
 // download, and attribution come from behind a common interface, so the dialog's
@@ -41,7 +40,7 @@ import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
 //   credit(hit)           -> the credit line the block keeps under the picture
 //
 // `needsToken` distinguishes Pixabay (proxied through the Worker, which enforces
-// a Turnstile check) from Wikimedia Commons (queried directly from the browser,
+// the instance's AI check) from Wikimedia Commons (queried directly from the browser,
 // no key and no token needed — see @spelling-creator/core/browser/commonsImages).
 // Commons' results open with the pictures Wikidata lists for the topic, which
 // carry `wikidata: { role, item }` and get a badge saying what they are.
@@ -104,12 +103,12 @@ const PROVIDERS = [
  * Dialog that searches an image source and inserts the chosen one as an image
  * block. Pixabay searches/downloads go through the apps/api Worker (so the API
  * key stays server-side and the rate limit is enforced there), each carrying a
- * fresh Turnstile token — exactly like the AI dialogs. Wikimedia Commons is
- * queried directly from the browser (no key, no token).
+ * fresh token from the instance's AI check, exactly like the AI dialogs.
+ * Wikimedia Commons is queried directly from the browser (no key, no token).
  *
- * Turnstile tokens are single-use, so after every Worker call we reset the
- * widget to mint a new token for the next action (search again, or pick an
- * image to insert). The widget is only mounted for sources that need a token.
+ * Tokens are single-use, so after every Worker call the check is refreshed to
+ * mint a new one for the next action (search again, or pick an image to
+ * insert). The check is only mounted for sources that need a token.
  */
 export default function ImageSearchDialog({
   open,
@@ -119,23 +118,37 @@ export default function ImageSearchDialog({
 }) {
   const [providerId, setProviderId] = useState("pixabay");
   const [query, setQuery] = useState("");
-  const [token, setToken] = useState("");
   const [hits, setHits] = useState(null); // null = no search yet; [] = no results
   const [searching, setSearching] = useState(false);
   const [insertingId, setInsertingId] = useState(null);
   const [error, setError] = useState("");
-  const widgetRef = useRef(null);
   const { t } = useTranslation("editorTools");
 
   const provider = PROVIDERS.find((p) => p.id === providerId) || PROVIDERS[0];
   const busy = searching || insertingId !== null;
+
+  // The check, mounted while the dialog is open AND the current source needs a
+  // token; torn down on close or when switching to a source that doesn't (e.g.
+  // Wikimedia). A used token can't be reused, so `refreshToken` mints a fresh
+  // one for the next action.
+  const {
+    token,
+    widget,
+    refresh: refreshToken,
+    unavailable,
+  } = useAiChallenge(open && provider.needsToken, {
+    onError: setError,
+    messages: {
+      notConfigured: t("imageSearch.turnstileNotConfigured"),
+      failed: t("imageSearch.verificationFailed"),
+    },
+  });
 
   // Reset the search state each time the dialog opens. The chosen source
   // persists across opens (it lives outside this effect).
   useEffect(() => {
     if (open) {
       setQuery("");
-      setToken("");
       setHits(null);
       setSearching(false);
       setInsertingId(null);
@@ -143,56 +156,11 @@ export default function ImageSearchDialog({
     }
   }, [open]);
 
-  // Mount the Turnstile widget while the dialog is open AND the current source
-  // needs a token; tear it down on close or when switching to a source that
-  // doesn't (e.g. Wikimedia).
-  useEffect(() => {
-    if (!open || !provider.needsToken) return;
-    if (!turnstileSiteKey()) {
-      setError(t("imageSearch.turnstileNotConfigured"));
-      return;
-    }
-
-    let widgetId;
-    let cancelled = false;
-
-    whenTurnstileReady()
-      .then((turnstile) => {
-        if (cancelled || !widgetRef.current) return;
-        widgetId = turnstile.render(widgetRef.current, {
-          sitekey: turnstileSiteKey(),
-          callback: (tok) => setToken(tok),
-          "expired-callback": () => setToken(""),
-          "error-callback": () => {
-            setToken("");
-            setError(t("imageSearch.verificationFailed"));
-          },
-        });
-      })
-      .catch((e) => setError(e.message));
-
-    return () => {
-      cancelled = true;
-      if (widgetId != null && window.turnstile) {
-        window.turnstile.remove(widgetId);
-      }
-    };
-  }, [open, provider.needsToken, t]);
-
-  // A used token can't be reused; mint a fresh one for the next action.
-  const refreshToken = () => {
-    setToken("");
-    if (widgetRef.current && window.turnstile) {
-      window.turnstile.reset(widgetRef.current);
-    }
-  };
-
   const handleProviderChange = (next) => {
     if (!next || next === providerId || busy) return;
     setProviderId(next);
     setHits(null);
     setError("");
-    setToken("");
   };
 
   const handleSearch = async () => {
@@ -333,14 +301,12 @@ export default function ImageSearchDialog({
             </Button>
           </div>
 
-          {/* Turnstile widget — only sources that proxy through the Worker need it. */}
-          {provider.needsToken && (
-            <div ref={widgetRef} className="min-h-[65px]" />
-          )}
+          {/* The AI check: only sources that proxy through the Worker need it. */}
+          {provider.needsToken && widget}
 
-          {error && (
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
 

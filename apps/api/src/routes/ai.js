@@ -1,9 +1,9 @@
-// The Turnstile-gated AI / image flow — the Worker's POST entrypoint (`POST /`).
+// The challenge-gated AI / image flow, the Worker's POST entrypoint (`POST /`).
 // `mode` selects the suggester: "text"/"question"/"lessonIdea" drive Gemini;
 // "factCheck" checks a lesson's numbers and dates against Wikidata, the
 // Smithsonian's record of volcanoes and Wikipedia; "fix" asks
 // for a fix to one lesson check finding (see lib/lessonFix.js);
-// "imageSearch"/"imageFetch" proxy Pixabay. All share the Turnstile check and the
+// "imageSearch"/"imageFetch" proxy Pixabay. All share the challenge check and the
 // per-IP token-bucket rate limiter below; text suggestions and fact checks are
 // additionally cached.
 
@@ -12,7 +12,7 @@ import { checkPassages, cleanPassages } from '../lib/factCheck.js';
 import { FixError, MAX_FIX_DOC_CHARS, cleanFixDoc, findFinding, suggestLessonFix } from '../lib/lessonFix.js';
 import { cacheKey, textCacheKey } from '../lib/cache.js';
 import { clientIp, rateLimitStore } from '../platform/index.js';
-import { verifyTurnstile } from '../lib/turnstile.js';
+import { verifyAiChallenge } from '../lib/aiChallenge.js';
 import { textResponse } from '../lib/http.js';
 
 // How long a cached AI answer lives in KV.
@@ -147,15 +147,16 @@ async function handleImageFetch(rawUrl, okHeaders, cors) {
 }
 
 /**
- * The Turnstile-gated AI / image entrypoint (POST /). Reads the request JSON,
- * verifies Turnstile, charges the per-IP rate limiter (a cached text answer is
- * served first and costs nothing), then dispatches on `mode`.
+ * The challenge-gated AI / image entrypoint (POST /). Reads the request JSON,
+ * checks the instance's challenge (Turnstile, ALTCHA or none, per AI_CHALLENGE;
+ * see lib/aiChallenge.js), charges the per-IP rate limiter (a cached text answer
+ * is served first and costs nothing), then dispatches on `mode`.
  *
- * `verify` replaces the Turnstile check. Only code can pass it, never config:
- * the local stub API (apps/stub-api) runs this handler with a check that always
- * passes, since its stand-in widget has no Cloudflare challenge behind it.
+ * `verify` replaces that check. Only code can pass it, never config: the local
+ * stub API (apps/stub-api) runs this handler with a check that always passes,
+ * since its stand-in widget has no Cloudflare challenge behind it.
  */
-export async function handleAi(request, env, cors, allowedHostnames, { verify = verifyTurnstile } = {}) {
+export async function handleAi(request, env, cors, allowedHostnames, { verify = verifyAiChallenge } = {}) {
 	const LIMIT = 60;
 	const WINDOW = 60;
 	const ip = clientIp(env, request) || 'unknown';
@@ -214,7 +215,7 @@ export async function handleAi(request, env, cors, allowedHostnames, { verify = 
 	// A fix reads the whole lesson (the checks are lesson-wide) and the key of
 	// the finding to fix. Only shape and size are checked here, pre-auth, the
 	// same as the other modes' cheap input checks. The finding itself is looked
-	// up in the handler below, after Turnstile and the rate limiter, because the
+	// up in the handler below, after the challenge and the rate limiter, because the
 	// lookup runs the full lesson checks and an unverified request must not get
 	// to spend that CPU for free.
 	let fixDoc = null;
@@ -228,12 +229,13 @@ export async function handleAi(request, env, cors, allowedHostnames, { verify = 
 		}
 	}
 
-	// Validate the request really came from our domain via Turnstile.
-	// This relies on the verified `hostname` from Cloudflare's siteverify
-	// response, not on spoofable Origin/Referer headers.
-	const turnstile = await verify(token, env.TURNSTILE_SECRET_KEY, allowedHostnames, ip);
-	if (!turnstile.ok) {
-		return new Response(turnstile.reason, { status: turnstile.status, headers: cors });
+	// The instance's challenge. With Turnstile this proves the request came from
+	// our own domain, through the verified `hostname` in Cloudflare's siteverify
+	// response rather than spoofable Origin/Referer headers. With ALTCHA it
+	// proves the sender spent the work; with none it passes.
+	const challenge = await verify(token, env, allowedHostnames, ip);
+	if (!challenge.ok) {
+		return new Response(challenge.reason, { status: challenge.status, headers: cors });
 	}
 
 	// Token-bucket rate limiter: read the current bucket and refill it for the
@@ -303,7 +305,7 @@ export async function handleAi(request, env, cors, allowedHostnames, { verify = 
 
 	// Pixabay image search/fetch. The Worker holds the API key and proxies
 	// the request (Pixabay's CDN sends no CORS headers, so the browser can't
-	// read the bytes itself). Both modes share the Turnstile check and rate
+	// read the bytes itself). Both modes share the challenge check and rate
 	// limiter above; the Pixabay response itself is edge-cached for 24h.
 	if (mode === 'imageSearch') {
 		return handleImageSearch(query, page, perPage, env, okHeaders, cors);

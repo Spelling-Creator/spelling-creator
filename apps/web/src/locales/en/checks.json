@@ -48,7 +48,7 @@
     "newSuggestions_other": "This also adds {{count}} suggestions to the Check panel.",
     "stale": "The lesson has changed since this fix was made, so it no longer fits. Try again.",
     "genericError": "No fix came back. Try again in a moment.",
-    "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
+    "turnstileNotConfigured": "AI isn't set up here: this instance uses Turnstile but has no site key.",
     "verificationFailed": "Verification failed. Close this and open it again to retry.",
     "fields": {
       "passage": "Text",

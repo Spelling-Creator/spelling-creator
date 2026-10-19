@@ -28,6 +28,7 @@
     "@tsparticles/react": "^4.3.2",
     "@tsparticles/shape-text": "^4.3.2",
     "@tsparticles/slim": "^4.3.2",
+    "altcha": "^3.4.0",
     "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

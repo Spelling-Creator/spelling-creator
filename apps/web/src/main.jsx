@@ -9,15 +9,33 @@ import { configureCore } from "@spelling-creator/core/config";
 // reaching for the bundler itself — see packages/core/src/config.js.
 //
 // This is now the ONLY place in the app that touches import.meta.env.
-configureCore({
+const buildTime = {
   apiUrl: import.meta.env.VITE_API_URL,
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
   turnstileSiteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+  aiChallenge: import.meta.env.VITE_AI_CHALLENGE,
   authMode: import.meta.env.VITE_AUTH_MODE,
   usernameDomain: import.meta.env.VITE_USERNAME_DOMAIN,
-});
+};
+
+// A self-hosted server writes its own settings into the shell as it serves it
+// (apps/api/src/node/browserConfig.js), so one published image runs anywhere.
+// Those win over the build's. Being there at all means the page came from the
+// API itself, so its origin is the API, and it is also where the identity
+// service lives unless the server said otherwise or the build baked in another.
+const runtime = window.__CONFIG__;
+configureCore(
+  runtime
+    ? {
+        ...buildTime,
+        apiUrl: window.location.origin,
+        supabaseUrl: buildTime.supabaseUrl || window.location.origin,
+        ...runtime,
+      }
+    : buildTime,
+);
 // Registers all translation namespaces with i18next before anything renders.
 import "./lib/i18n.js";
 // Tailwind + shadcn/ui tokens (full preflight now that MUI's CssBaseline is

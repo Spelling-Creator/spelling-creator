@@ -26,6 +26,7 @@ import { Hono } from 'hono';
 import { allowedHostnames, corsHeaders } from './lib/cors.js';
 
 import { handleAi } from './routes/ai.js';
+import { handleAltchaChallenge } from './routes/altcha.js';
 import { handleImageGet, handleImagePut } from './routes/images.js';
 import { handleGit } from './routes/git.js';
 import { handleLessons } from './routes/lessons.js';
@@ -167,9 +168,12 @@ export function createApp() {
 	// (cached); see routes/spelling-words.js.
 	app.get('/spelling-words.json', (c) => handleSpellingWords(req(c), c.env, urlOf(c), cors(c)));
 
-	// Turnstile-gated AI / image flow. The client posts to the API root (`POST /`).
+	// Challenge-gated AI / image flow. The client posts to the API root (`POST /`).
 	// A POST, so it does not collide with the GET/HEAD frontend catch-all.
 	app.post('/', (c) => handleAi(req(c), c.env, cors(c), c.get('allowed')));
+	// The challenge the ALTCHA widget solves before that POST, on instances that
+	// use ALTCHA rather than Turnstile (AI_CHALLENGE=altcha).
+	app.get('/altcha/challenge', (c) => handleAltchaChallenge(req(c), c.env, cors(c)));
 
 	return app;
 }

@@ -26,6 +26,7 @@
 		"@spelling-creator/core": "workspace:*",
 		"@spelling-creator/mcp": "workspace:*",
 		"agents": "^0.20.1",
+		"altcha-lib": "^2.6.0",
 		"glin-profanity": "^3.3.0",
 		"hono": "^4.13.2",
 		"parse5": "^8.0.1",

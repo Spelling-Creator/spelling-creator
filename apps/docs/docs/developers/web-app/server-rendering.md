@@ -22,6 +22,18 @@ Both hosts do this: the Cloudflare Worker (`handleFrontend` in
 (`apps/api/src/node/server.js`) call the same `shouldServerRender` /
 `serverRender` pair from `apps/api/src/routes/ssr.js`.
 
+The data is loaded the way the browser loads it, through core's own client,
+from the origin the page is being served at. On the Worker that is a
+subrequest back into the same Worker. On the Node host the same URL is often
+unreachable from inside the process: behind the compose stack's gateway it
+names a port only the gateway listens on. So the Node host answers any request
+to the origin it is currently serving in-process, with the app's own handler,
+and only sends other origins over the network (`apps/api/src/node/selfFetch.js`).
+Without that, every render there fails with "Could not reach the lesson hub" and
+falls back to the shell. The one exception is `/rest/v1` and `/auth/v1`, which
+the app never serves: on an origin that also fronts PostgREST and GoTrue, those
+still go over the network to them.
+
 A lesson's tabs (`/hub/:id/practice`, `/discussion`, `/proposals`,
 `/proposals/:prId`, `/history`; see [Pages & routing](./pages-and-routing.md#a-lessons-tabs))
 are all the same lesson, so one `fetchLesson` serves all of them and the tab

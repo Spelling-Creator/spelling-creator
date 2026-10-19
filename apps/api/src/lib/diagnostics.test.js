@@ -60,6 +60,8 @@ function envWith(routes, platformOverrides = {}) {
 		SUPABASE_URL: BASE,
 		SUPABASE_SERVICE_ROLE_KEY: SERVICE_ROLE_KEY,
 		ALLOWED_HOSTNAMES: 'app.test',
+		// The one AI check a healthy instance can pass with nothing else set.
+		AI_CHALLENGE: 'altcha',
 		PLATFORM: {
 			images: blobStore(async () => ({ objects: [], cursor: '', truncated: false })),
 			lessonGit: blobStore(async () => ({ objects: [], cursor: '', truncated: false })),
@@ -116,8 +118,36 @@ describe('runDiagnostics — everything working', () => {
 				'images',
 				'lesson-history',
 				'key-value',
+				'ai-challenge',
 			]);
 			expect(result.checks.every((c) => c.state === 'ok')).toBe(true);
+		});
+	});
+
+	describe('the AI challenge', () => {
+		const check = async (env) => withFetch(async () => find(await runDiagnostics({ ...envWith(HEALTHY_ROUTES), ...env }), 'ai-challenge'));
+
+		it('says where an ALTCHA key comes from', async () => {
+			expect((await check({})).detail).toContain('derived from the service-role key');
+			expect((await check({ ALTCHA_HMAC_KEY: 'k' })).detail).toContain('ALTCHA_HMAC_KEY');
+		});
+
+		it('fails a value it does not know, rather than guessing quietly', async () => {
+			const result = await check({ AI_CHALLENGE: 'altca' });
+			expect(result.state).toBe('failed');
+			expect(result.detail).toContain('treated as turnstile');
+		});
+
+		it('names an unset Turnstile secret without failing the instance', async () => {
+			const result = await check({ AI_CHALLENGE: 'turnstile' });
+			expect(result.state).toBe('skipped');
+			expect(result.detail).toContain('TURNSTILE_SECRET_KEY');
+		});
+
+		it('says plainly that none means no check', async () => {
+			const result = await check({ AI_CHALLENGE: 'none' });
+			expect(result.state).toBe('ok');
+			expect(result.detail).toContain('anyone who can reach this instance');
 		});
 	});
 

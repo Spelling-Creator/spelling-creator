@@ -60,7 +60,7 @@ it, so the prompt carries the checker's own `message`: prose already written
 for a model, naming the fix. A finding that is no longer there is refused with
 a 409, and one that isn't in `AI_FIX_CODES` with a 400.
 
-Only the request's shape and size are checked before Turnstile. The finding
+Only the request's shape and size are checked before the AI check. The finding
 lookup runs the full lesson checks, so it happens behind the verification and
 the rate limiter, where an unverified request can't make the Worker spend that
 CPU for free. The lookup's one pass is reused as the "before" side of every
@@ -117,7 +117,7 @@ panel's Undo works the same way.
 
 ## Cost and limits
 
-A fix is one Turnstile check and one rate-limit token, like the other
+A fix is one pass of the AI check and one rate-limit token, like the other
 [AI helpers](./ai-suggestions.md), and one or two model calls. Nothing is
 cached: asking again should give a different fix. A request is refused with a
 413 if the lesson is over 300,000 characters as JSON (`MAX_FIX_DOC_CHARS`).
@@ -128,8 +128,8 @@ cached: asking again should give a different fix. A request is refused with a
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
 | `packages/core/src/lessonAiFixes.js`                   | `AI_FIX_CODES`, `fixContext`, `aiEditsToOperations`, `applyFixOperations`, `checkFix`. Shared.    |
 | `apps/api/src/lib/lessonFix.js`                        | The prompt, `FIX_SCHEMA`, finding the finding again, and the two tries.                           |
-| `apps/api/src/routes/ai.js`                            | The `fix` mode: input checks, Turnstile, rate limit.                                              |
+| `apps/api/src/routes/ai.js`                            | The `fix` mode: input checks, the AI check, rate limit.                                           |
 | `packages/core/src/aiSuggest.js`                       | `suggestFix()`, the browser's call to the Worker.                                                 |
 | `apps/web/src/components/editor/AiFixDialog.jsx`       | The dialog, the preview and the word diff (`diff`'s `diffWordsWithSpace`).                        |
-| `apps/web/src/components/editor/LessonChecksSheet.jsx` | The **Fix with AI** button, shown only when the instance has an API and a Turnstile key.          |
+| `apps/web/src/components/editor/LessonChecksSheet.jsx` | The **Fix with AI** button, shown only when `hasAiChallenge()`: an API, and a check it can pass.  |
 | `apps/web/src/pages/EditorPage.jsx`                    | `applyAiFix`, which checks the fix once more and applies it through the same path as a quick fix. |

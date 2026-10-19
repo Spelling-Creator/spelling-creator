@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { SparklesIcon } from "lucide-react";
 import {
@@ -22,15 +22,13 @@ import {
 import { Field, FieldLabel } from "./ui/field.jsx";
 import { suggestQuestion } from "@spelling-creator/core/aiSuggest";
 import { QUESTION_TYPE_MENU } from "@spelling-creator/core/questions";
-import { turnstileSiteKey } from "@spelling-creator/core/config";
-import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
+import { useAiChallenge } from "../lib/aiChallenge.jsx";
 
 /**
  * Dialog that suggests a quiz question via the Worker, alongside the text
  * suggester. The subject is the section title the user already typed; the user
- * only picks which type of question to generate. Like AiTextDialog, it renders
- * a Cloudflare Turnstile widget and sends the verified token with the request
- * so the Worker can confirm the call came from our domain. The section's
+ * only picks which type of question to generate. Like AiTextDialog, it shows
+ * the instance's AI check and sends its token with the request. The section's
  * existing text is sent as context so the question is grounded in the lesson.
  * The prompts of any questions already in the section are sent too, so the model
  * can avoid repeating one the user already has.
@@ -45,57 +43,32 @@ export default function AiQuestionDialog({
   onClose,
 }) {
   const [questionType, setQuestionType] = useState("single");
-  const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const widgetRef = useRef(null);
   const { t } = useTranslation("aiDialogs");
+  const {
+    token,
+    widget,
+    refresh: refreshChallenge,
+    unavailable,
+  } = useAiChallenge(open, {
+    onError: setError,
+    messages: {
+      notConfigured: t("aiQuestion.turnstileNotConfigured"),
+      failed: t("aiQuestion.verificationFailed"),
+    },
+  });
 
   const subject = (sectionTitle || "").trim();
 
   // Reset the form each time the dialog opens.
   useEffect(() => {
     if (open) {
-      setToken("");
       setError("");
       setBusy(false);
       setQuestionType("single");
     }
   }, [open]);
-
-  // Mount the Turnstile widget while the dialog is open; tear it down on close.
-  useEffect(() => {
-    if (!open) return;
-    if (!turnstileSiteKey()) {
-      setError(t("aiQuestion.turnstileNotConfigured"));
-      return;
-    }
-
-    let widgetId;
-    let cancelled = false;
-
-    whenTurnstileReady()
-      .then((turnstile) => {
-        if (cancelled || !widgetRef.current) return;
-        widgetId = turnstile.render(widgetRef.current, {
-          sitekey: turnstileSiteKey(),
-          callback: (tok) => setToken(tok),
-          "expired-callback": () => setToken(""),
-          "error-callback": () => {
-            setToken("");
-            setError(t("aiQuestion.verificationFailed"));
-          },
-        });
-      })
-      .catch((e) => setError(e.message));
-
-    return () => {
-      cancelled = true;
-      if (widgetId != null && window.turnstile) {
-        window.turnstile.remove(widgetId);
-      }
-    };
-  }, [open, t]);
 
   const handleGenerate = async () => {
     if (!subject) {
@@ -116,10 +89,7 @@ export default function AiQuestionDialog({
     } catch (e) {
       setError(e.message || t("aiQuestion.genericError"));
       // Token is single-use; force a fresh challenge before retrying.
-      setToken("");
-      if (widgetRef.current && window.turnstile) {
-        window.turnstile.reset(widgetRef.current);
-      }
+      refreshChallenge();
     } finally {
       setBusy(false);
     }
@@ -182,10 +152,10 @@ export default function AiQuestionDialog({
               </SelectContent>
             </Select>
           </Field>
-          <div ref={widgetRef} className="min-h-[65px]" />
-          {error && (
+          {widget}
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
         </div>

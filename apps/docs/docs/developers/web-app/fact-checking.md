@@ -35,13 +35,14 @@ so fixing a number clears its finding without checking again.
 
 None of it is counted in the Check button's badge or the outline: those are
 free and always current, and this is neither. The section is hidden on an
-instance with no API URL or no Turnstile site key (`hasApi()` and
-`hasTurnstile()`), where it could only fail.
+instance with no API URL, or one using Turnstile with no site key
+(`hasAiChallenge()`), where it could only fail.
 
 ## How a check works
 
 1. The editor sends the lesson's passages (`lessonPassages`, each
-   `{ blockId, text }`), the lesson title and a Turnstile token to the Worker:
+   `{ blockId, text }`), the lesson title and a token from the instance's AI
+   check (see [AI suggestions](./ai-suggestions.md#the-shared-flow)) to the Worker:
    `POST /` with `mode: "factCheck"`.
 2. The Worker asks the model to list the claims in the passages
    (`factCheckPrompt`, `FACT_CLAIMS_SCHEMA`).
@@ -386,7 +387,7 @@ dates come back unshifted.
 A check is one model call and, typically, two Wikipedia searches per distinct subject
 (the name, and the name with its kind), one per distinct stated name, and one SPARQL
 query. Then two Smithsonian requests if any claim is about a volcano, and one Wikipedia
-article read per subject that still needs one. It goes through the same Turnstile check
+article read per subject that still needs one. It goes through the same AI check
 and per-IP rate limiter as the other [AI helpers](./ai-suggestions.md) and costs one
 token.
 
@@ -412,7 +413,8 @@ token.
 
 A self-hosted instance needs outbound HTTPS to `en.wikipedia.org`,
 `www.wikidata.org`, `query.wikidata.org` and
-`webservices.volcano.si.edu`, as well as an AI provider and a Turnstile key.
+`webservices.volcano.si.edu`, as well as an AI provider and, if its AI check
+is Turnstile, a Turnstile key.
 
 ## Where the code is
 
@@ -424,7 +426,7 @@ A self-hosted instance needs outbound HTTPS to `en.wikipedia.org`,
 | `packages/core/src/smithsonian.js`                    | The Global Volcanism Program: a volcano's record, and comparing eruption dates.                                                  |
 | `packages/core/src/factText.js`                       | Reading an article's sentences: the quantities, dates and names in each.                                                         |
 | `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                                       |
-| `apps/api/src/routes/ai.js`                           | The `factCheck` mode: Turnstile, rate limit, cache.                                                                              |
+| `apps/api/src/routes/ai.js`                           | The `factCheck` mode: the AI check, rate limit, cache.                                                                           |
 | `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                                                |
 | `apps/web/src/lib/factCheck.js`                       | `useFactCheck()`, and the wording of findings (`describeFact`).                                                                  |
 | `apps/web/src/components/editor/FactCheckSection.jsx` | The Facts section of the Check panel.                                                                                            |

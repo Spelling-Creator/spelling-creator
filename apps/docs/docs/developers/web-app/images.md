@@ -60,11 +60,13 @@ The flow:
    `Image from Pixabay` when there's no user name
    (`imageSearch.providers.pixabay.*` in `editorTools.json`).
 
-Each Worker call consumes its single-use Turnstile token, so the widget is reset
-to mint a fresh one between searching and inserting. This source needs the same
-`VITE_API_URL` / `VITE_TURNSTILE_SITE_KEY` as the AI features, plus a
-`PIXABAY_API_KEY` secret **on the Worker** (`wrangler secret put PIXABAY_API_KEY`).
-Without a site key the dialog shows "VITE_TURNSTILE_SITE_KEY is not configured."
+Each Worker call consumes its single-use token from the instance's AI check
+(Turnstile, ALTCHA or none; see `src/lib/aiChallenge.jsx` and
+[Self-hosting](../self-hosting.md#ai)), so the check is refreshed to mint a
+fresh one between searching and inserting. This source needs the same setup as
+the AI features, plus a `PIXABAY_API_KEY` secret **on the Worker**
+(`wrangler secret put PIXABAY_API_KEY`). On a Turnstile instance with no site
+key, the dialog says Pixabay search isn't set up.
 
 ### Wikimedia Commons
 

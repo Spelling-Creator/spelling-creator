@@ -21,6 +21,8 @@
 // paraphrasing them helps nobody.
 
 import { platform } from '../platform/index.js';
+import { AI_CHALLENGES, aiChallengeMode } from './aiChallenge.js';
+import { altchaConfigured } from './altcha.js';
 import { supabaseBase, supabaseHeaders } from './supabase.js';
 
 // Long enough for a container that is still starting, short enough that a whole
@@ -105,7 +107,8 @@ function checkCredentials(env) {
 			'credentials',
 			`SUPABASE_SERVICE_ROLE_KEY is not a JWT — it has ${parts} part${parts === 1 ? '' : 's'} where a token has 3`,
 			'It should be a signed token, not a password. If it still reads like the placeholder from .env.example, ' +
-				'generate a real one — `./scripts/generate-env.sh` writes a matching set.',
+				'generate a real one: `docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env --print` prints ' +
+				'a matching set, as does `./scripts/generate-env.sh --print` from a checkout.',
 		);
 	}
 	if (!payload) {
@@ -357,6 +360,44 @@ async function checkKeyValue(env) {
 }
 
 /**
+ * Which check guards the AI features, and whether it can work. Configuration
+ * only: Turnstile's secret can only be proved by a real token, and an ALTCHA
+ * challenge is signed locally.
+ */
+function checkAiChallenge(env) {
+	const raw = String(env.AI_CHALLENGE || '').trim();
+	const mode = aiChallengeMode(env);
+	if (raw && raw.toLowerCase() !== mode) {
+		return failed(
+			'ai-challenge',
+			`AI_CHALLENGE is "${raw}", which is not one of ${AI_CHALLENGES.join(', ')}, so it is treated as turnstile`,
+			'Set AI_CHALLENGE to turnstile, altcha or none.',
+		);
+	}
+	if (mode === 'none') {
+		return ok('ai-challenge', 'none: anyone who can reach this instance can use the AI features, within the per-IP rate limit');
+	}
+	if (mode === 'altcha') {
+		if (!altchaConfigured(env)) {
+			return failed('ai-challenge', 'altcha, but there is no key to sign challenges with', 'Set ALTCHA_HMAC_KEY.');
+		}
+		return ok(
+			'ai-challenge',
+			env.ALTCHA_HMAC_KEY
+				? 'altcha: challenges are signed with ALTCHA_HMAC_KEY'
+				: 'altcha: challenges are signed with a key derived from the service-role key',
+		);
+	}
+	if (!env.TURNSTILE_SECRET_KEY) {
+		return skipped(
+			'ai-challenge',
+			'turnstile, but TURNSTILE_SECRET_KEY is not set, so the AI features are unavailable (AI_CHALLENGE=altcha needs no account)',
+		);
+	}
+	return ok('ai-challenge', 'turnstile: the secret key is set');
+}
+
+/**
  * Run every check.
  *
  * Sequential rather than parallel on purpose: the checks build on each other, a
@@ -388,6 +429,7 @@ export async function runDiagnostics(env) {
 	checks.push(await checkBlobStore('images', services.images, 'lesson images cannot be uploaded or served'));
 	checks.push(await checkBlobStore('lesson-history', services.lessonGit, 'version history and forking are unavailable'));
 	checks.push(await checkKeyValue(env));
+	checks.push(checkAiChallenge(env));
 
 	return { ok: checks.every((c) => c.state !== 'failed'), checks };
 }

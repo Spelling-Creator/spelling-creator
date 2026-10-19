@@ -129,7 +129,7 @@
         "altFallback": "Wikimedia Commons image"
       }
     },
-    "turnstileNotConfigured": "VITE_TURNSTILE_SITE_KEY is not configured.",
+    "turnstileNotConfigured": "Pixabay search isn't set up here: this instance uses Turnstile but has no site key.",
     "verificationFailed": "Verification failed. Please try again.",
     "title": {
       "replace": "Replace image",

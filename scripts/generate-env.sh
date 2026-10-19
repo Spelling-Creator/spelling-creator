@@ -5,6 +5,20 @@
 #   ./scripts/generate-env.sh           # writes .env, refusing to clobber
 #   ./scripts/generate-env.sh --force   # mints new credentials into an existing .env
 #   ./scripts/generate-env.sh --print   # writes nothing, prints a fresh set
+#   ./scripts/generate-env.sh --target PATH   # writes PATH instead of the repo's .env
+#
+# Without a clone, the app image carries it as `generate-env`, which writes .env
+# in its working directory. Mount yours there, and run as yourself so the file
+# is yours:
+#
+#   docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+#     ghcr.io/spelling-creator/spelling-creator generate-env
+#
+# Writing the file here, rather than printing it into a shell redirect, is what
+# keeps the service-role key safe: `> .env` truncates an existing file before
+# anything runs, and creates a new one readable by whatever the host's umask
+# allows. This refuses to overwrite, writes through a temp file, and creates the
+# file readable by its owner only.
 #
 # POSIX sh and openssl, deliberately: somebody self-hosting this has Docker and
 # nothing else, and asking them to install a Node toolchain to produce a config
@@ -36,31 +50,37 @@ TEMPLATE="$ROOT/.env.example"
 
 FORCE=0
 PRINT=0
-for arg in "$@"; do
-	case "$arg" in
+while [ $# -gt 0 ]; do
+	case "$1" in
 		--force) FORCE=1 ;;
 		--print) PRINT=1 ;;
+		--target)
+			if [ $# -lt 2 ]; then
+				printf '%s needs a path\n' "$1" >&2
+				exit 2
+			fi
+			TARGET=$2
+			shift
+			;;
 		-h | --help)
-			sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//'
+			sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'
 			exit 0
 			;;
 		*)
-			printf 'unknown option: %s\n' "$arg" >&2
+			printf 'unknown option: %s\n' "$1" >&2
 			exit 2
 			;;
 	esac
+	shift
 done
 
 if ! command -v openssl >/dev/null 2>&1; then
 	cat >&2 <<-'MISSING'
 		openssl is required and was not found.
 
-		If you would rather not install it, any container with it will do:
-		  docker run --rm -v "$PWD:/w" -w /w --entrypoint sh \
-		    alpine/openssl:latest scripts/generate-env.sh
-
-		(--entrypoint sh matters: that image's entrypoint is openssl, so
-		without it Docker runs "openssl sh scripts/generate-env.sh".)
+		If you would rather not install it, the app image has it:
+		  docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+		    ghcr.io/spelling-creator/spelling-creator generate-env
 	MISSING
 	exit 1
 fi
@@ -145,8 +165,21 @@ rewrite() {
 	done
 }
 
+fill_in_by_hand() {
+	printf 'Still to fill in by hand:\n'
+	printf '  PUBLIC_URL / PUBLIC_HOSTNAME  where this instance is reachable from a browser\n'
+	printf '\nSign-in is by username and password (AUTH_MODE=password), so no mail server is\n'
+	printf 'needed. Fill in SMTP_* only for AUTH_MODE=magic-link or both, or to let people\n'
+	printf 'reset their own passwords by email. Otherwise an admin does that from the\n'
+	printf 'moderation page.\n'
+	printf '\nThen start it with `docker compose up -d`.\n'
+}
+
+# The guidance goes to stderr here, because stdout is the .env itself, for
+# whoever is capturing it (`generate-env --print` in the app image).
 if [ "$PRINT" -eq 1 ]; then
 	rewrite "$TEMPLATE"
+	fill_in_by_hand >&2
 	exit 0
 fi
 
@@ -179,12 +212,7 @@ mv "$TMP" "$TARGET"
 printf 'Wrote %s\n\n' "$TARGET"
 if [ "$REWRITING" -eq 1 ]; then
 	printf 'Credentials replaced; everything else in the file was left as it was.\n'
+	printf '\nThen start it with `docker compose up -d`.\n'
 else
-	printf 'Still to fill in by hand:\n'
-	printf '  PUBLIC_URL / PUBLIC_HOSTNAME  where this instance is reachable from a browser\n'
-	printf '\nSign-in is by username and password (AUTH_MODE=password), so no mail server is\n'
-	printf 'needed. Fill in SMTP_* only for AUTH_MODE=magic-link or both, or to let people\n'
-	printf 'reset their own passwords by email — otherwise an admin does that from the\n'
-	printf 'moderation page.\n'
+	fill_in_by_hand
 fi
-printf '\nPUBLIC_URL is baked into the SPA at build time, so set it before `docker compose up -d --build`.\n'

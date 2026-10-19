@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { SparklesIcon, ThumbsDownIcon } from "lucide-react";
 import {
@@ -16,15 +16,14 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip.jsx";
 import { cn } from "../lib/utils.js";
 import { suggestText, dislikeText } from "@spelling-creator/core/aiSuggest";
 import { useAuth } from "../lib/auth.jsx";
-import { turnstileSiteKey } from "@spelling-creator/core/config";
-import { whenTurnstileReady } from "@spelling-creator/core/browser/turnstile";
+import { useAiChallenge } from "../lib/aiChallenge.jsx";
 
 /**
  * Dialog that generates a block of lesson text via the Worker. The subject is
  * the section title the user already typed, so there is no separate input to
- * fill in here. It renders a Cloudflare Turnstile widget; the verified token it
- * produces is sent with the request so the Worker can confirm the call came
- * from our domain.
+ * fill in here. It shows the instance's AI check (Turnstile or ALTCHA, see
+ * lib/aiChallenge.jsx), and the token it produces is sent with the request so
+ * the Worker can tell the call came from a person using the app.
  *
  * The generated text is shown for review before it is inserted. A signed-in
  * user can "thumbs down" a suggestion: that evicts it from the Worker's cache
@@ -40,7 +39,6 @@ export default function AiTextDialog({
   onClose,
 }) {
   const { user, accessToken } = useAuth();
-  const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   // The generated text awaiting review, and whether it has been disliked
@@ -48,9 +46,21 @@ export default function AiTextDialog({
   const [result, setResult] = useState("");
   const [disliked, setDisliked] = useState(false);
   const [dislikeBusy, setDislikeBusy] = useState(false);
-  const widgetRef = useRef(null);
-  const widgetIdRef = useRef(null);
   const { t } = useTranslation("aiDialogs");
+  // Every token is single-use, so the check is refreshed after each AI call to
+  // have a fresh one ready for a possible regenerate.
+  const {
+    token,
+    widget,
+    refresh: refreshChallenge,
+    unavailable,
+  } = useAiChallenge(open, {
+    onError: setError,
+    messages: {
+      notConfigured: t("aiText.turnstileNotConfigured"),
+      failed: t("aiText.verificationFailed"),
+    },
+  });
 
   const subject = (sectionTitle || "").trim();
   const working = busy || dislikeBusy;
@@ -58,7 +68,6 @@ export default function AiTextDialog({
   // Reset the form each time the dialog opens.
   useEffect(() => {
     if (open) {
-      setToken("");
       setError("");
       setBusy(false);
       setResult("");
@@ -66,49 +75,6 @@ export default function AiTextDialog({
       setDislikeBusy(false);
     }
   }, [open]);
-
-  // Mount the Turnstile widget while the dialog is open; tear it down on close.
-  useEffect(() => {
-    if (!open) return;
-    if (!turnstileSiteKey()) {
-      setError(t("aiText.turnstileNotConfigured"));
-      return;
-    }
-
-    let cancelled = false;
-
-    whenTurnstileReady()
-      .then((turnstile) => {
-        if (cancelled || !widgetRef.current) return;
-        widgetIdRef.current = turnstile.render(widgetRef.current, {
-          sitekey: turnstileSiteKey(),
-          callback: (tok) => setToken(tok),
-          "expired-callback": () => setToken(""),
-          "error-callback": () => {
-            setToken("");
-            setError(t("aiText.verificationFailed"));
-          },
-        });
-      })
-      .catch((e) => setError(e.message));
-
-    return () => {
-      cancelled = true;
-      if (widgetIdRef.current != null && window.turnstile) {
-        window.turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, [open, t]);
-
-  // The Turnstile token is single-use, so refresh the widget after each AI call
-  // to have a fresh one ready for a possible regenerate.
-  const refreshChallenge = () => {
-    setToken("");
-    if (widgetIdRef.current != null && window.turnstile) {
-      window.turnstile.reset(widgetIdRef.current);
-    }
-  };
 
   const handleGenerate = async () => {
     if (!subject) {
@@ -218,11 +184,11 @@ export default function AiTextDialog({
             </div>
           )}
 
-          {/* The widget powers the initial generate and any regenerate. */}
-          <div ref={widgetRef} className="min-h-[65px]" />
-          {error && (
+          {/* The check powers the initial generate and any regenerate. */}
+          {widget}
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
         </div>
