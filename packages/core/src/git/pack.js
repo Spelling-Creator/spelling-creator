@@ -19,6 +19,7 @@
 // a pack is pure JSON and stays small.
 
 import * as git from "isomorphic-git";
+import { newId } from "../id.js";
 import {
   BRANCH,
   BRANCH_REF,
@@ -135,7 +136,11 @@ async function absorbPack({ fs, gitdir, packfile, filename }) {
   const dir = `${gitdir}/objects/pack`;
   await mkdirp(fs, dir);
 
-  const name = filename || `pack-${crypto.randomUUID().replace(/-/g, "")}.pack`;
+  // Through newId rather than crypto.randomUUID: browsers only offer that on a
+  // secure origin, and a self-hosted instance served over plain http on a LAN
+  // address is not one, which made every clone there throw. The name only has
+  // to be unique.
+  const name = filename || `pack-${newId().replace(/[^0-9a-z]/gi, "")}.pack`;
   await fs.promises.writeFile(`${dir}/${name}`, packfile);
 
   // indexPack joins dir + filepath, so pointing `dir` at the gitdir puts the
