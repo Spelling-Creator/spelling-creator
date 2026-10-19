@@ -10,7 +10,10 @@
 // object storage serves the hub and refuses image uploads with a clear 500,
 // rather than failing to start.
 
+import { InProcessMessageQueue } from '@fedify/fedify';
+
 import { noopCache } from '../platform/cache.js';
+import { postgrestFedifyKv } from '../platform/postgrestFedifyKv.js';
 import { postgrestKv } from '../platform/postgrestKv.js';
 import { s3Blobs } from '../platform/s3.js';
 
@@ -105,10 +108,9 @@ export function nodePlatform(env) {
 	// between hosts is a copy rather than a rename.
 	const bucket = (name) => (s3 && name ? s3Blobs({ ...s3, bucket: name }) : null);
 
-	const kv =
-		env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
-			? postgrestKv({ url: env.SUPABASE_URL, apiKey: env.SUPABASE_SERVICE_ROLE_KEY })
-			: null;
+	const database =
+		env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? { url: env.SUPABASE_URL, apiKey: env.SUPABASE_SERVICE_ROLE_KEY } : null;
+	const kv = database ? postgrestKv(database) : null;
 
 	return {
 		images: bucket(env.S3_BUCKET_IMAGES),
@@ -122,6 +124,14 @@ export function nodePlatform(env) {
 		// properly, with a shared store and eviction, where a Map here would hold
 		// a copy per worker process and grow without bound. See platform/cache.js.
 		cache: noopCache,
+		// Fedify's caches go in the same table, under their own prefix (see
+		// postgrestFedifyKv.js). Deliveries queue in memory: they are retried
+		// while the process lives and lost when it stops, which for an instance
+		// with a handful of followers is the right trade against running a broker.
+		// The seam is where a Redis-backed queue would go when that stops being
+		// true.
+		federationKv: database ? postgrestFedifyKv(database) : null,
+		federationQueue: new InProcessMessageQueue(),
 		clientIp: clientIpFrom(env),
 	};
 }

@@ -5,6 +5,7 @@
 import { supabaseHeaders, getAuthUserById, findAuthUserByEmail } from '../lib/supabase.js';
 import { getUserRole, isModeratorRole, lookupUserRole, verifyUserAndRole } from '../lib/auth.js';
 import { rowToLesson, fullyDeleteLesson } from '../lib/lesson.js';
+import { announceLesson } from '../lib/federation/index.js';
 import { textResponse, jsonResponse } from '../lib/http.js';
 import { DEFAULT_USERNAME_DOMAIN, identifierToEmail } from '@spelling-creator/core/username';
 
@@ -42,8 +43,12 @@ const PASSWORD_MIN_LENGTH = 8;
  * "/moderation" page route. See the registration comment in app.js.
  *
  * Errors are short plain-text reasons, matching the rest of the API.
+ *
+ * `ctx` is the execution context, for telling a lesson author's followers on
+ * other servers when a moderator hides, shows or deletes a lesson (see
+ * lib/federation/).
  */
-export async function handleModeration(request, env, url, cors) {
+export async function handleModeration(request, env, url, cors, ctx) {
 	if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
 		return textResponse('Server misconfiguration: Supabase is not configured', 500, cors);
 	}
@@ -141,6 +146,9 @@ export async function handleModeration(request, env, url, cors) {
 		if (!res.ok) return textResponse('Could not update the lesson.', 502, cors);
 		const rows = await res.json().catch(() => []);
 		if (!Array.isArray(rows) || rows.length === 0) return textResponse('Lesson not found.', 404, cors);
+		// To other servers a hidden lesson is a deleted one, and a lesson shown
+		// again is published afresh. Only a published lesson was ever theirs to see.
+		if (rows[0].published) announceLesson(env, ctx, rows[0], body.shadowbanned ? 'delete' : 'create');
 		return jsonResponse({ lesson: rowToLesson(rows[0], { includeMod: true }) }, 200, cors);
 	}
 
@@ -173,7 +181,7 @@ export async function handleModeration(request, env, url, cors) {
 	if (method === 'DELETE' && seg.length === 2 && seg[0] === 'lessons') {
 		const denied = denyAdmin();
 		if (denied) return denied;
-		const ok = await fullyDeleteLesson(env, base, seg[1]);
+		const ok = await fullyDeleteLesson(env, base, seg[1], ctx);
 		if (!ok) return textResponse('Lesson not found.', 404, cors);
 		return jsonResponse({ ok: true }, 200, cors);
 	}
@@ -228,7 +236,7 @@ export async function handleModeration(request, env, url, cors) {
 			return textResponse('Request not found or already resolved.', 404, cors);
 		}
 		if (seg[2] === 'approve') {
-			await fullyDeleteLesson(env, base, lookRows[0].lesson_id);
+			await fullyDeleteLesson(env, base, lookRows[0].lesson_id, ctx);
 		}
 		const patch = { status: seg[2] === 'approve' ? 'approved' : 'denied', resolved_by: user.id, resolved_at: nowIso() };
 		try {

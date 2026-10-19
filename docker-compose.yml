@@ -93,6 +93,10 @@ services:
       PUBLIC_SUPABASE_URL: ${PUBLIC_SUPABASE_URL:-}
 
       ALLOWED_HOSTNAMES: ${PUBLIC_HOSTNAME:?missing, see .env.example}
+      # Set to PUBLIC_URL to join the fediverse: authors become ActivityPub
+      # actors that people on Mastodon (or another instance of this app) can
+      # follow. Empty keeps federation off. See "Federation" in the docs.
+      FEDERATION_ORIGIN: ${FEDERATION_ORIGIN:-}
       # One proxy (the gateway) sits in front of this process, so the client IP
       # is the last entry in x-forwarded-for, and x-forwarded-proto says whether
       # the browser used https. Raise this if you add a CDN or a tunnel: the

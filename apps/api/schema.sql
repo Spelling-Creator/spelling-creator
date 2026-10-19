@@ -448,6 +448,55 @@ alter table public.kv_store enable row level security;
 -- ----------------------------------------------------------------------------
 
 
+-- ============================================================================
+-- Federation (ActivityPub).
+--
+-- Every author is an ActivityPub actor and every published lesson is an
+-- Article, so somebody on Mastodon (or any other instance of this app) can
+-- follow an author and see their lessons as they are published. The protocol
+-- side is Fedify (see apps/api/src/lib/federation/ and
+-- /docs/developers/federation); these two tables are what it needs this
+-- database to remember. Nothing is written to them unless FEDERATION_ORIGIN is
+-- set, and creating them on an instance that never federates is harmless.
+-- ============================================================================
+
+-- The signing keys of each actor, made the first time the actor is asked for
+-- and kept for good: a remote server verifies every delivery against the key
+-- it fetched from the actor document, so a key that changed under it would
+-- make every later delivery fail. One RSA pair (HTTP Signatures, which is what
+-- the fediverse verifies today) and one Ed25519 pair (Object Integrity Proofs),
+-- each as a `{ privateKey, publicKey }` pair of JWKs.
+create table if not exists public.federation_keys (
+  user_id    uuid primary key references auth.users (id) on delete cascade,
+  rsa        jsonb not null,
+  ed25519    jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+-- Who follows an author from another server. `actor_id` is the follower's
+-- actor URI; `inbox` and `shared_inbox` are where a lesson is delivered to
+-- (the shared one, when the server has it, so one delivery serves every
+-- follower there). A row is written when a Follow arrives and removed on
+-- Undo(Follow), when the remote account is deleted, or when the inbox is gone
+-- for good.
+create table if not exists public.federation_followers (
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  actor_id     text not null,
+  inbox        text not null,
+  shared_inbox text,
+  created_at   timestamptz not null default now(),
+  primary key (user_id, actor_id)
+);
+
+-- A remote account deletion removes its follows of every author at once.
+create index if not exists federation_followers_actor_idx on public.federation_followers (actor_id);
+
+-- Private keys live here, so the posture is the strictest one: RLS on with no
+-- anon or authenticated policies at all. Only the service role reads them.
+alter table public.federation_keys      enable row level security;
+alter table public.federation_followers enable row level security;
+
+
 -- ----------------------------------------------------------------------------
 -- Seed an admin. There is no in-app way to create an admin (admins can only add
 -- moderators), so run this once per admin in the Supabase SQL editor. The person

@@ -11,6 +11,7 @@
 import { createApp, cors, registerFrontend, req, urlOf } from './app.js';
 
 import { CollabRoom } from './collab-room.js';
+import { federationFor } from './lib/federation/index.js';
 import { PracticeRoom } from './practice-room.js';
 import { ogImage, handleFrontend } from './routes/render.js';
 import { handleCollab, handleCollabAgent } from './routes/collab.js';
@@ -63,5 +64,26 @@ registerFrontend(app, handleFrontend);
 export default {
 	fetch(request, env, ctx) {
 		return buildOAuthProvider(app, env).fetch(request, env, ctx);
+	},
+
+	// Outgoing ActivityPub deliveries, when a FEDERATION_QUEUE binding exists (see
+	// wrangler.jsonc). Cloudflare Queues hands batches here; each message is one
+	// task Fedify enqueued and now runs. A failure retries that message alone,
+	// with the queue's own backoff, rather than the whole batch.
+	async queue(batch, env) {
+		const federation = await federationFor(env);
+		for (const message of batch.messages) {
+			if (!federation) {
+				message.ack();
+				continue;
+			}
+			try {
+				await federation.processQueuedTask({ env }, message.body);
+				message.ack();
+			} catch (error) {
+				console.error('federation queue:', error);
+				message.retry();
+			}
+		}
 	},
 };

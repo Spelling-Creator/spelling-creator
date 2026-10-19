@@ -8,6 +8,7 @@ import { bannedResponse } from '../lib/bans.js';
 import { fetchLessonRow, isTrustedCollaborator, rowToLesson } from '../lib/lesson.js';
 import { fetchRatingStats } from '../lib/ratings.js';
 import { LESSON_ID_RE, deleteLessonGit, deleteLessonPullGit } from '../lib/lessonGit.js';
+import { announceLesson } from '../lib/federation/index.js';
 import { createNotification } from './notifications.js';
 import { textResponse, jsonResponse } from '../lib/http.js';
 
@@ -52,8 +53,11 @@ async function countUserDrafts(env, base, userId, excludeId) {
  * Each user may hold at most MAX_DRAFTS private drafts at once (published lessons are
  * unlimited); a save that would exceed it is rejected with 409.
  * Errors are short plain-text reasons so the frontend can surface res.text().
+ *
+ * `ctx` is the execution context, for telling the author's followers on other
+ * servers about a change after the response has gone (lib/federation/).
  */
-export async function handleLessons(request, env, url, cors) {
+export async function handleLessons(request, env, url, cors, ctx) {
 	if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
 		return textResponse('Server misconfiguration: Supabase is not configured', 500, cors);
 	}
@@ -258,6 +262,9 @@ export async function handleLessons(request, env, url, cors) {
 		if (!Array.isArray(rows) || rows.length === 0) {
 			return textResponse('Could not save the lesson.', 502, cors);
 		}
+		// A new public lesson is news to the author's followers elsewhere; a draft
+		// is nobody's business until it is published.
+		if (published) announceLesson(env, ctx, { ...rows[0], doc }, 'create');
 		return jsonResponse({ lesson: rowToLesson(rows[0]) }, 201, cors);
 	}
 
@@ -369,6 +376,15 @@ export async function handleLessons(request, env, url, cors) {
 			return textResponse('Could not save the lesson.', 502, cors);
 		}
 
+		// What followers on other servers hear depends on whether the lesson was,
+		// and now is, public. A shadowbanned lesson is never public to them, so a
+		// save to one says nothing; the moderator's toggle speaks for it.
+		const wasPublic = Boolean(existing.published) && !existing.shadowbanned;
+		const isPublic = Boolean(rows[0].published) && !existing.shadowbanned;
+		if (isPublic && !wasPublic) announceLesson(env, ctx, { ...rows[0], doc: patch.doc }, 'create');
+		else if (!isPublic && wasPublic) announceLesson(env, ctx, rows[0], 'delete');
+		else if (isPublic) announceLesson(env, ctx, { ...rows[0], doc: patch.doc }, 'update');
+
 		// Tell the author someone else saved their lesson — it changed under them,
 		// and they didn't do it. Best-effort: never fail the save over a notification.
 		if (isTrusted) {
@@ -408,7 +424,7 @@ export async function handleLessons(request, env, url, cors) {
 		let ownRes;
 		try {
 			ownRes = await fetch(
-				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(id)}&author_id=eq.${encodeURIComponent(user.id)}&select=id&limit=1`,
+				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(id)}&author_id=eq.${encodeURIComponent(user.id)}&select=id,author_id,published,shadowbanned&limit=1`,
 				{ headers: supabaseHeaders(env) },
 			);
 		} catch (e) {
@@ -463,6 +479,11 @@ export async function handleLessons(request, env, url, cors) {
 		// (4) Drop the lesson's stored version history so its packfile doesn't
 		// outlive it in the bucket. Best-effort — the lesson row is already gone.
 		await deleteLessonGit(env, id);
+
+		// (5) Followers on other servers hold a copy of the Article; tell them it
+		// is gone. Only if they ever heard of it: a draft was never announced.
+		const was = ownRows[0];
+		if (was.published && !was.shadowbanned) announceLesson(env, ctx, was, 'delete');
 
 		return jsonResponse({ ok: true }, 200, cors);
 	}

@@ -41,6 +41,12 @@ export default defineWorkersConfig({
 			// The Node entry point and its filesystem-backed asset server. There is
 			// nothing here for workerd to run — this host is the other one.
 			'src/node/**',
+			// Fedify's OpenTelemetry dependency imports `node:process` on load, which
+			// this runner cannot resolve even with nodejs_compat (the real bundle
+			// can, which `pnpm --filter @spelling-creator/api bundle` checks). The
+			// federation is exercised under Node; the routes that call into it load
+			// it lazily, which is what keeps their own suites runnable here.
+			'src/lib/federation/**',
 		],
 		poolOptions: {
 			workers: {

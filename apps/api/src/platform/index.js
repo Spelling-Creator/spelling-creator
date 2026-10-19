@@ -18,11 +18,13 @@
 // blobs.js / kv.js / cache.js for what each method must do.
 //
 //   platform(env) -> {
-//     images,      BlobStore | null   lesson images, keyed by content hash
-//     lessonGit,   BlobStore | null   lesson history packfiles
-//     rateLimit,   KvStore   | null   rate-limit buckets + the AI answer cache
-//     oauthState,  KvStore   | null   short-lived MCP OAuth authorization state
-//     cache,       ResponseCache      HTTP response cache (never null; may no-op)
+//     images,          BlobStore | null   lesson images, keyed by content hash
+//     lessonGit,       BlobStore | null   lesson history packfiles
+//     rateLimit,       KvStore   | null   rate-limit buckets + the AI answer cache
+//     oauthState,      KvStore   | null   short-lived MCP OAuth authorization state
+//     cache,           ResponseCache      HTTP response cache (never null; may no-op)
+//     federationKv,    Fedify KvStore | null       ActivityPub caches (remote actors, keys, idempotence)
+//     federationQueue, Fedify MessageQueue | null  outgoing deliveries (null = send at once)
 //     clientIp(request) -> string
 //   }
 //
@@ -30,6 +32,11 @@
 // already check for — an instance without an image bucket serves everything
 // else. `cache` is the exception: a host with no cache returns the no-op cache
 // (see cache.js), because "don't cache" is always a valid answer.
+//
+// The two federation entries are Fedify's own interfaces rather than the seam's,
+// because Fedify is the one reading them (see lib/federation/). They sit here
+// for the same reason as the rest: which store backs them is the host's
+// business, and the hosted instance and a self-hosted one answer differently.
 
 import { cloudflarePlatform } from './cloudflare.js';
 
@@ -54,6 +61,8 @@ const built = new WeakMap();
  *   rateLimit: import('./kv.js').KvStore | null,
  *   oauthState: import('./kv.js').KvStore | null,
  *   cache: import('./cache.js').ResponseCache,
+ *   federationKv: object | null,
+ *   federationQueue: object | null,
  *   clientIp: (request: Request) => string,
  * }}
  */
@@ -85,6 +94,19 @@ export const oauthStateStore = (env) => platform(env).oauthState;
 
 /** This host's HTTP response cache. Never null — see the no-op cache. */
 export const responseCache = (env) => platform(env).cache;
+
+/**
+ * The key-value store Fedify keeps its caches in, or null when this host has
+ * none, in which case federation stays off however FEDERATION_ORIGIN is set.
+ */
+export const federationKvStore = (env) => platform(env).federationKv ?? null;
+
+/**
+ * The queue outgoing ActivityPub deliveries go through, or null to send them
+ * at once from the request that caused them (retried by nobody, which is fine
+ * for an instance with a handful of followers and wrong for one with many).
+ */
+export const federationQueue = (env) => platform(env).federationQueue ?? null;
 
 /**
  * The client IP a request arrived from, however this host reports it. Recorded

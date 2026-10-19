@@ -7,6 +7,8 @@
 // bindings directly. Anything cleverer belongs in the route, where it can be
 // tested once for every host rather than once per host.
 
+import { WorkersKvStore, WorkersMessageQueue } from '@fedify/cfworkers';
+
 import { normalizeMetadata, assertUsableKey, deleteKeys } from './blobs.js';
 
 /**
@@ -162,6 +164,13 @@ export function cloudflarePlatform(env) {
 		rateLimit: env?.RATE_LIMIT_KV ? kvStore(env.RATE_LIMIT_KV) : null,
 		oauthState: env?.OAUTH_KV ? kvStore(env.OAUTH_KV) : null,
 		cache: edgeCache(),
+		// Fedify's caches share the rate-limit namespace. Its keys all start with
+		// `_fedify`, which nothing else in that namespace does, and both hold the
+		// same kind of thing: short-lived entries whose absence is the right
+		// answer. A queue is optional (see wrangler.jsonc): without the binding,
+		// deliveries are made from the request that caused them.
+		federationKv: env?.RATE_LIMIT_KV ? new WorkersKvStore(env.RATE_LIMIT_KV) : null,
+		federationQueue: env?.FEDERATION_QUEUE ? new WorkersMessageQueue(env.FEDERATION_QUEUE) : null,
 		// Cloudflare's own header, set by the edge and not forgeable by the client
 		// (it overwrites whatever arrived). Deliberately no x-forwarded-for
 		// fallback here: on this host that header IS client-controlled, and the IP

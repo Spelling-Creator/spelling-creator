@@ -246,9 +246,10 @@ Besides `lessons`, `comments` and `ratings` below, the file defines
 [Profiles](./profiles.md)), `lesson_pull_requests` (see
 [Pull requests](./pull-requests.md)), the moderation tables `user_roles`,
 `banned_names`, `banned_ips` and `lesson_delete_requests` (see
-[Moderation](./moderation.md)), and `kv_store`, the expiring key-value table a
+[Moderation](./moderation.md)), `kv_store`, the expiring key-value table a
 self-hosted instance uses in place of Cloudflare KV (see
-[Platform seam](../platform-seam.md)).
+[Platform seam](../platform-seam.md)), and `federation_keys` and
+`federation_followers` (see [Federation](../federation.md)).
 
 **Row level security.** The API connects with the service-role key, which
 bypasses RLS, so it is the only writer. RLS is enabled on every table anyway as

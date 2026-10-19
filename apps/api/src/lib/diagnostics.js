@@ -23,6 +23,7 @@
 import { platform } from '../platform/index.js';
 import { AI_CHALLENGES, aiChallengeMode } from './aiChallenge.js';
 import { altchaConfigured } from './altcha.js';
+import { federationEnabled, federationOrigin } from './federation/index.js';
 import { supabaseBase, supabaseHeaders } from './supabase.js';
 
 // Long enough for a container that is still starting, short enough that a whole
@@ -398,6 +399,31 @@ function checkAiChallenge(env) {
 }
 
 /**
+ * Whether this instance federates, and what it would take to. A misspelled
+ * origin is the one failure here, because it silently turns federation off.
+ */
+function checkFederation(env) {
+	const raw = (env.FEDERATION_ORIGIN || '').toString().trim();
+	if (!raw) return skipped('federation', 'off; set FEDERATION_ORIGIN to the public origin to join the fediverse');
+	const origin = federationOrigin(env);
+	if (!origin)
+		return failed(
+			'federation',
+			`FEDERATION_ORIGIN is not an http(s) origin: ${JSON.stringify(raw)}`,
+			'Use the address a browser types, e.g. https://spelling.example.org.',
+		);
+	if (!federationEnabled(env)) {
+		return failed(
+			'federation',
+			`${origin}, but there is nowhere to keep its caches`,
+			'Federation needs the database (see above) and the key-value store.',
+		);
+	}
+	const queue = platform(env).federationQueue;
+	return ok('federation', `on at ${origin}${queue ? '' : ', deliveries sent at once without retries'}`);
+}
+
+/**
  * Run every check.
  *
  * Sequential rather than parallel on purpose: the checks build on each other, a
@@ -430,6 +456,7 @@ export async function runDiagnostics(env) {
 	checks.push(await checkBlobStore('lesson-history', services.lessonGit, 'version history and forking are unavailable'));
 	checks.push(await checkKeyValue(env));
 	checks.push(checkAiChallenge(env));
+	checks.push(checkFederation(env));
 
 	return { ok: checks.every((c) => c.state !== 'failed'), checks };
 }
