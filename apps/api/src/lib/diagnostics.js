@@ -105,8 +105,8 @@ function checkCredentials(env) {
 			'credentials',
 			`SUPABASE_SERVICE_ROLE_KEY is not a JWT — it has ${parts} part${parts === 1 ? '' : 's'} where a token has 3`,
 			'It should be a signed token, not a password. If it still reads like the placeholder from .env.example, ' +
-				'generate a real one: `docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env` prints a ' +
-				'matching set, as does `./scripts/generate-env.sh` from a checkout.',
+				'generate a real one: `docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env --print` prints ' +
+				'a matching set, as does `./scripts/generate-env.sh --print` from a checkout.',
 		);
 	}
 	if (!payload) {

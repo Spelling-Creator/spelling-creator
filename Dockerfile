@@ -134,16 +134,18 @@ WORKDIR /app
 # - psql, for the compose stack's `schema` service, which runs
 #   apps/api/scripts/apply-schema.sh from this image rather than mounting
 #   schema.sql from a checkout. A few megabytes.
-# - openssl, and a `generate-env` command on the PATH that prints a filled-in
-#   .env from .env.example (scripts/generate-env.sh --print):
+# - openssl, and a `generate-env` command on the PATH that writes a filled-in
+#   .env from .env.example into a mounted directory
+#   (scripts/generate-env-docker.sh):
 #
-#     docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+#     docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+#       ghcr.io/spelling-creator/spelling-creator generate-env
 #
 #   The base image's entrypoint runs a first argument that names a command on
-#   the PATH instead of passing it to node, which is what makes that work.
+#   the PATH instead of passing it to node, which is what makes that work. The
+#   link is made here, before the app is copied in, and resolves once it is.
 RUN apk add --no-cache postgresql-client openssl \
- && printf '#!/bin/sh\nexec sh /app/scripts/generate-env.sh --print "$@"\n' > /usr/local/bin/generate-env \
- && chmod +x /usr/local/bin/generate-env
+ && ln -s /app/scripts/generate-env-docker.sh /usr/local/bin/generate-env
 
 # `node` is a non-root user the base image already provides. Nothing here is
 # written to at runtime — the process is stateless — so it needs no ownership

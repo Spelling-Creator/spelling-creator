@@ -38,19 +38,47 @@ fi
 
 SCHEMA=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/schema.sql
 
+# A connection that is never answered (a host dropping packets rather than
+# refusing them) would otherwise wait forever on each attempt, and the attempt
+# limit below would never be reached.
+export PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-5}"
+
 # Two seconds apart, so this is five minutes. GoTrue's first migration usually
 # takes seconds, but has been seen to take nearly two minutes on a small home
 # server, which is too close to give up at.
 ATTEMPTS=150
+
+ERRORS=$(mktemp)
+trap 'rm -f "$ERRORS"' EXIT
+
+# Whether GoTrue has created auth.users yet.
+#
+# Waiting is only right for what time fixes. A query that fails is told apart
+# from one that answers "not yet": a password the server refuses, or a role or
+# database that doesn't exist, will be just as wrong in five minutes, so those
+# stop here with psql's own words. Anything else (the server still starting, a
+# dropped connection) is waited out like a missing table.
+auth_ready() {
+	if ! found=$(psql -tAc "select to_regclass('auth.users')" 2>"$ERRORS"); then
+		if grep -qE 'password authentication failed|does not exist|no pg_hba.conf entry' "$ERRORS"; then
+			cat "$ERRORS" >&2
+			echo 'GAVE UP: the database refused this connection, and waiting will not change that.' >&2
+			echo 'Check POSTGRES_PASSWORD matches what the database was created with.' >&2
+			exit 1
+		fi
+		return 1
+	fi
+	[ "$(printf '%s' "$found" | tr -d '[:space:]')" = "auth.users" ]
+}
 
 echo 'waiting for auth.users (GoTrue creates it on its first migration)...'
 attempt=0
 # Bounded, and loud about why it gave up. An unbounded wait cannot tell "not
 # migrated yet" from "cannot reach the database at all", and both look
 # identical from outside: a container that never finishes and an app that
-# never starts. psql's own errors are left on stderr so they land in
-# `docker compose logs schema`.
-until [ "$(psql -tAc "select to_regclass('auth.users')" | tr -d '[:space:]')" = "auth.users" ]; do
+# never starts. The last error psql gave is shown with each progress line, so
+# it lands in `docker compose logs schema`.
+until auth_ready; do
 	attempt=$((attempt + 1))
 	if [ "$attempt" -ge "$ATTEMPTS" ]; then
 		echo "GAVE UP: auth.users did not appear within $((ATTEMPTS * 2 / 60)) minutes."
@@ -69,19 +97,27 @@ until [ "$(psql -tAc "select to_regclass('auth.users')" | tr -d '[:space:]')" = 
 	fi
 	if [ $((attempt % 5)) -eq 0 ]; then
 		echo "  still waiting ($((attempt * 2))s)"
+		if [ -s "$ERRORS" ]; then sed 's/^/    /' "$ERRORS"; fi
 	fi
 	sleep 2
 done
 
-echo 'applying schema.sql'
-psql -v ON_ERROR_STOP=1 -f "$SCHEMA"
-
-echo 'granting the new tables to service_role'
-# Belt and braces over the ALTER DEFAULT PRIVILEGES in the compose file's roles
-# script. Default privileges only reach objects created afterwards by the role
-# that set them, which makes them quietly conditional on how and by whom the
-# schema was applied. The failure is a table that exists, that PostgREST can
-# see, and that the API is refused with 42501. That reads as an authentication
-# problem and is not one. Granting explicitly here does not depend on any of it.
-psql -v ON_ERROR_STOP=1 -c "grant all on all tables in schema public to service_role;
-  grant all on all sequences in schema public to service_role;"
+# One session for all of it, holding an advisory lock, so that two runs against
+# the same database (two stacks sharing one Postgres, or a restart racing a run
+# still in progress) take turns. schema.sql drops and recreates its policies,
+# and two runs interleaving those would fail one of them on a policy the other
+# had just created. The lock is released when the session ends, however it ends.
+#
+# The grants are belt and braces over the ALTER DEFAULT PRIVILEGES in the
+# compose file's roles script. Default privileges only reach objects created
+# afterwards by the role that set them, which makes them quietly conditional on
+# how and by whom the schema was applied. The failure is a table that exists,
+# that PostgREST can see, and that the API is refused with 42501. That reads as
+# an authentication problem and is not one. Granting explicitly here does not
+# depend on any of it.
+echo 'applying schema.sql and granting the new tables to service_role'
+psql -v ON_ERROR_STOP=1 \
+	-c "select pg_advisory_lock(hashtext('spelling-creator:apply-schema'))" \
+	-f "$SCHEMA" \
+	-c "grant all on all tables in schema public to service_role;
+	  grant all on all sequences in schema public to service_role;"

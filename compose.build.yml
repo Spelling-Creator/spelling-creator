@@ -18,3 +18,9 @@
 services:
   app:
     build: .
+  # The same image, which carries the schema and the script that applies it.
+  # Given the build too so that `--build` builds it for both, rather than one
+  # of them trying to pull a tag that only exists locally. The second build is
+  # all cache, so it costs nothing.
+  schema:
+    build: .

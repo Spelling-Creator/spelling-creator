@@ -40,16 +40,25 @@ directory:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/Spelling-Creator/spelling-creator/main/docker-compose.yml
-docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
-chmod 600 .env              # it holds the service-role key
+docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+  ghcr.io/spelling-creator/spelling-creator generate-env
 # then set PUBLIC_URL / PUBLIC_HOSTNAME in .env
 docker compose up -d
 ```
 
-`generate-env` prints a `.env` with every credential filled in, and what is left
-to set by hand goes to the terminal rather than into the file. The compose file
-pulls the same image to run the app and to apply the database schema, so those
-two can never be out of step.
+`generate-env` writes `.env` into the mounted directory with every credential
+filled in, and says what is left to set by hand. Running it as yourself (`-u`)
+makes the file yours rather than the image's user's. It never overwrites an
+existing `.env`, writes through a temporary file so an interrupted run leaves
+nothing half-written, and creates the file readable only by its owner, since it
+holds the service-role key. That is also why it writes the file itself rather
+than printing it into `> .env`, which would empty an existing file before
+anything ran and create a new one with whatever permissions the shell's umask
+allows. (`generate-env --print` prints a fresh set instead, with nothing
+mounted.)
+
+The compose file pulls the same image to run the app and to apply the database
+schema, so those two can never be out of step.
 
 That pulls the published image, and only that: a tag that can't be pulled
 stops with an error rather than being built from whatever is on disk. `latest`
@@ -111,7 +120,10 @@ ordering it depends on is not something to leave to a reader. A one-shot
 waits for GoTrue to create `auth.users` on its first migration (up to five
 minutes, since that first migration can be slow on a small machine), then
 applies `apps/api/schema.sql` with `ON_ERROR_STOP`, grants the new tables to
-`service_role`, and the app waits for it to finish. It runs on every
+`service_role`, and the app waits for it to finish. A password the database
+refuses stops it at once with Postgres's own message, since waiting would not
+fix it, and the schema is applied under an advisory lock, so two runs against
+one database take turns rather than colliding. It runs on every
 `docker compose up`, and every statement in the schema is safe to re-run, so
 this is also how an upgrade brings in new tables and columns. A second one-shot
 service, `storage-init`, creates the two buckets (`lesson-images` and

@@ -5,10 +5,20 @@
 #   ./scripts/generate-env.sh           # writes .env, refusing to clobber
 #   ./scripts/generate-env.sh --force   # mints new credentials into an existing .env
 #   ./scripts/generate-env.sh --print   # writes nothing, prints a fresh set
+#   ./scripts/generate-env.sh --target PATH   # writes PATH instead of the repo's .env
 #
-# Without a clone, the app image carries it as `generate-env`, which prints:
+# Without a clone, the app image carries it as `generate-env`, which writes .env
+# in its working directory. Mount yours there, and run as yourself so the file
+# is yours:
 #
-#   docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+#   docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+#     ghcr.io/spelling-creator/spelling-creator generate-env
+#
+# Writing the file here, rather than printing it into a shell redirect, is what
+# keeps the service-role key safe: `> .env` truncates an existing file before
+# anything runs, and creates a new one readable by whatever the host's umask
+# allows. This refuses to overwrite, writes through a temp file, and creates the
+# file readable by its owner only.
 #
 # POSIX sh and openssl, deliberately: somebody self-hosting this has Docker and
 # nothing else, and asking them to install a Node toolchain to produce a config
@@ -40,19 +50,28 @@ TEMPLATE="$ROOT/.env.example"
 
 FORCE=0
 PRINT=0
-for arg in "$@"; do
-	case "$arg" in
+while [ $# -gt 0 ]; do
+	case "$1" in
 		--force) FORCE=1 ;;
 		--print) PRINT=1 ;;
+		--target)
+			if [ $# -lt 2 ]; then
+				printf '%s needs a path\n' "$1" >&2
+				exit 2
+			fi
+			TARGET=$2
+			shift
+			;;
 		-h | --help)
-			sed -n '3,11p' "$0" | sed 's/^# \{0,1\}//'
+			sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'
 			exit 0
 			;;
 		*)
-			printf 'unknown option: %s\n' "$arg" >&2
+			printf 'unknown option: %s\n' "$1" >&2
 			exit 2
 			;;
 	esac
+	shift
 done
 
 if ! command -v openssl >/dev/null 2>&1; then
@@ -60,7 +79,8 @@ if ! command -v openssl >/dev/null 2>&1; then
 		openssl is required and was not found.
 
 		If you would rather not install it, the app image has it:
-		  docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
+		  docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+		    ghcr.io/spelling-creator/spelling-creator generate-env
 	MISSING
 	exit 1
 fi
@@ -155,8 +175,8 @@ fill_in_by_hand() {
 	printf '\nThen start it with `docker compose up -d`.\n'
 }
 
-# The guidance goes to stderr here, because stdout is the .env itself: this is
-# what `generate-env > .env` runs in the app image.
+# The guidance goes to stderr here, because stdout is the .env itself, for
+# whoever is capturing it (`generate-env --print` in the app image).
 if [ "$PRINT" -eq 1 ]; then
 	rewrite "$TEMPLATE"
 	fill_in_by_hand >&2

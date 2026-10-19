@@ -4,8 +4,8 @@
 # This file is all you need; there is no repository to clone. In an empty
 # directory:
 #
-#   docker run --rm ghcr.io/spelling-creator/spelling-creator generate-env > .env
-#   chmod 600 .env           # it holds the service-role key
+#   docker run --rm -v "$PWD:/w" -w /w -u "$(id -u):$(id -g)" \
+#     ghcr.io/spelling-creator/spelling-creator generate-env
 #   # set PUBLIC_URL and PUBLIC_HOSTNAME in .env
 #   docker compose up -d
 #
@@ -124,13 +124,8 @@ services:
   # so the schema always matches the app and nothing has to be mounted from a
   # checkout. It runs on every `up`, and every statement is safe to re-run, so
   # this is also how an upgrade applies new tables and columns.
-  #
-  # `build` is repeated from `app` so that `docker compose up --build` builds
-  # the image here too (from cache, so it costs nothing), rather than trying to
-  # pull a tag that only exists locally.
   schema:
     image: ghcr.io/spelling-creator/spelling-creator:${IMAGE_TAG:-latest}
-    build: .
     restart: "no"
     environment:
       PGHOST: postgres
