@@ -27,6 +27,10 @@ on:
       - "apps/**"
       - "packages/**"
       - "patches/**"
+      # The image's `generate-env` command is scripts/generate-env.sh filling in
+      # .env.example, so a change to either is a change to the image.
+      - "scripts/**"
+      - ".env.example"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
