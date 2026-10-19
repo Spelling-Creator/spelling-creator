@@ -191,6 +191,16 @@ another reverse proxy), set `SITE_ADDRESS=:80` so the gateway serves plain http
 behind it instead of trying for a certificate of its own, and
 `TRUSTED_PROXY_COUNT=2` to count the extra hop.
 
+The gateway has to trust that hop too. Caddy only passes on the
+`X-Forwarded-For` and `X-Forwarded-Proto` it receives from a proxy it trusts,
+and replaces them otherwise, which would leave the app seeing the tunnel's
+address for every visitor (one shared rate limit, and bans that hit everyone)
+and http for every page. So with a count above 1 the gateway trusts private
+addresses, which covers a tunnel such as cloudflared running on the same machine
+or network. A CDN reaching the gateway over the internet comes from public
+addresses instead: list its published ranges in `GATEWAY_TRUSTED_PROXIES`,
+separated by spaces. `docker compose logs gateway` says what it trusts.
+
 The app learns that a request arrived over https from the `X-Forwarded-Proto`
 header the gateway sends (see [`TRUSTED_PROXY_COUNT`](#the-server-itself)),
 which is what keeps the links it builds, in the sitemap, the feed and

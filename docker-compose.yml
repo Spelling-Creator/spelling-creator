@@ -151,7 +151,12 @@ services:
   #
   # Already behind something that terminates TLS (a tunnel, a CDN, another
   # proxy)? Set SITE_ADDRESS=:80 so Caddy doesn't try to get a certificate too,
-  # and raise TRUSTED_PROXY_COUNT on the app to count that hop.
+  # and TRUSTED_PROXY_COUNT=2 to count that hop. Caddy then has to trust that
+  # hop as well, or it replaces the X-Forwarded-For and X-Forwarded-Proto it
+  # was sent with its own, and the app sees the tunnel's address for every
+  # visitor and http for every page. Behind a count above 1 it trusts private
+  # addresses (a tunnel on this machine or network); a CDN on the internet
+  # needs its own address ranges in GATEWAY_TRUSTED_PROXIES.
   gateway:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -163,6 +168,8 @@ services:
     environment:
       PUBLIC_URL: ${PUBLIC_URL:?missing, see .env.example}
       SITE_ADDRESS: ${SITE_ADDRESS:-}
+      TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
+      GATEWAY_TRUSTED_PROXIES: ${GATEWAY_TRUSTED_PROXIES:-}
       # The Caddyfile, which the entrypoint below writes out before starting
       # Caddy. It lives here rather than under `configs:` because Compose only
       # recreates a container when its own definition changes: a new Caddyfile
@@ -210,6 +217,9 @@ services:
       - sh
       - -c
       - |
+        # Stop on the first failure, so a Caddyfile that couldn't be written
+        # is reported as that rather than as Caddy starting with no config.
+        set -e
         if [ -z "$$SITE_ADDRESS" ]; then
           case "$$PUBLIC_URL" in
             https://*)
@@ -220,8 +230,19 @@ services:
           esac
         fi
         export SITE_ADDRESS
-        printf '%s\n' "$$CADDYFILE" > /etc/caddy/Caddyfile
-        echo "gateway: serving $$SITE_ADDRESS"
+        # Which upstream proxies may set X-Forwarded-For and -Proto (see the
+        # comment above this service). None, unless something sits in front.
+        TRUSTED=$$GATEWAY_TRUSTED_PROXIES
+        if [ -z "$$TRUSTED" ] && [ "$$TRUSTED_PROXY_COUNT" -gt 1 ] 2>/dev/null; then
+          TRUSTED=private_ranges
+        fi
+        {
+          if [ -n "$$TRUSTED" ]; then
+            printf '{\n\tservers {\n\t\ttrusted_proxies static %s\n\t}\n}\n\n' "$$TRUSTED"
+          fi
+          printf '%s\n' "$$CADDYFILE"
+        } > /etc/caddy/Caddyfile
+        echo "gateway: serving $$SITE_ADDRESS$${TRUSTED:+, trusting proxies at $$TRUSTED}"
         exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     # Certificates and the keys behind them. Kept on a volume so a restart
     # doesn't ask Let's Encrypt for a new one each time, which would run into
