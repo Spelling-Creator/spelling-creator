@@ -39,9 +39,13 @@ async function solved(env, options = CHEAP) {
 }
 
 describe('verifyAltcha', () => {
-	it('accepts a solved challenge once, and remembers it until it would expire', async () => {
+	// At the cost the route really asks for, solved on one thread, which takes a
+	// few seconds and more on a shared CI runner than Vitest's five-second
+	// default allows. The widget splits the same work across workers.
+	const REAL_COST_TIMEOUT_MS = 60_000;
+
+	it('accepts a solved challenge once, and remembers it until it would expire', { timeout: REAL_COST_TIMEOUT_MS }, async () => {
 		const env = envWith();
-		// At the cost the route really asks for.
 		const { challenge, token } = await solved(env, {});
 
 		expect(await verifyAltcha(token, env)).toEqual({ ok: true });
