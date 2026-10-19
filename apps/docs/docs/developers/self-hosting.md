@@ -41,15 +41,30 @@ rather than its implementation to keep that swap a one-line edit.
 docker compose up -d
 ```
 
-That pulls the published image rather than building one. `latest` follows
-`main`; to stay on one build until you choose to move, set `IMAGE_TAG` in `.env`
-to one of the `sha-<commit>` tags on the package page. Upgrading is then a
-matter of changing it and running `docker compose pull && docker compose up -d`.
+That pulls the published image, and only that: a tag that can't be pulled
+stops with an error rather than being built from whatever is on disk. `latest`
+follows `main`; to stay on one build until you choose to move, set `IMAGE_TAG`
+in `.env` to one of the `sha-<commit>` tags on the package page. Upgrading is
+then a matter of changing it and running
+`docker compose pull && docker compose up -d`.
 
-To run your own changes instead, `docker compose up -d --build` builds the
-checkout and tags it with the same name. That needs Git LFS, because the images
-and videos the app ships are stored there, and the build stops with the fix if
-it finds pointer files where they should be.
+The image is public, so pulling it needs no login. If a pull is refused with
+"denied" or "unauthorized", the package's visibility has been changed on
+GitHub, which is something for the repository's maintainers to put back.
+
+To run your own changes instead, add `compose.build.yml`, which builds the
+checkout and tags it with the published image's name:
+
+```bash
+docker compose -f docker-compose.yml -f compose.build.yml up -d --build
+```
+
+It is a separate file, used only when named, so that `docker-compose.yml` alone
+never quietly builds a checkout in place of a pinned image. To use it for every
+command in the directory, set `COMPOSE_FILE=docker-compose.yml:compose.build.yml`
+in `.env`. Building needs Git LFS, because the images and videos the app ships
+are stored there, and the build stops with the fix if it finds pointer files
+where they should be.
 
 The generator refuses to overwrite an existing `.env`; `--force` mints new
 credentials into one anyway, and `--print` writes nothing and prints a fresh set.

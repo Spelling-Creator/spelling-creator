@@ -25,17 +25,20 @@ name: spelling-creator
 services:
   # The API + SPA + docs, all from the one image.
   #
-  # `docker compose up` pulls the published image. `docker compose up --build`
-  # builds this checkout instead and tags it with the same name, which is the
-  # way to run local changes. Pin a build with IMAGE_TAG (sha-<commit>) rather
-  # than following `latest`.
+  # `docker compose up` pulls the published image, and only ever that: a tag
+  # that can't be pulled is an error, never something built in its place. Pin a
+  # build with IMAGE_TAG (sha-<commit>) rather than following `latest`.
+  #
+  # To run local changes, build this checkout through compose.build.yml, which
+  # adds the build step and is only used when named:
+  #
+  #   docker compose -f docker-compose.yml -f compose.build.yml up -d --build
   #
   # Nothing about this instance is baked into the image. The server writes the
   # SPA's settings into the page from the environment below as it serves it, so
   # changing one is a restart (`docker compose up -d`), never a rebuild.
   app:
     image: ghcr.io/spelling-creator/spelling-creator:${IMAGE_TAG:-latest}
-    build: .
     restart: unless-stopped
     environment:
       # Server-side, these point at the gateway over the internal network. The
@@ -70,6 +73,13 @@ services:
       # Turnstile, so they need a widget of your own; see "AI" in the docs.
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+
+      # Optional, and handed to the SPA (see "How the browser gets its settings"
+      # in the docs). GOOGLE_CLIENT_ID turns on "Save to Google Docs".
+      # PUBLIC_SUPABASE_URL is only for pointing sign-in at an identity service
+      # somewhere other than this gateway, such as a hosted Supabase project.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      PUBLIC_SUPABASE_URL: ${PUBLIC_SUPABASE_URL:-}
 
       ALLOWED_HOSTNAMES: ${PUBLIC_HOSTNAME:?missing, see .env.example}
       # One proxy (the gateway) sits in front of this process, so the client IP

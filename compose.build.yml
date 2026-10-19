@@ -1,0 +1,20 @@
+# Build the app image from this checkout instead of pulling the published one.
+#
+#   docker compose -f docker-compose.yml -f compose.build.yml up -d --build
+#
+# Or, to have every compose command in this directory use it, add this to .env:
+#
+#   COMPOSE_FILE=docker-compose.yml:compose.build.yml
+#
+# A file of its own, and never loaded unless named, so that docker-compose.yml
+# on its own only ever runs the image it names. With the build step in the main
+# file, a pinned IMAGE_TAG that couldn't be pulled would quietly be built from
+# whatever checkout happened to be there instead, under the pinned tag's name.
+#
+# The build is tagged with the published image's name, so the services that
+# share that image run it too. It needs Git LFS: see "From a checkout" in the
+# self-hosting docs.
+
+services:
+  app:
+    build: .
