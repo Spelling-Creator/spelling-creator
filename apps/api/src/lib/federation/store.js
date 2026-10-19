@@ -154,6 +154,11 @@ export function countPublishedLessons(env, base, userId) {
 	return count(env, `${base}/rest/v1/lessons?${by}${visible}&select=id`);
 }
 
+/** How many comments the hub holds, for NodeInfo, which requires the number. */
+export function countComments(env, base) {
+	return count(env, `${base}/rest/v1/comments?select=id`);
+}
+
 /**
  * A public lesson by id, with its document so the Article can carry an
  * excerpt, or null when there is no such lesson or it is not public. A draft

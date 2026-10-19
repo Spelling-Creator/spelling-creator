@@ -136,6 +136,7 @@ function fakeSupabase(db) {
 			const row = db.keys.get(f.user_id);
 			return json(row ? [row] : []);
 		}
+		if (table === 'comments') return json([{ id: 'c1' }, { id: 'c2' }]);
 		if (table === 'federation_followers') {
 			if (request.method === 'POST') {
 				const body = await request.json();
@@ -190,6 +191,18 @@ beforeEach(async () => {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+});
+
+describe('nodeinfo', () => {
+	it('says what software this is and how many lessons it holds', async () => {
+		const res = await get('/nodeinfo/2.1', 'application/json');
+		expect(res.status).toBe(200);
+		const info = await res.json();
+		expect(info.software.name).toBe('spelling-creator');
+		expect(info.protocols).toEqual(['activitypub']);
+		expect(info.usage.localPosts).toBe(1);
+		expect(info.usage.localComments).toBe(2);
+	});
 });
 
 describe('configuration', () => {

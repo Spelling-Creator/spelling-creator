@@ -26,6 +26,7 @@ import {
 	ID_RE,
 	PAGE,
 	addFollower,
+	countComments,
 	countFollowers,
 	countPublishedLessons,
 	fetchPublishedLesson,
@@ -207,8 +208,12 @@ builder.setNodeInfoDispatcher('/nodeinfo/2.1', async (ctx) => ({
 		repository: new URL(SOFTWARE_REPOSITORY),
 	},
 	protocols: ['activitypub'],
+	// Both counts are required by Fedify's NodeInfo validation, which answers 500
+	// for a missing one rather than leaving the field out. User counts are not:
+	// they are left out, since this API has no cheap way to count accounts.
 	usage: {
 		users: {},
 		localPosts: await countPublishedLessons(ctx.data.env, baseOf(ctx), null),
+		localComments: await countComments(ctx.data.env, baseOf(ctx)),
 	},
 }));
