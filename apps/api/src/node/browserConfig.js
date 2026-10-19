@@ -152,13 +152,24 @@ export function withBrowserConfig(assets, env) {
 			const rewrite = SHELL_PATH.test(pathname) ? rewrites.shell : pathname === SERVICE_WORKER_PATH ? rewrites.serviceWorker : null;
 			if (!rewrite) return assets.fetch(request);
 
-			// Always read the body, even for HEAD, because its length is what the
-			// rewrite changes.
-			const res = await assets.fetch(new Request(request.url));
+			// The file as it is on disk, whatever the browser sent: a plain GET even
+			// for HEAD, because its length is what the rewrite changes, and without
+			// the caller's conditional or encoding headers, because the asset server
+			// would answer those about the file rather than about the page served
+			// from it (a 304 with no body to rewrite, or compressed bytes).
+			const res = await assets.fetch(new Request(request.url, { headers: { 'Accept-Encoding': 'identity' } }));
 			if (!res.ok) return res;
 			const body = rewrite(await res.text());
 
+			// Anything that describes the bytes on disk is wrong for the rewritten
+			// page, so it goes rather than travels along. An ETag from the file would
+			// stay the same when only the configuration changed, letting a cache in
+			// front keep serving the old settings. The page carries Cache-Control:
+			// no-cache, so dropping validators costs a full response, never a stale one.
 			const headers = new Headers(res.headers);
+			for (const name of ['ETag', 'Last-Modified', 'Content-Encoding', 'Content-MD5', 'Digest']) {
+				headers.delete(name);
+			}
 			headers.set('Content-Length', String(Buffer.byteLength(body)));
 			return new Response(request.method === 'HEAD' ? null : body, { status: res.status, headers });
 		},

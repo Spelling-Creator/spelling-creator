@@ -141,6 +141,39 @@ describe('withBrowserConfig', () => {
 		const res = await get(withBrowserConfig(assetServer(empty), {}), '/index.html');
 		expect(res.status).toBe(404);
 	});
+
+	it('never answers with headers that describe the file rather than the page', async () => {
+		// An asset server that validates and compresses, as a future one might:
+		// it answers a conditional request with an empty 304, and labels its bytes.
+		const seen = [];
+		const assets = {
+			async fetch(request) {
+				seen.push(request);
+				if (request.headers.get('if-none-match') === '"disk"') return new Response(null, { status: 304 });
+				return new Response(SHELL, {
+					headers: {
+						'Content-Type': 'text/html',
+						'Cache-Control': 'no-cache',
+						ETag: '"disk"',
+						'Last-Modified': 'Sat, 17 Oct 2026 00:00:00 GMT',
+						'Content-Encoding': 'identity',
+					},
+				});
+			},
+		};
+		const res = await get(withBrowserConfig(assets, { AUTH_MODE: 'password' }), '/', {
+			headers: { 'If-None-Match': '"disk"', 'Accept-Encoding': 'br' },
+		});
+
+		// The page, not a 304: the rewrite is the response.
+		expect(res.status).toBe(200);
+		expect(configIn(await res.text())).toEqual({ authMode: 'password' });
+		expect(seen[0].headers.get('if-none-match')).toBeNull();
+		expect(seen[0].headers.get('accept-encoding')).toBe('identity');
+
+		for (const name of ['etag', 'last-modified', 'content-encoding']) expect(res.headers.get(name)).toBeNull();
+		expect(res.headers.get('cache-control')).toBe('no-cache');
+	});
 });
 
 describe('createHandler', () => {
