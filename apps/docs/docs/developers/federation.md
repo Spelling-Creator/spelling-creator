@@ -194,11 +194,13 @@ Pictures are the one part that is copied rather than cloned. The document
 refers to them by content hash, and the hashes belong to the other instance's
 store. The browser fetches each one from there (an instance's `/images/:hash`
 answers any origin, as this one's does), keeps it like a picture the user
-added, and rewrites the reference to the hash of the bytes it stored, which are
-the compressed form the other instance serves. That rewrite is what lets the
-normal save-to-cloud upload them here under a hash the server can verify. It
-also means the fork's first commit touches every picture block, which is an
-honest record of what happened to them. A picture that cannot be fetched or
+added, and rewrites the reference to the hash of the bytes it stored. Those
+are usually the compressed form the other instance serves, so the hash
+changes and the fork's first commit touches that picture block, an honest
+record of what happened to it; when the other instance kept the original, the
+hash comes out the same and nothing changes. Either way the picture is now in
+this browser's store, which is what lets the normal save-to-cloud upload it
+here under a hash the server can verify. A picture that cannot be fetched or
 stored keeps its old reference, and the editor says how many could not be
 copied, and also whether the history failed to come along. See
 `copyRemoteImages` in `core/browser/imageRef`.
