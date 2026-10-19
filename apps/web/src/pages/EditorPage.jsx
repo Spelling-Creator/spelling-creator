@@ -1149,17 +1149,23 @@ export default function EditorPage() {
         }
       }
       adoptRecord(adopted);
+      // A remote copy can lose either of its two parts, and the notice says
+      // which, since both fail quietly above: the pictures, and the history (a
+      // lesson with none, or a clone that did not work).
+      const host = remote ? remote.origin.replace(/^https?:\/\//, "") : "";
       notify({
-        severity: imagesMissing ? "warning" : "info",
+        severity: remote && (imagesMissing || !cloned) ? "warning" : "info",
         message: remote
           ? imagesMissing
-            ? t("messages.forkedFromRemoteImagesMissing", {
-                host: remote.origin.replace(/^https?:\/\//, ""),
-                count: imagesMissing,
-              })
-            : t("messages.forkedFromRemote", {
-                host: remote.origin.replace(/^https?:\/\//, ""),
-              })
+            ? t(
+                cloned
+                  ? "messages.forkedFromRemoteImagesMissing"
+                  : "messages.forkedFromRemoteImagesAndHistoryMissing",
+                { host, count: imagesMissing },
+              )
+            : cloned
+              ? t("messages.forkedFromRemote", { host })
+              : t("messages.forkedFromRemoteHistoryMissing", { host })
           : cloned
             ? t("messages.forkedWithHistory")
             : t("messages.forkedWithoutHistory"),

@@ -57,8 +57,13 @@ export async function storeImageBytes(bytes, mime) {
  * added, and referenced afresh. The ref changes, because the bytes served are
  * the compressed form the other instance stores and the hash is of what is
  * stored here; that is also what lets the normal save-to-cloud upload them
- * under a hash the server can verify. A picture that cannot be fetched keeps
- * its old ref and is reported, rather than failing the fork.
+ * under a hash the server can verify. The ref usually changes, because the
+ * bytes served are often the compressed form; when the other instance stored
+ * the original, the hash comes out the same. A picture that cannot be fetched
+ * or stored keeps its old ref and is reported, rather than failing the fork.
+ * Storing one hashes it with `crypto.subtle`, which a browser only offers on a
+ * secure origin, so on an instance served over plain http at a LAN address no
+ * picture can be copied (or added at all).
  *
  * @param {object} doc
  * @param {string} origin  The other instance's origin, e.g. `https://other.example`.

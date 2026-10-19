@@ -198,9 +198,16 @@ added, and rewrites the reference to the hash of the bytes it stored, which are
 the compressed form the other instance serves. That rewrite is what lets the
 normal save-to-cloud upload them here under a hash the server can verify. It
 also means the fork's first commit touches every picture block, which is an
-honest record of what happened to them. A picture that cannot be fetched keeps
-its old reference and the editor says how many are missing. See
+honest record of what happened to them. A picture that cannot be fetched or
+stored keeps its old reference, and the editor says how many could not be
+copied, and also whether the history failed to come along. See
 `copyRemoteImages` in `core/browser/imageRef`.
+
+Storing a picture hashes it with `crypto.subtle`, which browsers only offer on a
+secure origin: https, or `localhost`. An instance served over plain http at a
+network address is neither, so no picture can be copied there, and none can be
+added in its editor either. Two test instances reached over an SSH tunnel are
+on `localhost` and work.
 
 Not done yet: pulling the original's later changes into a remote fork. The
 clone makes that merge possible (the shared ancestry is real), but the sync
