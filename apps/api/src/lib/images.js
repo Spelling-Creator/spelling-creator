@@ -11,13 +11,10 @@ export const IMAGE_HASH_RE = /^[0-9a-f]{64}$/;
 // Cap a single image so one PUT can't fill the bucket (also mirrored client-side).
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-// Lowercase hex SHA-256 of the given bytes — matches the hash the browser
+// Lowercase hex SHA-256 of the given bytes, which matches the hash the browser
 // computes (web/src/lib/imageStore.js) so a content-addressed object key is
-// verifiable from its bytes.
-export async function sha256Hex(bytes) {
-	const digest = await crypto.subtle.digest('SHA-256', bytes);
-	return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+// verifiable from its bytes. Re-exported for the routes that hash images.
+export { sha256Hex } from './crypto.js';
 
 // Store image bytes under their content-hash key, first compressing them to WEBP
 // (convertImageToWebp falls back to the original bytes for formats it can't

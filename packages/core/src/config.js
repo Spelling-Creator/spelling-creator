@@ -150,7 +150,7 @@ export function hasTurnstile() {
  *   'none'       No check; the server lets every request through to its rate
  *                limiter.
  *
- * Anything unrecognised reads as 'turnstile', the same way the server reads it.
+ * Anything unrecognized reads as 'turnstile', the same way the server reads it.
  *
  * @returns {'turnstile' | 'altcha' | 'none'}
  */
@@ -182,7 +182,7 @@ export function hasAiChallenge() {
  *   'password'    email and password. Needs no mail at all.
  *   'both'        offer either, the visitor chooses.
  *
- * Anything unrecognised reads as 'magic-link', so a typo degrades to the
+ * Anything unrecognized reads as 'magic-link', so a typo degrades to the
  * default rather than to an instance nobody can get into.
  *
  * @returns {'magic-link' | 'password' | 'both'}

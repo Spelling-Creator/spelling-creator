@@ -42,6 +42,7 @@ export default function AiLessonIdeaDialog({
     token,
     widget,
     refresh: refreshChallenge,
+    unavailable,
   } = useAiChallenge(open, {
     onError: setError,
     messages: {
@@ -132,9 +133,9 @@ export default function AiLessonIdeaDialog({
 
           {/* The check powers the initial generate and any regenerate. */}
           {widget}
-          {error && (
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
         </div>

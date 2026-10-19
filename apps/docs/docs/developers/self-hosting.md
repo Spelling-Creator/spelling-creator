@@ -558,6 +558,12 @@ its `ai-challenge` line.
 Whichever is chosen, the per-address rate limiter still applies afterwards, 60
 requests a minute.
 
+With `altcha` or `none`, the server also leaves Cloudflare's Turnstile script
+out of the page it serves. The built `index.html` loads it on every page,
+because the hosted instance needs it, but an instance that will never use it
+shouldn't send each visitor's address to Cloudflare, or make a request that
+fails on every page when it has no internet access.
+
 #### ALTCHA
 
 [ALTCHA](https://altcha.org) is an open-source proof of work. When an AI dialog
@@ -567,6 +573,16 @@ so there is usually a token before anyone has finished reading the dialog. The
 server checks the signature and the solution (`apps/api/src/lib/altcha.js`), and
 accepts each solved challenge once: its nonce goes in the rate-limit store until
 the challenge would have expired, ten minutes after it was issued.
+
+Challenges are rate-limited per address too, at the same 60 a minute with a
+bucket of their own. Making one costs the server a key derivation, so without a
+limit anyone could have it make them in a loop without solving any.
+
+Recording a spent challenge is a read and then a write, because the rate-limit
+store has no atomic insert (on Cloudflare it is Workers KV). Two copies of one
+solution sent at the same instant can therefore both pass. That is accepted: it
+takes the work of solving the challenge in the first place, it only works
+within that instant, and both requests still pay the rate limiter.
 
 It is a cost rather than a proof of a human. Every request makes the sender do
 some work, which is what makes scripting the AI endpoints expensive, without

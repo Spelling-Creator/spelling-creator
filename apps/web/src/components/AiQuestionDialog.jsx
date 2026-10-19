@@ -50,6 +50,7 @@ export default function AiQuestionDialog({
     token,
     widget,
     refresh: refreshChallenge,
+    unavailable,
   } = useAiChallenge(open, {
     onError: setError,
     messages: {
@@ -152,9 +153,9 @@ export default function AiQuestionDialog({
             </Select>
           </Field>
           {widget}
-          {error && (
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
         </div>

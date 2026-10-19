@@ -34,6 +34,8 @@
 
 import { createHash } from 'node:crypto';
 
+import { aiChallengeMode } from '../lib/aiChallenge.js';
+
 /**
  * The browser settings, by the name main.jsx passes to configureCore, and the
  * environment variable each is read from.
@@ -106,6 +108,9 @@ export function reviseShell(sw, suffix) {
 	return null;
 }
 
+// The <script> index.html loads Turnstile with, attributes in any order.
+const TURNSTILE_SCRIPT_TAG = /<script\b[^>]*\bsrc="https:\/\/challenges\.cloudflare\.com\/turnstile\/[^"]*"[^>]*>\s*<\/script>\s*/;
+
 const SHELL_PATH = /^\/(index\.html)?$/;
 const SERVICE_WORKER_PATH = '/sw.js';
 
@@ -117,8 +122,18 @@ const SERVICE_WORKER_PATH = '/sw.js';
  * @param {Record<string, string | undefined>} env
  */
 export function withBrowserConfig(assets, env) {
-	const script = configScript(browserConfig(env));
+	const config = browserConfig(env);
+	const script = configScript(config);
+	// The suffix follows the script, and the script carries aiChallenge, so
+	// dropping the Turnstile tag below also changes the shell's revision.
 	const suffix = createHash('sha256').update(script).digest('hex').slice(0, 12);
+	// index.html loads Cloudflare's Turnstile script on every page, because the
+	// hosted instance's AI check is Turnstile. An instance that has chosen ALTCHA
+	// or none at runtime will never use it, and loading it anyway would hand
+	// every visitor's address to Cloudflare for nothing (and, on a network
+	// without internet access, fail on every page). Only when the setting is
+	// here: without it, the browser uses whatever the build chose.
+	const withoutTurnstile = Boolean(config.aiChallenge) && aiChallengeMode(env) !== 'turnstile';
 	const warned = new Set();
 	const warnOnce = (message) => {
 		if (warned.has(message)) return;
@@ -135,7 +150,8 @@ export function withBrowserConfig(assets, env) {
 				warnOnce('index.html has no </head>, so it is served without the runtime configuration.');
 				return html;
 			}
-			return html.replace('</head>', () => `${script}</head>`);
+			const page = withoutTurnstile ? html.replace(TURNSTILE_SCRIPT_TAG, '') : html;
+			return page.replace('</head>', () => `${script}</head>`);
 		},
 		serviceWorker(sw) {
 			const revised = reviseShell(sw, suffix);

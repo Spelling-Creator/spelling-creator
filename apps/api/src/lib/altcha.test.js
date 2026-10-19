@@ -5,6 +5,7 @@ import { solveChallenge } from 'altcha-lib';
 import { deriveKey } from 'altcha-lib/algorithms/web/pbkdf2';
 import { describe, expect, it } from 'vitest';
 
+import { handleAltchaChallenge } from '../routes/altcha.js';
 import { aiChallengeMode, verifyAiChallenge } from './aiChallenge.js';
 import { altchaConfigured, createAltchaChallenge, verifyAltcha } from './altcha.js';
 
@@ -12,7 +13,9 @@ function kvStore() {
 	const values = new Map();
 	return {
 		values,
-		get: async (k) => values.get(k) ?? null,
+		// Values are kept with the options they were written with, so a test can
+		// check an expiry; reads answer with the value alone, as a real store does.
+		get: async (k) => values.get(k)?.v ?? null,
 		put: async (k, v, options) => void values.set(k, { v, options }),
 		delete: async (k) => void values.delete(k),
 	};
@@ -103,7 +106,10 @@ describe('verifyAltcha', () => {
 		const env = { PLATFORM: { rateLimit: kvStore() } };
 		expect(altchaConfigured(env)).toBe(false);
 		expect(await createAltchaChallenge(env)).toBeNull();
-		expect(await verifyAltcha('anything', env)).toMatchObject({ ok: false, status: 500 });
+		const result = await verifyAltcha('anything', env);
+		expect(result).toMatchObject({ ok: false, status: 500 });
+		// The caller is told it isn't set up, not which secrets are missing.
+		expect(result.reason).not.toMatch(/ALTCHA_HMAC_KEY|SERVICE_ROLE/);
 	});
 
 	it('uses ALTCHA_HMAC_KEY in preference to the derived key', async () => {
@@ -141,5 +147,47 @@ describe('verifyAiChallenge', () => {
 			ok: false,
 			status: 500,
 		});
+	});
+});
+
+describe('GET /altcha/challenge', () => {
+	const routeEnv = (extra = {}) =>
+		envWith({
+			AI_CHALLENGE: 'altcha',
+			PLATFORM: { rateLimit: kvStore(), clientIp: () => '203.0.113.7' },
+			...extra,
+		});
+	const get = (env) => handleAltchaChallenge(new Request('https://host.test/altcha/challenge'), env, {});
+
+	it('is not there unless the check is ALTCHA', async () => {
+		expect((await get(routeEnv({ AI_CHALLENGE: 'turnstile' }))).status).toBe(404);
+		expect((await get(routeEnv({ AI_CHALLENGE: 'none' }))).status).toBe(404);
+	});
+
+	it('hands out a signed challenge nothing may cache', async () => {
+		const res = await get(routeEnv());
+		expect(res.status).toBe(200);
+		expect(res.headers.get('cache-control')).toBe('no-store');
+		const challenge = await res.json();
+		expect(challenge.parameters.algorithm).toBe('PBKDF2/SHA-256');
+		expect(challenge.signature).toMatch(/^[0-9a-f]{64}$/);
+	});
+
+	it('limits how many one address can ask for', async () => {
+		// Each challenge costs the server a key derivation, so asking in a loop
+		// without solving any must stop.
+		const env = routeEnv();
+		const statuses = [];
+		for (let i = 0; i < 61; i += 1) statuses.push((await get(env)).status);
+		expect(statuses.slice(0, 60).every((s) => s === 200)).toBe(true);
+		const refused = await get(env);
+		expect(refused.status).toBe(429);
+		expect(Number(refused.headers.get('retry-after'))).toBeGreaterThan(0);
+	});
+
+	it('says it is not set up without naming any secret', async () => {
+		const res = await get({ AI_CHALLENGE: 'altcha', PLATFORM: { rateLimit: kvStore(), clientIp: () => '' } });
+		expect(res.status).toBe(500);
+		expect(await res.text()).not.toMatch(/ALTCHA_HMAC_KEY|SERVICE_ROLE/);
 	});
 });

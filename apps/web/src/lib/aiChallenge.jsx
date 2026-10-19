@@ -34,14 +34,25 @@ export const NO_CHALLENGE_TOKEN = "none";
  * @param {boolean} active Whether the widget should be mounted (usually: the
  *   dialog is open, and for image search, the chosen source needs a token).
  * @param {object} options
- * @param {(message: string) => void} options.onError Shows a message to the user.
- * @param {{ notConfigured: string, failed: string }} options.messages The
+ * @param {(message: string) => void} options.onError Shows a message to the user
+ *   when the check fails while the dialog is open.
+ * @param {{ notConfigured?: string, failed: string }} options.messages The
  *   dialog's own wording for "this instance has no Turnstile key" and "the check
  *   failed".
- * @returns {{ token: string, widget: import("react").ReactNode, refresh: () => void }}
+ * @returns {{
+ *   token: string,
+ *   widget: import("react").ReactNode,
+ *   refresh: () => void,
+ *   unavailable: string,
+ * }} `unavailable` is the not-configured message, or "" when the check can
+ *   work. It is returned for the dialog to show rather than reported through
+ *   onError, because it is a fact about the instance rather than an event: a
+ *   dialog's own "clear the error on open" would otherwise wipe it in the same
+ *   render it was set in.
  */
 export function useAiChallenge(active, { onError, messages }) {
   const mode = aiChallenge();
+  const notConfigured = mode === "turnstile" && !turnstileSiteKey();
   const [token, setToken] = useState("");
   const containerRef = useRef(null);
   const resetRef = useRef(null);
@@ -60,17 +71,15 @@ export function useAiChallenge(active, { onError, messages }) {
     }
     setToken("");
 
-    let cancelled = false;
+    let canceled = false;
     let teardown = () => {};
 
     if (mode === "turnstile") {
-      if (!turnstileSiteKey()) {
-        report("notConfigured");
-        return undefined;
-      }
+      // Nothing to render; `unavailable` below tells the dialog why.
+      if (notConfigured) return undefined;
       whenTurnstileReady()
         .then((turnstile) => {
-          if (cancelled || !containerRef.current) return;
+          if (canceled || !containerRef.current) return;
           const id = turnstile.render(containerRef.current, {
             sitekey: turnstileSiteKey(),
             callback: (tok) => setToken(tok),
@@ -87,7 +96,7 @@ export function useAiChallenge(active, { onError, messages }) {
     } else {
       import("./altchaWidget.js")
         .then(() => {
-          if (cancelled || !containerRef.current) return;
+          if (canceled || !containerRef.current) return;
           const widget = document.createElement("altcha-widget");
           widget.setAttribute("challenge", `${apiUrl()}/altcha/challenge`);
           // Start solving as soon as the dialog opens, so there is usually a
@@ -116,11 +125,11 @@ export function useAiChallenge(active, { onError, messages }) {
     }
 
     return () => {
-      cancelled = true;
+      canceled = true;
       teardown();
       resetRef.current = null;
     };
-  }, [active, mode]);
+  }, [active, mode, notConfigured]);
 
   const refresh = useCallback(() => {
     if (mode === "none") return;
@@ -136,5 +145,10 @@ export function useAiChallenge(active, { onError, messages }) {
       />
     );
 
-  return { token, widget, refresh };
+  // Only while the check is wanted: image search keeps it inactive for
+  // Wikimedia, which needs no check and should not say Pixabay is unavailable.
+  const unavailable =
+    active && notConfigured ? messages?.notConfigured || "" : "";
+
+  return { token, widget, refresh, unavailable };
 }

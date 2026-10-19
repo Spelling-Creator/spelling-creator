@@ -173,7 +173,7 @@ export function createApp() {
 	app.post('/', (c) => handleAi(req(c), c.env, cors(c), c.get('allowed')));
 	// The challenge the ALTCHA widget solves before that POST, on instances that
 	// use ALTCHA rather than Turnstile (AI_CHALLENGE=altcha).
-	app.get('/altcha/challenge', (c) => handleAltchaChallenge(c.env, cors(c)));
+	app.get('/altcha/challenge', (c) => handleAltchaChallenge(req(c), c.env, cors(c)));
 
 	return app;
 }

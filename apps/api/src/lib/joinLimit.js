@@ -2,7 +2,8 @@
 // agent join to a collaboration session (routes/collab.js) and a host or board
 // join to a letterboard session (routes/practice.js). Each is a request to be let
 // into a room, and each is cheap to spam, so each takes a token from a bucket in
-// the rate-limit store first.
+// the rate-limit store first. ALTCHA challenges (routes/altcha.js) use it too:
+// just as cheap to ask for, and each one costs the server some work to make.
 //
 // Token bucket, keyed by whatever identifies the caller: a user id where there is
 // a sign-in, the client IP where there isn't (boards join anonymously). The bucket

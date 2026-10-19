@@ -193,3 +193,33 @@ describe('createHandler', () => {
 		expect(configIn(await res.text())).toEqual({ authMode: 'password', supabaseAnonKey: 'anon' });
 	});
 });
+
+describe('the Turnstile script', () => {
+	// As the built index.html has it: one attribute a line.
+	const TURNSTILE_TAG = `<script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+      async
+      defer
+    ></script>`;
+	const shell = `<!doctype html><html><head><title>shell</title>\n    ${TURNSTILE_TAG}\n    <script src="https://accounts.google.com/gsi/client" async defer></script></head><body></body></html>`;
+	const assets = { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) };
+	const page = async (env) => (await withBrowserConfig(assets, env).fetch(new Request('https://host.test/'))).text();
+
+	it('is left out where the instance has chosen another check', async () => {
+		for (const AI_CHALLENGE of ['altcha', 'none']) {
+			const html = await page({ AI_CHALLENGE });
+			expect(html).not.toContain('challenges.cloudflare.com');
+			// Only that tag: the rest of the head is untouched.
+			expect(html).toContain('accounts.google.com/gsi/client');
+			expect(configIn(html)).toEqual({ aiChallenge: AI_CHALLENGE });
+		}
+	});
+
+	it('stays where Turnstile is the check, or where the build decides', async () => {
+		expect(await page({ AI_CHALLENGE: 'turnstile' })).toContain('challenges.cloudflare.com');
+		// Unset here, the browser uses the build's choice, which may be Turnstile.
+		expect(await page({})).toContain('challenges.cloudflare.com');
+		// A value the server reads as Turnstile is Turnstile for the page too.
+		expect(await page({ AI_CHALLENGE: 'typo' })).toContain('challenges.cloudflare.com');
+	});
+});

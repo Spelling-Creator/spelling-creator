@@ -135,6 +135,7 @@ export default function ImageSearchDialog({
     token,
     widget,
     refresh: refreshToken,
+    unavailable,
   } = useAiChallenge(open && provider.needsToken, {
     onError: setError,
     messages: {
@@ -303,9 +304,9 @@ export default function ImageSearchDialog({
           {/* The AI check: only sources that proxy through the Worker need it. */}
           {provider.needsToken && widget}
 
-          {error && (
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
 

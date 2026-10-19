@@ -17,6 +17,9 @@ import { createChallenge, randomInt, verifySolution } from 'altcha-lib';
 import { deriveKey } from 'altcha-lib/algorithms/web/pbkdf2';
 
 import { rateLimitStore } from '../platform/index.js';
+import { hmacHex } from './crypto.js';
+
+export { NOT_CONFIGURED as ALTCHA_NOT_CONFIGURED };
 
 // How long a challenge may wait between being fetched and being used. Long
 // enough to cover someone who opens a dialog and reads it before clicking;
@@ -37,14 +40,17 @@ const ALGORITHM = 'PBKDF2/SHA-256';
 // the same whichever check an instance runs.
 const EXPIRED = 'Verification expired. Please re-verify and try again';
 
-const encoder = new TextEncoder();
+// What a caller is told when there is nothing to sign with. Deliberately
+// general: which variables are missing is for the operator, who gets it in the
+// log (below) and in the dependency check, not for whoever sent the request.
+const NOT_CONFIGURED = 'Server misconfiguration: the AI check is not set up';
 
-/** HMAC-SHA-256 of `message` under `key`, as lowercase hex. */
-async function hmacHex(key, message) {
-	const cryptoKey = await crypto.subtle.importKey('raw', encoder.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-	const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(message));
-	return Array.from(new Uint8Array(signature), (b) => b.toString(16).padStart(2, '0')).join('');
-}
+// The secrets for each master key, computed once. They depend only on the
+// environment, which doesn't change while the process or isolate runs, so
+// deriving them again for every challenge and every check would be two HMACs
+// of pure waste each time. Keyed by the master key itself, so an environment
+// with different keys (a test, another Worker binding) still gets its own.
+const derived = new Map();
 
 /**
  * The two secrets challenges are signed with, or null if there is nothing to
@@ -56,17 +62,28 @@ async function hmacHex(key, message) {
  * reveals nothing about it. The second secret signs the derived key, which lets
  * verification check a signature instead of repeating the work.
  */
-async function secrets(env) {
-	const master = env.ALTCHA_HMAC_KEY
-		? env.ALTCHA_HMAC_KEY
-		: env.SUPABASE_SERVICE_ROLE_KEY
-			? await hmacHex(env.SUPABASE_SERVICE_ROLE_KEY, 'altcha-challenge-signing')
-			: '';
-	if (!master) return null;
-	return {
-		hmacSignatureSecret: master,
-		hmacKeySignatureSecret: await hmacHex(master, 'altcha-derived-key-signing'),
-	};
+function secrets(env) {
+	const explicit = env.ALTCHA_HMAC_KEY || '';
+	const fallback = explicit ? '' : env.SUPABASE_SERVICE_ROLE_KEY || '';
+	if (!explicit && !fallback) {
+		console.error('ALTCHA has nothing to sign challenges with: set ALTCHA_HMAC_KEY or SUPABASE_SERVICE_ROLE_KEY.');
+		return Promise.resolve(null);
+	}
+	const id = explicit ? `explicit:${explicit}` : `derived:${fallback}`;
+	let pending = derived.get(id);
+	if (!pending) {
+		// The promise rather than its value, so concurrent first requests share
+		// one derivation.
+		pending = (async () => {
+			const master = explicit || (await hmacHex(fallback, 'altcha-challenge-signing'));
+			return {
+				hmacSignatureSecret: master,
+				hmacKeySignatureSecret: await hmacHex(master, 'altcha-derived-key-signing'),
+			};
+		})();
+		derived.set(id, pending);
+	}
+	return pending;
 }
 
 /** Whether this environment has something to sign challenges with. */
@@ -116,13 +133,7 @@ function decodePayload(token) {
  */
 export async function verifyAltcha(token, env) {
 	const keys = await secrets(env);
-	if (!keys) {
-		return {
-			ok: false,
-			status: 500,
-			reason: 'Server misconfiguration: set ALTCHA_HMAC_KEY or SUPABASE_SERVICE_ROLE_KEY',
-		};
-	}
+	if (!keys) return { ok: false, status: 500, reason: NOT_CONFIGURED };
 	if (!token) return { ok: false, status: 403, reason: 'Missing verification' };
 
 	const payload = decodePayload(token);

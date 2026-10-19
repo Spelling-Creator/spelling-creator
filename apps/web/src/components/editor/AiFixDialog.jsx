@@ -176,6 +176,7 @@ export default function AiFixDialog({ open, finding, doc, onApply, onClose }) {
     token,
     widget,
     refresh: refreshChallenge,
+    unavailable,
   } = useAiChallenge(open, {
     onError: setError,
     messages: {
@@ -282,9 +283,9 @@ export default function AiFixDialog({ open, finding, doc, onApply, onClose }) {
           )}
 
           <div className={fix || busy ? "hidden" : ""}>{widget}</div>
-          {error && (
+          {(error || unavailable) && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || unavailable}</AlertDescription>
             </Alert>
           )}
         </div>
