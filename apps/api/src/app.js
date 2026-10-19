@@ -66,7 +66,25 @@ async function federationMiddleware(c, next) {
 		middleware = fedifyMiddleware(fedi, (hc) => ({ env: hc.env }));
 		fediMiddlewares.set(fedi, middleware);
 	}
-	return middleware(c, next);
+	// An ActivityPub request Fedify has nothing for (a deleted lesson, a draft,
+	// an account that does not exist) is answered here rather than handed on.
+	// Handed on, it reached the web app, which answers every page path with its
+	// shell and a 200, so a remote server asking for a deleted lesson was told it
+	// exists and given HTML.
+	return middleware(c, async () => {
+		if (wantsActivityPub(c.req.raw)) {
+			c.res = new Response('Not found.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', Vary: 'Accept' } });
+			return;
+		}
+		await next();
+	});
+}
+
+/** Whether a request asks for ActivityPub JSON rather than a page or the API's own JSON. */
+export function wantsActivityPub(request) {
+	const accept = (request.headers.get('accept') || '').toLowerCase();
+	if (accept.includes('text/html')) return false;
+	return accept.includes('application/activity+json') || accept.includes('application/ld+json');
 }
 
 /**

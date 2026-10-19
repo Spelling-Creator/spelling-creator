@@ -9,6 +9,7 @@
 import { MemoryKvStore } from '@fedify/fedify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createApp, registerFrontend, wantsActivityPub } from '../../app.js';
 import { lessonContentHtml, lessonExcerpt } from './article.js';
 import { builder } from './builder.js';
 import { announceLesson, federationEnabled, federationOrigin } from './index.js';
@@ -191,6 +192,50 @@ beforeEach(async () => {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+});
+
+describe('inside the app', () => {
+	// The whole route table, with a frontend that answers every page path the way
+	// the real one does: its shell, and a 200.
+	const appFetch = (path, accept) => {
+		const app = createApp();
+		registerFrontend(app, () => new Response('<html>shell</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }));
+		const executionCtx = { waitUntil() {}, passThroughOnException() {} };
+		return app.fetch(new Request(`${ORIGIN}${path}`, { headers: { Accept: accept } }), env(), executionCtx);
+	};
+
+	it('serves the Article to ActivityPub and the page to a browser at one address', async () => {
+		const article = await appFetch(`/hub/${LESSON}`, AP);
+		expect(article.status).toBe(200);
+		expect((await article.json()).type).toBe('Article');
+		const page = await appFetch(`/hub/${LESSON}`, 'text/html');
+		expect(await page.text()).toBe('<html>shell</html>');
+	});
+
+	it('answers 404, not the page shell, when ActivityPub asks for something that is not there', async () => {
+		for (const path of [
+			`/hub/${DRAFT}`,
+			`/hub/${HIDDEN}`,
+			'/hub/99999999-9999-4999-8999-999999999999',
+			'/users/99999999-9999-4999-8999-999999999999',
+		]) {
+			const res = await appFetch(path, AP);
+			expect(res.status, path).toBe(404);
+			expect(res.headers.get('content-type'), path).not.toContain('text/html');
+		}
+		// A browser asking for the same draft still gets the app, which decides.
+		expect((await appFetch(`/hub/${DRAFT}`, 'text/html')).status).toBe(200);
+	});
+
+	it('tells an ActivityPub request from a page or an API call', () => {
+		const ask = (accept) => wantsActivityPub(new Request(ORIGIN, { headers: accept ? { Accept: accept } : {} }));
+		expect(ask(AP)).toBe(true);
+		expect(ask('application/ld+json; profile="https://www.w3.org/ns/activitystreams"')).toBe(true);
+		expect(ask('text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')).toBe(false);
+		expect(ask('application/json')).toBe(false);
+		expect(ask('*/*')).toBe(false);
+		expect(ask('')).toBe(false);
+	});
 });
 
 describe('nodeinfo', () => {
