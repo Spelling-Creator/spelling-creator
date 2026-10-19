@@ -74,7 +74,42 @@ export async function fetchPack(lessonId) {
   }
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("Could not download the lesson history.");
+  return packFromResponse(res);
+}
 
+/**
+ * Download the packed history of a lesson on ANOTHER instance, through this
+ * hub's API, which fetches it on the caller's behalf (the other instance does
+ * not answer a browser from here, and should not). `packUrl` is the address
+ * the API handed back with the lesson (see fetchRemoteLesson in lessons.js).
+ * The response has the shape fetchPack reads, tip and branch map included.
+ *
+ * @returns {Promise<{ packfile: Uint8Array, head: string, refs: object } | null>}
+ *          null when the lesson has no history there.
+ */
+export async function fetchRemotePackFile(packUrl, accessToken) {
+  if (!hasApi() || !packUrl) return null;
+  if (!accessToken) throw new Error("Please sign in before copying a lesson.");
+
+  let res;
+  try {
+    res = await fetch(
+      `${apiUrl()}/remote/pack?url=${encodeURIComponent(packUrl)}`,
+      { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+  } catch {
+    throw new Error("Could not reach the lesson history.");
+  }
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(detail || "Could not download the lesson history.");
+  }
+  return packFromResponse(res);
+}
+
+/** The pack and the refs that travel in its headers, or null for an unusable one. */
+async function packFromResponse(res) {
   const head = res.headers.get("X-Git-Head");
   if (!head) return null; // a pack with no tip is unusable
 

@@ -107,6 +107,7 @@ export async function getLesson(id) {
  * @param {?string} [opts.lessonId]   The hub lesson this one is attached to, if it is already published or saved as a cloud draft.
  * @param {boolean} [opts.published]  Whether that hub lesson is public or a private draft. Only meaningful with `lessonId`.
  * @param {?string} [opts.forkedFrom] The hub lesson this one was forked from, so it can be synced with it later.
+ * @param {?string} [opts.forkedFromUrl] Or, for a lesson forked from another instance, the address of the page it was forked from there.
  */
 export async function createLesson({
   id = newId(),
@@ -114,6 +115,7 @@ export async function createLesson({
   lessonId = null,
   published = true,
   forkedFrom = null,
+  forkedFromUrl = null,
 } = {}) {
   const now = Date.now();
   const record = {
@@ -122,6 +124,7 @@ export async function createLesson({
     lessonId,
     published,
     forkedFrom,
+    forkedFromUrl,
     createdAt: now,
     updatedAt: now,
   };

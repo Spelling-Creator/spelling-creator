@@ -231,6 +231,10 @@ and the original descend from commits with identical oids, git can find their
 
 A fork records where it came from in two places: `lessons.forked_from` in
 Postgres (the pointer home) and `refs/remotes/upstream/main` in its own repo.
+A lesson forked from another instance is the same clone, made from a pack this
+hub's API fetched there, with `lessons.forked_from_url` as its pointer home
+instead; see
+[Federation](./federation.md#forking-a-lesson-from-another-instance).
 
 Lesson images are **not** in the pack. Blocks reference images by content hash
 and the bytes already live in R2 (see [Lesson images](lesson-images.md)),

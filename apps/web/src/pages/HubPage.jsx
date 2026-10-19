@@ -12,6 +12,7 @@ import {
   BookMarkedIcon,
   CloudIcon,
   FileTextIcon,
+  GlobeIcon,
   PencilIcon,
   RefreshCwIcon,
   RssIcon,
@@ -40,6 +41,7 @@ import {
   deleteLesson,
   lessonsFeedUrl,
   EDIT_REQUEST_KEY,
+  REMOTE_FORK_REQUEST_KEY,
 } from "@spelling-creator/core/lessons";
 import { LessonListSkeleton } from "../components/Skeletons.jsx";
 import {
@@ -157,6 +159,46 @@ function LessonRow({ lesson, draft, editable, onEdit, onDelete }) {
 export default function HubPage() {
   const { t } = useTranslation("hub");
   const { user, accessToken } = useAuth();
+
+  // "From another instance": the address of a lesson on another hub, to fork
+  // here. The hub only collects the address; the editor fetches the lesson
+  // through this hub's API (the other hub does not answer a browser from here)
+  // and lands it as a fork, the way it does a lesson from this hub. The API
+  // reads on the signed-in caller's behalf, so the dialog asks for a sign-in
+  // first rather than sending somebody to the editor to be told that there.
+  const [remoteOpen, setRemoteOpen] = useState(false);
+  const [remoteUrl, setRemoteUrl] = useState("");
+  const [remoteError, setRemoteError] = useState("");
+  const openRemote = () => {
+    setRemoteUrl("");
+    setRemoteError("");
+    setRemoteOpen(true);
+  };
+  const forkRemote = (e) => {
+    e.preventDefault();
+    const raw = remoteUrl.trim();
+    let parsed = null;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      parsed = null;
+    }
+    if (!parsed || !/^https?:$/.test(parsed.protocol)) {
+      setRemoteError(t("remoteDialog.invalid"));
+      return;
+    }
+    if (!user) {
+      setRemoteError(t("remoteDialog.signIn"));
+      return;
+    }
+    try {
+      sessionStorage.setItem(REMOTE_FORK_REQUEST_KEY, parsed.href);
+    } catch {
+      setRemoteError(t("remoteDialog.storageUnavailable"));
+      return;
+    }
+    navigate("/editor");
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const origin = useSiteOrigin();
@@ -345,6 +387,13 @@ export default function HubPage() {
           </p>
           {hasApi() && (
             <div className="flex shrink-0 items-center gap-0.5">
+              <IconActionButton
+                tooltip={t("toolbar.remoteTooltip")}
+                aria-label={t("toolbar.remoteAria")}
+                onClick={openRemote}
+              >
+                <GlobeIcon />
+              </IconActionButton>
               <IconActionButton
                 tooltip={t("toolbar.feedTooltip")}
                 aria-label={t("toolbar.feedAria")}
@@ -577,6 +626,53 @@ export default function HubPage() {
               {t("deleteDialog.delete")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={remoteOpen} onOpenChange={setRemoteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={forkRemote} className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>{t("remoteDialog.title")}</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {t("remoteDialog.description")}
+            </p>
+            <Field>
+              <FieldLabel htmlFor="hub-remote-url">
+                {t("remoteDialog.urlLabel")}
+              </FieldLabel>
+              <Input
+                id="hub-remote-url"
+                type="url"
+                autoFocus
+                placeholder={t("remoteDialog.urlPlaceholder")}
+                value={remoteUrl}
+                onChange={(e) => {
+                  setRemoteUrl(e.target.value);
+                  setRemoteError("");
+                }}
+              />
+            </Field>
+            {remoteError && (
+              <Alert variant="destructive">
+                <AlertDescription>{remoteError}</AlertDescription>
+              </Alert>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRemoteOpen(false)}
+              >
+                {t("remoteDialog.cancel")}
+              </Button>
+              <Button type="submit" disabled={!remoteUrl.trim()}>
+                <GlobeIcon data-icon="inline-start" />
+                {t("remoteDialog.copy")}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

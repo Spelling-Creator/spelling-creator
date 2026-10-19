@@ -118,6 +118,21 @@ export function stripCollaborators(doc) {
 }
 
 /**
+ * The `forkedFromUrl` a save sent, as the string to store, or null when it is
+ * absent or not a web address. Dropped rather than refused, like a bad
+ * `forkedFrom`: losing the link home is survivable, failing the save is not.
+ */
+export function forkedFromUrlOf(value) {
+	if (typeof value !== 'string' || !value.trim() || value.length > 2048) return null;
+	try {
+		const url = new URL(value.trim());
+		return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Map a Supabase `lessons` row to the camelCase summary the frontend expects.
  *
  * @param {object}  row
@@ -153,6 +168,9 @@ export function rowToLesson(row, { withDoc = false, includeMod = false, includeC
 		// so the editor can offer to pull the original's later changes in, merging the
 		// two histories against the commit they diverged from (see web/src/lib/git/).
 		forkedFrom: row.forked_from ?? null,
+		// Or, for a lesson forked from another instance, the page it was forked
+		// from there. The two never both apply.
+		forkedFromUrl: row.forked_from_url ?? null,
 		createdAt: row.created_at,
 	};
 	if (withDoc) lesson.doc = includeCollaborators ? row.doc : stripCollaborators(row.doc);

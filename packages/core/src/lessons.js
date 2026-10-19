@@ -35,6 +35,13 @@ export const EDIT_REQUEST_KEY = "s2c-lesson-maker:edit-lesson-id";
 // row is never modified. Consumed and cleared once on the editor's mount.
 export const FORK_REQUEST_KEY = "s2c-lesson-maker:fork-lesson-id";
 
+// sessionStorage key the hub uses to hand the editor the web address of a
+// lesson on ANOTHER instance to fork. The editor asks this hub's API to read it
+// (see fetchRemoteLesson) and then proceeds as for a fork from here, with the
+// address as the lesson's pointer home instead of a hub id. Consumed and
+// cleared once on the editor's mount.
+export const REMOTE_FORK_REQUEST_KEY = "s2c-lesson-maker:fork-remote-url";
+
 // Whether the hub can reach a backend at all. Browsing needs only this; the
 // publish step additionally needs a signed-in Supabase session.
 
@@ -136,6 +143,38 @@ export async function fetchLesson(id, accessToken) {
 }
 
 /**
+ * A lesson on another instance, read through this hub's API so it can be forked
+ * here. The address is the lesson's page there; the API finds the lesson through
+ * federation and answers with its document and where its history can be fetched
+ * from (`packUrl`, which fetchRemotePackFile in git/remote.js takes). Needs a
+ * signed-in session, since the API fetches on the caller's behalf.
+ * @param {string} url
+ * @param {string} accessToken  Supabase session JWT.
+ * @returns {Promise<{url, origin, title, author, sectionCount, createdAt, doc, packUrl}>}
+ */
+export async function fetchRemoteLesson(url, accessToken) {
+  if (!hasApi()) throw new Error("The lesson hub is not configured.");
+  if (!accessToken) {
+    throw new Error("Please sign in to copy a lesson from another instance.");
+  }
+
+  let res;
+  try {
+    res = await fetch(
+      `${apiUrl()}/remote/lesson?url=${encodeURIComponent(url)}`,
+      { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+  } catch {
+    throw new Error("Could not reach the lesson hub.");
+  }
+  if (!res.ok) throw await readError(res);
+
+  const data = await res.json().catch(() => ({}));
+  if (!data.lesson?.doc) throw new Error("Lesson not found.");
+  return data.lesson;
+}
+
+/**
  * Save the current editor document to the cloud as a new lesson. Requires a
  * signed-in Supabase session: the access token is sent as a Bearer credential and
  * the Worker verifies it (and derives the author) before inserting the row.
@@ -143,16 +182,18 @@ export async function fetchLesson(id, accessToken) {
  * the default) or kept as a private draft backup (false).
  * @param {object} doc          The editor document ({ title, sections }).
  * @param {string} accessToken  Supabase session JWT.
- * @param {{ published?: boolean, forkedFrom?: string }} [opts]
+ * @param {{ published?: boolean, forkedFrom?: string, forkedFromUrl?: string }} [opts]
  *        `forkedFrom` is the id of the lesson this one was forked from, when it
  *        was. The server records it so the fork can later pull the original's
- *        changes in — see lib/git/sync.js.
- * @returns {Promise<{id, title, author, sectionCount, published, forkedFrom, createdAt}>}
+ *        changes in (see lib/git/sync.js). `forkedFromUrl` is the same pointer
+ *        home for a lesson forked from another instance: the page it was forked
+ *        from there.
+ * @returns {Promise<{id, title, author, sectionCount, published, forkedFrom, forkedFromUrl, createdAt}>}
  */
 export async function publishLesson(
   doc,
   accessToken,
-  { published = true, forkedFrom = null } = {},
+  { published = true, forkedFrom = null, forkedFromUrl = null } = {},
 ) {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!accessToken) throw new Error("Please sign in before saving.");
@@ -173,6 +214,7 @@ export async function publishLesson(
         doc,
         published,
         ...(forkedFrom ? { forkedFrom } : {}),
+        ...(forkedFromUrl ? { forkedFromUrl } : {}),
       }),
     });
   } catch {

@@ -39,6 +39,23 @@ or unpublish it, or a moderator hides it, the post is deleted.
 Drafts are private and never leave the hub, so following someone shows you
 only what they have chosen to publish.
 
+## Copying a lesson from another instance
+
+A lesson on another Spelling Creator instance can be forked into this one, the
+same way as a lesson on this hub, with its whole history. On the hub, choose
+**Copy a lesson from another instance** (the globe button next to the RSS
+button), paste the address of the lesson's page there, and press **Open in the
+editor**. You need to be signed in, because the hub fetches the lesson for you.
+
+The lesson opens in the editor as a new lesson of your own, titled as a copy,
+with its pictures brought over. Edit it as you like and save it to this hub;
+its page will say which instance it was forked from. The other instance has to
+federate too, and to run a version that offers its lessons this way.
+
+For now a copy does not pull in the original's later changes, as a fork of a
+lesson on this hub can. The history it brought with it is what would make that
+possible later.
+
 ## What you can't do yet
 
 Replying to a lesson post from Mastodon does not add a comment to the lesson,

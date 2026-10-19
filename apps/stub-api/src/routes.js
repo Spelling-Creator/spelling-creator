@@ -176,6 +176,7 @@ export function createHandler(
       doc: b.doc,
       published: Boolean(b.published),
       forkedFrom: b.forkedFrom ?? null,
+      forkedFromUrl: b.forkedFromUrl ?? null,
       createdAt: new Date().toISOString(),
       ratings: new Map(),
     };
@@ -315,6 +316,54 @@ export function createHandler(
       : { main: head };
     state.packs.set(id, { packfile, head, refs });
     ctx.json(200, { ok: true, head });
+  });
+
+  // ---------------------------------------------------------------- remote
+  // Lessons on "another instance", for the fork-from-elsewhere flow. The stub
+  // is its own other instance: any address whose path is /hub/<id> of a lesson
+  // it holds is answered with that lesson, and the pack address it hands back
+  // comes straight back here. Enough to walk the whole flow without a second
+  // server.
+  const remoteId = (ctx) => {
+    let target;
+    try {
+      target = new URL(ctx.url.searchParams.get("url") || "");
+    } catch {
+      return null;
+    }
+    const m = /^\/(?:hub|git)\/([^/]+)/.exec(target.pathname);
+    return m ? { id: m[1], origin: target.origin } : null;
+  };
+  on("GET", "/remote/lesson", (ctx) => {
+    if (!ctx.user) return ctx.send(401, "Please sign in.");
+    const found = remoteId(ctx);
+    const l = found && state.lessons.get(found.id);
+    if (!l) return ctx.send(404, "No lesson was found at that address.");
+    const view = fullLesson(l);
+    ctx.json(200, {
+      lesson: {
+        url: `${found.origin}/hub/${l.id}`,
+        origin: found.origin,
+        title: view.title,
+        author: view.author,
+        sectionCount: view.sectionCount,
+        createdAt: view.createdAt,
+        doc: view.doc,
+        packUrl: state.packs.has(l.id)
+          ? `${found.origin}/git/${l.id}/pack`
+          : null,
+      },
+    });
+  });
+  on("GET", "/remote/pack", (ctx) => {
+    if (!ctx.user) return ctx.send(401, "Please sign in.");
+    const found = remoteId(ctx);
+    const p = found && state.packs.get(found.id);
+    if (!p) return ctx.send(404, "No history");
+    ctx.send(200, p.packfile, "application/x-git-packfile", {
+      "X-Git-Head": p.head,
+      "X-Git-Refs": JSON.stringify(p.refs),
+    });
   });
 
   // ---------------------------------------------------------------- notifications

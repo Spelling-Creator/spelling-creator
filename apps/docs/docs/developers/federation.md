@@ -149,6 +149,64 @@ Asked for the whole collection at once, which is what Fedify does to gather a
 delivery's recipients, it answers with every follower in one go rather than
 paging through its own table.
 
+## Forking a lesson from another instance
+
+The attachments on an Article are what makes this possible: a lesson on any
+federating instance can be forked here with the full history a local fork gets,
+and the fork records where it came from.
+
+The hub's **From another instance** button takes the address of a lesson page
+elsewhere and hands it to the editor (through `REMOTE_FORK_REQUEST_KEY` in
+`sessionStorage`, the way a local fork request travels). The editor cannot read
+the other instance itself: that instance's API only answers cross-origin reads
+from its own app, which is right. So this instance's API reads for it, on the
+signed-in caller's behalf:
+
+| Route                             | Does                                                                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /remote/lesson?url=<page>`   | Finds the lesson through ActivityPub and answers `{ lesson: { url, origin, title, author, sectionCount, createdAt, doc, packUrl } }`.   |
+| `GET /remote/pack?url=<pack url>` | Fetches the lesson's packed history and passes it through, tip and branch map in `X-Git-Head` and `X-Git-Refs` as from `/git/:id/pack`. |
+
+Both need a `Bearer` token and answer `501` on an instance that does not
+federate. Both are shaped around the fact that the server is fetching an
+address a visitor typed:
+
+- The lesson is found with Fedify's `lookupObject`, whose document loader
+  refuses private network addresses and applies the same rule to redirects.
+  What comes back has to be an `Article`, and the two links it carries have to
+  be on the Article's own origin, so the only host the server reaches on a
+  visitor's say-so is one Fedify has already vetted. An Article on this very
+  hub is refused with a pointer to the lesson's own Fork action.
+- The pack proxy fetches one shape of URL only, `/git/<id>/pack` on a public
+  address, follows no redirects, caps the body at the pack limit, and checks
+  the bytes are a packfile before passing them on.
+
+With the document and the pack in hand the editor does what a local fork does
+(`forkRemoteLessonRepo` in `core/browser/git/sync`): clones the pack into the
+new lesson's repository, so the fork shares the original's commits and oids,
+and records the origin, which the lesson page shows as "Forked from the
+original on `<host>`". It is kept in `lessons.forked_from_url`, sent as
+`forkedFromUrl` on `POST /lessons`, since nothing in this database can be a
+foreign key to a row elsewhere; a lesson has one pointer home or the other,
+never both.
+
+Pictures are the one part that is copied rather than cloned. The document
+refers to them by content hash, and the hashes belong to the other instance's
+store. The browser fetches each one from there (an instance's `/images/:hash`
+answers any origin, as this one's does), keeps it like a picture the user
+added, and rewrites the reference to the hash of the bytes it stored, which are
+the compressed form the other instance serves. That rewrite is what lets the
+normal save-to-cloud upload them here under a hash the server can verify. It
+also means the fork's first commit touches every picture block, which is an
+honest record of what happened to them. A picture that cannot be fetched keeps
+its old reference and the editor says how many are missing. See
+`copyRemoteImages` in `core/browser/imageRef`.
+
+Not done yet: pulling the original's later changes into a remote fork. The
+clone makes that merge possible (the shared ancestry is real), but the sync
+action is keyed on a local `forkedFrom` id today and stays hidden for a remote
+one.
+
 ## Per host
 
 Fedify needs two stores from the host, and the [platform seam](./platform-seam.md)

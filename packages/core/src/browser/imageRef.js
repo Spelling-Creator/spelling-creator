@@ -48,6 +48,59 @@ export async function storeImageBytes(bytes, mime) {
   return { hash, mime, ext: extFromMime(mime) };
 }
 
+/**
+ * Bring the pictures of a lesson forked from another instance over here.
+ *
+ * The document's image refs point at that instance's store, which this hub
+ * knows nothing about, so each picture is fetched from there (its image route
+ * answers any origin, as ours does), kept locally like a picture the user
+ * added, and referenced afresh. The ref changes, because the bytes served are
+ * the compressed form the other instance stores and the hash is of what is
+ * stored here; that is also what lets the normal save-to-cloud upload them
+ * under a hash the server can verify. A picture that cannot be fetched keeps
+ * its old ref and is reported, rather than failing the fork.
+ *
+ * @param {object} doc
+ * @param {string} origin  The other instance's origin, e.g. `https://other.example`.
+ * @returns {Promise<{ doc: object, copied: number, failed: number }>}
+ */
+export async function copyRemoteImages(doc, origin) {
+  const base = origin.replace(/\/$/, "");
+  const refs = new Map();
+  let failed = 0;
+  for (const section of doc?.sections || []) {
+    for (const block of section?.blocks || []) {
+      const hash = block?.image?.hash;
+      if (!hash || block.src || refs.has(hash)) continue;
+      try {
+        const res = await fetch(`${base}/images/${hash}`);
+        if (!res.ok) throw new Error(`Image fetch failed (${res.status}).`);
+        const blob = await res.blob();
+        const mime = blob.type || block.image.mime || "image/webp";
+        refs.set(hash, await storeImageBytes(blob, mime));
+      } catch {
+        failed += 1;
+      }
+    }
+  }
+  if (refs.size === 0) return { doc, copied: 0, failed };
+  return {
+    doc: {
+      ...doc,
+      sections: doc.sections.map((section) => ({
+        ...section,
+        blocks: (section.blocks || []).map((block) =>
+          block?.image?.hash && refs.has(block.image.hash)
+            ? { ...block, image: refs.get(block.image.hash) }
+            : block,
+        ),
+      })),
+    },
+    copied: refs.size,
+    failed,
+  };
+}
+
 // Resolve an image block to a usable `<img>` src. Returns { url, revoke } where
 // revoke() releases an object URL (a no-op for data:/https: URLs).
 export async function resolveImageSrc(block) {

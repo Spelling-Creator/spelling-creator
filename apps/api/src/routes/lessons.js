@@ -5,7 +5,7 @@
 import { supabaseHeaders, verifySupabaseUser } from '../lib/supabase.js';
 import { authorFromUser, bearerToken, clientIp, displayNameOf, isModeratorRole, verifyUserAndRole } from '../lib/auth.js';
 import { bannedResponse } from '../lib/bans.js';
-import { fetchLessonRow, isTrustedCollaborator, rowToLesson } from '../lib/lesson.js';
+import { fetchLessonRow, forkedFromUrlOf, isTrustedCollaborator, rowToLesson } from '../lib/lesson.js';
 import { fetchRatingStats } from '../lib/ratings.js';
 import { LESSON_ID_RE, deleteLessonGit, deleteLessonPullGit } from '../lib/lessonGit.js';
 import { announceLesson } from '../lib/federation/index.js';
@@ -79,7 +79,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
 
 		const query = `author_id=eq.${encodeURIComponent(
 			user.id,
-		)}&select=id,author_id,title,author,section_count,published,forked_from,created_at&order=created_at.desc`;
+		)}&select=id,author_id,title,author,section_count,published,forked_from,forked_from_url,created_at&order=created_at.desc`;
 		let res;
 		try {
 			res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
@@ -102,7 +102,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
 	// turns out to need it — a normal published, non-shadowbanned read stays
 	// token-free.
 	if (request.method === 'GET' && id) {
-		const query = `id=eq.${encodeURIComponent(id)}&select=id,author_id,title,author,section_count,published,shadowbanned,author_ip,forked_from,created_at,doc&limit=1`;
+		const query = `id=eq.${encodeURIComponent(id)}&select=id,author_id,title,author,section_count,published,shadowbanned,author_ip,forked_from,forked_from_url,created_at,doc&limit=1`;
 		let res;
 		try {
 			res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
@@ -169,7 +169,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
 	// excluded; section_count gives the summary its count without shipping every block.
 	if (request.method === 'GET') {
 		const query =
-			'published=eq.true&shadowbanned=eq.false&select=id,author_id,title,author,section_count,published,forked_from,created_at&order=created_at.desc';
+			'published=eq.true&shadowbanned=eq.false&select=id,author_id,title,author,section_count,published,forked_from,forked_from_url,created_at&order=created_at.desc';
 		let res;
 		try {
 			res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
@@ -231,6 +231,9 @@ export async function handleLessons(request, env, url, cors, ctx) {
 		// and merge against (see web/src/lib/git/sync.js). A bad id is dropped rather
 		// than rejected — losing the link is survivable, failing the save is not.
 		const forkedFrom = typeof body.forkedFrom === 'string' && LESSON_ID_RE.test(body.forkedFrom) ? body.forkedFrom : null;
+		// Or the page it was forked from on another instance (see routes/remote.js).
+		// One or the other: a lesson from elsewhere has no row here to point at.
+		const forkedFromUrl = forkedFrom ? null : forkedFromUrlOf(body.forkedFromUrl);
 
 		const insert = {
 			author_id: user.id,
@@ -239,21 +242,25 @@ export async function handleLessons(request, env, url, cors, ctx) {
 			doc,
 			published,
 			forked_from: forkedFrom,
+			forked_from_url: forkedFromUrl,
 			// Recorded so an admin can later ban the address from a lesson of theirs.
 			author_ip: clientIp(env, request) || null,
 		};
 
 		let res;
 		try {
-			res = await fetch(`${base}/rest/v1/lessons?select=id,author_id,title,author,section_count,published,forked_from,created_at`, {
-				method: 'POST',
-				headers: {
-					...supabaseHeaders(env),
-					'Content-Type': 'application/json',
-					Prefer: 'return=representation',
+			res = await fetch(
+				`${base}/rest/v1/lessons?select=id,author_id,title,author,section_count,published,forked_from,forked_from_url,created_at`,
+				{
+					method: 'POST',
+					headers: {
+						...supabaseHeaders(env),
+						'Content-Type': 'application/json',
+						Prefer: 'return=representation',
+					},
+					body: JSON.stringify(insert),
 				},
-				body: JSON.stringify(insert),
-			});
+			);
 		} catch (e) {
 			return textResponse('Could not reach the lesson store.', 502, cors);
 		}
@@ -356,7 +363,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
 			res = await fetch(
 				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(
 					id,
-				)}&select=id,author_id,title,author,section_count,published,shadowbanned,forked_from,created_at`,
+				)}&select=id,author_id,title,author,section_count,published,shadowbanned,forked_from,forked_from_url,created_at`,
 				{
 					method: 'PATCH',
 					headers: {

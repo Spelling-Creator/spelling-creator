@@ -40,7 +40,12 @@ import {
   mergeBase,
   packRepo,
 } from "../../git/pack.js";
-import { fetchPack, fetchRefs, pushPack } from "../../git/remote.js";
+import {
+  fetchPack,
+  fetchRefs,
+  fetchRemotePackFile,
+  pushPack,
+} from "../../git/remote.js";
 import {
   closePullRequest,
   createPullRequest,
@@ -886,6 +891,23 @@ export async function forkLessonRepo(
   targetRepoId = DRAFT_REPO,
 ) {
   const pack = await fetchPack(sourceLessonId).catch(() => null);
+  return cloneForFork(pack, targetRepoId);
+}
+
+/**
+ * Fork a lesson that lives on another instance: the same clone, from the pack
+ * this hub's API fetched there on our behalf (see fetchRemotePackFile). The
+ * result is as much a clone as a fork from here, same commits and same oids,
+ * which is what a later sync against that instance would merge on.
+ */
+export async function forkRemoteLessonRepo(packUrl, targetRepoId, accessToken) {
+  const pack = await fetchRemotePackFile(packUrl, accessToken).catch(
+    () => null,
+  );
+  return cloneForFork(pack, targetRepoId);
+}
+
+async function cloneForFork(pack, targetRepoId) {
   if (!pack) return null;
 
   // A fork starts from a clean repo — anything already under this id belongs to

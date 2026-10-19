@@ -12,7 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, registerFrontend, wantsActivityPub } from '../../app.js';
 import { lessonContentHtml, lessonExcerpt } from './article.js';
 import { builder } from './builder.js';
-import { announceLesson, federationEnabled, federationFor, federationOrigin } from './index.js';
+import { announceLesson, federationEnabled, federationFor, federationOrigin, fetchRemoteLesson } from './index.js';
+import { remotePackPath } from './remote.js';
 
 const ORIGIN = 'https://hub.test';
 const API_KEY = 'service-role-key';
@@ -94,16 +95,18 @@ function filtersOf(url) {
 /**
  * The slice of Supabase the federation reads: GoTrue's admin user lookup, and
  * PostgREST over the lessons, keys and followers tables. Anything else is a
- * remote server, recorded in `remote` and answered 202 so a delivery succeeds.
+ * remote server, recorded in `remote` and answered from `remoteRoutes` by exact
+ * URL, or 202 so a delivery succeeds.
  */
-function fakeSupabase(db) {
+function fakeSupabase(db, remoteRoutes = {}) {
 	const remote = [];
 	async function handle(input, init = {}) {
 		const request = input instanceof Request ? input : new Request(input, init);
 		const url = new URL(request.url);
 		if (url.origin !== 'https://db.test') {
 			remote.push(request);
-			return new Response(null, { status: 202 });
+			const route = remoteRoutes[url.href];
+			return route ? route() : new Response(null, { status: 202 });
 		}
 		if (request.headers.get('apikey') !== API_KEY) return new Response('{}', { status: 401 });
 
@@ -401,6 +404,86 @@ describe('followers', () => {
 		announceLesson({ ...env(), FEDERATION_ORIGIN: '' }, { waitUntil: (p) => waited.push(p) }, db.lessons[0], 'create');
 		announceLesson(env(), { waitUntil: (p) => waited.push(p) }, { id: LESSON }, 'create');
 		expect(waited).toHaveLength(0);
+	});
+});
+
+describe('a lesson on another instance', () => {
+	const REMOTE = '55555555-5555-4555-8555-555555555555';
+	const page = `https://remote.test/hub/${REMOTE}`;
+	const activityJson = (body) => () => Response.json(body, { headers: { 'content-type': 'application/activity+json' } });
+	const article = (overrides = {}) =>
+		activityJson({
+			'@context': 'https://www.w3.org/ns/activitystreams',
+			id: page,
+			type: 'Article',
+			attributedTo: 'https://remote.test/users/bob',
+			name: 'Volcanoes',
+			url: page,
+			attachment: [
+				{ type: 'Link', href: `https://remote.test/lessons/${REMOTE}`, mediaType: 'application/json' },
+				{ type: 'Link', href: `https://remote.test/git/${REMOTE}/pack`, mediaType: 'application/x-git-packfile' },
+			],
+			...overrides,
+		});
+	const remoteDoc = { title: 'Volcanoes', sections: [{ id: 's', name: 'One', blocks: [] }] };
+	const lessonJson = () =>
+		Response.json({
+			lesson: {
+				id: REMOTE,
+				title: 'Volcanoes',
+				author: 'Bob',
+				sectionCount: 1,
+				createdAt: '2026-09-01T00:00:00.000Z',
+				doc: { ...remoteDoc, trustedCollaborators: [{ email: 'x@y' }] },
+			},
+		});
+
+	const withRemote = (routes) => {
+		server = fakeSupabase(db, routes);
+		vi.stubGlobal('fetch', server.fetch);
+	};
+
+	it('finds the lesson behind its page and the two links a fork needs', async () => {
+		withRemote({ [page]: article(), [`https://remote.test/lessons/${REMOTE}`]: lessonJson });
+		const lesson = await fetchRemoteLesson(env(), new URL(page));
+		expect(lesson.url).toBe(page);
+		expect(lesson.origin).toBe('https://remote.test');
+		expect(lesson.title).toBe('Volcanoes');
+		expect(lesson.author).toBe('Bob');
+		expect(lesson.packUrl).toBe(`https://remote.test/git/${REMOTE}/pack`);
+		expect(lesson.doc.sections).toHaveLength(1);
+		// Other people's email addresses never come along, whatever the other end sent.
+		expect(lesson.doc.trustedCollaborators).toBeUndefined();
+	});
+
+	it('refuses a lesson on this very hub', async () => {
+		withRemote({ [`${ORIGIN}/hub/${LESSON}`]: article({ id: `${ORIGIN}/hub/${LESSON}` }) });
+		await expect(fetchRemoteLesson(env(), new URL(`${ORIGIN}/hub/${LESSON}`))).rejects.toMatchObject({ status: 400 });
+	});
+
+	it('answers not found for an address with no Article behind it', async () => {
+		withRemote({ [page]: () => new Response('nope', { status: 404 }) });
+		await expect(fetchRemoteLesson(env(), new URL(page))).rejects.toMatchObject({ status: 404 });
+	});
+
+	it("ignores links that point off the Article's own origin", async () => {
+		withRemote({
+			[page]: article({
+				attachment: [
+					{ type: 'Link', href: `https://elsewhere.test/lessons/${REMOTE}`, mediaType: 'application/json' },
+					{ type: 'Link', href: `https://elsewhere.test/git/${REMOTE}/pack`, mediaType: 'application/x-git-packfile' },
+				],
+			}),
+		});
+		await expect(fetchRemoteLesson(env(), new URL(page))).rejects.toMatchObject({ status: 502 });
+		expect(server.remote.some((r) => r.url.startsWith('https://elsewhere.test'))).toBe(false);
+	});
+
+	it('only ever proxies a lesson history address', () => {
+		expect(remotePackPath(new URL(`https://remote.test/git/${REMOTE}/pack`))).toBe(REMOTE);
+		expect(remotePackPath(new URL('https://remote.test/git/not-an-id/pack'))).toBeNull();
+		expect(remotePackPath(new URL(`https://remote.test/images/${'a'.repeat(64)}`))).toBeNull();
+		expect(remotePackPath(new URL(`https://remote.test/git/${REMOTE}/refs`))).toBeNull();
 	});
 });
 

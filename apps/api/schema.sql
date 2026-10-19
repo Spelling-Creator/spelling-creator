@@ -44,6 +44,14 @@ alter table public.lessons add column if not exists forked_from uuid references 
 -- Forks are looked up by their origin ("what was forked from this lesson?").
 create index if not exists lessons_forked_from_idx on public.lessons (forked_from);
 
+-- The lesson this one was forked from when that lesson lives on ANOTHER
+-- instance: the URL of its page there, found through federation (see
+-- /docs/developers/federation). Null for an original and for a fork of a
+-- lesson on this hub, which `forked_from` records instead. Nothing here can
+-- point at that row, so this is the pointer home for a remote fork: what the
+-- lesson page shows as the origin, and what a later sync would fetch from.
+alter table public.lessons add column if not exists forked_from_url text;
+
 -- Listing is ordered newest-first; index the sort key.
 create index if not exists lessons_created_at_idx on public.lessons (created_at desc);
 

@@ -28,6 +28,8 @@
   },
   "toolbar": {
     "description": "Browse lessons shared by the community. Open one to preview it.",
+    "remoteTooltip": "Copy a lesson from another instance",
+    "remoteAria": "copy a lesson from another instance",
     "feedTooltip": "Subscribe to the latest lessons (RSS)",
     "feedAria": "latest lessons RSS feed",
     "refreshTooltip": "Refresh",
@@ -59,6 +61,17 @@
   "errors": {
     "loadFailed": "Could not load lessons.",
     "deleteFailed": "Could not delete this lesson."
+  },
+  "remoteDialog": {
+    "title": "Copy a lesson from another instance",
+    "description": "Paste the address of a lesson page on another Spelling Creator hub. It opens in the editor as a fork, with its history, and you can save it to this hub as your own.",
+    "urlLabel": "Lesson address",
+    "urlPlaceholder": "https://other.example/hub/...",
+    "invalid": "That is not a web address.",
+    "signIn": "Sign in first: the hub fetches the lesson for you.",
+    "storageUnavailable": "Your browser would not let the hub hand the lesson to the editor.",
+    "cancel": "Cancel",
+    "copy": "Open in the editor"
   },
   "deleteDialog": {
     "title": "Delete this lesson?",

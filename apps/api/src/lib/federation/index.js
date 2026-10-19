@@ -64,7 +64,13 @@ export function federationEnabled(env) {
 /** The federation modules, loaded once. */
 let modules;
 function fedify() {
-	if (!modules) modules = Promise.all([import('./builder.js'), import('./article.js')]).then(([b, a]) => ({ ...b, ...a }));
+	if (!modules) {
+		modules = Promise.all([import('./builder.js'), import('./article.js'), import('./remote.js')]).then(([b, a, r]) => ({
+			...b,
+			...a,
+			...r,
+		}));
+	}
 	return modules;
 }
 
@@ -148,6 +154,33 @@ export function announceLesson(env, executionCtx, row, kind) {
 		console.error(`federation: could not send ${kind} for lesson ${row.id}:`, error);
 	});
 	if (executionCtx && typeof executionCtx.waitUntil === 'function') executionCtx.waitUntil(job);
+}
+
+/**
+ * A lesson on another federating instance, found through its page URL, as the
+ * material for a fork here: its document, where its history is, and where it
+ * came from. See remote.js. Throws a `RemoteLessonError` with the status to
+ * answer with, or a plain Error when federation is off here.
+ */
+export async function fetchRemoteLesson(env, url) {
+	const ctx = await federationContext(env);
+	const { RemoteLessonError, lookupRemoteLesson } = await fedify();
+	if (!ctx) throw new RemoteLessonError('This instance does not federate, so it cannot copy lessons from others.', 501);
+	return lookupRemoteLesson(ctx, url);
+}
+
+/**
+ * Refuse a URL this server must not fetch for a visitor. See remote.js.
+ */
+export async function assertRemoteFetchable(env, url) {
+	const { assertFetchable } = await fedify();
+	return assertFetchable(env, url);
+}
+
+/** The lesson id in a remote history URL, or null when it is not one. */
+export async function remotePackLessonId(url) {
+	const { remotePackPath } = await fedify();
+	return remotePackPath(url);
 }
 
 async function deliver(env, row, kind) {

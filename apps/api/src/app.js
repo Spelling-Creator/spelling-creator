@@ -38,6 +38,7 @@ import { handleLessonResponses, handleLessonResponseDelete } from './routes/less
 import { handleTextFeedback } from './routes/feedback.js';
 import { handleNotifications } from './routes/notifications.js';
 import { handleProfile } from './routes/profile.js';
+import { handleRemoteLesson, handleRemotePack } from './routes/remote.js';
 import { handleUsers } from './routes/users.js';
 import { handleFollow, handleFollowList, handleFollowingFeed } from './routes/follows.js';
 import { handleModeration } from './routes/moderation.js';
@@ -162,6 +163,12 @@ export function createApp() {
 	// can be told about it after the response has gone (see announceLesson).
 	app.all('/lessons', (c) => handleLessons(req(c), c.env, urlOf(c), cors(c), c.executionCtx));
 	app.all('/lessons/*', (c) => handleLessons(req(c), c.env, urlOf(c), cors(c), c.executionCtx));
+
+	// A lesson on another federating instance, read on a signed-in visitor's
+	// behalf so it can be forked here: the lesson itself, then its packed history
+	// (see routes/remote.js). Its own top-level path for the reason /git has one.
+	app.all('/remote/lesson', (c) => handleRemoteLesson(req(c), c.env, urlOf(c), cors(c)));
+	app.all('/remote/pack', (c) => handleRemotePack(req(c), c.env, urlOf(c), cors(c)));
 
 	// Negative feedback on a cached AI text suggestion (Supabase-JWT gated, not
 	// Turnstile, so handled before the AI flow).
