@@ -639,6 +639,13 @@ lost when it stops. That is the right trade for an instance with a handful of
 followers; see [Per host](./federation.md#per-host) for where a durable queue
 would go.
 
+To try federation between two instances on one machine or private network,
+whose origins are private addresses, set `FEDERATION_ALLOW_PRIVATE_ADDRESSES=true`
+on both; without it each refuses to talk to the other, as it should on the
+internet. Two compose stacks on one machine need their own directory, `.env`
+and `COMPOSE_PROJECT_NAME`, and different `PUBLIC_PORT`s; see
+[Trying it with two instances](./federation.md#trying-it-with-two-instances).
+
 ## Notes on running it
 
 **Put a reverse proxy in front.** The process serves static files itself so that

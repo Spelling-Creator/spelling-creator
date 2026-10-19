@@ -202,6 +202,35 @@ from or deliver to private network addresses. That refusal is what stops a
 remote actor document from pointing the server at its own network, so the
 switch is for one thing only: two instances on one machine, in development.
 
+## Trying it with two instances
+
+Federation is server to server, so a test needs two instances that can each
+reach the other's `FEDERATION_ORIGIN`, not only a browser that can reach both.
+A development Worker on a laptop and a compose stack on another machine do not
+qualify unless the laptop is reachable from that machine under the very name
+its origin uses. Two compose stacks on one Docker host do, with the host's
+address on its network as both origins:
+
+1. On the Docker host, from a checkout, build the image once with
+   `docker compose -f docker-compose.yml -f compose.build.yml build` and
+   `IMAGE_TAG` set in `.env` to a name of your own, so neither stack pulls the
+   published image instead.
+2. Make two directories, each with its own `.env` from
+   `./scripts/generate-env.sh --target <dir>/.env`, and in each set
+   `COMPOSE_PROJECT_NAME` (so the two stacks do not share containers or
+   volumes), a different `PUBLIC_PORT`, `PUBLIC_URL` and `FEDERATION_ORIGIN`
+   both to `http://<host address>:<that port>`, `PUBLIC_HOSTNAME` to the
+   address, the same `IMAGE_TAG`, and `FEDERATION_ALLOW_PRIVATE_ADDRESSES=true`.
+3. `docker compose up -d` in each. `docker compose logs app` shows the
+   `federation` line of the dependency check, with the origin it is on at.
+
+Then, in a browser that can reach the host (over SSH, `ssh -L` for each port
+works, since the pages only ever talk to their own origin): sign in on each,
+publish a lesson on one, and on the other paste that lesson's page address into
+**Copy a lesson from another instance** on the hub. For the follow side, `curl`
+one instance's WebFinger from the other host, or follow an author from any
+fediverse account that can reach the address.
+
 ## Schema
 
 `apps/api/schema.sql` adds two tables, both with row level security on and no
