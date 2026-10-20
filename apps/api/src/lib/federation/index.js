@@ -24,13 +24,30 @@ import { federationKvStore, federationQueue } from '../../platform/index.js';
 import { supabaseBase, supabaseConfigured } from '../supabase.js';
 import { removeFollowersByInbox } from './store.js';
 
-/** The configured origin, normalized, or '' when federation is off. */
+/**
+ * Whether this instance is a test one that may talk to private addresses, and
+ * so may also run on plain http (see federationOrigin). Never on the internet.
+ */
+export function federationTestMode(env) {
+	return String(env?.FEDERATION_ALLOW_PRIVATE_ADDRESSES || '').toLowerCase() === 'true';
+}
+
+/**
+ * The configured origin, normalized, or '' when federation is off.
+ *
+ * https only. The origin is written into every actor and object id, and other
+ * servers keep those ids for good, so an instance that federated over plain
+ * http would have its followers pinned to an address anyone on the path can
+ * read and rewrite. The one exception is a test pair on a private network
+ * (FEDERATION_ALLOW_PRIVATE_ADDRESSES), which has no certificates to use.
+ */
 export function federationOrigin(env) {
 	const raw = (env?.FEDERATION_ORIGIN || '').toString().trim();
 	if (!raw) return '';
 	try {
 		const url = new URL(raw);
-		return url.protocol === 'https:' || url.protocol === 'http:' ? url.origin : '';
+		if (url.protocol === 'https:') return url.origin;
+		return url.protocol === 'http:' && federationTestMode(env) ? url.origin : '';
 	} catch {
 		return '';
 	}
@@ -63,7 +80,13 @@ export function federationFor(env) {
 	if (!federationEnabled(env)) return Promise.resolve(null);
 	let pending = built.get(env);
 	if (!pending) {
-		pending = build(env);
+		// A build that fails is forgotten rather than kept, so the next request
+		// tries again instead of every request failing on the same rejection for
+		// the life of the process.
+		pending = build(env).catch((error) => {
+			built.delete(env);
+			throw error;
+		});
 		built.set(env, pending);
 	}
 	return pending;
@@ -82,7 +105,7 @@ async function build(env) {
 		// what stops a remote actor document from pointing this server at its own
 		// network. Two instances on one machine, in development, are exactly that
 		// case, so it can be switched off there and nowhere else.
-		allowPrivateAddress: String(env.FEDERATION_ALLOW_PRIVATE_ADDRESSES || '').toLowerCase() === 'true',
+		allowPrivateAddress: federationTestMode(env),
 	});
 	// A remote inbox that is gone for good (its server answers 404 or 410) is
 	// no longer anywhere to deliver to. Forgetting the followers behind it is

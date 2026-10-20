@@ -55,10 +55,12 @@ export function decodeKey(stored) {
  * @param {string} config.url      Base URL of the PostgREST server (or Supabase project).
  * @param {string} config.apiKey   The service-role key.
  * @param {string} [config.table]  Defaults to 'kv_store'.
+ * @param {number} [config.pageRows] Rows per request when listing. Defaults to
+ *   500, under PostgREST's usual max-rows; smaller only in tests.
  * @param {typeof fetch} [config.fetch] Injectable for tests.
  */
 export function postgrestFedifyKv(config) {
-	const { url, apiKey, table = TABLE, fetch: doFetch = fetch } = config;
+	const { url, apiKey, table = TABLE, pageRows = 500, fetch: doFetch = fetch } = config;
 	const base = `${url.replace(/\/$/, '')}/rest/v1/${table}`;
 	const headers = { apikey: apiKey, Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
 
@@ -74,6 +76,19 @@ export function postgrestFedifyKv(config) {
 		} catch {
 			return undefined;
 		}
+	}
+
+	/** The rows a select answers, or none when the store cannot be reached. */
+	async function readRows(url) {
+		let response;
+		try {
+			response = await doFetch(url, { headers });
+		} catch {
+			return [];
+		}
+		if (!response.ok) return [];
+		const rows = await response.json().catch(() => []);
+		return Array.isArray(rows) ? rows : [];
 	}
 
 	async function remove(stored) {
@@ -125,25 +140,35 @@ export function postgrestFedifyKv(config) {
 		},
 
 		async *list(prefix) {
-			// The encoding leaves no LIKE wildcard in a key, so `*` (PostgREST's
-			// spelling of `%`) matches exactly the keys under the prefix. An empty
-			// prefix lists everything of Fedify's and nothing of anyone else's.
-			const pattern = `${prefix && prefix.length ? encodeKey(prefix) : PREFIX}*`;
-			let response;
-			try {
-				response = await doFetch(`${base}?key=like.${encodeURIComponent(pattern)}&select=key,value,expires_at&order=key.asc`, {
-					headers,
+			// Keys under a prefix are the prefix itself and anything below it on a
+			// segment boundary, as Fedify compares keys segment by segment:
+			// ['_fedify', 'publicKey'] lists ['_fedify', 'publicKey', 'k'] and not
+			// ['_fedify', 'publicKeyX']. `encodeSegment` escapes every `/` inside a
+			// segment, so a literal `/` is always a boundary, and it leaves no LIKE
+			// wildcard in a key, so `*` (PostgREST's spelling of `%`) matches exactly
+			// what follows. An empty prefix lists everything of Fedify's and nothing
+			// of anyone else's.
+			const root = prefix && prefix.length ? encodeKey(prefix) : null;
+			const select = 'select=key,value,expires_at';
+			const toEntries = (rows) =>
+				rows.flatMap((row) => {
+					const value = liveValue(row);
+					const key = decodeKey(row.key || '');
+					return value === undefined || !key ? [] : [{ key, value }];
 				});
-			} catch {
-				return;
+
+			if (root) {
+				for (const entry of toEntries(await readRows(`${base}?key=eq.${encodeURIComponent(root)}&${select}`))) yield entry;
 			}
-			if (!response.ok) return;
-			const rows = await response.json().catch(() => []);
-			for (const row of Array.isArray(rows) ? rows : []) {
-				const value = liveValue(row);
-				const key = decodeKey(row.key || '');
-				if (value === undefined || !key) continue;
-				yield { key, value };
+
+			// In pages, because PostgREST caps a response at its max-rows setting
+			// without saying so, and a listing cut short would leave Fedify thinking
+			// it had seen every entry.
+			const pattern = encodeURIComponent(`${root ? `${root}/` : PREFIX}*`);
+			for (let offset = 0; ; offset += pageRows) {
+				const rows = await readRows(`${base}?key=like.${pattern}&${select}&order=key.asc&limit=${pageRows}&offset=${offset}`);
+				for (const entry of toEntries(rows)) yield entry;
+				if (rows.length < pageRows) return;
 			}
 		},
 	};

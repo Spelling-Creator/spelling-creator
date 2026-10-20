@@ -59,7 +59,16 @@ export const urlOf = (c) => new URL(c.req.url);
 // paths, which is told apart by its Accept header.
 const fediMiddlewares = new WeakMap();
 async function federationMiddleware(c, next) {
-	const fedi = await federationFor(c.env);
+	// Federation failing to start must not take the rest of the hub with it:
+	// the request carries on without it, and the next one tries again (a failed
+	// build is not cached; see federationFor).
+	let fedi;
+	try {
+		fedi = await federationFor(c.env);
+	} catch (error) {
+		console.error('federation: could not start:', error);
+		fedi = null;
+	}
 	if (!fedi) return next();
 	let middleware = fediMiddlewares.get(fedi);
 	if (!middleware) {

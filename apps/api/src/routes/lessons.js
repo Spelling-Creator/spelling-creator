@@ -356,7 +356,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
 			res = await fetch(
 				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(
 					id,
-				)}&select=id,author_id,title,author,section_count,published,forked_from,created_at`,
+				)}&select=id,author_id,title,author,section_count,published,shadowbanned,forked_from,created_at`,
 				{
 					method: 'PATCH',
 					headers: {
@@ -378,9 +378,11 @@ export async function handleLessons(request, env, url, cors, ctx) {
 
 		// What followers on other servers hear depends on whether the lesson was,
 		// and now is, public. A shadowbanned lesson is never public to them, so a
-		// save to one says nothing; the moderator's toggle speaks for it.
+		// save to one says nothing; the moderator's toggle speaks for it. "Now" is
+		// the row the write returned, so the answer is the saved state rather than
+		// what this handler assumed it would be.
 		const wasPublic = Boolean(existing.published) && !existing.shadowbanned;
-		const isPublic = Boolean(rows[0].published) && !existing.shadowbanned;
+		const isPublic = Boolean(rows[0].published) && !rows[0].shadowbanned;
 		if (isPublic && !wasPublic) announceLesson(env, ctx, { ...rows[0], doc: patch.doc }, 'create');
 		else if (!isPublic && wasPublic) announceLesson(env, ctx, rows[0], 'delete');
 		else if (isPublic) announceLesson(env, ctx, { ...rows[0], doc: patch.doc }, 'update');
@@ -397,7 +399,10 @@ export async function handleLessons(request, env, url, cors, ctx) {
 			}).catch(() => {});
 		}
 
-		return jsonResponse({ lesson: rowToLesson(rows[0]) }, 200, cors);
+		// `shadowbanned` was selected for the decision above and stays out of the
+		// answer: the author saving a hidden lesson must not learn it is hidden.
+		const { shadowbanned: _hidden, ...saved } = rows[0];
+		return jsonResponse({ lesson: rowToLesson(saved) }, 200, cors);
 	}
 
 	// DELETE /lessons/:id — remove a lesson the signed-in user published. Requires

@@ -145,6 +145,14 @@ describe('runDiagnostics — everything working', () => {
 			expect(result.detail).toContain('spelling.example.org');
 		});
 
+		it('says why a plain http origin is off, and what turns it on for a test', async () => {
+			const result = await check({ FEDERATION_ORIGIN: 'http://192.168.5.129:8080' });
+			expect(result.state).toBe('failed');
+			expect(result.fix).toContain('FEDERATION_ALLOW_PRIVATE_ADDRESSES');
+			const test = await check({ FEDERATION_ORIGIN: 'http://192.168.5.129:8080', FEDERATION_ALLOW_PRIVATE_ADDRESSES: 'true' });
+			expect(test.state).toBe('ok');
+		});
+
 		it('fails when the host has nowhere to keep the caches', async () => {
 			const result = await check({}, { federationKv: null });
 			expect(result.state).toBe('failed');

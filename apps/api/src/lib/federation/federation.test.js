@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, registerFrontend, wantsActivityPub } from '../../app.js';
 import { lessonContentHtml, lessonExcerpt } from './article.js';
 import { builder } from './builder.js';
-import { announceLesson, federationEnabled, federationOrigin } from './index.js';
+import { announceLesson, federationEnabled, federationFor, federationOrigin } from './index.js';
 
 const ORIGIN = 'https://hub.test';
 const API_KEY = 'service-role-key';
@@ -258,6 +258,27 @@ describe('configuration', () => {
 		expect(federationEnabled(env())).toBe(true);
 		expect(federationEnabled({ ...env(), FEDERATION_ORIGIN: '' })).toBe(false);
 		expect(federationEnabled(env({ federationKv: null }))).toBe(false);
+	});
+
+	it('federates over https only, except as a test pair on a private network', () => {
+		// The ids carry the origin and other servers keep them for good.
+		expect(federationOrigin({ FEDERATION_ORIGIN: 'http://spellingcreator.org' })).toBe('');
+		expect(federationOrigin({ FEDERATION_ORIGIN: 'http://192.168.5.129:8080', FEDERATION_ALLOW_PRIVATE_ADDRESSES: 'true' })).toBe(
+			'http://192.168.5.129:8080',
+		);
+		expect(federationOrigin({ FEDERATION_ORIGIN: 'ftp://spellingcreator.org', FEDERATION_ALLOW_PRIVATE_ADDRESSES: 'true' })).toBe('');
+	});
+
+	it('tries again after a failed start rather than failing every later request', async () => {
+		const spy = vi.spyOn(builder, 'build').mockRejectedValueOnce(new Error('kv down'));
+		try {
+			const shared = env();
+			await expect(federationFor(shared)).rejects.toThrow('kv down');
+			await expect(federationFor(shared)).resolves.toBeTruthy();
+			expect(spy).toHaveBeenCalledTimes(2);
+		} finally {
+			spy.mockRestore();
+		}
 	});
 });
 

@@ -158,9 +158,17 @@ builder
 		const base = baseOf(ctx);
 		if (!(await fetchPublicUser(env, base, parsed.identifier))) return;
 		// Fedify has verified the Follow was signed by its actor; this fetches
-		// that actor's document, which is where its inbox is.
-		const follower = await follow.getActor(ctx);
+		// that actor's document, which is where its inbox is. Signed as the
+		// followed author: a Follow that arrived at the shared inbox gets an
+		// unsigned loader otherwise, and a server in authorized-fetch mode (secure
+		// mode on Mastodon) refuses to hand its actor to an unsigned request.
+		const documentLoader = await ctx.getDocumentLoader({ identifier: parsed.identifier });
+		const follower = await follow.getActor({ documentLoader, contextLoader: ctx.contextLoader });
 		if (follower?.id == null || follower.inboxId == null) return;
+		// Recorded before the Accept is sent, and a failure here throws past it:
+		// no record and no Accept is a state the follower's server retries out of,
+		// where an Accept for a follow nobody kept would leave it thinking it
+		// follows somebody who never hears from it.
 		await addFollower(env, base, {
 			userId: parsed.identifier,
 			actorId: follower.id.href,

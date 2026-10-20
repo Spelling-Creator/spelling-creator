@@ -24,7 +24,8 @@
 # FEDERATION_ORIGIN is the address that goes into every ActivityPub id this
 # Worker mints. wrangler.jsonc sets the production one, so it has to be
 # overridden with the local address or a local actor would claim to live on
-# the real site.
+# the real site. Federation only runs on an https origin, so it is on under
+# portless and off with PORTLESS=0, whose plain http address it refuses.
 #
 # With PORTLESS=0 there is no PORTLESS_URL, and wrangler runs on its own port
 # (8787) as before.

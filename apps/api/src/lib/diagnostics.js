@@ -406,10 +406,17 @@ function checkFederation(env) {
 	const raw = (env.FEDERATION_ORIGIN || '').toString().trim();
 	if (!raw) return skipped('federation', 'off; set FEDERATION_ORIGIN to the public origin to join the fediverse');
 	const origin = federationOrigin(env);
+	if (!origin && /^http:/i.test(raw)) {
+		return failed(
+			'federation',
+			`FEDERATION_ORIGIN is plain http (${JSON.stringify(raw)}), which only federates as a test pair`,
+			'Use the https address, or set FEDERATION_ALLOW_PRIVATE_ADDRESSES=true on a private test network.',
+		);
+	}
 	if (!origin)
 		return failed(
 			'federation',
-			`FEDERATION_ORIGIN is not an http(s) origin: ${JSON.stringify(raw)}`,
+			`FEDERATION_ORIGIN is not an https origin: ${JSON.stringify(raw)}`,
 			'Use the address a browser types, e.g. https://spelling.example.org.',
 		);
 	if (!federationEnabled(env)) {

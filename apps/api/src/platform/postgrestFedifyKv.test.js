@@ -21,8 +21,10 @@ function likeMatcher(pattern) {
 	return new RegExp(`^${re}$`, 's');
 }
 
-function fakePostgrest() {
+// `maxRows` is PostgREST's own cap on a response, which it applies silently.
+function fakePostgrest({ maxRows = Infinity } = {}) {
 	const rows = new Map();
+	const requests = [];
 
 	async function handle(input, init = {}) {
 		const url = new URL(input);
@@ -51,13 +53,17 @@ function fakePostgrest() {
 			for (const row of matched) rows.delete(row.key);
 			return new Response(null, { status: 204 });
 		}
-		return new Response(JSON.stringify(matched), { status: 200, headers: { 'content-type': 'application/json' } });
+		requests.push(url.search);
+		const offset = Number(url.searchParams.get('offset') || 0);
+		const limit = Math.min(Number(url.searchParams.get('limit') || Infinity), maxRows);
+		const page = matched.slice(offset, offset + limit);
+		return new Response(JSON.stringify(page), { status: 200, headers: { 'content-type': 'application/json' } });
 	}
 
-	return { fetch: handle, rows };
+	return { fetch: handle, rows, requests };
 }
 
-const storeOver = (server) => postgrestFedifyKv({ url: 'https://db.test', apiKey: API_KEY, fetch: server.fetch });
+const storeOver = (server, options = {}) => postgrestFedifyKv({ url: 'https://db.test', apiKey: API_KEY, fetch: server.fetch, ...options });
 
 describe('key encoding', () => {
 	it('round-trips every character a LIKE pattern or the separator would misread', () => {
@@ -121,6 +127,28 @@ describe('postgrestFedifyKv', () => {
 		const all = [];
 		for await (const entry of store.list()) all.push(entry.key[0]);
 		expect(all).toEqual(['_fedify', '_fedify', '_fedify', 'xfedifyx']);
+	});
+
+	it('lists whole segments, never a key that only starts with the same letters', async () => {
+		const store = storeOver(fakePostgrest());
+		await store.set(['_fedify', 'publicKey'], 'exact');
+		await store.set(['_fedify', 'publicKey', 'k'], 'below');
+		await store.set(['_fedify', 'publicKeyX', 'k'], 'neighbour');
+		const listed = [];
+		for await (const entry of store.list(['_fedify', 'publicKey'])) listed.push(entry.value);
+		expect(listed).toEqual(['exact', 'below']);
+	});
+
+	it('pages through a listing longer than one response', async () => {
+		// PostgREST would cut a single unpaged response at max-rows (3 here) and
+		// say nothing; every key has to come back regardless.
+		const server = fakePostgrest({ maxRows: 3 });
+		const store = storeOver(server, { pageRows: 3 });
+		for (let i = 0; i < 8; i++) await store.set(['_fedify', 'remoteDocument', `d${i}`], i);
+		const listed = [];
+		for await (const entry of store.list(['_fedify', 'remoteDocument'])) listed.push(entry.value);
+		expect(listed.sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+		expect(server.requests.filter((q) => q.includes('like.')).length).toBe(3);
 	});
 
 	it('reads an unreachable store as a miss rather than failing the caller', async () => {
