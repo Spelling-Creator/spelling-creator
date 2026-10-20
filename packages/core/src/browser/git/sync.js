@@ -915,17 +915,25 @@ async function cloneForFork(pack, targetRepoId) {
   await deleteRepo(targetRepoId);
 
   const ctx = repoCtx(targetRepoId);
-  // The lesson, and only the lesson. Its author's variations came down in the same
-  // pack — they are in it so that *they* can reach them from another device — but
-  // somebody else's half-finished ideas are not part of what was forked, and
-  // adopting them as branches of the fork would say they were.
-  await cloneFromPack({ ...ctx, ...pack, refs: null });
+  try {
+    // The lesson, and only the lesson. Its author's variations came down in the same
+    // pack — they are in it so that *they* can reach them from another device — but
+    // somebody else's half-finished ideas are not part of what was forked, and
+    // adopting them as branches of the fork would say they were.
+    await cloneFromPack({ ...ctx, ...pack, refs: null });
 
-  // Record where we came from, so the first sync has a base even before it
-  // fetches anything new.
-  await fetchRemotePack({ ...ctx, ...pack, ref: UPSTREAM_REF });
+    // Record where we came from, so the first sync has a base even before it
+    // fetches anything new.
+    await fetchRemotePack({ ...ctx, ...pack, ref: UPSTREAM_REF });
 
-  return readDocAt({ ...ctx, oid: pack.head });
+    return await readDocAt({ ...ctx, oid: pack.head });
+  } catch (error) {
+    // A pack that does not clone, or whose tip is not in it, leaves no
+    // half-made repository behind for the next save to commit on top of: the
+    // lesson starts a history of its own instead, as one with no pack does.
+    await deleteRepo(targetRepoId).catch(() => {});
+    throw error;
+  }
 }
 
 /**

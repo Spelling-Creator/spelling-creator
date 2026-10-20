@@ -5,7 +5,11 @@
 import { hasApi } from "./config.js";
 
 import { getImageBlob } from "@spelling-creator/core/browser/imageStore";
-import { imagePublicUrl } from "@spelling-creator/core/browser/imageRef";
+import {
+  imagePublicUrl,
+  storeImageBytes,
+} from "@spelling-creator/core/browser/imageRef";
+import { MAX_IMAGE_BYTES } from "./image.js";
 
 // Hashes already confirmed present in R2 this session (uploaded, or known to be
 // cloud-sourced). Lets repeated saves of the same lesson skip re-PUTting every
@@ -75,4 +79,92 @@ export async function ensureImagesUploaded(doc, accessToken) {
     await uploadImage(hash, blob, accessToken);
     known.add(hash);
   }
+}
+
+// How many pictures are fetched from another instance at once.
+const COPY_CONCURRENCY = 4;
+
+// Fetch one picture from another instance and keep it here, returning its new
+// ref. Only what this hub's own upload accepts is kept: an image type, within
+// the size limit. A picture kept here is uploaded on every save until it
+// lands, so an `application/octet-stream` object or an error page kept as one
+// would make every later save of the fork fail on it.
+async function copyRemoteImage(base, hash) {
+  const res = await fetch(`${base}/images/${hash}`);
+  if (!res.ok) throw new Error(`Image fetch failed (${res.status}).`);
+  const type = (res.headers.get("content-type") || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (!type.startsWith("image/")) {
+    throw new Error(`Not an image (${type || "no type"}).`);
+  }
+  if (Number(res.headers.get("content-length") || 0) > MAX_IMAGE_BYTES) {
+    throw new Error("Image is too large.");
+  }
+  const blob = await res.blob();
+  if (blob.size === 0 || blob.size > MAX_IMAGE_BYTES) {
+    throw new Error("Image is empty or too large.");
+  }
+  return storeImageBytes(blob, type);
+}
+
+/**
+ * Bring the pictures of a lesson forked from another instance over here.
+ *
+ * The document's image refs point at that instance's store, which this hub
+ * knows nothing about, so each picture (every one collectImageHashes finds)
+ * is fetched from there, a few at a time (an instance's image route answers
+ * any origin, as ours does), kept locally like a picture the user added, and
+ * referenced by the hash of what was kept. That is what lets the normal
+ * save-to-cloud upload it here under a hash the server can verify. The hash
+ * usually differs from the old one, because the other instance serves the
+ * compressed form it stored; when it stored the original, it comes out the
+ * same.
+ *
+ * A picture that cannot be fetched, is not an image this hub would accept, or
+ * cannot be stored keeps its old ref and is counted in `failed`, rather than
+ * failing the fork. Storing hashes with `crypto.subtle`, which a browser only
+ * offers on a secure origin, so on an instance served over plain http at a
+ * network address no picture can be copied (or added at all).
+ *
+ * @param {object} doc
+ * @param {string} origin  The other instance's origin, e.g. `https://other.example`.
+ * @returns {Promise<{ doc: object, copied: number, failed: number }>}
+ */
+export async function copyRemoteImages(doc, origin) {
+  const base = origin.replace(/\/$/, "");
+  const hashes = collectImageHashes(doc);
+  const refs = new Map();
+  let failed = 0;
+  let next = 0;
+  const worker = async () => {
+    while (next < hashes.length) {
+      const hash = hashes[next++];
+      try {
+        refs.set(hash, await copyRemoteImage(base, hash));
+      } catch {
+        failed += 1;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(COPY_CONCURRENCY, hashes.length) }, worker),
+  );
+  if (refs.size === 0) return { doc, copied: 0, failed };
+  return {
+    doc: {
+      ...doc,
+      sections: doc.sections.map((section) => ({
+        ...section,
+        blocks: (section.blocks || []).map((block) =>
+          block?.image?.hash && refs.has(block.image.hash)
+            ? { ...block, image: refs.get(block.image.hash) }
+            : block,
+        ),
+      })),
+    },
+    copied: refs.size,
+    failed,
+  };
 }

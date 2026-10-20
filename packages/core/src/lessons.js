@@ -143,6 +143,25 @@ export async function fetchLesson(id, accessToken) {
 }
 
 /**
+ * Whether this hub can copy lessons from other instances, which it can only
+ * when it federates (GET /remote). Asked before offering the action, so that
+ * an instance that cannot never shows it. False when the API is unreachable or
+ * too old to know, which is the same answer as far as the button is concerned.
+ * @returns {Promise<boolean>}
+ */
+export async function remoteForkAvailable() {
+  if (!hasApi()) return false;
+  try {
+    const res = await fetch(`${apiUrl()}/remote`, { method: "GET" });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
+    return data.available === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * A lesson on another instance, read through this hub's API so it can be forked
  * here. The address is the lesson's page there; the API finds the lesson through
  * federation and answers with its document and where its history can be fetched

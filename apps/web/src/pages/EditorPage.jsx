@@ -128,7 +128,10 @@ import {
   migrateToLibrary,
 } from "@spelling-creator/core/browser/storage";
 import { convertDocImages } from "@spelling-creator/core/browser/imageRef";
-import { ensureImagesUploaded } from "@spelling-creator/core/imagesClient";
+import {
+  copyRemoteImages,
+  ensureImagesUploaded,
+} from "@spelling-creator/core/imagesClient";
 // exportJson is a Blob and an <a> — no heavy dependency, so it stays static.
 // (exportOslfXml loads its XML writer itself, on first use.)
 // The docx/PDF/import pipeline is not: it loads on demand through
@@ -150,7 +153,6 @@ import {
   FORK_REQUEST_KEY,
   REMOTE_FORK_REQUEST_KEY,
 } from "@spelling-creator/core/lessons";
-import { copyRemoteImages } from "@spelling-creator/core/browser/imageRef";
 import {
   fetchPullRequests,
   mergePullRequest,
@@ -1071,6 +1073,7 @@ export default function EditorPage() {
     source,
     published,
     forkedFrom: incomingFork,
+    forkedFromUrl: incomingForkUrl,
     remote,
   }) => {
     await flushCurrentLesson();
@@ -1197,6 +1200,7 @@ export default function EditorPage() {
         lessonId: id,
         published,
         forkedFrom: incomingFork || null,
+        forkedFromUrl: incomingForkUrl || null,
       });
       record = await getLesson(existing.id);
       differs = diffDocs(record?.doc, nextDoc).length > 0;
@@ -1206,6 +1210,7 @@ export default function EditorPage() {
         lessonId: id,
         published,
         forkedFrom: incomingFork || null,
+        forkedFromUrl: incomingForkUrl || null,
       });
     }
     adoptRecord(record);
@@ -1293,8 +1298,10 @@ export default function EditorPage() {
           // a re-save keeps them private until the author chooses to publish.
           published: lesson.published !== false,
           // Re-opening a lesson that is itself a fork keeps its link home, so the
-          // "sync with the original" action stays available across sessions.
+          // "sync with the original" action stays available across sessions,
+          // and so does a fork of a lesson on another instance.
           forkedFrom: lesson.forkedFrom || null,
+          forkedFromUrl: lesson.forkedFromUrl || null,
         }));
     load
       .then((incoming) => {

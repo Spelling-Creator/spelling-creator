@@ -334,6 +334,8 @@ export function createHandler(
     const m = /^\/(?:hub|git)\/([^/]+)/.exec(target.pathname);
     return m ? { id: m[1], origin: target.origin } : null;
   };
+  // The stub can always do it, so the hub always offers it here.
+  on("GET", "/remote", (ctx) => ctx.json(200, { available: true }));
   on("GET", "/remote/lesson", (ctx) => {
     if (!ctx.user) return ctx.send(401, "Please sign in.");
     const found = remoteId(ctx);

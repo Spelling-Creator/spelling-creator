@@ -40,6 +40,7 @@ import {
   fetchMyLessons,
   deleteLesson,
   lessonsFeedUrl,
+  remoteForkAvailable,
   EDIT_REQUEST_KEY,
   REMOTE_FORK_REQUEST_KEY,
 } from "@spelling-creator/core/lessons";
@@ -159,13 +160,29 @@ function LessonRow({ lesson, draft, editable, onEdit, onDelete }) {
 export default function HubPage() {
   const { t } = useTranslation("hub");
   const { user, accessToken } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const origin = useSiteOrigin();
 
-  // "From another instance": the address of a lesson on another hub, to fork
-  // here. The hub only collects the address; the editor fetches the lesson
-  // through this hub's API (the other hub does not answer a browser from here)
-  // and lands it as a fork, the way it does a lesson from this hub. The API
-  // reads on the signed-in caller's behalf, so the dialog asks for a sign-in
-  // first rather than sending somebody to the editor to be told that there.
+  // "Copy a lesson from another instance": the address of a lesson on another
+  // hub, to fork here. The hub only collects the address; the editor fetches
+  // the lesson through this hub's API (the other hub does not answer a browser
+  // from here) and lands it as a fork, the way it does a lesson from this hub.
+  // The API reads on the signed-in caller's behalf, so the dialog asks for a
+  // sign-in first rather than sending somebody to the editor to be told that
+  // there. The button only shows once this instance has said it federates,
+  // since one that does not cannot copy anything.
+  const [remoteAvailable, setRemoteAvailable] = useState(false);
+  useEffect(() => {
+    if (!hasApi()) return undefined;
+    let current = true;
+    remoteForkAvailable().then((available) => {
+      if (current) setRemoteAvailable(available);
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
   const [remoteOpen, setRemoteOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState("");
   const [remoteError, setRemoteError] = useState("");
@@ -199,9 +216,6 @@ export default function HubPage() {
     }
     navigate("/editor");
   };
-  const navigate = useNavigate();
-  const location = useLocation();
-  const origin = useSiteOrigin();
 
   // The published listing the Worker already fetched and rendered, on a
   // server-rendered page load. undefined otherwise — see lib/ssr.jsx.
@@ -387,13 +401,15 @@ export default function HubPage() {
           </p>
           {hasApi() && (
             <div className="flex shrink-0 items-center gap-0.5">
-              <IconActionButton
-                tooltip={t("toolbar.remoteTooltip")}
-                aria-label={t("toolbar.remoteAria")}
-                onClick={openRemote}
-              >
-                <GlobeIcon />
-              </IconActionButton>
+              {remoteAvailable && (
+                <IconActionButton
+                  tooltip={t("toolbar.remoteTooltip")}
+                  aria-label={t("toolbar.remoteAria")}
+                  onClick={openRemote}
+                >
+                  <GlobeIcon />
+                </IconActionButton>
+              )}
               <IconActionButton
                 tooltip={t("toolbar.feedTooltip")}
                 aria-label={t("toolbar.feedAria")}

@@ -14,7 +14,12 @@
 // Because a lesson has more than one possible writer, PUT is a compare-and-swap:
 // see pushPack below.
 import { apiUrl, hasApi } from "../config.js";
-import { DEFAULT_BRANCH, parseRefMap, serializeRefMap } from "./refs.js";
+import {
+  DEFAULT_BRANCH,
+  OID_RE,
+  parseRefMap,
+  serializeRefMap,
+} from "./refs.js";
 
 /** Whether the lesson hub (and so the shared history) is reachable at all. */
 
@@ -110,8 +115,12 @@ export async function fetchRemotePackFile(packUrl, accessToken) {
 
 /** The pack and the refs that travel in its headers, or null for an unusable one. */
 async function packFromResponse(res) {
-  const head = res.headers.get("X-Git-Head");
-  if (!head) return null; // a pack with no tip is unusable
+  const head = (res.headers.get("X-Git-Head") || "").trim();
+  // A pack with no tip is unusable, and so is one whose tip is not a commit
+  // id: cloning it would leave a history pointing at nothing. A remote pack
+  // passes through this hub from somebody else's server, so it is checked
+  // here as well as there.
+  if (!OID_RE.test(head)) return null;
 
   const bytes = new Uint8Array(await res.arrayBuffer());
   if (bytes.byteLength === 0) return null;
