@@ -29,13 +29,15 @@ platform(env) -> {
   cache,           ResponseCache      HTTP response cache (never null; may no-op)
   federationKv,    Fedify KvStore | null       ActivityPub caches
   federationQueue, Fedify MessageQueue | null  outgoing deliveries
+  remoteFetch(input, init) -> Response         fetch for an address a visitor chose
   clientIp(request) -> string
 }
 ```
 
 Handlers reach for these through the named helpers in `platform/index.js`
 (`imageStore`, `gitStore`, `rateLimitStore`, `oauthStateStore`, `responseCache`,
-`federationKvStore`, `federationQueue` and `clientIp`) rather than the object:
+`federationKvStore`, `federationQueue`, `remoteFetch` and `clientIp`) rather
+than the object:
 
 ```js
 import {
@@ -258,10 +260,19 @@ env.PLATFORM = {
   cache: noopCache,
   federationKv: postgrestFedifyKv({ url, apiKey }),
   federationQueue: new InProcessMessageQueue(),
+  // Connects only to public addresses, checked as the socket opens.
+  remoteFetch: publicFetch,
   // NOT `headers.get("x-forwarded-for")`. See below.
   clientIp: clientIpFrom(env),
 };
 ```
+
+`remoteFetch` is the fetch for addresses a visitor chose, such as a lesson on
+another instance. A Worker cannot reach a private network, so on Cloudflare it
+is the ordinary fetch. A Node process can, so there it refuses, when each
+socket opens, any name that resolves to a private address
+(`node/remoteFetch.js`), which is what makes a check-then-fetch safe against
+DNS rebinding. See [Federation](./federation.md#forking-a-lesson-from-another-instance).
 
 One table serves both KV roles there, as one KV namespace could have; they stay
 separate names in the seam so that a host that wants to split them can.

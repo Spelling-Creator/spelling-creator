@@ -155,31 +155,52 @@ The attachments on an Article are what makes this possible: a lesson on any
 federating instance can be forked here with the full history a local fork gets,
 and the fork records where it came from.
 
-The hub's **From another instance** button takes the address of a lesson page
-elsewhere and hands it to the editor (through `REMOTE_FORK_REQUEST_KEY` in
-`sessionStorage`, the way a local fork request travels). The editor cannot read
-the other instance itself: that instance's API only answers cross-origin reads
-from its own app, which is right. So this instance's API reads for it, on the
+The hub's **Copy a lesson from another instance** button takes the address of a
+lesson page elsewhere and hands it to the editor (through
+`REMOTE_FORK_REQUEST_KEY` in `sessionStorage`, the way a local fork request
+travels). The button only appears once `GET /remote` has said this instance
+can copy lessons, which it can when it federates. The editor cannot read the
+other instance itself: that instance's API only answers cross-origin reads from
+its own app, which is right. So this instance's API reads for it, on the
 signed-in caller's behalf:
 
 | Route                             | Does                                                                                                                                    |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /remote`                     | Public. `{ available }`: whether this instance federates, and so whether it can copy lessons at all.                                    |
 | `GET /remote/lesson?url=<page>`   | Finds the lesson through ActivityPub and answers `{ lesson: { url, origin, title, author, sectionCount, createdAt, doc, packUrl } }`.   |
 | `GET /remote/pack?url=<pack url>` | Fetches the lesson's packed history and passes it through, tip and branch map in `X-Git-Head` and `X-Git-Refs` as from `/git/:id/pack`. |
 
-Both need a `Bearer` token and answer `501` on an instance that does not
+The last two need a `Bearer` token and answer `501` on an instance that does not
 federate. Both are shaped around the fact that the server is fetching an
-address a visitor typed:
+address a visitor typed, and every fetch either makes goes through the same
+guards (`lib/federation/remote.js`):
 
-- The lesson is found with Fedify's `lookupObject`, whose document loader
-  refuses private network addresses and applies the same rule to redirects.
-  What comes back has to be an `Article`, and the two links it carries have to
-  be on the Article's own origin, so the only host the server reaches on a
-  visitor's say-so is one Fedify has already vetted. An Article on this very
-  hub is refused with a pointer to the lesson's own Fork action.
-- The pack proxy fetches one shape of URL only, `/git/<id>/pack` on a public
-  address, follows no redirects, caps the body at the pack limit, and checks
-  the bytes are a packfile before passing them on.
+- **No private addresses.** An address written as a private IP is refused up
+  front. On the Node host the connection itself is made by a fetch whose
+  socket lookup refuses any name with a private address among its answers
+  (`node/remoteFetch.js`), so a domain that answers a public address when
+  checked and `127.0.0.1` when fetched (DNS rebinding) gains nothing: the
+  check happens when the socket opens. A Worker cannot reach a private network
+  at all. A test pair (`FEDERATION_ALLOW_PRIVATE_ADDRESSES`) switches this off.
+- **Redirects one by one.** Up to three are followed by hand, each new address
+  checked the same way; the pack proxy follows none.
+- **Bounded reads.** Bodies are read chunk by chunk and dropped the moment they
+  pass the cap (20 MB for a lesson, the pack limit for a history), whatever
+  `Content-Length` says or leaves out, and every fetch has a deadline.
+- **Fedify parses, it does not fetch.** The Article is loaded with those guards
+  and handed to Fedify only to parse. Fedify's own `lookupObject` would fall
+  back to a WebFinger request with its own fetch, outside them. The id
+  of what comes back has to be on the origin that served it, as
+  `lookupObject` requires.
+- **One origin.** It has to be an `Article`, and its two links, and the page
+  the fork will be credited to, all have to be on its own origin, so an
+  Article cannot send the server elsewhere or have a fork claim another hub's
+  lesson. An Article on this very hub is refused with a pointer to the
+  lesson's own Fork action.
+- **Checked headers.** The pack proxy passes a tip only when it is a commit id,
+  and a branch map only when it reads cleanly and agrees with the tip, since
+  both go on to the browser. The browser checks the tip again, and a clone that
+  fails leaves no half-made repository behind.
 
 With the document and the pack in hand the editor does what a local fork does
 (`forkRemoteLessonRepo` in `core/browser/git/sync`): clones the pack into the
@@ -192,18 +213,24 @@ never both.
 
 Pictures are the one part that is copied rather than cloned. The document
 refers to them by content hash, and the hashes belong to the other instance's
-store. The browser fetches each one from there (an instance's `/images/:hash`
-answers any origin, as this one's does), keeps it like a picture the user
-added, and rewrites the reference to the hash of the bytes it stored. Those
-are usually the compressed form the other instance serves, so the hash
-changes and the fork's first commit touches that picture block, an honest
+store. The browser fetches each one from there, a few at a time (an instance's
+`/images/:hash` answers any origin, as this one's does), keeps it like a
+picture the user added, and rewrites the reference to the hash of the bytes it
+stored. Those are usually the compressed form the other instance serves, so the
+hash changes and the fork's first commit touches that picture block, an honest
 record of what happened to it; when the other instance kept the original, the
 hash comes out the same and nothing changes. Either way the picture is now in
 this browser's store, which is what lets the normal save-to-cloud upload it
-here under a hash the server can verify. A picture that cannot be fetched or
-stored keeps its old reference, and the editor says how many could not be
-copied, and also whether the history failed to come along. See
-`copyRemoteImages` in `core/browser/imageRef`.
+here under a hash the server can verify.
+
+Only a picture this hub's own upload would take is kept: an `image/` type,
+under the 8 MB limit (`MAX_IMAGE_BYTES` in `core/image`, which the upload route
+uses too). Anything else, such as an object served as
+`application/octet-stream` or an error page, would be uploaded on every save
+and refused every time, so it is treated as a picture that could not be copied:
+it keeps its old reference, and the editor says how many could not be copied,
+and also whether the history failed to come along. See `copyRemoteImages` in
+`core/imagesClient`.
 
 Storing a picture hashes it with `crypto.subtle`, which browsers only offer on a
 secure origin: https, or `localhost`. An instance served over plain http at a

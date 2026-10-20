@@ -157,6 +157,7 @@ lesson has at most one of the two.
 | `GET/POST /lessons/:id/responses`             | `Bearer <Supabase JWT>` | Your own saved answers from interactive mode, private to the caller; see [Interactive mode](./interactive-mode.md) |
 | `DELETE /lessons/:id/responses/:rid`          | `Bearer <Supabase JWT>` | `{ ok: true }`; deletes one of your own saved run-throughs; anyone else's matches nothing and `404`s               |
 | `POST /ai-text/dislike`                       | `Bearer <Supabase JWT>` | `{ ok: true }`; evicts the cached text for `{ subject, documentName }`                                             |
+| `GET /remote`                                 | none                    | `{ available }`: whether this instance can copy lessons from others (it federates)                                 |
 | `GET /remote/lesson?url=`                     | `Bearer <Supabase JWT>` | `{ lesson }` for a lesson page on another federating instance; see [Federation](../federation.md)                  |
 | `GET /remote/pack?url=`                       | `Bearer <Supabase JWT>` | That lesson's packed history, as `GET /git/:id/pack` serves one                                                    |
 
