@@ -41,7 +41,7 @@
     "@spelling-creator/core": "workspace:*",
     "@types/node": "^24.19.2",
     "@types/yargs": "^17.0.35",
-    "docx": "^9.10.0",
+    "docx": "^9.12.0",
     "rolldown": "^1.2.13",
     "typescript": "^7.0.2"
   },
