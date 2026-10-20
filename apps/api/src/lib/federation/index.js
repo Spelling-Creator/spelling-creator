@@ -164,23 +164,20 @@ export function announceLesson(env, executionCtx, row, kind) {
  */
 export async function fetchRemoteLesson(env, url) {
 	const ctx = await federationContext(env);
-	const { RemoteLessonError, lookupRemoteLesson } = await fedify();
+	const { RemoteLessonError, assertFetchable, lookupRemoteLesson } = await fedify();
 	if (!ctx) throw new RemoteLessonError('This instance does not federate, so it cannot copy lessons from others.', 501);
+	await assertFetchable(env, url);
 	return lookupRemoteLesson(ctx, url);
 }
 
 /**
- * Refuse a URL this server must not fetch for a visitor. See remote.js.
+ * The packed history at a lesson's history address on another instance, its
+ * tip and branch map checked. See fetchRemotePack in remote.js; throws a
+ * `RemoteLessonError` with the status to answer with.
  */
-export async function assertRemoteFetchable(env, url) {
-	const { assertFetchable } = await fedify();
-	return assertFetchable(env, url);
-}
-
-/** The lesson id in a remote history URL, or null when it is not one. */
-export async function remotePackLessonId(url) {
-	const { remotePackPath } = await fedify();
-	return remotePackPath(url);
+export async function fetchRemoteHistory(env, url) {
+	const { fetchRemotePack } = await fedify();
+	return fetchRemotePack(env, url);
 }
 
 async function deliver(env, row, kind) {

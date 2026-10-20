@@ -171,6 +171,9 @@ export function cloudflarePlatform(env) {
 		// deliveries are made from the request that caused them.
 		federationKv: env?.RATE_LIMIT_KV ? new WorkersKvStore(env.RATE_LIMIT_KV) : null,
 		federationQueue: env?.FEDERATION_QUEUE ? new WorkersMessageQueue(env.FEDERATION_QUEUE) : null,
+		// A Worker cannot reach a private network, so an address a visitor chose
+		// needs no connect-time guard here (the Node host has one).
+		remoteFetch: (input, init) => fetch(input, init),
 		// Cloudflare's own header, set by the edge and not forgeable by the client
 		// (it overwrites whatever arrived). Deliberately no x-forwarded-for
 		// fallback here: on this host that header IS client-controlled, and the IP

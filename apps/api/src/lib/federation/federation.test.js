@@ -230,6 +230,14 @@ describe('inside the app', () => {
 		expect((await appFetch(`/hub/${DRAFT}`, 'text/html')).status).toBe(200);
 	});
 
+	it('says whether it can copy lessons from other instances, which the hub asks first', async () => {
+		const app = createApp();
+		const ask = async (overrides) =>
+			(await (await app.fetch(new Request(`${ORIGIN}/remote`), { ...env(), ...overrides })).json()).available;
+		expect(await ask({})).toBe(true);
+		expect(await ask({ FEDERATION_ORIGIN: '' })).toBe(false);
+	});
+
 	it('tells an ActivityPub request from a page or an API call', () => {
 		const ask = (accept) => wantsActivityPub(new Request(ORIGIN, { headers: accept ? { Accept: accept } : {} }));
 		expect(ask(AP)).toBe(true);
@@ -484,6 +492,103 @@ describe('a lesson on another instance', () => {
 		expect(remotePackPath(new URL('https://remote.test/git/not-an-id/pack'))).toBeNull();
 		expect(remotePackPath(new URL(`https://remote.test/images/${'a'.repeat(64)}`))).toBeNull();
 		expect(remotePackPath(new URL(`https://remote.test/git/${REMOTE}/refs`))).toBeNull();
+	});
+
+	it("credits the fork to the Article's own instance, whatever page it claims", async () => {
+		withRemote({
+			[page]: article({ url: 'https://trusted-hub.test/hub/abc' }),
+			[`https://remote.test/lessons/${REMOTE}`]: lessonJson,
+		});
+		const lesson = await fetchRemoteLesson(env(), new URL(page));
+		expect(lesson.url).toBe(page);
+	});
+
+	it('follows a redirect to the lesson, but not an endless chain of them', async () => {
+		const hop = (to) => () => new Response(null, { status: 302, headers: { Location: to } });
+		withRemote({
+			'https://remote.test/l/short': hop(page),
+			[page]: article(),
+			[`https://remote.test/lessons/${REMOTE}`]: lessonJson,
+		});
+		expect((await fetchRemoteLesson(env(), new URL('https://remote.test/l/short'))).title).toBe('Volcanoes');
+
+		withRemote({
+			'https://remote.test/a': hop('https://remote.test/b'),
+			'https://remote.test/b': hop('https://remote.test/a'),
+		});
+		await expect(fetchRemoteLesson(env(), new URL('https://remote.test/a'))).rejects.toMatchObject({ status: 404 });
+		// The first address and three redirects, and nothing else: no WebFinger
+		// fallback, which would be a fetch outside the guards.
+		expect(server.remote.map((r) => r.url)).toEqual([
+			'https://remote.test/a',
+			'https://remote.test/b',
+			'https://remote.test/a',
+			'https://remote.test/b',
+		]);
+	});
+
+	it('gives up on a lesson document larger than it will hold, without a length to warn it', async () => {
+		// A body that never ends and never says how long it is.
+		const endless = () =>
+			new Response(
+				new ReadableStream({
+					pull(controller) {
+						controller.enqueue(new Uint8Array(1024 * 1024));
+					},
+				}),
+				{ headers: { 'content-type': 'application/json' } },
+			);
+		withRemote({ [page]: article(), [`https://remote.test/lessons/${REMOTE}`]: endless });
+		await expect(fetchRemoteLesson(env(), new URL(page))).rejects.toMatchObject({ status: 413 });
+	});
+});
+
+describe('the history of a lesson on another instance', () => {
+	const REMOTE = '55555555-5555-4555-8555-555555555555';
+	const packUrl = `https://remote.test/git/${REMOTE}/pack`;
+	const HEAD = 'a'.repeat(40);
+	const PACK = new Uint8Array([0x50, 0x41, 0x43, 0x4b, 0, 0, 0, 2, 0, 0, 0, 0]);
+	const packAnswer = (headers) => () => new Response(PACK, { headers: { 'content-type': 'application/x-git-packfile', ...headers } });
+	const withPack = (answer) => {
+		server = fakeSupabase(db, { [packUrl]: answer });
+		vi.stubGlobal('fetch', server.fetch);
+	};
+	const history = async (url = packUrl) => {
+		const { fetchRemoteHistory } = await import('./index.js');
+		return fetchRemoteHistory(env(), new URL(url));
+	};
+
+	it('passes on a tip and branch map that are what they say they are', async () => {
+		withPack(packAnswer({ 'X-Git-Head': HEAD, 'X-Git-Refs': JSON.stringify({ main: HEAD }) }));
+		const pack = await history();
+		expect(pack.head).toBe(HEAD);
+		expect(JSON.parse(pack.refs)).toEqual({ main: HEAD });
+	});
+
+	it('refuses a tip that is not a commit id, header tricks included', async () => {
+		for (const head of ['not-an-oid', `${HEAD}\r\nSet-Cookie: x=1`, '']) {
+			withPack(packAnswer({ 'X-Git-Head': head.replace(/[\r\n]/g, ' ') }));
+			await expect(history(), head).rejects.toMatchObject({ status: 502 });
+		}
+	});
+
+	it('leaves out a branch map that disagrees with the tip or cannot be read', async () => {
+		withPack(packAnswer({ 'X-Git-Head': HEAD, 'X-Git-Refs': JSON.stringify({ main: 'b'.repeat(40) }) }));
+		expect((await history()).refs).toBeNull();
+		withPack(packAnswer({ 'X-Git-Head': HEAD, 'X-Git-Refs': '{not json' }));
+		expect((await history()).refs).toBeNull();
+	});
+
+	it('follows no redirect, and fetches only a history address', async () => {
+		withPack(() => new Response(null, { status: 302, headers: { Location: 'https://remote.test/elsewhere' } }));
+		await expect(history()).rejects.toMatchObject({ status: 502 });
+		expect(server.remote.map((r) => r.url)).toEqual([packUrl]);
+		await expect(history(`https://remote.test/lessons/${REMOTE}`)).rejects.toMatchObject({ status: 400 });
+	});
+
+	it('refuses what is not a packfile', async () => {
+		withPack(() => new Response('<html>', { headers: { 'X-Git-Head': HEAD } }));
+		await expect(history()).rejects.toMatchObject({ status: 502 });
 	});
 });
 

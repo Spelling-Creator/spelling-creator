@@ -16,6 +16,7 @@ import { noopCache } from '../platform/cache.js';
 import { postgrestFedifyKv } from '../platform/postgrestFedifyKv.js';
 import { postgrestKv } from '../platform/postgrestKv.js';
 import { s3Blobs } from '../platform/s3.js';
+import { publicFetch } from './remoteFetch.js';
 
 /**
  * Read the S3 credentials shared by both buckets, or null when object storage
@@ -132,6 +133,11 @@ export function nodePlatform(env) {
 		// true.
 		federationKv: database ? postgrestFedifyKv(database) : null,
 		federationQueue: new InProcessMessageQueue(),
+		// For addresses a visitor chose (a lesson on another instance): connects
+		// only to public addresses, checked when the socket opens, which is what
+		// defeats DNS rebinding (see remoteFetch.js). A test pair on a private
+		// network has to reach private addresses, so it gets the ordinary fetch.
+		remoteFetch: String(env.FEDERATION_ALLOW_PRIVATE_ADDRESSES || '').toLowerCase() === 'true' ? fetch : publicFetch,
 		clientIp: clientIpFrom(env),
 	};
 }

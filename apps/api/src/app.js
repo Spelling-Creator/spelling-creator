@@ -38,7 +38,7 @@ import { handleLessonResponses, handleLessonResponseDelete } from './routes/less
 import { handleTextFeedback } from './routes/feedback.js';
 import { handleNotifications } from './routes/notifications.js';
 import { handleProfile } from './routes/profile.js';
-import { handleRemoteLesson, handleRemotePack } from './routes/remote.js';
+import { handleRemoteInfo, handleRemoteLesson, handleRemotePack } from './routes/remote.js';
 import { handleUsers } from './routes/users.js';
 import { handleFollow, handleFollowList, handleFollowingFeed } from './routes/follows.js';
 import { handleModeration } from './routes/moderation.js';
@@ -167,6 +167,9 @@ export function createApp() {
 	// A lesson on another federating instance, read on a signed-in visitor's
 	// behalf so it can be forked here: the lesson itself, then its packed history
 	// (see routes/remote.js). Its own top-level path for the reason /git has one.
+	// The bare path says whether this instance can do it at all, which the hub
+	// asks before showing its button (as the Practice page asks GET /practice).
+	app.get('/remote', (c) => handleRemoteInfo(c.env, cors(c)));
 	app.all('/remote/lesson', (c) => handleRemoteLesson(req(c), c.env, urlOf(c), cors(c)));
 	app.all('/remote/pack', (c) => handleRemotePack(req(c), c.env, urlOf(c), cors(c)));
 

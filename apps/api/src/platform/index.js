@@ -25,6 +25,7 @@
 //     cache,           ResponseCache      HTTP response cache (never null; may no-op)
 //     federationKv,    Fedify KvStore | null       ActivityPub caches (remote actors, keys, idempotence)
 //     federationQueue, Fedify MessageQueue | null  outgoing deliveries (null = send at once)
+//     remoteFetch(input, init) -> Response         fetch for an address a visitor chose
 //     clientIp(request) -> string
 //   }
 //
@@ -107,6 +108,14 @@ export const federationKvStore = (env) => platform(env).federationKv ?? null;
  * for an instance with a handful of followers and wrong for one with many).
  */
 export const federationQueue = (env) => platform(env).federationQueue ?? null;
+
+/**
+ * The fetch for an address a visitor chose, such as a lesson on another
+ * instance. On the Node host it connects only to public addresses (see
+ * node/remoteFetch.js); a host that says nothing gets the ordinary fetch,
+ * looked up when called so a test's stub applies.
+ */
+export const remoteFetch = (env) => platform(env).remoteFetch ?? ((input, init) => fetch(input, init));
 
 /**
  * The client IP a request arrived from, however this host reports it. Recorded
