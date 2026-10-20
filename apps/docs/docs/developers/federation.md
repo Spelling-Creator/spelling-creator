@@ -164,8 +164,11 @@ public keys, which activities have already been processed, and which signature
 spec each remote server accepts. Nothing in it is authoritative, which is what
 lets it share a table with the rate limiters. `postgrestFedifyKv` is Fedify's
 own wider interface (keys are arrays of strings, values are JSON, prefixes can
-be listed) over PostgREST, with a key encoding that keeps a `_` or `%` in a key
-from widening a prefix listing: see `apps/api/src/platform/postgrestFedifyKv.js`.
+be listed) over PostgREST. A listing matches whole key segments, as Fedify
+expects (`publicKey` does not list `publicKeyX`), with a key encoding that keeps
+a `_` or `%` in a key from widening it, and it reads in pages, since PostgREST
+cuts a single response at its `max-rows` without saying so. See
+`apps/api/src/platform/postgrestFedifyKv.js`.
 
 **Without a queue** (`federationQueue` null), deliveries are made from the
 request that caused them and are not retried. For an instance with a handful of
@@ -189,7 +192,10 @@ scheme included: `https://spelling.example.org`. It is written into every actor
 and object id, which is why it is explicit rather than read off the request: an
 id built from a `Host` header a client chose is an id another server will store.
 For the same reason it must not change once anyone follows someone here;
-followers hold the old ids and the keys that went with them.
+followers hold the old ids and the keys that went with them. And it has to be
+https: an origin on plain http leaves federation off (the dependency check says
+so), since those stored ids would point other servers at an address anyone on
+the path can read and rewrite. The one exception is a test pair, below.
 
 On the hosted instance it is a `vars` entry in `wrangler.jsonc`, and
 `apps/api/scripts/dev.sh` overrides it with the local address so a development
@@ -198,9 +204,12 @@ Worker never claims to live on the real site. In the compose stack it is the
 empty keeps federation off. See [Self-hosting](./self-hosting.md#federation).
 
 `FEDERATION_ALLOW_PRIVATE_ADDRESSES=true` switches off Fedify's refusal to fetch
-from or deliver to private network addresses. That refusal is what stops a
-remote actor document from pointing the server at its own network, so the
-switch is for one thing only: two instances on one machine, in development.
+from or deliver to private network addresses, and lets the origin be plain
+http. That refusal is what stops a remote actor document from pointing the
+server at its own network, so the switch is for one thing only: two instances
+on one machine or private network, in development. The development Worker under
+portless has an https origin and federates; run with `PORTLESS=0`, its origin is
+plain http and federation stays off.
 
 ## Trying it with two instances
 
@@ -224,12 +233,11 @@ address on its network as both origins:
 3. `docker compose up -d` in each. `docker compose logs app` shows the
    `federation` line of the dependency check, with the origin it is on at.
 
-Then, in a browser that can reach the host (over SSH, `ssh -L` for each port
-works, since the pages only ever talk to their own origin): sign in on each,
-publish a lesson on one, and on the other paste that lesson's page address into
-**Copy a lesson from another instance** on the hub. For the follow side, `curl`
-one instance's WebFinger from the other host, or follow an author from any
-fediverse account that can reach the address.
+Then sign in on one in a browser that can reach the host (over SSH, `ssh -L`
+for each port works, since the pages only ever talk to their own origin) and
+publish a lesson. To see it federate, `curl` that instance's WebFinger and
+actor from the other host, or follow its author from any fediverse account that
+can reach the address and watch the lesson arrive.
 
 ## Schema
 

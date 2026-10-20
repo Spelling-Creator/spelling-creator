@@ -85,7 +85,7 @@ prerender snapshots and og-image screenshots.
 The two federation members are not the seam's own interfaces but
 [Fedify](https://fedify.dev)'s, because Fedify is the one reading them: its
 `KvStore` (keys are arrays of strings, values are JSON, prefixes can be listed)
-and its `MessageQueue`. They sit in the seam for the same reason as the rest,
+and its `MessageQueue`. They sit in the seam for the same reason as the rest:
 which store backs them is the host's business. See
 [Federation](./federation.md#per-host) for what each host provides, and
 `platform/postgrestFedifyKv.js` for the PostgREST-backed `KvStore`.
