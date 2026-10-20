@@ -11,10 +11,10 @@
 // that behaves differently across the two is a self-hosting bug, and the cheapest
 // moment to find one is the moment it is introduced.
 
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-	test: {
-		projects: ['./vitest.workers.config.js', './vitest.node.config.js'],
-	},
+  test: {
+    projects: ["./vitest.workers.config.js", "./vitest.node.config.js"],
+  },
 });

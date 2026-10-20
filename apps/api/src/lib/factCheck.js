@@ -11,20 +11,21 @@
 // looked up, so an invented fact can't reach the author as a finding.
 
 import {
-	FACT_PROPERTIES,
-	FACT_PROPERTY_KEYS,
-	FACT_QUALIFIERS,
-	FACT_UNIT_KEYS,
-	GVP_WFS,
-	checkClaims,
-	squashText,
-} from '@spelling-creator/core/factCheck';
-import { generateWithFallback } from './ai/index.js';
+  FACT_PROPERTIES,
+  FACT_PROPERTY_KEYS,
+  FACT_QUALIFIERS,
+  FACT_UNIT_KEYS,
+  GVP_WFS,
+  checkClaims,
+  squashText,
+} from "@spelling-creator/core/factCheck";
+import { generateWithFallback } from "./ai/index.js";
 
 // Wikimedia's User-Agent policy wants a name and a way to reach the operator;
 // requests without one are throttled to 10 a minute, or refused. With it, the
 // Worker gets 200 a minute. The Smithsonian is sent the same.
-const USER_AGENT = 'SpellingCreator/1.0 (https://spellingcreator.org; lesson fact checking)';
+const USER_AGENT =
+  "SpellingCreator/1.0 (https://spellingcreator.org; lesson fact checking)";
 
 // Bounds on one request, so a huge lesson can't turn into a huge prompt or a
 // flood of lookups.
@@ -36,36 +37,48 @@ const MAX_CLAIMS = 40;
 // A unit-less claim (a population, a date) says "none" to the model: an empty
 // string is a legal enum value in JSON Schema but not one every provider
 // accepts.
-const NO_UNIT = 'none';
+const NO_UNIT = "none";
 const CLAIM_UNITS = FACT_UNIT_KEYS.map((key) => key || NO_UNIT);
 
 export const FACT_CLAIMS_SCHEMA = {
-	type: 'object',
-	properties: {
-		claims: {
-			type: 'array',
-			items: {
-				type: 'object',
-				properties: {
-					passage: { type: 'integer' },
-					quote: { type: 'string' },
-					subject: { type: 'string' },
-					kind: { type: 'string' },
-					property: { type: 'string', enum: FACT_PROPERTY_KEYS },
-					stated: { type: 'string' },
-					value: { type: 'number' },
-					unit: { type: 'string', enum: CLAIM_UNITS },
-					month: { type: 'integer' },
-					day: { type: 'integer' },
-					qualifier: { type: 'string', enum: FACT_QUALIFIERS },
-				},
-				required: ['passage', 'quote', 'subject', 'kind', 'property', 'stated', 'value', 'unit', 'month', 'day', 'qualifier'],
-				additionalProperties: false,
-			},
-		},
-	},
-	required: ['claims'],
-	additionalProperties: false,
+  type: "object",
+  properties: {
+    claims: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          passage: { type: "integer" },
+          quote: { type: "string" },
+          subject: { type: "string" },
+          kind: { type: "string" },
+          property: { type: "string", enum: FACT_PROPERTY_KEYS },
+          stated: { type: "string" },
+          value: { type: "number" },
+          unit: { type: "string", enum: CLAIM_UNITS },
+          month: { type: "integer" },
+          day: { type: "integer" },
+          qualifier: { type: "string", enum: FACT_QUALIFIERS },
+        },
+        required: [
+          "passage",
+          "quote",
+          "subject",
+          "kind",
+          "property",
+          "stated",
+          "value",
+          "unit",
+          "month",
+          "day",
+          "qualifier",
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["claims"],
+  additionalProperties: false,
 };
 
 /**
@@ -75,25 +88,33 @@ export const FACT_CLAIMS_SCHEMA = {
  * @returns {{ blockId: string, text: string }[]}
  */
 export function cleanPassages(raw) {
-	if (!Array.isArray(raw)) return [];
-	const out = [];
-	let total = 0;
-	for (const p of raw.slice(0, MAX_PASSAGES)) {
-		const text = typeof p?.text === 'string' ? p.text.trim().slice(0, MAX_PASSAGE_CHARS) : '';
-		if (!text) continue;
-		if (total + text.length > MAX_TOTAL_CHARS) break;
-		total += text.length;
-		out.push({ blockId: typeof p.blockId === 'string' ? p.blockId.slice(0, 100) : '', text });
-	}
-	return out;
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  let total = 0;
+  for (const p of raw.slice(0, MAX_PASSAGES)) {
+    const text =
+      typeof p?.text === "string"
+        ? p.text.trim().slice(0, MAX_PASSAGE_CHARS)
+        : "";
+    if (!text) continue;
+    if (total + text.length > MAX_TOTAL_CHARS) break;
+    total += text.length;
+    out.push({
+      blockId: typeof p.blockId === "string" ? p.blockId.slice(0, 100) : "",
+      text,
+    });
+  }
+  return out;
 }
 
 export function factCheckPrompt(passages, documentName) {
-	const properties = FACT_PROPERTY_KEYS.map((key) => `- ${key}: ${FACT_PROPERTIES[key].hint}`).join('\n');
-	const units = CLAIM_UNITS.join(', ');
-	const numbered = passages.map((p, i) => `[${i + 1}]\n${p.text}`).join('\n\n');
-	const title = documentName ? ` The lesson is titled "${documentName}".` : '';
-	return `The passages below come from a Spelling lesson for nonspeaking spellers.${title} List the facts in them that can be checked against an encyclopedia: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing, or a number stated about a kind of animal.
+  const properties = FACT_PROPERTY_KEYS.map(
+    (key) => `- ${key}: ${FACT_PROPERTIES[key].hint}`,
+  ).join("\n");
+  const units = CLAIM_UNITS.join(", ");
+  const numbered = passages.map((p, i) => `[${i + 1}]\n${p.text}`).join("\n\n");
+  const title = documentName ? ` The lesson is titled "${documentName}".` : "";
+  return `The passages below come from a Spelling lesson for nonspeaking spellers.${title} List the facts in them that can be checked against an encyclopedia: a number, a date, or a named thing (a capital, a country, a discoverer) stated about one specific, named, real-world thing, or a number stated about a kind of animal.
 
 Only these kinds of fact count. Use the matching "property":
 ${properties}
@@ -128,17 +149,23 @@ ${numbered}`;
  * the quote is still there, so a placed finding can't read as changed.
  */
 export function placeClaims(claims, passages) {
-	const texts = passages.map((p) => squashText(p.text));
-	const out = [];
-	for (const claim of claims || []) {
-		const quote = squashText(claim?.quote);
-		if (!quote) continue;
-		const stated = Number(claim.passage) - 1;
-		const index = texts[stated]?.includes(quote) ? stated : texts.findIndex((t) => t.includes(quote));
-		if (index === -1) continue;
-		out.push({ ...claim, passage: index, unit: claim.unit === NO_UNIT ? '' : claim.unit });
-	}
-	return out;
+  const texts = passages.map((p) => squashText(p.text));
+  const out = [];
+  for (const claim of claims || []) {
+    const quote = squashText(claim?.quote);
+    if (!quote) continue;
+    const stated = Number(claim.passage) - 1;
+    const index = texts[stated]?.includes(quote)
+      ? stated
+      : texts.findIndex((t) => t.includes(quote));
+    if (index === -1) continue;
+    out.push({
+      ...claim,
+      passage: index,
+      unit: claim.unit === NO_UNIT ? "" : claim.unit,
+    });
+  }
+  return out;
 }
 
 // Wikimedia's answers change slowly; hold them at the edge for a day so a
@@ -152,7 +179,9 @@ export function placeClaims(claims, passages) {
 // asks it at most twice.
 const UNCACHED_HOSTS = new Set([new URL(GVP_WFS).hostname]);
 export const cachedFetch = (url, init) =>
-	UNCACHED_HOSTS.has(new URL(url).hostname) ? fetch(url, init) : fetch(url, { ...init, cf: { cacheTtl: 86400, cacheEverything: true } });
+  UNCACHED_HOSTS.has(new URL(url).hostname)
+    ? fetch(url, init)
+    : fetch(url, { ...init, cf: { cacheTtl: 86400, cacheEverything: true } });
 
 /**
  * Check a lesson's passages. Returns the facts with `passage` as an index into
@@ -161,16 +190,16 @@ export const cachedFetch = (url, init) =>
  * @throws when no AI provider answers.
  */
 export async function checkPassages(passages, documentName, env) {
-	if (!passages.length) return [];
-	const response = await generateWithFallback({
-		prompt: factCheckPrompt(passages, documentName),
-		schema: FACT_CLAIMS_SCHEMA,
-		env,
-	});
-	const parsed = JSON.parse(response.text);
-	return checkClaims(placeClaims(parsed?.claims, passages), {
-		userAgent: USER_AGENT,
-		fetch: cachedFetch,
-		maxClaims: MAX_CLAIMS,
-	});
+  if (!passages.length) return [];
+  const response = await generateWithFallback({
+    prompt: factCheckPrompt(passages, documentName),
+    schema: FACT_CLAIMS_SCHEMA,
+    env,
+  });
+  const parsed = JSON.parse(response.text);
+  return checkClaims(placeClaims(parsed?.claims, passages), {
+    userAgent: USER_AGENT,
+    fetch: cachedFetch,
+    maxClaims: MAX_CLAIMS,
+  });
 }

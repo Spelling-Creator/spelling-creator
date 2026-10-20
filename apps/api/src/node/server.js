@@ -17,18 +17,18 @@
 // src/node/platform.js and in the docs. The process is stateless: run as many as
 // you like behind a proxy.
 
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL } from "node:url";
 
-import { serve } from '@hono/node-server';
+import { serve } from "@hono/node-server";
 
-import { createApp, registerFrontend } from '../app.js';
-import { serverRender, shouldServerRender } from '../routes/ssr.js';
-import { serveApp } from '../routes/spa.js';
-import { assetServer } from './assets.js';
-import { withBrowserConfig } from './browserConfig.js';
-import { withForwardedScheme } from './forwardedScheme.js';
-import { nodePlatform } from './platform.js';
-import { installSelfFetch, servingSelf } from './selfFetch.js';
+import { createApp, registerFrontend } from "../app.js";
+import { serverRender, shouldServerRender } from "../routes/ssr.js";
+import { serveApp } from "../routes/spa.js";
+import { assetServer } from "./assets.js";
+import { withBrowserConfig } from "./browserConfig.js";
+import { withForwardedScheme } from "./forwardedScheme.js";
+import { nodePlatform } from "./platform.js";
+import { installSelfFetch, servingSelf } from "./selfFetch.js";
 
 /**
  * The frontend fall-through for this host: server-render the public read routes,
@@ -41,11 +41,11 @@ import { installSelfFetch, servingSelf } from './selfFetch.js';
  * every other public page.
  */
 async function frontend(request, env, ctx, url) {
-	if (shouldServerRender(request, url)) {
-		const rendered = await serverRender(request, env, ctx, url);
-		if (rendered) return rendered;
-	}
-	return await serveApp(request, env, url);
+  if (shouldServerRender(request, url)) {
+    const rendered = await serverRender(request, env, ctx, url);
+    if (rendered) return rendered;
+  }
+  return await serveApp(request, env, url);
 }
 
 /**
@@ -59,43 +59,46 @@ async function frontend(request, env, ctx, url) {
  * @returns {(request: Request) => Promise<Response>}
  */
 export function createHandler(processEnv = process.env) {
-	const app = createApp();
-	registerFrontend(app, frontend);
+  const app = createApp();
+  registerFrontend(app, frontend);
 
-	// The Worker receives `env` from the runtime, already populated with bindings
-	// and vars. Here it is the process environment plus the two things the runtime
-	// would otherwise have supplied: the platform services and the asset server.
-	// The asset server writes the SPA's settings into the shell as it serves it
-	// (see browserConfig.js), which is what lets one published image run with
-	// anyone's configuration.
-	const env = {
-		...processEnv,
-		PLATFORM: nodePlatform(processEnv),
-		ASSETS: withBrowserConfig(assetServer(processEnv.WEB_DIST || 'apps/web/dist'), processEnv),
-	};
+  // The Worker receives `env` from the runtime, already populated with bindings
+  // and vars. Here it is the process environment plus the two things the runtime
+  // would otherwise have supplied: the platform services and the asset server.
+  // The asset server writes the SPA's settings into the shell as it serves it
+  // (see browserConfig.js), which is what lets one published image run with
+  // anyone's configuration.
+  const env = {
+    ...processEnv,
+    PLATFORM: nodePlatform(processEnv),
+    ASSETS: withBrowserConfig(
+      assetServer(processEnv.WEB_DIST || "apps/web/dist"),
+      processEnv,
+    ),
+  };
 
-	// `waitUntil` exists so a handler can finish background work after the response
-	// is sent — populating a cache, mostly. There is no request lifetime to extend
-	// in Node, so the work simply runs; what matters is that a rejection here
-	// cannot become an unhandled rejection and take the process down.
-	const ctx = {
-		waitUntil(promise) {
-			Promise.resolve(promise).catch((error) => {
-				console.error('background task failed:', error);
-			});
-		},
-		passThroughOnException() {},
-	};
+  // `waitUntil` exists so a handler can finish background work after the response
+  // is sent — populating a cache, mostly. There is no request lifetime to extend
+  // in Node, so the work simply runs; what matters is that a rejection here
+  // cannot become an unhandled rejection and take the process down.
+  const ctx = {
+    waitUntil(promise) {
+      Promise.resolve(promise).catch((error) => {
+        console.error("background task failed:", error);
+      });
+    },
+    passThroughOnException() {},
+  };
 
-	// Requests to our own origin (server rendering loading its page's data) are
-	// answered in-process, as a subrequest is on the Worker, rather than over a
-	// network address that may not lead back here (see selfFetch.js).
-	installSelfFetch();
-	const serve = servingSelf((request) => app.fetch(request, env, ctx));
-	// The scheme is settled first, so that the origin every route builds links
-	// from, and the one self-requests are matched against, is the one the browser
-	// actually used (see forwardedScheme.js).
-	return (request) => serve(withForwardedScheme(request, processEnv));
+  // Requests to our own origin (server rendering loading its page's data) are
+  // answered in-process, as a subrequest is on the Worker, rather than over a
+  // network address that may not lead back here (see selfFetch.js).
+  installSelfFetch();
+  const serve = servingSelf((request) => app.fetch(request, env, ctx));
+  // The scheme is settled first, so that the origin every route builds links
+  // from, and the one self-requests are matched against, is the one the browser
+  // actually used (see forwardedScheme.js).
+  return (request) => serve(withForwardedScheme(request, processEnv));
 }
 
 /**
@@ -111,37 +114,43 @@ export function createHandler(processEnv = process.env) {
  * exactly what was missing the first time this was deployed.
  */
 async function reportDependencies(env) {
-	try {
-		const { runDiagnostics, formatDiagnostics } = await import('../lib/diagnostics.js');
-		const result = await runDiagnostics({ ...env, PLATFORM: nodePlatform(env) });
-		(result.ok ? console.log : console.warn)(formatDiagnostics(result));
-	} catch (e) {
-		console.warn('Could not run the dependency check:', e);
-	}
+  try {
+    const { runDiagnostics, formatDiagnostics } =
+      await import("../lib/diagnostics.js");
+    const result = await runDiagnostics({
+      ...env,
+      PLATFORM: nodePlatform(env),
+    });
+    (result.ok ? console.log : console.warn)(formatDiagnostics(result));
+  } catch (e) {
+    console.warn("Could not run the dependency check:", e);
+  }
 }
 
 /** Start listening. Returns the server so a caller can close it. */
 export function start(processEnv = process.env) {
-	const port = Number(processEnv.PORT || 8787);
-	const hostname = processEnv.HOST || '0.0.0.0';
+  const port = Number(processEnv.PORT || 8787);
+  const hostname = processEnv.HOST || "0.0.0.0";
 
-	const fetch = createHandler(processEnv);
-	const server = serve({ fetch, port, hostname }, (info) => {
-		console.log(`Spelling Creator API listening on http://${hostname}:${info.port}`);
-		// Deliberately after the listen callback and deliberately not awaited.
-		void reportDependencies(processEnv);
-	});
+  const fetch = createHandler(processEnv);
+  const server = serve({ fetch, port, hostname }, (info) => {
+    console.log(
+      `Spelling Creator API listening on http://${hostname}:${info.port}`,
+    );
+    // Deliberately after the listen callback and deliberately not awaited.
+    void reportDependencies(processEnv);
+  });
 
-	// Containers and process managers stop a process with SIGTERM and expect it to
-	// go quietly. Without this, Node ignores it while the server holds the event
-	// loop open and the supervisor eventually escalates to SIGKILL — which drops
-	// whatever requests were in flight.
-	for (const signal of ['SIGTERM', 'SIGINT']) {
-		process.on(signal, () => {
-			server.close(() => process.exit(0));
-		});
-	}
-	return server;
+  // Containers and process managers stop a process with SIGTERM and expect it to
+  // go quietly. Without this, Node ignores it while the server holds the event
+  // loop open and the supervisor eventually escalates to SIGKILL — which drops
+  // whatever requests were in flight.
+  for (const signal of ["SIGTERM", "SIGINT"]) {
+    process.on(signal, () => {
+      server.close(() => process.exit(0));
+    });
+  }
+  return server;
 }
 
 // Started directly (`node src/node/server.js`) rather than imported by a test.
@@ -150,4 +159,5 @@ export function start(processEnv = process.env) {
 // the two stop matching as soon as the path contains a space or a non-ASCII
 // character, and the failure mode is that the process starts, exits 0, and
 // serves nothing — which is a miserable thing to debug in a container.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) start();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  start();

@@ -7,9 +7,9 @@
 // bindings directly. Anything cleverer belongs in the route, where it can be
 // tested once for every host rather than once per host.
 
-import { WorkersKvStore, WorkersMessageQueue } from '@fedify/cfworkers';
+import { WorkersKvStore, WorkersMessageQueue } from "@fedify/cfworkers";
 
-import { normalizeMetadata, assertUsableKey, deleteKeys } from './blobs.js';
+import { normalizeMetadata, assertUsableKey, deleteKeys } from "./blobs.js";
 
 /**
  * Normalise an R2 head/get result into the BlobHead fields. R2 splits an
@@ -20,13 +20,13 @@ import { normalizeMetadata, assertUsableKey, deleteKeys } from './blobs.js';
  * @param {import('@cloudflare/workers-types').R2Object} object
  */
 function headOf(object) {
-	return {
-		key: object.key,
-		contentType: object.httpMetadata?.contentType || '',
-		etag: object.httpEtag || '',
-		metadata: object.customMetadata || {},
-		size: object.size || 0,
-	};
+  return {
+    key: object.key,
+    contentType: object.httpMetadata?.contentType || "",
+    etag: object.httpEtag || "",
+    metadata: object.customMetadata || {},
+    size: object.size || 0,
+  };
 }
 
 /**
@@ -35,62 +35,64 @@ function headOf(object) {
  * @returns {import('./blobs.js').BlobStore}
  */
 export function r2Blobs(bucket) {
-	return {
-		async head(key) {
-			const object = await bucket.head(assertUsableKey(key));
-			return object ? headOf(object) : null;
-		},
+  return {
+    async head(key) {
+      const object = await bucket.head(assertUsableKey(key));
+      return object ? headOf(object) : null;
+    },
 
-		async get(key) {
-			const object = await bucket.get(assertUsableKey(key));
-			if (!object) return null;
-			return {
-				...headOf(object),
-				body: object.body,
-				bytes: async () => new Uint8Array(await object.arrayBuffer()),
-				text: () => object.text(),
-				json: () => object.json(),
-			};
-		},
+    async get(key) {
+      const object = await bucket.get(assertUsableKey(key));
+      if (!object) return null;
+      return {
+        ...headOf(object),
+        body: object.body,
+        bytes: async () => new Uint8Array(await object.arrayBuffer()),
+        text: () => object.text(),
+        json: () => object.json(),
+      };
+    },
 
-		async put(key, bytes, opts) {
-			// R2 would take a `..` segment literally where an S3 path would resolve
-			// it. Refused here too, so the two hosts cannot disagree about which
-			// object a key names — see assertUsableKey.
-			await bucket.put(assertUsableKey(key), bytes, {
-				httpMetadata: { contentType: opts?.contentType || 'application/octet-stream' },
-				customMetadata: normalizeMetadata(opts?.metadata),
-			});
-		},
+    async put(key, bytes, opts) {
+      // R2 would take a `..` segment literally where an S3 path would resolve
+      // it. Refused here too, so the two hosts cannot disagree about which
+      // object a key names — see assertUsableKey.
+      await bucket.put(assertUsableKey(key), bytes, {
+        httpMetadata: {
+          contentType: opts?.contentType || "application/octet-stream",
+        },
+        customMetadata: normalizeMetadata(opts?.metadata),
+      });
+    },
 
-		async delete(key) {
-			const keys = deleteKeys(key);
-			if (keys.length === 0) return;
-			// R2's delete takes either form, but pass the array only when there is
-			// more than one so a single delete stays a single-key operation.
-			await bucket.delete(keys.length === 1 ? keys[0] : keys);
-		},
+    async delete(key) {
+      const keys = deleteKeys(key);
+      if (keys.length === 0) return;
+      // R2's delete takes either form, but pass the array only when there is
+      // more than one so a single delete stays a single-key operation.
+      await bucket.delete(keys.length === 1 ? keys[0] : keys);
+    },
 
-		async list(opts) {
-			// `include` is what makes the listing carry each object's content type and
-			// user metadata — without it R2 returns keys and sizes only, and the WEBP
-			// backfill would need a get() per object just to decide whether to skip
-			// it. Both are asked for because the contract promises both: the S3
-			// adapter HEADs every listed object and so returns metadata whether it
-			// wants to or not, and a listing that carried it on one host and `{}` on
-			// the other is exactly the silent divergence this seam exists to prevent.
-			const listing = await bucket.list({
-				limit: opts?.limit,
-				cursor: opts?.cursor || undefined,
-				include: ['httpMetadata', 'customMetadata'],
-			});
-			return {
-				objects: listing.objects.map(headOf),
-				cursor: listing.truncated ? listing.cursor : '',
-				truncated: Boolean(listing.truncated),
-			};
-		},
-	};
+    async list(opts) {
+      // `include` is what makes the listing carry each object's content type and
+      // user metadata — without it R2 returns keys and sizes only, and the WEBP
+      // backfill would need a get() per object just to decide whether to skip
+      // it. Both are asked for because the contract promises both: the S3
+      // adapter HEADs every listed object and so returns metadata whether it
+      // wants to or not, and a listing that carried it on one host and `{}` on
+      // the other is exactly the silent divergence this seam exists to prevent.
+      const listing = await bucket.list({
+        limit: opts?.limit,
+        cursor: opts?.cursor || undefined,
+        include: ["httpMetadata", "customMetadata"],
+      });
+      return {
+        objects: listing.objects.map(headOf),
+        cursor: listing.truncated ? listing.cursor : "",
+        truncated: Boolean(listing.truncated),
+      };
+    },
+  };
 }
 
 /**
@@ -99,16 +101,20 @@ export function r2Blobs(bucket) {
  * @returns {import('./kv.js').KvStore}
  */
 export function kvStore(namespace) {
-	return {
-		get: (key) => namespace.get(key),
-		put: async (key, value, opts) => {
-			// KV rejects an expirationTtl below 60s outright, and every TTL this API
-			// sets is comfortably above that — so pass it straight through and let a
-			// mistake surface rather than silently rounding it up.
-			await namespace.put(key, value, opts?.expirationTtl ? { expirationTtl: opts.expirationTtl } : undefined);
-		},
-		delete: (key) => namespace.delete(key),
-	};
+  return {
+    get: (key) => namespace.get(key),
+    put: async (key, value, opts) => {
+      // KV rejects an expirationTtl below 60s outright, and every TTL this API
+      // sets is comfortably above that — so pass it straight through and let a
+      // mistake surface rather than silently rounding it up.
+      await namespace.put(
+        key,
+        value,
+        opts?.expirationTtl ? { expirationTtl: opts.expirationTtl } : undefined,
+      );
+    },
+    delete: (key) => namespace.delete(key),
+  };
 }
 
 /**
@@ -122,30 +128,30 @@ export function kvStore(namespace) {
  * @returns {import('./cache.js').ResponseCache}
  */
 export function edgeCache() {
-	const keyOf = (key) => new Request(key, { method: 'GET' });
-	return {
-		async match(key) {
-			try {
-				return (await caches.default.match(keyOf(key))) || null;
-			} catch (e) {
-				return null;
-			}
-		},
-		async put(key, response) {
-			try {
-				await caches.default.put(keyOf(key), response);
-			} catch (e) {
-				// An uncacheable response (or a full cache) is not this caller's problem.
-			}
-		},
-		async delete(key) {
-			try {
-				await caches.default.delete(keyOf(key));
-			} catch (e) {
-				// Best-effort purge; a stale entry expires on its own.
-			}
-		},
-	};
+  const keyOf = (key) => new Request(key, { method: "GET" });
+  return {
+    async match(key) {
+      try {
+        return (await caches.default.match(keyOf(key))) || null;
+      } catch (e) {
+        return null;
+      }
+    },
+    async put(key, response) {
+      try {
+        await caches.default.put(keyOf(key), response);
+      } catch (e) {
+        // An uncacheable response (or a full cache) is not this caller's problem.
+      }
+    },
+    async delete(key) {
+      try {
+        await caches.default.delete(keyOf(key));
+      } catch (e) {
+        // Best-effort purge; a stale entry expires on its own.
+      }
+    },
+  };
 }
 
 /**
@@ -158,26 +164,30 @@ export function edgeCache() {
  * @param {object} env
  */
 export function cloudflarePlatform(env) {
-	return {
-		images: env?.IMAGES ? r2Blobs(env.IMAGES) : null,
-		lessonGit: env?.LESSON_GIT ? r2Blobs(env.LESSON_GIT) : null,
-		rateLimit: env?.RATE_LIMIT_KV ? kvStore(env.RATE_LIMIT_KV) : null,
-		oauthState: env?.OAUTH_KV ? kvStore(env.OAUTH_KV) : null,
-		cache: edgeCache(),
-		// Fedify's caches share the rate-limit namespace. Its keys all start with
-		// `_fedify`, which nothing else in that namespace does, and both hold the
-		// same kind of thing: short-lived entries whose absence is the right
-		// answer. A queue is optional (see wrangler.jsonc): without the binding,
-		// deliveries are made from the request that caused them.
-		federationKv: env?.RATE_LIMIT_KV ? new WorkersKvStore(env.RATE_LIMIT_KV) : null,
-		federationQueue: env?.FEDERATION_QUEUE ? new WorkersMessageQueue(env.FEDERATION_QUEUE) : null,
-		// A Worker cannot reach a private network, so an address a visitor chose
-		// needs no connect-time guard here (the Node host has one).
-		remoteFetch: (input, init) => fetch(input, init),
-		// Cloudflare's own header, set by the edge and not forgeable by the client
-		// (it overwrites whatever arrived). Deliberately no x-forwarded-for
-		// fallback here: on this host that header IS client-controlled, and the IP
-		// is used for bans.
-		clientIp: (request) => request.headers.get('cf-connecting-ip') || '',
-	};
+  return {
+    images: env?.IMAGES ? r2Blobs(env.IMAGES) : null,
+    lessonGit: env?.LESSON_GIT ? r2Blobs(env.LESSON_GIT) : null,
+    rateLimit: env?.RATE_LIMIT_KV ? kvStore(env.RATE_LIMIT_KV) : null,
+    oauthState: env?.OAUTH_KV ? kvStore(env.OAUTH_KV) : null,
+    cache: edgeCache(),
+    // Fedify's caches share the rate-limit namespace. Its keys all start with
+    // `_fedify`, which nothing else in that namespace does, and both hold the
+    // same kind of thing: short-lived entries whose absence is the right
+    // answer. A queue is optional (see wrangler.jsonc): without the binding,
+    // deliveries are made from the request that caused them.
+    federationKv: env?.RATE_LIMIT_KV
+      ? new WorkersKvStore(env.RATE_LIMIT_KV)
+      : null,
+    federationQueue: env?.FEDERATION_QUEUE
+      ? new WorkersMessageQueue(env.FEDERATION_QUEUE)
+      : null,
+    // A Worker cannot reach a private network, so an address a visitor chose
+    // needs no connect-time guard here (the Node host has one).
+    remoteFetch: (input, init) => fetch(input, init),
+    // Cloudflare's own header, set by the edge and not forgeable by the client
+    // (it overwrites whatever arrived). Deliberately no x-forwarded-for
+    // fallback here: on this host that header IS client-controlled, and the IP
+    // is used for bans.
+    clientIp: (request) => request.headers.get("cf-connecting-ip") || "",
+  };
 }

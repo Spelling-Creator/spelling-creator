@@ -8,15 +8,19 @@
 // Those extras are registered before `registerFrontend`, because the frontend
 // catch-all answers every unmatched GET and would otherwise swallow them.
 
-import { createApp, cors, registerFrontend, req, urlOf } from './app.js';
+import { createApp, cors, registerFrontend, req, urlOf } from "./app.js";
 
-import { CollabRoom } from './collab-room.js';
-import { federationFor } from './lib/federation/index.js';
-import { PracticeRoom } from './practice-room.js';
-import { ogImage, handleFrontend } from './routes/render.js';
-import { handleCollab, handleCollabAgent } from './routes/collab.js';
-import { handlePractice, handlePracticeInfo } from './routes/practice.js';
-import { HubMcp, registerOAuthConsentRoutes, buildOAuthProvider } from './routes/mcp.js';
+import { CollabRoom } from "./collab-room.js";
+import { federationFor } from "./lib/federation/index.js";
+import { PracticeRoom } from "./practice-room.js";
+import { ogImage, handleFrontend } from "./routes/render.js";
+import { handleCollab, handleCollabAgent } from "./routes/collab.js";
+import { handlePractice, handlePracticeInfo } from "./routes/practice.js";
+import {
+  HubMcp,
+  registerOAuthConsentRoutes,
+  buildOAuthProvider,
+} from "./routes/mcp.js";
 
 // Re-export the Durable Object classes so Wrangler can bind them (the
 // migrations in wrangler.jsonc register COLLAB_ROOM -> CollabRoom,
@@ -27,25 +31,29 @@ export { CollabRoom, PracticeRoom, HubMcp };
 const app = createApp();
 
 // Open Graph preview image: a headless-Chromium screenshot of an in-site page.
-app.get('/og-image', (c) => ogImage(req(c), c.env, c.executionCtx, urlOf(c)));
+app.get("/og-image", (c) => ogImage(req(c), c.env, c.executionCtx, urlOf(c)));
 
 // An AI assistant taking part in a session over HTTP (the MCP server can't hold
 // a socket between tool calls). Registered first: its GET would otherwise be
 // taken for a WebSocket upgrade by the wildcard below.
-app.all('/collab/:code/agent', (c) => handleCollabAgent(req(c), c.env, urlOf(c), cors(c)));
-app.all('/collab/:code/agent/*', (c) => handleCollabAgent(req(c), c.env, urlOf(c), cors(c)));
+app.all("/collab/:code/agent", (c) =>
+  handleCollabAgent(req(c), c.env, urlOf(c), cors(c)),
+);
+app.all("/collab/:code/agent/*", (c) =>
+  handleCollabAgent(req(c), c.env, urlOf(c), cors(c)),
+);
 
 // Live-collaboration WebSocket. A WS upgrade arrives as a GET, so this must be
 // registered before the GET/HEAD frontend fall-through below would shadow it.
-app.get('/collab', (c) => handleCollab(req(c), c.env, urlOf(c), cors(c)));
-app.get('/collab/*', (c) => handleCollab(req(c), c.env, urlOf(c), cors(c)));
+app.get("/collab", (c) => handleCollab(req(c), c.env, urlOf(c), cors(c)));
+app.get("/collab/*", (c) => handleCollab(req(c), c.env, urlOf(c), cors(c)));
 
 // Letterboard session WebSocket: a Practice page hosting, a letterboard tablet
 // following. Same reasoning as /collab for registering it here, before the
 // frontend fall-through. The bare path is the capability check the Practice
 // page makes before offering its letterboard button, so it comes first.
-app.get('/practice', (c) => handlePracticeInfo(c.env, cors(c)));
-app.get('/practice/*', (c) => handlePractice(req(c), c.env, urlOf(c), cors(c)));
+app.get("/practice", (c) => handlePracticeInfo(c.env, cors(c)));
+app.get("/practice/*", (c) => handlePractice(req(c), c.env, urlOf(c), cors(c)));
 
 // Consent screen backing the remote MCP OAuth flow. `/authorize`, `/token`, and
 // `/register` are also reserved paths (the OAuthProvider wrap below implements
@@ -62,28 +70,28 @@ registerFrontend(app, handleFrontend);
 // see routes/mcp.js. Built fresh per request so its token-refresh callback can
 // close over this request's env bindings.
 export default {
-	fetch(request, env, ctx) {
-		return buildOAuthProvider(app, env).fetch(request, env, ctx);
-	},
+  fetch(request, env, ctx) {
+    return buildOAuthProvider(app, env).fetch(request, env, ctx);
+  },
 
-	// Outgoing ActivityPub deliveries, when a FEDERATION_QUEUE binding exists (see
-	// wrangler.jsonc). Cloudflare Queues hands batches here; each message is one
-	// task Fedify enqueued and now runs. A failure retries that message alone,
-	// with the queue's own backoff, rather than the whole batch.
-	async queue(batch, env) {
-		const federation = await federationFor(env);
-		for (const message of batch.messages) {
-			if (!federation) {
-				message.ack();
-				continue;
-			}
-			try {
-				await federation.processQueuedTask({ env }, message.body);
-				message.ack();
-			} catch (error) {
-				console.error('federation queue:', error);
-				message.retry();
-			}
-		}
-	},
+  // Outgoing ActivityPub deliveries, when a FEDERATION_QUEUE binding exists (see
+  // wrangler.jsonc). Cloudflare Queues hands batches here; each message is one
+  // task Fedify enqueued and now runs. A failure retries that message alone,
+  // with the queue's own backoff, rather than the whole batch.
+  async queue(batch, env) {
+    const federation = await federationFor(env);
+    for (const message of batch.messages) {
+      if (!federation) {
+        message.ack();
+        continue;
+      }
+      try {
+        await federation.processQueuedTask({ env }, message.body);
+        message.ack();
+      } catch (error) {
+        console.error("federation queue:", error);
+        message.retry();
+      }
+    }
+  },
 };

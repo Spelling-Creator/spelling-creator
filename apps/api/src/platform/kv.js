@@ -39,7 +39,7 @@
  * @returns {boolean}
  */
 export function isExpired(expiresAt, now = Math.floor(Date.now() / 1000)) {
-	return Boolean(expiresAt) && expiresAt <= now;
+  return Boolean(expiresAt) && expiresAt <= now;
 }
 
 /**
@@ -51,6 +51,6 @@ export function isExpired(expiresAt, now = Math.floor(Date.now() / 1000)) {
  * @returns {number}
  */
 export function expiryFrom(opts, now = Math.floor(Date.now() / 1000)) {
-	const ttl = opts && Number(opts.expirationTtl);
-	return Number.isFinite(ttl) && ttl > 0 ? now + Math.floor(ttl) : 0;
+  const ttl = opts && Number(opts.expirationTtl);
+  return Number.isFinite(ttl) && ttl > 0 ? now + Math.floor(ttl) : 0;
 }

@@ -12,12 +12,12 @@
 // collaboration join is limited by user. The code is the only secret, and the
 // limit is what keeps guessing one from being cheap.
 
-import { verifySupabaseUser } from '../lib/supabase.js';
-import { clientIp } from '../lib/auth.js';
-import { jsonResponse } from '../lib/http.js';
-import { takeJoinToken } from '../lib/joinLimit.js';
-import { rateLimitStore } from '../platform/index.js';
-import { SESSION_CODE_RE } from './collab.js';
+import { verifySupabaseUser } from "../lib/supabase.js";
+import { clientIp } from "../lib/auth.js";
+import { jsonResponse } from "../lib/http.js";
+import { takeJoinToken } from "../lib/joinLimit.js";
+import { rateLimitStore } from "../platform/index.js";
+import { SESSION_CODE_RE } from "./collab.js";
 
 // A board is at the limit after this many joins in a minute from one address.
 // Generous for a tablet that reconnects after a dropped connection, and a dead
@@ -36,16 +36,16 @@ const BOARD_JOIN_LIMIT = 10;
  * @returns {string|null}
  */
 export function parsePracticeCode(pathname) {
-	const m = /^\/practice\/([^/]+)\/?$/.exec(pathname);
-	if (!m) return null;
-	let code;
-	try {
-		code = decodeURIComponent(m[1]).trim();
-	} catch {
-		return null;
-	}
-	if (!SESSION_CODE_RE.test(code)) return null;
-	return code.toUpperCase();
+  const m = /^\/practice\/([^/]+)\/?$/.exec(pathname);
+  if (!m) return null;
+  let code;
+  try {
+    code = decodeURIComponent(m[1]).trim();
+  } catch {
+    return null;
+  }
+  if (!SESSION_CODE_RE.test(code)) return null;
+  return code.toUpperCase();
 }
 
 /**
@@ -59,7 +59,7 @@ export function parsePracticeCode(pathname) {
  * `available: false` (a Worker deployed without the PRACTICE_ROOM binding).
  */
 export function handlePracticeInfo(env, cors) {
-	return jsonResponse({ available: Boolean(env.PRACTICE_ROOM) }, 200, cors);
+  return jsonResponse({ available: Boolean(env.PRACTICE_ROOM) }, 200, cors);
 }
 
 /**
@@ -73,66 +73,90 @@ export function handlePracticeInfo(env, cors) {
  * reaches the room: the verified role goes over as X-Practice-Role instead.
  */
 export async function handlePractice(request, env, url, cors) {
-	if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') {
-		return new Response('Expected a WebSocket upgrade.', { status: 426, headers: cors });
-	}
-	if (!env.PRACTICE_ROOM) {
-		return new Response('Letterboard sync is not configured.', { status: 500, headers: cors });
-	}
+  if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
+    return new Response("Expected a WebSocket upgrade.", {
+      status: 426,
+      headers: cors,
+    });
+  }
+  if (!env.PRACTICE_ROOM) {
+    return new Response("Letterboard sync is not configured.", {
+      status: 500,
+      headers: cors,
+    });
+  }
 
-	const code = parsePracticeCode(url.pathname);
-	if (!code) {
-		return new Response('Invalid session code.', { status: 400, headers: cors });
-	}
+  const code = parsePracticeCode(url.pathname);
+  if (!code) {
+    return new Response("Invalid session code.", {
+      status: 400,
+      headers: cors,
+    });
+  }
 
-	const kv = rateLimitStore(env);
-	if (!kv) {
-		return new Response('Server misconfiguration: no rate-limit store configured', { status: 500, headers: cors });
-	}
+  const kv = rateLimitStore(env);
+  if (!kv) {
+    return new Response(
+      "Server misconfiguration: no rate-limit store configured",
+      { status: 500, headers: cors },
+    );
+  }
 
-	const create = url.searchParams.get('create') === '1';
-	if (create) {
-		// The host runs the lesson and records the answers through the signed-in
-		// responses endpoint, so it has to be signed in.
-		const user = await verifySupabaseUser(env, url.searchParams.get('token') || '');
-		if (!user) {
-			return new Response('Sign in to run a lesson for a letterboard.', { status: 401, headers: cors });
-		}
-		const limited = await takeJoinToken(kv, `practice-rl:user:${user.id}`, {
-			message: 'Too many letterboard sessions started. Please wait a moment.',
-			cors,
-		});
-		if (limited) return limited;
-	} else {
-		// An anonymous join is only limited by where it comes from, so one with no
-		// address is refused rather than put in a shared bucket, where one client
-		// could spend everyone else's joins. On Cloudflare the edge always sets
-		// the address, so this only turns away a request that skipped it.
-		const ip = clientIp(env, request);
-		if (!ip) {
-			return new Response("Can't tell where this request came from, so it can't join.", {
-				status: 400,
-				headers: cors,
-			});
-		}
-		const limited = await takeJoinToken(kv, `practice-rl:ip:${ip}`, {
-			message: 'Too many attempts to join a letterboard session. Please wait a moment.',
-			cors,
-			limit: BOARD_JOIN_LIMIT,
-		});
-		if (limited) return limited;
-	}
+  const create = url.searchParams.get("create") === "1";
+  if (create) {
+    // The host runs the lesson and records the answers through the signed-in
+    // responses endpoint, so it has to be signed in.
+    const user = await verifySupabaseUser(
+      env,
+      url.searchParams.get("token") || "",
+    );
+    if (!user) {
+      return new Response("Sign in to run a lesson for a letterboard.", {
+        status: 401,
+        headers: cors,
+      });
+    }
+    const limited = await takeJoinToken(kv, `practice-rl:user:${user.id}`, {
+      message: "Too many letterboard sessions started. Please wait a moment.",
+      cors,
+    });
+    if (limited) return limited;
+  } else {
+    // An anonymous join is only limited by where it comes from, so one with no
+    // address is refused rather than put in a shared bucket, where one client
+    // could spend everyone else's joins. On Cloudflare the edge always sets
+    // the address, so this only turns away a request that skipped it.
+    const ip = clientIp(env, request);
+    if (!ip) {
+      return new Response(
+        "Can't tell where this request came from, so it can't join.",
+        {
+          status: 400,
+          headers: cors,
+        },
+      );
+    }
+    const limited = await takeJoinToken(kv, `practice-rl:ip:${ip}`, {
+      message:
+        "Too many attempts to join a letterboard session. Please wait a moment.",
+      cors,
+      limit: BOARD_JOIN_LIMIT,
+    });
+    if (limited) return limited;
+  }
 
-	// Forward the upgrade with the role we established. A client-supplied copy of
-	// the header is dropped first, and the token never leaves this Worker.
-	const headers = new Headers(request.headers);
-	headers.delete('X-Practice-Role');
-	headers.set('X-Practice-Role', create ? 'host' : 'board');
-	const forward = new URL(url.toString());
-	forward.pathname = `/practice/${code}`;
-	forward.search = '';
+  // Forward the upgrade with the role we established. A client-supplied copy of
+  // the header is dropped first, and the token never leaves this Worker.
+  const headers = new Headers(request.headers);
+  headers.delete("X-Practice-Role");
+  headers.set("X-Practice-Role", create ? "host" : "board");
+  const forward = new URL(url.toString());
+  forward.pathname = `/practice/${code}`;
+  forward.search = "";
 
-	return practiceRoom(env, code).fetch(new Request(forward.toString(), { method: 'GET', headers }));
+  return practiceRoom(env, code).fetch(
+    new Request(forward.toString(), { method: "GET", headers }),
+  );
 }
 
 /**
@@ -142,5 +166,7 @@ export async function handlePractice(request, env, url, cors) {
  * differently.
  */
 export function practiceRoom(env, code) {
-	return env.PRACTICE_ROOM.get(env.PRACTICE_ROOM.idFromName(code.toUpperCase()));
+  return env.PRACTICE_ROOM.get(
+    env.PRACTICE_ROOM.idFromName(code.toUpperCase()),
+  );
 }

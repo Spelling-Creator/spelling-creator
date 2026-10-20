@@ -38,12 +38,21 @@
 // pass in @spelling-creator/core/richText. Only the parser is per-runtime, and now
 // it need not even be that.
 
-import { parseFragment, serialize } from 'parse5';
+import { parseFragment, serialize } from "parse5";
 
-import { LINK_REL, LINK_TARGET, MEDIA_TAGS, RICH_TEXT_TAGS, isSafeLink } from '@spelling-creator/core/richText';
+import {
+  LINK_REL,
+  LINK_TARGET,
+  MEDIA_TAGS,
+  RICH_TEXT_TAGS,
+  isSafeLink,
+} from "@spelling-creator/core/richText";
 
 // Re-exported so the routes keep importing their rich-text helpers from one place.
-export { isRichTextEmpty, richTextToPlain } from '@spelling-creator/core/richText';
+export {
+  isRichTextEmpty,
+  richTextToPlain,
+} from "@spelling-creator/core/richText";
 
 const KEEP_TAGS = new Set(RICH_TEXT_TAGS);
 
@@ -53,50 +62,50 @@ const KEEP_TAGS = new Set(RICH_TEXT_TAGS);
 // outright. Everything else unknown (div, span, h1, table...) is unwrapped instead —
 // its text is innocent, only the tag is unwanted.
 const DROP_TAGS = new Set([
-	'script',
-	'style',
-	'noscript',
-	'template',
-	'iframe',
-	'frame',
-	'frameset',
-	'object',
-	'embed',
-	'applet',
-	// The rest of HTML's raw-text elements. Their content is not parsed as markup,
-	// so a browser — and parse5's serializer with it — treats the text inside them
-	// as literal and writes it back *unescaped*. Unwrapping one would therefore
-	// hand its `<script>alert(1)</script>` body out as markup rather than as the
-	// words it was parsed as. script, style, iframe and noscript are already above;
-	// these four complete the set (parse5's UNESCAPED_TEXT), and none of them is
-	// prose anybody meant to write.
-	'xmp',
-	'noembed',
-	'noframes',
-	'plaintext',
-	// Media. The product forbids uploading or embedding any of these.
-	...MEDIA_TAGS,
-	// Interactive/form content has no place in a comment.
-	'form',
-	'input',
-	'button',
-	'select',
-	'option',
-	'textarea',
-	'label',
-	// Document-level tags, which should never appear in a fragment.
-	'html',
-	'head',
-	'body',
-	'meta',
-	'link',
-	'base',
-	'title',
+  "script",
+  "style",
+  "noscript",
+  "template",
+  "iframe",
+  "frame",
+  "frameset",
+  "object",
+  "embed",
+  "applet",
+  // The rest of HTML's raw-text elements. Their content is not parsed as markup,
+  // so a browser — and parse5's serializer with it — treats the text inside them
+  // as literal and writes it back *unescaped*. Unwrapping one would therefore
+  // hand its `<script>alert(1)</script>` body out as markup rather than as the
+  // words it was parsed as. script, style, iframe and noscript are already above;
+  // these four complete the set (parse5's UNESCAPED_TEXT), and none of them is
+  // prose anybody meant to write.
+  "xmp",
+  "noembed",
+  "noframes",
+  "plaintext",
+  // Media. The product forbids uploading or embedding any of these.
+  ...MEDIA_TAGS,
+  // Interactive/form content has no place in a comment.
+  "form",
+  "input",
+  "button",
+  "select",
+  "option",
+  "textarea",
+  "label",
+  // Document-level tags, which should never appear in a fragment.
+  "html",
+  "head",
+  "body",
+  "meta",
+  "link",
+  "base",
+  "title",
 ]);
 
 /** parse5 marks a node's kind with `nodeName`; these two are not elements. */
-const TEXT_NODE = '#text';
-const COMMENT_NODE = '#comment';
+const TEXT_NODE = "#text";
+const COMMENT_NODE = "#comment";
 
 /**
  * How deeply nested an element may be before it is flattened to its text.
@@ -125,17 +134,19 @@ const MAX_DEPTH = 100;
  * not be the reason that holds.
  */
 function attributeValue(node, name) {
-	// parse5 keeps the prefix in `name` (`xlink:href`, not `href`) and reports the
-	// namespace separately, so the comparison is against the part after the last
-	// colon. Comparing the whole name would quietly miss exactly the case this
-	// helper says it covers.
-	const localName = (attr) => attr.name.slice(attr.name.lastIndexOf(':') + 1).toLowerCase();
-	const found = (node.attrs || []).find((attr) => localName(attr) === name);
-	return found ? found.value : null;
+  // parse5 keeps the prefix in `name` (`xlink:href`, not `href`) and reports the
+  // namespace separately, so the comparison is against the part after the last
+  // colon. Comparing the whole name would quietly miss exactly the case this
+  // helper says it covers.
+  const localName = (attr) =>
+    attr.name.slice(attr.name.lastIndexOf(":") + 1).toLowerCase();
+  const found = (node.attrs || []).find((attr) => localName(attr) === name);
+  return found ? found.value : null;
 }
 
 /** Whether a node is an element this sanitizer removes along with its subtree. */
-const isDropped = (node) => Boolean(node.tagName) && DROP_TAGS.has(node.tagName.toLowerCase());
+const isDropped = (node) =>
+  Boolean(node.tagName) && DROP_TAGS.has(node.tagName.toLowerCase());
 
 /** A parse5 text node holding `value`. */
 const textNode = (value) => ({ nodeName: TEXT_NODE, value, parentNode: null });
@@ -149,20 +160,20 @@ const textNode = (value) => ({ nodeName: TEXT_NODE, value, parentNode: null });
  * into the document just because it was buried deeply enough.
  */
 function subtreeText(root) {
-	let text = '';
-	const stack = [root];
-	while (stack.length > 0) {
-		const node = stack.pop();
-		if (node.nodeName === TEXT_NODE) {
-			text += node.value;
-			continue;
-		}
-		if (isDropped(node)) continue;
-		const children = node.childNodes || [];
-		// Pushed in reverse so popping walks them left to right.
-		for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
-	}
-	return text;
+  let text = "";
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (node.nodeName === TEXT_NODE) {
+      text += node.value;
+      continue;
+    }
+    if (isDropped(node)) continue;
+    const children = node.childNodes || [];
+    // Pushed in reverse so popping walks them left to right.
+    for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
+  }
+  return text;
 }
 
 /**
@@ -175,64 +186,64 @@ function subtreeText(root) {
  * the parent splices them in where it stood.
  */
 function replacementFor(node, depth, resolved) {
-	// Anything that is neither text, comment nor a named element — a doctype, a
-	// stray document node — has no place in stored prose. The fragment root has no
-	// tagName either, so it is exempted by the caller rather than here.
-	const tag = node.tagName ? node.tagName.toLowerCase() : '';
-	if (!tag) return [];
-	if (DROP_TAGS.has(tag)) return [];
+  // Anything that is neither text, comment nor a named element — a doctype, a
+  // stray document node — has no place in stored prose. The fragment root has no
+  // tagName either, so it is exempted by the caller rather than here.
+  const tag = node.tagName ? node.tagName.toLowerCase() : "";
+  if (!tag) return [];
+  if (DROP_TAGS.has(tag)) return [];
 
-	// Past the limit the subtree was never walked, so there is nothing to splice —
-	// keep its words as one flat text node and drop every tag it contained.
-	if (depth >= MAX_DEPTH) {
-		const text = subtreeText(node);
-		return text ? [textNode(text)] : [];
-	}
+  // Past the limit the subtree was never walked, so there is nothing to splice —
+  // keep its words as one flat text node and drop every tag it contained.
+  if (depth >= MAX_DEPTH) {
+    const text = subtreeText(node);
+    return text ? [textNode(text)] : [];
+  }
 
-	const children = [];
-	for (const child of node.childNodes || []) {
-		// Comments carry nothing a user meant to write, and are a classic
-		// parser-confusion vector. Dropped everywhere.
-		if (child.nodeName === COMMENT_NODE) continue;
-		if (child.nodeName === TEXT_NODE) {
-			children.push(child);
-			continue;
-		}
-		children.push(...(resolved.get(child) || []));
-	}
+  const children = [];
+  for (const child of node.childNodes || []) {
+    // Comments carry nothing a user meant to write, and are a classic
+    // parser-confusion vector. Dropped everywhere.
+    if (child.nodeName === COMMENT_NODE) continue;
+    if (child.nodeName === TEXT_NODE) {
+      children.push(child);
+      continue;
+    }
+    children.push(...(resolved.get(child) || []));
+  }
 
-	if (!KEEP_TAGS.has(tag)) {
-		// An unknown-but-harmless wrapper (div, span, h2, table...): drop the tag
-		// but keep the text inside it, so a paste from elsewhere loses its layout
-		// rather than its words.
-		return children;
-	}
+  if (!KEEP_TAGS.has(tag)) {
+    // An unknown-but-harmless wrapper (div, span, h2, table...): drop the tag
+    // but keep the text inside it, so a paste from elsewhere loses its layout
+    // rather than its words.
+    return children;
+  }
 
-	// Read the href before stripping, since the strip is what we would otherwise
-	// read it back from.
-	const href = tag === 'a' ? attributeValue(node, 'href') : null;
+  // Read the href before stripping, since the strip is what we would otherwise
+  // read it back from.
+  const href = tag === "a" ? attributeValue(node, "href") : null;
 
-	// Strip every attribute. This one rule removes onclick=, onerror=, style=, and
-	// every attribute we have never heard of, without enumerating them.
-	node.attrs = [];
+  // Strip every attribute. This one rule removes onclick=, onerror=, style=, and
+  // every attribute we have never heard of, without enumerating them.
+  node.attrs = [];
 
-	if (tag === 'a') {
-		if (!isSafeLink(href)) {
-			// An unusable or hostile link: keep the words, lose the link.
-			return children;
-		}
-		// Links that survive open away from the app, pass no SEO value to spammers,
-		// and cannot reach back through `window.opener`.
-		node.attrs = [
-			{ name: 'href', value: href.trim() },
-			{ name: 'target', value: LINK_TARGET },
-			{ name: 'rel', value: LINK_REL },
-		];
-	}
+  if (tag === "a") {
+    if (!isSafeLink(href)) {
+      // An unusable or hostile link: keep the words, lose the link.
+      return children;
+    }
+    // Links that survive open away from the app, pass no SEO value to spammers,
+    // and cannot reach back through `window.opener`.
+    node.attrs = [
+      { name: "href", value: href.trim() },
+      { name: "target", value: LINK_TARGET },
+      { name: "rel", value: LINK_REL },
+    ];
+  }
 
-	node.childNodes = children;
-	for (const child of children) child.parentNode = node;
-	return [node];
+  node.childNodes = children;
+  for (const child of children) child.parentNode = node;
+  return [node];
 }
 
 /**
@@ -245,50 +256,51 @@ function replacementFor(node, depth, resolved) {
  * tree walk or a visited flag on the nodes themselves.
  */
 function transformFragment(root) {
-	/** @type {{ node: object, depth: number }[]} */
-	const preorder = [];
-	const stack = [{ node: root, depth: 0 }];
-	while (stack.length > 0) {
-		const frame = stack.pop();
-		preorder.push(frame);
-		// Never descend into a subtree that is going to be removed wholesale, and
-		// never descend past the limit — both of those are handled where the node's
-		// replacement is computed.
-		if (frame.depth >= MAX_DEPTH || isDropped(frame.node)) continue;
-		const children = frame.node.childNodes || [];
-		for (let i = children.length - 1; i >= 0; i -= 1) {
-			const child = children[i];
-			// Text and comments are leaves; their handling is inlined above, so they
-			// never need a frame of their own.
-			if (child.nodeName === TEXT_NODE || child.nodeName === COMMENT_NODE) continue;
-			stack.push({ node: child, depth: frame.depth + 1 });
-		}
-	}
+  /** @type {{ node: object, depth: number }[]} */
+  const preorder = [];
+  const stack = [{ node: root, depth: 0 }];
+  while (stack.length > 0) {
+    const frame = stack.pop();
+    preorder.push(frame);
+    // Never descend into a subtree that is going to be removed wholesale, and
+    // never descend past the limit — both of those are handled where the node's
+    // replacement is computed.
+    if (frame.depth >= MAX_DEPTH || isDropped(frame.node)) continue;
+    const children = frame.node.childNodes || [];
+    for (let i = children.length - 1; i >= 0; i -= 1) {
+      const child = children[i];
+      // Text and comments are leaves; their handling is inlined above, so they
+      // never need a frame of their own.
+      if (child.nodeName === TEXT_NODE || child.nodeName === COMMENT_NODE)
+        continue;
+      stack.push({ node: child, depth: frame.depth + 1 });
+    }
+  }
 
-	const resolved = new Map();
-	for (let i = preorder.length - 1; i >= 1; i -= 1) {
-		const { node, depth } = preorder[i];
-		resolved.set(node, replacementFor(node, depth, resolved));
-	}
+  const resolved = new Map();
+  for (let i = preorder.length - 1; i >= 1; i -= 1) {
+    const { node, depth } = preorder[i];
+    resolved.set(node, replacementFor(node, depth, resolved));
+  }
 
-	// The root is the fragment itself, which is kept — only its children change.
-	const children = [];
-	for (const child of root.childNodes || []) {
-		if (child.nodeName === COMMENT_NODE) continue;
-		if (child.nodeName === TEXT_NODE) {
-			children.push(child);
-			continue;
-		}
-		children.push(...(resolved.get(child) || []));
-	}
-	// Re-parent everything that ends up here. A node unwrapped out of a removed
-	// element still points at it, and parse5's serializer asks a text node's
-	// *parent* whether to escape — so a stale parent is not a tidiness matter but the
-	// difference between storing `&lt;script&gt;` and storing `<script>`. Elements
-	// kept by replacementFor already re-parent their own children; this is the one
-	// level that has no element to do it.
-	for (const child of children) child.parentNode = root;
-	return children;
+  // The root is the fragment itself, which is kept — only its children change.
+  const children = [];
+  for (const child of root.childNodes || []) {
+    if (child.nodeName === COMMENT_NODE) continue;
+    if (child.nodeName === TEXT_NODE) {
+      children.push(child);
+      continue;
+    }
+    children.push(...(resolved.get(child) || []));
+  }
+  // Re-parent everything that ends up here. A node unwrapped out of a removed
+  // element still points at it, and parse5's serializer asks a text node's
+  // *parent* whether to escape — so a stale parent is not a tidiness matter but the
+  // difference between storing `&lt;script&gt;` and storing `<script>`. Elements
+  // kept by replacementFor already re-parent their own children; this is the one
+  // level that has no element to do it.
+  for (const child of children) child.parentNode = root;
+  return children;
 }
 
 /**
@@ -308,13 +320,13 @@ function transformFragment(root) {
  * @returns {Promise<string>} Sanitized HTML.
  */
 export async function sanitizeRichText(html) {
-	const input = typeof html === 'string' ? html : '';
-	if (!input) return '';
+  const input = typeof html === "string" ? html : "";
+  if (!input) return "";
 
-	// Parsed as a fragment, as the browser does for innerHTML, so the input is
-	// treated as body content rather than a whole document — an implied <html> or
-	// <head> would otherwise be invented around it and then dropped.
-	const fragment = parseFragment(input);
-	fragment.childNodes = transformFragment(fragment);
-	return serialize(fragment);
+  // Parsed as a fragment, as the browser does for innerHTML, so the input is
+  // treated as body content rather than a whole document — an implied <html> or
+  // <head> would otherwise be invented around it and then dropped.
+  const fragment = parseFragment(input);
+  fragment.childNodes = transformFragment(fragment);
+  return serialize(fragment);
 }

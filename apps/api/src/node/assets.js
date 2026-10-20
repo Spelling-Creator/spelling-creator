@@ -16,38 +16,39 @@
 // compression properly. This exists so that a deployment doesn't *have* to: one
 // process, one port, and it works.
 
-import { createReadStream } from 'node:fs';
-import { realpath, stat } from 'node:fs/promises';
-import { extname, join, normalize, resolve, sep } from 'node:path';
-import { Readable } from 'node:stream';
+import { createReadStream } from "node:fs";
+import { realpath, stat } from "node:fs/promises";
+import { extname, join, normalize, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
 
 const CONTENT_TYPES = new Map(
-	Object.entries({
-		'.html': 'text/html; charset=utf-8',
-		'.js': 'text/javascript; charset=utf-8',
-		'.mjs': 'text/javascript; charset=utf-8',
-		'.css': 'text/css; charset=utf-8',
-		'.json': 'application/json; charset=utf-8',
-		'.map': 'application/json; charset=utf-8',
-		'.svg': 'image/svg+xml',
-		'.png': 'image/png',
-		'.jpg': 'image/jpeg',
-		'.jpeg': 'image/jpeg',
-		'.gif': 'image/gif',
-		'.webp': 'image/webp',
-		'.avif': 'image/avif',
-		'.ico': 'image/x-icon',
-		'.woff': 'font/woff',
-		'.woff2': 'font/woff2',
-		'.ttf': 'font/ttf',
-		'.txt': 'text/plain; charset=utf-8',
-		'.xml': 'application/xml; charset=utf-8',
-		'.webmanifest': 'application/manifest+json',
-		'.wasm': 'application/wasm',
-	}),
+  Object.entries({
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".map": "application/json; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".txt": "text/plain; charset=utf-8",
+    ".xml": "application/xml; charset=utf-8",
+    ".webmanifest": "application/manifest+json",
+    ".wasm": "application/wasm",
+  }),
 );
 
-const contentType = (path) => CONTENT_TYPES.get(extname(path).toLowerCase()) || 'application/octet-stream';
+const contentType = (path) =>
+  CONTENT_TYPES.get(extname(path).toLowerCase()) || "application/octet-stream";
 
 /**
  * Vite writes hashed filenames under /assets/, so those bytes never change for a
@@ -56,7 +57,9 @@ const contentType = (path) => CONTENT_TYPES.get(extname(path).toLowerCase()) || 
  * pointing at asset names that no longer exist.
  */
 function cacheControl(pathname) {
-	return pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache';
+  return pathname.startsWith("/assets/")
+    ? "public, max-age=31536000, immutable"
+    : "no-cache";
 }
 
 /**
@@ -67,8 +70,8 @@ function cacheControl(pathname) {
  * root already ends in one, and `//` is inside nothing.
  */
 function contains(root, candidate) {
-	const prefix = root.endsWith(sep) ? root : root + sep;
-	return candidate === root || candidate.startsWith(prefix);
+  const prefix = root.endsWith(sep) ? root : root + sep;
+  return candidate === root || candidate.startsWith(prefix);
 }
 
 /**
@@ -81,14 +84,14 @@ function contains(root, candidate) {
  * Lexical, and therefore only half the check — see fileAt for the other half.
  */
 function resolveWithin(root, pathname) {
-	let decoded;
-	try {
-		decoded = decodeURIComponent(pathname);
-	} catch (e) {
-		return null;
-	}
-	const candidate = resolve(join(root, normalize(decoded)));
-	return contains(root, candidate) ? candidate : null;
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch (e) {
+    return null;
+  }
+  const candidate = resolve(join(root, normalize(decoded)));
+  return contains(root, candidate) ? candidate : null;
 }
 
 /**
@@ -104,15 +107,15 @@ function resolveWithin(root, pathname) {
  * against an unresolved root would refuse every file in it.
  */
 async function fileAt(root, path) {
-	try {
-		const info = await stat(path);
-		if (info.isDirectory()) return await fileAt(root, join(path, 'index.html'));
-		if (!info.isFile()) return null;
-		const real = await realpath(path);
-		return contains(root, real) ? { path: real, size: info.size } : null;
-	} catch (e) {
-		return null;
-	}
+  try {
+    const info = await stat(path);
+    if (info.isDirectory()) return await fileAt(root, join(path, "index.html"));
+    if (!info.isFile()) return null;
+    const real = await realpath(path);
+    return contains(root, real) ? { path: real, size: info.size } : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
@@ -122,55 +125,59 @@ async function fileAt(root, path) {
  * @returns {{ fetch: (request: Request) => Promise<Response> }}
  */
 export function assetServer(directory) {
-	const root = resolve(directory);
+  const root = resolve(directory);
 
-	// Resolved once, lazily, and remembered as the promise rather than its value
-	// so that concurrent first requests share the one lookup. A directory that
-	// cannot be resolved (it does not exist yet) falls back to the lexical path,
-	// which serves nothing anyway.
-	let realRootOnce = null;
-	const realRoot = () => {
-		realRootOnce ||= realpath(root).catch(() => root);
-		return realRootOnce;
-	};
+  // Resolved once, lazily, and remembered as the promise rather than its value
+  // so that concurrent first requests share the one lookup. A directory that
+  // cannot be resolved (it does not exist yet) falls back to the lexical path,
+  // which serves nothing anyway.
+  let realRootOnce = null;
+  const realRoot = () => {
+    realRootOnce ||= realpath(root).catch(() => root);
+    return realRootOnce;
+  };
 
-	async function respond(request, path, status) {
-		const found = await fileAt(await realRoot(), path);
-		if (!found) return null;
-		// The type comes from the file that was actually resolved, not from what was
-		// asked for: a request for "/" resolves to index.html, and typing it by the
-		// requested path would serve the shell as application/octet-stream — which
-		// browsers offer to download rather than render.
-		const headers = new Headers({
-			'Content-Type': contentType(found.path),
-			'Cache-Control': cacheControl(new URL(request.url).pathname),
-			'Content-Length': String(found.size),
-		});
-		// HEAD gets the headers and none of the bytes.
-		if (request.method === 'HEAD') return new Response(null, { status, headers });
-		return new Response(Readable.toWeb(createReadStream(found.path)), { status, headers });
-	}
+  async function respond(request, path, status) {
+    const found = await fileAt(await realRoot(), path);
+    if (!found) return null;
+    // The type comes from the file that was actually resolved, not from what was
+    // asked for: a request for "/" resolves to index.html, and typing it by the
+    // requested path would serve the shell as application/octet-stream — which
+    // browsers offer to download rather than render.
+    const headers = new Headers({
+      "Content-Type": contentType(found.path),
+      "Cache-Control": cacheControl(new URL(request.url).pathname),
+      "Content-Length": String(found.size),
+    });
+    // HEAD gets the headers and none of the bytes.
+    if (request.method === "HEAD")
+      return new Response(null, { status, headers });
+    return new Response(Readable.toWeb(createReadStream(found.path)), {
+      status,
+      headers,
+    });
+  }
 
-	return {
-		async fetch(request) {
-			const url = new URL(request.url);
-			const target = resolveWithin(root, url.pathname);
-			if (!target) return new Response('Not found.', { status: 404 });
+  return {
+    async fetch(request) {
+      const url = new URL(request.url);
+      const target = resolveWithin(root, url.pathname);
+      if (!target) return new Response("Not found.", { status: 404 });
 
-			const direct = await respond(request, target, 200);
-			if (direct) return direct;
+      const direct = await respond(request, target, 200);
+      if (direct) return direct;
 
-			// The docs site is built with VitePress's `cleanUrls`, so /docs/intro is
-			// really intro.html. Cloudflare resolves that with its default
-			// `auto-trailing-slash` asset handling; this is the same rule. Without it
-			// every docs page would be a 404 that routes/spa.js then answers with the
-			// app's own not-found page.
-			const asHtml = await respond(request, `${target}.html`, 200);
-			if (asHtml) return asHtml;
+      // The docs site is built with VitePress's `cleanUrls`, so /docs/intro is
+      // really intro.html. Cloudflare resolves that with its default
+      // `auto-trailing-slash` asset handling; this is the same rule. Without it
+      // every docs page would be a 404 that routes/spa.js then answers with the
+      // app's own not-found page.
+      const asHtml = await respond(request, `${target}.html`, 200);
+      if (asHtml) return asHtml;
 
-			// Nothing here. Whether that means "client-side route" or "no such page"
-			// is routes/spa.js's call, not this layer's.
-			return new Response('Not found.', { status: 404 });
-		},
-	};
+      // Nothing here. Whether that means "client-side route" or "no such page"
+      // is routes/spa.js's call, not this layer's.
+      return new Response("Not found.", { status: 404 });
+    },
+  };
 }

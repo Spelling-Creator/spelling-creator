@@ -39,7 +39,7 @@
 // for the same reason as the rest: which store backs them is the host's
 // business, and the hosted instance and a self-hosted one answer differently.
 
-import { cloudflarePlatform } from './cloudflare.js';
+import { cloudflarePlatform } from "./cloudflare.js";
 
 // Memoised per `env` object. The adapters hold no per-request state, and the
 // runtime hands the same `env` to every request, so building them once keeps
@@ -68,13 +68,13 @@ const built = new WeakMap();
  * }}
  */
 export function platform(env) {
-	if (env && env.PLATFORM) return env.PLATFORM;
-	let p = built.get(env);
-	if (!p) {
-		p = cloudflarePlatform(env);
-		built.set(env, p);
-	}
-	return p;
+  if (env && env.PLATFORM) return env.PLATFORM;
+  let p = built.get(env);
+  if (!p) {
+    p = cloudflarePlatform(env);
+    built.set(env, p);
+  }
+  return p;
 }
 
 /** The lesson-image blob store, or null when this host has none. */
@@ -115,7 +115,8 @@ export const federationQueue = (env) => platform(env).federationQueue ?? null;
  * node/remoteFetch.js); a host that says nothing gets the ordinary fetch,
  * looked up when called so a test's stub applies.
  */
-export const remoteFetch = (env) => platform(env).remoteFetch ?? ((input, init) => fetch(input, init));
+export const remoteFetch = (env) =>
+  platform(env).remoteFetch ?? ((input, init) => fetch(input, init));
 
 /**
  * The client IP a request arrived from, however this host reports it. Recorded

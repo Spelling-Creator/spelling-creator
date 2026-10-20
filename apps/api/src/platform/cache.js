@@ -39,9 +39,9 @@
  * @type {ResponseCache}
  */
 export const noopCache = {
-	async match() {
-		return null;
-	},
-	async put() {},
-	async delete() {},
+  async match() {
+    return null;
+  },
+  async put() {},
+  async delete() {},
 };

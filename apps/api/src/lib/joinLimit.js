@@ -26,21 +26,35 @@ const DEFAULT_WINDOW_SECONDS = 60;
  * @param {number} [opts.windowSeconds] How long a full bucket takes to refill.
  * @returns {Promise<Response|null>} A 429 Response when over budget, else null.
  */
-export async function takeJoinToken(kv, key, { message, cors, limit = DEFAULT_LIMIT, windowSeconds = DEFAULT_WINDOW_SECONDS }) {
-	const now = Math.floor(Date.now() / 1000);
-	const entry = readBucket(await kv.get(key)) || { tokens: limit, last: now };
-	entry.tokens = Math.min(limit, entry.tokens + ((now - entry.last) * limit) / windowSeconds);
-	entry.last = now;
-	if (entry.tokens < 1) {
-		const retryAfter = Math.ceil((1 - entry.tokens) * (windowSeconds / limit));
-		return new Response(message, {
-			status: 429,
-			headers: { ...(cors || {}), 'Retry-After': String(retryAfter) },
-		});
-	}
-	entry.tokens -= 1;
-	await kv.put(key, JSON.stringify(entry), { expirationTtl: windowSeconds * 2 });
-	return null;
+export async function takeJoinToken(
+  kv,
+  key,
+  {
+    message,
+    cors,
+    limit = DEFAULT_LIMIT,
+    windowSeconds = DEFAULT_WINDOW_SECONDS,
+  },
+) {
+  const now = Math.floor(Date.now() / 1000);
+  const entry = readBucket(await kv.get(key)) || { tokens: limit, last: now };
+  entry.tokens = Math.min(
+    limit,
+    entry.tokens + ((now - entry.last) * limit) / windowSeconds,
+  );
+  entry.last = now;
+  if (entry.tokens < 1) {
+    const retryAfter = Math.ceil((1 - entry.tokens) * (windowSeconds / limit));
+    return new Response(message, {
+      status: 429,
+      headers: { ...(cors || {}), "Retry-After": String(retryAfter) },
+    });
+  }
+  entry.tokens -= 1;
+  await kv.put(key, JSON.stringify(entry), {
+    expirationTtl: windowSeconds * 2,
+  });
+  return null;
 }
 
 // A stored bucket, or null for none. A row that isn't one (corrupt, or written
@@ -48,12 +62,14 @@ export async function takeJoinToken(kv, key, { message, cors, limit = DEFAULT_LI
 // full bucket: failing every join with a 500 until the row expired would be
 // worse than briefly forgetting how many joins came before.
 function readBucket(raw) {
-	if (!raw) return null;
-	let entry;
-	try {
-		entry = JSON.parse(raw);
-	} catch {
-		return null;
-	}
-	return entry && Number.isFinite(entry.tokens) && Number.isFinite(entry.last) ? entry : null;
+  if (!raw) return null;
+  let entry;
+  try {
+    entry = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  return entry && Number.isFinite(entry.tokens) && Number.isFinite(entry.last)
+    ? entry
+    : null;
 }

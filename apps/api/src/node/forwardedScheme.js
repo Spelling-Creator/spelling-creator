@@ -14,7 +14,7 @@
 // where a chain has left a list, the last entry is the one the nearest proxy
 // wrote.
 
-import { trustedProxyHops } from './platform.js';
+import { trustedProxyHops } from "./platform.js";
 
 /**
  * `request` with its URL's scheme set to the one the nearest trusted proxy
@@ -25,25 +25,25 @@ import { trustedProxyHops } from './platform.js';
  * @returns {Request}
  */
 export function withForwardedScheme(request, env) {
-	if (trustedProxyHops(env) === 0) return request;
+  if (trustedProxyHops(env) === 0) return request;
 
-	const header = request.headers.get('x-forwarded-proto') || '';
-	const scheme = header.split(',').pop().trim().toLowerCase();
-	if (scheme !== 'https' && scheme !== 'http') return request;
+  const header = request.headers.get("x-forwarded-proto") || "";
+  const scheme = header.split(",").pop().trim().toLowerCase();
+  if (scheme !== "https" && scheme !== "http") return request;
 
-	const url = new URL(request.url);
-	if (url.protocol === `${scheme}:`) return request;
-	url.protocol = scheme;
+  const url = new URL(request.url);
+  if (url.protocol === `${scheme}:`) return request;
+  url.protocol = scheme;
 
-	// Rebuilt field by field rather than with `new Request(url, request)`: Node
-	// refuses a streamed body without `duplex: 'half'`, and an upload is exactly
-	// the request that has one.
-	return new Request(url, {
-		method: request.method,
-		headers: request.headers,
-		body: request.body,
-		duplex: 'half',
-		redirect: request.redirect,
-		signal: request.signal,
-	});
+  // Rebuilt field by field rather than with `new Request(url, request)`: Node
+  // refuses a streamed body without `duplex: 'half'`, and an upload is exactly
+  // the request that has one.
+  return new Request(url, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    duplex: "half",
+    redirect: request.redirect,
+    signal: request.signal,
+  });
 }

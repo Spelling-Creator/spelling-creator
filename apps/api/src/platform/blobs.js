@@ -78,11 +78,11 @@
  * @returns {Record<string, string>}
  */
 export function normalizeMetadata(metadata) {
-	const out = {};
-	for (const [k, v] of Object.entries(metadata || {})) {
-		if (typeof v === 'string') out[k] = v;
-	}
-	return out;
+  const out = {};
+  for (const [k, v] of Object.entries(metadata || {})) {
+    if (typeof v === "string") out[k] = v;
+  }
+  return out;
 }
 
 /**
@@ -108,11 +108,13 @@ export function normalizeMetadata(metadata) {
  * @returns {string}
  */
 export function assertUsableKey(key) {
-	const text = String(key ?? '');
-	if (text.split('/').some((segment) => segment === '.' || segment === '..')) {
-		throw new Error(`Blob key ${JSON.stringify(text)} contains a "." or ".." path segment, which no store may resolve.`);
-	}
-	return text;
+  const text = String(key ?? "");
+  if (text.split("/").some((segment) => segment === "." || segment === "..")) {
+    throw new Error(
+      `Blob key ${JSON.stringify(text)} contains a "." or ".." path segment, which no store may resolve.`,
+    );
+  }
+  return text;
 }
 
 /**
@@ -124,6 +126,8 @@ export function assertUsableKey(key) {
  * @returns {string[]}
  */
 export function deleteKeys(key) {
-	const keys = Array.isArray(key) ? key : [key];
-	return keys.filter((k) => typeof k === 'string' && k !== '').map(assertUsableKey);
+  const keys = Array.isArray(key) ? key : [key];
+  return keys
+    .filter((k) => typeof k === "string" && k !== "")
+    .map(assertUsableKey);
 }

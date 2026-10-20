@@ -10,35 +10,35 @@
 // object storage serves the hub and refuses image uploads with a clear 500,
 // rather than failing to start.
 
-import { InProcessMessageQueue } from '@fedify/fedify';
+import { InProcessMessageQueue } from "@fedify/fedify";
 
-import { noopCache } from '../platform/cache.js';
-import { postgrestFedifyKv } from '../platform/postgrestFedifyKv.js';
-import { postgrestKv } from '../platform/postgrestKv.js';
-import { s3Blobs } from '../platform/s3.js';
-import { publicFetch } from './remoteFetch.js';
+import { noopCache } from "../platform/cache.js";
+import { postgrestFedifyKv } from "../platform/postgrestFedifyKv.js";
+import { postgrestKv } from "../platform/postgrestKv.js";
+import { s3Blobs } from "../platform/s3.js";
+import { publicFetch } from "./remoteFetch.js";
 
 /**
  * Read the S3 credentials shared by both buckets, or null when object storage
  * isn't configured.
  */
 function s3Config(env) {
-	const endpoint = env.S3_ENDPOINT;
-	const accessKeyId = env.S3_ACCESS_KEY_ID;
-	const secretAccessKey = env.S3_SECRET_ACCESS_KEY;
-	if (!endpoint || !accessKeyId || !secretAccessKey) return null;
-	return {
-		endpoint,
-		accessKeyId,
-		secretAccessKey,
-		sessionToken: env.S3_SESSION_TOKEN || undefined,
-		// us-east-1 is what MinIO and Garage expect when they don't care, and is
-		// the conventional placeholder for S3 implementations without regions.
-		region: env.S3_REGION || 'us-east-1',
-		// Path style by default: MinIO and Garage serve it without wildcard DNS.
-		// AWS wants the other one.
-		forcePathStyle: env.S3_FORCE_PATH_STYLE !== 'false',
-	};
+  const endpoint = env.S3_ENDPOINT;
+  const accessKeyId = env.S3_ACCESS_KEY_ID;
+  const secretAccessKey = env.S3_SECRET_ACCESS_KEY;
+  if (!endpoint || !accessKeyId || !secretAccessKey) return null;
+  return {
+    endpoint,
+    accessKeyId,
+    secretAccessKey,
+    sessionToken: env.S3_SESSION_TOKEN || undefined,
+    // us-east-1 is what MinIO and Garage expect when they don't care, and is
+    // the conventional placeholder for S3 implementations without regions.
+    region: env.S3_REGION || "us-east-1",
+    // Path style by default: MinIO and Garage serve it without wildcard DNS.
+    // AWS wants the other one.
+    forcePathStyle: env.S3_FORCE_PATH_STYLE !== "false",
+  };
 }
 
 /**
@@ -53,9 +53,11 @@ function s3Config(env) {
  * @returns {number}
  */
 export function trustedProxyHops(env) {
-	const setting = String(env.TRUSTED_PROXY_COUNT ?? '').trim();
-	const configured = setting === '' ? 1 : Number(setting);
-	return Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : 1;
+  const setting = String(env.TRUSTED_PROXY_COUNT ?? "").trim();
+  const configured = setting === "" ? 1 : Number(setting);
+  return Number.isFinite(configured) && configured >= 0
+    ? Math.floor(configured)
+    : 1;
 }
 
 /**
@@ -79,21 +81,21 @@ export function trustedProxyHops(env) {
  * header a client had just made up.
  */
 function clientIpFrom(env) {
-	const header = (env.CLIENT_IP_HEADER || 'x-forwarded-for').toLowerCase();
-	const hops = trustedProxyHops(env);
-	return (request) => {
-		if (hops === 0) return '';
-		const raw = request.headers.get(header) || '';
-		if (!raw) return '';
-		// A single-value header (Cloudflare's cf-connecting-ip, nginx's
-		// x-real-ip) has no list to index into.
-		if (header !== 'x-forwarded-for') return raw.trim();
-		const parts = raw
-			.split(',')
-			.map((part) => part.trim())
-			.filter(Boolean);
-		return parts[Math.max(0, parts.length - hops)] || '';
-	};
+  const header = (env.CLIENT_IP_HEADER || "x-forwarded-for").toLowerCase();
+  const hops = trustedProxyHops(env);
+  return (request) => {
+    if (hops === 0) return "";
+    const raw = request.headers.get(header) || "";
+    if (!raw) return "";
+    // A single-value header (Cloudflare's cf-connecting-ip, nginx's
+    // x-real-ip) has no list to index into.
+    if (header !== "x-forwarded-for") return raw.trim();
+    const parts = raw
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts[Math.max(0, parts.length - hops)] || "";
+  };
 }
 
 /**
@@ -102,42 +104,49 @@ function clientIpFrom(env) {
  * @param {Record<string, string | undefined>} env Usually `process.env`.
  */
 export function nodePlatform(env) {
-	const s3 = s3Config(env);
-	// Both buckets share credentials and endpoint; only the bucket name differs.
-	// Two buckets rather than prefixes in one because that is how the Cloudflare
-	// deployment is arranged, and keeping them the same shape means a migration
-	// between hosts is a copy rather than a rename.
-	const bucket = (name) => (s3 && name ? s3Blobs({ ...s3, bucket: name }) : null);
+  const s3 = s3Config(env);
+  // Both buckets share credentials and endpoint; only the bucket name differs.
+  // Two buckets rather than prefixes in one because that is how the Cloudflare
+  // deployment is arranged, and keeping them the same shape means a migration
+  // between hosts is a copy rather than a rename.
+  const bucket = (name) =>
+    s3 && name ? s3Blobs({ ...s3, bucket: name }) : null;
 
-	const database =
-		env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? { url: env.SUPABASE_URL, apiKey: env.SUPABASE_SERVICE_ROLE_KEY } : null;
-	const kv = database ? postgrestKv(database) : null;
+  const database =
+    env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+      ? { url: env.SUPABASE_URL, apiKey: env.SUPABASE_SERVICE_ROLE_KEY }
+      : null;
+  const kv = database ? postgrestKv(database) : null;
 
-	return {
-		images: bucket(env.S3_BUCKET_IMAGES),
-		lessonGit: bucket(env.S3_BUCKET_GIT),
-		// One table serves both roles, as one KV namespace could have: the keys are
-		// prefixed and the lifetimes are similar. They stay separate names in the
-		// seam because a host that wanted to split them should be able to.
-		rateLimit: kv,
-		oauthState: kv,
-		// Nothing in-process: a reverse proxy in front of this does the job
-		// properly, with a shared store and eviction, where a Map here would hold
-		// a copy per worker process and grow without bound. See platform/cache.js.
-		cache: noopCache,
-		// Fedify's caches go in the same table, under their own prefix (see
-		// postgrestFedifyKv.js). Deliveries queue in memory: they are retried
-		// while the process lives and lost when it stops, which for an instance
-		// with a handful of followers is the right trade against running a broker.
-		// The seam is where a Redis-backed queue would go when that stops being
-		// true.
-		federationKv: database ? postgrestFedifyKv(database) : null,
-		federationQueue: new InProcessMessageQueue(),
-		// For addresses a visitor chose (a lesson on another instance): connects
-		// only to public addresses, checked when the socket opens, which is what
-		// defeats DNS rebinding (see remoteFetch.js). A test pair on a private
-		// network has to reach private addresses, so it gets the ordinary fetch.
-		remoteFetch: String(env.FEDERATION_ALLOW_PRIVATE_ADDRESSES || '').toLowerCase() === 'true' ? fetch : publicFetch,
-		clientIp: clientIpFrom(env),
-	};
+  return {
+    images: bucket(env.S3_BUCKET_IMAGES),
+    lessonGit: bucket(env.S3_BUCKET_GIT),
+    // One table serves both roles, as one KV namespace could have: the keys are
+    // prefixed and the lifetimes are similar. They stay separate names in the
+    // seam because a host that wanted to split them should be able to.
+    rateLimit: kv,
+    oauthState: kv,
+    // Nothing in-process: a reverse proxy in front of this does the job
+    // properly, with a shared store and eviction, where a Map here would hold
+    // a copy per worker process and grow without bound. See platform/cache.js.
+    cache: noopCache,
+    // Fedify's caches go in the same table, under their own prefix (see
+    // postgrestFedifyKv.js). Deliveries queue in memory: they are retried
+    // while the process lives and lost when it stops, which for an instance
+    // with a handful of followers is the right trade against running a broker.
+    // The seam is where a Redis-backed queue would go when that stops being
+    // true.
+    federationKv: database ? postgrestFedifyKv(database) : null,
+    federationQueue: new InProcessMessageQueue(),
+    // For addresses a visitor chose (a lesson on another instance): connects
+    // only to public addresses, checked when the socket opens, which is what
+    // defeats DNS rebinding (see remoteFetch.js). A test pair on a private
+    // network has to reach private addresses, so it gets the ordinary fetch.
+    remoteFetch:
+      String(env.FEDERATION_ALLOW_PRIVATE_ADDRESSES || "").toLowerCase() ===
+      "true"
+        ? fetch
+        : publicFetch,
+    clientIp: clientIpFrom(env),
+  };
 }

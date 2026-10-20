@@ -8,11 +8,11 @@
 // gates (handleCollab, handlePractice): authentication is the Worker's job, not
 // the room's, so these tests are about each room's own behavior (merging,
 // relaying, admission, persistence).
-export { CollabRoom } from './collab-room.js';
-export { PracticeRoom } from './practice-room.js';
+export { CollabRoom } from "./collab-room.js";
+export { PracticeRoom } from "./practice-room.js";
 
 export default {
-	fetch() {
-		return new Response('collab-room test worker');
-	},
+  fetch() {
+    return new Response("collab-room test worker");
+  },
 };

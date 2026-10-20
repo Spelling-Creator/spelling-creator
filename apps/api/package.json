@@ -1,47 +1,47 @@
 {
-	"name": "@spelling-creator/api",
-	"version": "0.0.0",
-	"private": true,
-	"type": "module",
-	"imports": {
-		"#image-codec-wasm": {
-			"workerd": "./src/codecs/wasm.workerd.js",
-			"default": "./src/codecs/wasm.node.js"
-		}
-	},
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "portless run --name api.spelling-creator sh scripts/dev.sh",
-		"test": "vitest run",
-		"bundle": "wrangler deploy --dry-run --outdir dist",
-		"start:node": "node src/node/server.js"
-	},
-	"dependencies": {
-		"@cloudflare/puppeteer": "^1.4.0",
-		"@cloudflare/workers-oauth-provider": "^0.10.3",
-		"@fedify/cfworkers": "^2.4.4",
-		"@fedify/fedify": "^2.4.4",
-		"@fedify/hono": "^2.4.4",
-		"@fedify/vocab": "^2.4.4",
-		"@hono/node-server": "^2.1.1",
-		"@jsquash/jpeg": "^1.6.0",
-		"@jsquash/png": "^3.1.1",
-		"@jsquash/webp": "^1.5.0",
-		"@spelling-creator/core": "workspace:*",
-		"@spelling-creator/mcp": "workspace:*",
-		"agents": "^0.20.1",
-		"altcha-lib": "^2.6.0",
-		"glin-profanity": "^3.3.0",
-		"hono": "^4.13.2",
-		"parse5": "^8.0.1",
-		"temporal-polyfill": "^1.0.6",
-		"undici": "^8.12.3",
-		"yjs": "^13.6.32"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.12.4",
-		"vitest": "~3.2.7",
-		"wrangler": "^4.147.0"
-	},
-	"packageManager": "pnpm@12.4.1"
+  "name": "@spelling-creator/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#image-codec-wasm": {
+      "workerd": "./src/codecs/wasm.workerd.js",
+      "default": "./src/codecs/wasm.node.js"
+    }
+  },
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "portless run --name api.spelling-creator sh scripts/dev.sh",
+    "test": "vitest run",
+    "bundle": "wrangler deploy --dry-run --outdir dist",
+    "start:node": "node src/node/server.js"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^1.4.0",
+    "@cloudflare/workers-oauth-provider": "^0.10.3",
+    "@fedify/cfworkers": "^2.4.4",
+    "@fedify/fedify": "^2.4.4",
+    "@fedify/hono": "^2.4.4",
+    "@fedify/vocab": "^2.4.4",
+    "@hono/node-server": "^2.1.1",
+    "@jsquash/jpeg": "^1.6.0",
+    "@jsquash/png": "^3.1.1",
+    "@jsquash/webp": "^1.5.0",
+    "@spelling-creator/core": "workspace:*",
+    "@spelling-creator/mcp": "workspace:*",
+    "agents": "^0.20.1",
+    "altcha-lib": "^2.6.0",
+    "glin-profanity": "^3.3.0",
+    "hono": "^4.13.2",
+    "parse5": "^8.0.1",
+    "temporal-polyfill": "^1.0.6",
+    "undici": "^8.12.3",
+    "yjs": "^13.6.32"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.4",
+    "vitest": "~3.2.7",
+    "wrangler": "^4.147.0"
+  },
+  "packageManager": "pnpm@12.4.1"
 }

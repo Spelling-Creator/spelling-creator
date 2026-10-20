@@ -9,9 +9,9 @@
 // The functions are async only so that both halves of this module have the same
 // signature; there is nothing to wait for here.
 
-import WEBP_ENC_WASM from '@jsquash/webp/codec/enc/webp_enc_simd.wasm';
-import PNG_DEC_WASM from '@jsquash/png/codec/pkg/squoosh_png_bg.wasm';
-import JPEG_DEC_WASM from '@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm';
+import WEBP_ENC_WASM from "@jsquash/webp/codec/enc/webp_enc_simd.wasm";
+import PNG_DEC_WASM from "@jsquash/png/codec/pkg/squoosh_png_bg.wasm";
+import JPEG_DEC_WASM from "@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm";
 
 export const webpEncoderWasm = async () => WEBP_ENC_WASM;
 export const pngDecoderWasm = async () => PNG_DEC_WASM;

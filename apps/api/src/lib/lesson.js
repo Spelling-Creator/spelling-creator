@@ -2,10 +2,10 @@
 // row→summary mapper, the trusted-collaborator check, and the full
 // (author-agnostic) delete used by admins.
 
-import { supabaseHeaders } from './supabase.js';
-import { isModeratorRole, verifyUserAndRole } from './auth.js';
-import { announceLesson } from './federation/index.js';
-import { deleteLessonGit, deleteLessonPullGit } from './lessonGit.js';
+import { supabaseHeaders } from "./supabase.js";
+import { isModeratorRole, verifyUserAndRole } from "./auth.js";
+import { announceLesson } from "./federation/index.js";
+import { deleteLessonGit, deleteLessonPullGit } from "./lessonGit.js";
 
 /**
  * The emails on a lesson's trusted-collaborator list, lowercased.
@@ -16,8 +16,17 @@ import { deleteLessonGit, deleteLessonPullGit } from './lessonGit.js';
  * below, may merge a fork back into the lesson.
  */
 export function trustedEmails(doc) {
-	const list = doc && Array.isArray(doc.trustedCollaborators) ? doc.trustedCollaborators : [];
-	return new Set(list.map((t) => (t && typeof t.email === 'string' ? t.email.trim().toLowerCase() : '')).filter(Boolean));
+  const list =
+    doc && Array.isArray(doc.trustedCollaborators)
+      ? doc.trustedCollaborators
+      : [];
+  return new Set(
+    list
+      .map((t) =>
+        t && typeof t.email === "string" ? t.email.trim().toLowerCase() : "",
+      )
+      .filter(Boolean),
+  );
 }
 
 /**
@@ -34,9 +43,11 @@ export function trustedEmails(doc) {
  * `row` must have been selected with its `doc`, since the list lives inside it.
  */
 export function isTrustedCollaborator(row, user) {
-	const email = (user && typeof user.email === 'string' ? user.email : '').trim().toLowerCase();
-	if (!email) return false;
-	return trustedEmails(row && row.doc).has(email);
+  const email = (user && typeof user.email === "string" ? user.email : "")
+    .trim()
+    .toLowerCase();
+  if (!email) return false;
+  return trustedEmails(row && row.doc).has(email);
 }
 
 /**
@@ -52,21 +63,30 @@ export function isTrustedCollaborator(row, user) {
  * Returns null when the lesson doesn't exist or the store can't be reached —
  * callers treat both as "no".
  */
-export async function fetchLessonRow(env, base, lessonId, { withDoc = false } = {}) {
-	// `forked_from` rides along because it is a permission input, not just display:
-	// opening a proposal against your own lesson is allowed only from a fork *of
-	// that lesson* (see openPull in routes/pulls.js).
-	const columns = withDoc ? 'id,author_id,published,shadowbanned,forked_from,doc' : 'id,author_id,published,shadowbanned,forked_from';
-	const query = `id=eq.${encodeURIComponent(lessonId)}&select=${columns}&limit=1`;
-	let res;
-	try {
-		res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
-	} catch (e) {
-		return null;
-	}
-	if (!res.ok) return null;
-	const rows = await res.json().catch(() => []);
-	return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+export async function fetchLessonRow(
+  env,
+  base,
+  lessonId,
+  { withDoc = false } = {},
+) {
+  // `forked_from` rides along because it is a permission input, not just display:
+  // opening a proposal against your own lesson is allowed only from a fork *of
+  // that lesson* (see openPull in routes/pulls.js).
+  const columns = withDoc
+    ? "id,author_id,published,shadowbanned,forked_from,doc"
+    : "id,author_id,published,shadowbanned,forked_from";
+  const query = `id=eq.${encodeURIComponent(lessonId)}&select=${columns}&limit=1`;
+  let res;
+  try {
+    res = await fetch(`${base}/rest/v1/lessons?${query}`, {
+      headers: supabaseHeaders(env),
+    });
+  } catch (e) {
+    return null;
+  }
+  if (!res.ok) return null;
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 }
 
 /**
@@ -84,16 +104,19 @@ export async function fetchLessonRow(env, base, lessonId, { withDoc = false } = 
  * fetched only on the uncommon path that actually needs it.
  */
 export async function canReadLesson(env, base, request, row) {
-	if (!row) return false;
-	if (row.published && !row.shadowbanned) return true;
+  if (!row) return false;
+  if (row.published && !row.shadowbanned) return true;
 
-	const { user, role } = await verifyUserAndRole(env, base, request);
-	if (user && user.id === row.author_id) return true;
-	if (isModeratorRole(role)) return true;
-	if (!user) return false;
+  const { user, role } = await verifyUserAndRole(env, base, request);
+  if (user && user.id === row.author_id) return true;
+  if (isModeratorRole(role)) return true;
+  if (!user) return false;
 
-	const full = row.doc !== undefined ? row : await fetchLessonRow(env, base, row.id, { withDoc: true });
-	return Boolean(full && isTrustedCollaborator(full, user));
+  const full =
+    row.doc !== undefined
+      ? row
+      : await fetchLessonRow(env, base, row.id, { withDoc: true });
+  return Boolean(full && isTrustedCollaborator(full, user));
 }
 
 /**
@@ -111,10 +134,11 @@ export async function canReadLesson(env, base, request, row) {
  * `preserveLocalFields` in `@spelling-creator/core/git/doc`.
  */
 export function stripCollaborators(doc) {
-	if (!doc || typeof doc !== 'object' || doc.trustedCollaborators === undefined) return doc;
-	const out = { ...doc };
-	delete out.trustedCollaborators;
-	return out;
+  if (!doc || typeof doc !== "object" || doc.trustedCollaborators === undefined)
+    return doc;
+  const out = { ...doc };
+  delete out.trustedCollaborators;
+  return out;
 }
 
 /**
@@ -123,13 +147,16 @@ export function stripCollaborators(doc) {
  * `forkedFrom`: losing the link home is survivable, failing the save is not.
  */
 export function forkedFromUrlOf(value) {
-	if (typeof value !== 'string' || !value.trim() || value.length > 2048) return null;
-	try {
-		const url = new URL(value.trim());
-		return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
-	} catch {
-		return null;
-	}
+  if (typeof value !== "string" || !value.trim() || value.length > 2048)
+    return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -147,37 +174,41 @@ export function forkedFromUrlOf(value) {
  *        collaborators on it (who need it to auto-admit each other to a live
  *        session). Everyone else, including moderators, gets it stripped.
  */
-export function rowToLesson(row, { withDoc = false, includeMod = false, includeCollaborators = false } = {}) {
-	const lesson = {
-		id: row.id,
-		// The author's Supabase user id — the frontend compares it with the
-		// signed-in user to decide whether to offer an "Edit" action. (The author
-		// display name lives separately in `author`.)
-		authorId: row.author_id,
-		title: row.title,
-		author: row.author,
-		sectionCount: row.section_count ?? 0,
-		// Whether the lesson is shared on the public hub. `false` is a draft, backed
-		// up to the database but visible only to its author. Defaults to true so a
-		// row from a database that predates the `published` column reads as published.
-		published: row.published ?? true,
-		// Whether a moderator has hidden the lesson from the public hub. Defaults to
-		// false so rows predating the column read as visible.
-		shadowbanned: row.shadowbanned ?? false,
-		// The lesson this one was forked from, or null. A fork keeps this pointer home
-		// so the editor can offer to pull the original's later changes in, merging the
-		// two histories against the commit they diverged from (see web/src/lib/git/).
-		forkedFrom: row.forked_from ?? null,
-		// Or, for a lesson forked from another instance, the page it was forked
-		// from there. The two never both apply.
-		forkedFromUrl: row.forked_from_url ?? null,
-		createdAt: row.created_at,
-	};
-	if (withDoc) lesson.doc = includeCollaborators ? row.doc : stripCollaborators(row.doc);
-	// The author's IP is sensitive: only attach it for mod/admin reads (for the
-	// admin "ban by IP" action), never in public or author-facing responses.
-	if (includeMod) lesson.authorIp = row.author_ip ?? null;
-	return lesson;
+export function rowToLesson(
+  row,
+  { withDoc = false, includeMod = false, includeCollaborators = false } = {},
+) {
+  const lesson = {
+    id: row.id,
+    // The author's Supabase user id — the frontend compares it with the
+    // signed-in user to decide whether to offer an "Edit" action. (The author
+    // display name lives separately in `author`.)
+    authorId: row.author_id,
+    title: row.title,
+    author: row.author,
+    sectionCount: row.section_count ?? 0,
+    // Whether the lesson is shared on the public hub. `false` is a draft, backed
+    // up to the database but visible only to its author. Defaults to true so a
+    // row from a database that predates the `published` column reads as published.
+    published: row.published ?? true,
+    // Whether a moderator has hidden the lesson from the public hub. Defaults to
+    // false so rows predating the column read as visible.
+    shadowbanned: row.shadowbanned ?? false,
+    // The lesson this one was forked from, or null. A fork keeps this pointer home
+    // so the editor can offer to pull the original's later changes in, merging the
+    // two histories against the commit they diverged from (see web/src/lib/git/).
+    forkedFrom: row.forked_from ?? null,
+    // Or, for a lesson forked from another instance, the page it was forked
+    // from there. The two never both apply.
+    forkedFromUrl: row.forked_from_url ?? null,
+    createdAt: row.created_at,
+  };
+  if (withDoc)
+    lesson.doc = includeCollaborators ? row.doc : stripCollaborators(row.doc);
+  // The author's IP is sensitive: only attach it for mod/admin reads (for the
+  // admin "ban by IP" action), never in public or author-facing responses.
+  if (includeMod) lesson.authorIp = row.author_ip ?? null;
+  return lesson;
 }
 
 /**
@@ -191,36 +222,43 @@ export function rowToLesson(row, { withDoc = false, includeMod = false, includeC
  * servers the lesson is gone once it is (see lib/federation/).
  */
 export async function fullyDeleteLesson(env, base, lessonId, ctx) {
-	// Who the lesson belonged to, and whether anyone elsewhere was ever told
-	// about it, read now because the row is about to go.
-	const row = await fetchLessonRow(env, base, lessonId);
-	// Sweep the packs of any pull requests against this lesson first: their rows
-	// go with the lesson (the FK cascades), taking with them the ids we need to
-	// find the packs, so this has to happen while the lesson is still there.
-	await deleteLessonPullGit(env, base, lessonId);
-	try {
-		await fetch(`${base}/rest/v1/comments?lesson_id=eq.${encodeURIComponent(lessonId)}`, {
-			method: 'DELETE',
-			headers: supabaseHeaders(env),
-		});
-	} catch (e) {
-		return false;
-	}
-	let res;
-	try {
-		res = await fetch(`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(lessonId)}&select=id`, {
-			method: 'DELETE',
-			headers: { ...supabaseHeaders(env), Prefer: 'return=representation' },
-		});
-	} catch (e) {
-		return false;
-	}
-	if (!res.ok) return false;
-	const rows = await res.json().catch(() => []);
-	const deleted = Array.isArray(rows) && rows.length > 0;
-	// Drop the lesson's stored version history too, so its packfile doesn't outlive
-	// it in the bucket. Best-effort — the row is already gone either way.
-	if (deleted) await deleteLessonGit(env, lessonId);
-	if (deleted && row && row.published && !row.shadowbanned) announceLesson(env, ctx, row, 'delete');
-	return deleted;
+  // Who the lesson belonged to, and whether anyone elsewhere was ever told
+  // about it, read now because the row is about to go.
+  const row = await fetchLessonRow(env, base, lessonId);
+  // Sweep the packs of any pull requests against this lesson first: their rows
+  // go with the lesson (the FK cascades), taking with them the ids we need to
+  // find the packs, so this has to happen while the lesson is still there.
+  await deleteLessonPullGit(env, base, lessonId);
+  try {
+    await fetch(
+      `${base}/rest/v1/comments?lesson_id=eq.${encodeURIComponent(lessonId)}`,
+      {
+        method: "DELETE",
+        headers: supabaseHeaders(env),
+      },
+    );
+  } catch (e) {
+    return false;
+  }
+  let res;
+  try {
+    res = await fetch(
+      `${base}/rest/v1/lessons?id=eq.${encodeURIComponent(lessonId)}&select=id`,
+      {
+        method: "DELETE",
+        headers: { ...supabaseHeaders(env), Prefer: "return=representation" },
+      },
+    );
+  } catch (e) {
+    return false;
+  }
+  if (!res.ok) return false;
+  const rows = await res.json().catch(() => []);
+  const deleted = Array.isArray(rows) && rows.length > 0;
+  // Drop the lesson's stored version history too, so its packfile doesn't outlive
+  // it in the bucket. Best-effort — the row is already gone either way.
+  if (deleted) await deleteLessonGit(env, lessonId);
+  if (deleted && row && row.published && !row.shadowbanned)
+    announceLesson(env, ctx, row, "delete");
+  return deleted;
 }

@@ -18,7 +18,7 @@
 // request: OpenAI enforces schemas properly, the hosted gateways' support varies
 // by model (and, for OpenRouter, by upstream host), and a local runtime depends on which one and which version.
 
-import { schemaToExampleShape, toOpenAiStrictSchema } from '../jsonSchema.js';
+import { schemaToExampleShape, toOpenAiStrictSchema } from "../jsonSchema.js";
 
 // Long enough for a slow model on a small local GPU, short enough that a failing
 // provider doesn't hold a request open while the fallback chain waits its turn.
@@ -33,12 +33,12 @@ const TIMEOUT_MS = 20_000;
  * @returns {string[]}
  */
 export function modelList(raw, defaults) {
-	if (!raw) return defaults;
-	const ids = raw
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean);
-	return ids.length > 0 ? ids : defaults;
+  if (!raw) return defaults;
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return ids.length > 0 ? ids : defaults;
 }
 
 /**
@@ -55,44 +55,57 @@ export function modelList(raw, defaults) {
  * @param {typeof fetch} [request.fetch] Injectable for tests.
  * @returns {Promise<{ text: string }>}
  */
-export async function chatCompletion({ endpoint, apiKey, model, prompt, schema, jsonMode = 'schema', label, fetch: doFetch = fetch }) {
-	const body = { model };
-	let content = prompt;
+export async function chatCompletion({
+  endpoint,
+  apiKey,
+  model,
+  prompt,
+  schema,
+  jsonMode = "schema",
+  label,
+  fetch: doFetch = fetch,
+}) {
+  const body = { model };
+  let content = prompt;
 
-	if (schema && jsonMode === 'schema') {
-		body.response_format = {
-			type: 'json_schema',
-			json_schema: { name: 'response', strict: true, schema: toOpenAiStrictSchema(schema) },
-		};
-	} else if (schema) {
-		// No enforcement available, so the shape goes in the prompt and
-		// json_object at least guarantees the reply parses.
-		const shape = JSON.stringify(schemaToExampleShape(schema));
-		content = `${prompt}\n\nRespond with ONLY a single JSON object (no markdown fencing, no commentary) matching exactly this shape: ${shape}`;
-		body.response_format = { type: 'json_object' };
-	}
+  if (schema && jsonMode === "schema") {
+    body.response_format = {
+      type: "json_schema",
+      json_schema: {
+        name: "response",
+        strict: true,
+        schema: toOpenAiStrictSchema(schema),
+      },
+    };
+  } else if (schema) {
+    // No enforcement available, so the shape goes in the prompt and
+    // json_object at least guarantees the reply parses.
+    const shape = JSON.stringify(schemaToExampleShape(schema));
+    content = `${prompt}\n\nRespond with ONLY a single JSON object (no markdown fencing, no commentary) matching exactly this shape: ${shape}`;
+    body.response_format = { type: "json_object" };
+  }
 
-	body.messages = [{ role: 'user', content }];
+  body.messages = [{ role: "user", content }];
 
-	const headers = { 'Content-Type': 'application/json' };
-	if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  const headers = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
-	const res = await doFetch(endpoint, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify(body),
-		signal: AbortSignal.timeout(TIMEOUT_MS),
-	});
-	if (!res.ok) {
-		const error = new Error(`${label} ${model} error ${res.status}`);
-		error.status = res.status;
-		throw error;
-	}
+  const res = await doFetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const error = new Error(`${label} ${model} error ${res.status}`);
+    error.status = res.status;
+    throw error;
+  }
 
-	const data = await res.json();
-	const text = data?.choices?.[0]?.message?.content;
-	if (!text) throw new Error(`${label} ${model} returned no text`);
-	return { text };
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error(`${label} ${model} returned no text`);
+  return { text };
 }
 
 /**
@@ -104,13 +117,13 @@ export async function chatCompletion({ endpoint, apiKey, model, prompt, schema, 
  * @param {(model: string) => Promise<{ text: string }>} call
  */
 export async function firstModelThatAnswers(models, call) {
-	let lastErr;
-	for (const model of models) {
-		try {
-			return await call(model);
-		} catch (err) {
-			lastErr = err;
-		}
-	}
-	throw lastErr ?? new Error('No models configured');
+  let lastErr;
+  for (const model of models) {
+    try {
+      return await call(model);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr ?? new Error("No models configured");
 }

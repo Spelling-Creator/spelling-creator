@@ -6,9 +6,9 @@
  * client surfaces `res.text()` directly, so the message is user-facing.
  */
 export function textResponse(msg, status, cors) {
-	const headers = new Headers(cors);
-	headers.set('Content-Type', 'text/plain');
-	return new Response(msg, { status, headers });
+  const headers = new Headers(cors);
+  headers.set("Content-Type", "text/plain");
+  return new Response(msg, { status, headers });
 }
 
 /**
@@ -17,9 +17,9 @@ export function textResponse(msg, status, cors) {
  * on error — matching the AI/Pixabay convention the frontend already surfaces.
  */
 export function jsonResponse(obj, status, cors) {
-	const headers = new Headers(cors);
-	headers.set('Content-Type', 'application/json');
-	return new Response(JSON.stringify(obj), { status, headers });
+  const headers = new Headers(cors);
+  headers.set("Content-Type", "application/json");
+  return new Response(JSON.stringify(obj), { status, headers });
 }
 
 /**
@@ -37,29 +37,29 @@ export function jsonResponse(obj, status, cors) {
  *   larger than `maxBytes`
  */
 export async function readCapped(response, maxBytes) {
-	if (Number(response.headers.get('content-length') || 0) > maxBytes) {
-		await response.body?.cancel().catch(() => {});
-		return null;
-	}
-	if (!response.body) return new Uint8Array(0);
-	const reader = response.body.getReader();
-	const chunks = [];
-	let total = 0;
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		total += value.byteLength;
-		if (total > maxBytes) {
-			await reader.cancel().catch(() => {});
-			return null;
-		}
-		chunks.push(value);
-	}
-	const bytes = new Uint8Array(total);
-	let offset = 0;
-	for (const chunk of chunks) {
-		bytes.set(chunk, offset);
-		offset += chunk.byteLength;
-	}
-	return bytes;
+  if (Number(response.headers.get("content-length") || 0) > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    return null;
+  }
+  if (!response.body) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }

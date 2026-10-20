@@ -31,8 +31,8 @@
 // paths (routes/lessons.js and lib/lesson.js) can clean a lesson's history up
 // without a route importing a route.
 
-import { gitStore } from '../platform/index.js';
-import { supabaseHeaders } from './supabase.js';
+import { gitStore } from "../platform/index.js";
+import { supabaseHeaders } from "./supabase.js";
 
 // A lesson id is a UUID — pinned down because it's interpolated into an object key.
 export const LESSON_ID_RE = /^[0-9a-fA-F-]{36}$/;
@@ -42,14 +42,14 @@ export const LESSON_ID_RE = /^[0-9a-fA-F-]{36}$/;
 // Worker validates a push against exactly what the client validated it against —
 // the same arrangement as the pull-request length limits.
 export {
-	DEFAULT_BRANCH,
-	OID_RE,
-	MAX_BRANCHES,
-	MAX_BRANCH_NAME,
-	isBranchName,
-	parseRefMap,
-	serializeRefMap,
-} from '@spelling-creator/core/git/refs';
+  DEFAULT_BRANCH,
+  OID_RE,
+  MAX_BRANCHES,
+  MAX_BRANCH_NAME,
+  isBranchName,
+  parseRefMap,
+  serializeRefMap,
+} from "@spelling-creator/core/git/refs";
 
 // Cap one repository's history. Packs hold only JSON (images are referenced by
 // hash and live in the images bucket, not in the repo), so even a long-lived
@@ -75,13 +75,13 @@ export const pullPackKey = (pullId) => `git/pulls/${pullId}/pack`;
  * not block the lesson delete, which is the part the user actually asked for.
  */
 export async function deleteLessonGit(env, lessonId) {
-	const store = gitStore(env);
-	if (!store || !LESSON_ID_RE.test(lessonId)) return;
-	try {
-		await store.delete([packKey(lessonId), refsKey(lessonId)]);
-	} catch (e) {
-		// The lesson row is already gone; a stray pack is harmless.
-	}
+  const store = gitStore(env);
+  if (!store || !LESSON_ID_RE.test(lessonId)) return;
+  try {
+    await store.delete([packKey(lessonId), refsKey(lessonId)]);
+  } catch (e) {
+    // The lesson row is already gone; a stray pack is harmless.
+  }
 }
 
 /**
@@ -90,13 +90,13 @@ export async function deleteLessonGit(env, lessonId) {
  * above: the row is the record, the pack is only its payload.
  */
 export async function deletePullGit(env, pullId) {
-	const store = gitStore(env);
-	if (!store || !LESSON_ID_RE.test(pullId)) return;
-	try {
-		await store.delete(pullPackKey(pullId));
-	} catch (e) {
-		// Nothing left to review either way.
-	}
+  const store = gitStore(env);
+  if (!store || !LESSON_ID_RE.test(pullId)) return;
+  try {
+    await store.delete(pullPackKey(pullId));
+  } catch (e) {
+    // Nothing left to review either way.
+  }
 }
 
 /**
@@ -109,22 +109,27 @@ export async function deletePullGit(env, pullId) {
  * unreachable.
  */
 export async function deleteLessonPullGit(env, base, lessonId) {
-	const store = gitStore(env);
-	if (!store || !LESSON_ID_RE.test(lessonId)) return;
-	let res;
-	try {
-		res = await fetch(`${base}/rest/v1/lesson_pull_requests?lesson_id=eq.${encodeURIComponent(lessonId)}&select=id`, {
-			headers: supabaseHeaders(env),
-		});
-	} catch (e) {
-		return;
-	}
-	if (!res.ok) return;
-	const rows = await res.json().catch(() => []);
-	if (!Array.isArray(rows) || rows.length === 0) return;
-	try {
-		await store.delete(rows.filter((r) => LESSON_ID_RE.test(r.id)).map((r) => pullPackKey(r.id)));
-	} catch (e) {
-		// Stray packs are harmless; the proposals they belonged to are gone.
-	}
+  const store = gitStore(env);
+  if (!store || !LESSON_ID_RE.test(lessonId)) return;
+  let res;
+  try {
+    res = await fetch(
+      `${base}/rest/v1/lesson_pull_requests?lesson_id=eq.${encodeURIComponent(lessonId)}&select=id`,
+      {
+        headers: supabaseHeaders(env),
+      },
+    );
+  } catch (e) {
+    return;
+  }
+  if (!res.ok) return;
+  const rows = await res.json().catch(() => []);
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  try {
+    await store.delete(
+      rows.filter((r) => LESSON_ID_RE.test(r.id)).map((r) => pullPackKey(r.id)),
+    );
+  } catch (e) {
+    // Stray packs are harmless; the proposals they belonged to are gone.
+  }
 }

@@ -18,9 +18,9 @@
 // being locked out of this endpoint never leaves an operator with no way to see
 // what is wrong.
 
-import { adminTokenMatches } from '../lib/adminToken.js';
-import { runDiagnostics, formatDiagnostics } from '../lib/diagnostics.js';
-import { jsonResponse, textResponse } from '../lib/http.js';
+import { adminTokenMatches } from "../lib/adminToken.js";
+import { runDiagnostics, formatDiagnostics } from "../lib/diagnostics.js";
+import { jsonResponse, textResponse } from "../lib/http.js";
 
 /**
  * GET /_health — the process is running and routing.
@@ -30,7 +30,7 @@ import { jsonResponse, textResponse } from '../lib/http.js';
  * which turns a small outage into a longer one.
  */
 export function handleHealth(cors) {
-	return jsonResponse({ ok: true }, 200, cors);
+  return jsonResponse({ ok: true }, 200, cors);
 }
 
 /**
@@ -40,25 +40,25 @@ export function handleHealth(cors) {
  * prints at startup, which is easier to read from a terminal than JSON.
  */
 export async function handleDiagnostics(request, env, cors) {
-	if (!env.ADMIN_MIGRATE_TOKEN) {
-		return textResponse(
-			'Diagnostics are not available: no ADMIN_MIGRATE_TOKEN is configured.\n' +
-				'The same checks are printed to this process’s log at startup.',
-			503,
-			cors,
-		);
-	}
-	const provided = request.headers.get('X-Admin-Token') || '';
-	if (!(await adminTokenMatches(provided, env.ADMIN_MIGRATE_TOKEN))) {
-		return textResponse('Forbidden.', 403, cors);
-	}
+  if (!env.ADMIN_MIGRATE_TOKEN) {
+    return textResponse(
+      "Diagnostics are not available: no ADMIN_MIGRATE_TOKEN is configured.\n" +
+        "The same checks are printed to this process’s log at startup.",
+      503,
+      cors,
+    );
+  }
+  const provided = request.headers.get("X-Admin-Token") || "";
+  if (!(await adminTokenMatches(provided, env.ADMIN_MIGRATE_TOKEN))) {
+    return textResponse("Forbidden.", 403, cors);
+  }
 
-	const result = await runDiagnostics(env);
-	// 200 either way: the request succeeded, and the answer is the body. A failing
-	// check is not a failed request, and returning 5xx here would make this
-	// endpoint indistinguishable from the outage it is describing.
-	if (new URL(request.url).searchParams.get('format') === 'text') {
-		return textResponse(formatDiagnostics(result), 200, cors);
-	}
-	return jsonResponse(result, 200, cors);
+  const result = await runDiagnostics(env);
+  // 200 either way: the request succeeded, and the answer is the body. A failing
+  // check is not a failed request, and returning 5xx here would make this
+  // endpoint indistinguishable from the outage it is describing.
+  if (new URL(request.url).searchParams.get("format") === "text") {
+    return textResponse(formatDiagnostics(result), 200, cors);
+  }
+  return jsonResponse(result, 200, cors);
 }

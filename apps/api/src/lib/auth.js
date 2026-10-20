@@ -2,8 +2,8 @@
 // label, and looking up the moderation role. Roles are always re-derived from the
 // database server-side — never trusted from the client.
 
-import { clientIp as platformClientIp } from '../platform/index.js';
-import { supabaseHeaders, verifySupabaseUser } from './supabase.js';
+import { clientIp as platformClientIp } from "../platform/index.js";
+import { supabaseHeaders, verifySupabaseUser } from "./supabase.js";
 
 /**
  * The display name a user chose for themselves (stored in user_metadata by the
@@ -11,8 +11,8 @@ import { supabaseHeaders, verifySupabaseUser } from './supabase.js';
  * ONLY name shown to other users — we never expose the email address.
  */
 export function displayNameOf(user) {
-	const meta = (user && user.user_metadata) || {};
-	return (meta.display_name || '').toString().trim();
+  const meta = (user && user.user_metadata) || {};
+  return (meta.display_name || "").toString().trim();
 }
 
 /**
@@ -23,7 +23,7 @@ export function displayNameOf(user) {
  * taken from the verified user, never from client-supplied input.
  */
 export function authorFromUser(user) {
-	return displayNameOf(user) || 'Anonymous';
+  return displayNameOf(user) || "Anonymous";
 }
 
 /**
@@ -38,15 +38,15 @@ export function authorFromUser(user) {
  * not because identity has anything to do with bindings.
  */
 export function clientIp(env, request) {
-	return platformClientIp(env, request);
+  return platformClientIp(env, request);
 }
 
 /**
  * Pull the `Authorization: Bearer <jwt>` token off a request, or '' if absent.
  */
 export function bearerToken(request) {
-	const auth = request.headers.get('Authorization') || '';
-	return auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';
+  const auth = request.headers.get("Authorization") || "";
+  return auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : "";
 }
 
 /**
@@ -66,19 +66,22 @@ export function bearerToken(request) {
  * @returns {Promise<{ known: boolean, role: 'admin' | 'moderator' | null }>}
  */
 export async function lookupUserRole(env, base, userId) {
-	if (!userId) return { known: true, role: null };
-	let res;
-	try {
-		res = await fetch(`${base}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(userId)}&select=role&limit=1`, {
-			headers: supabaseHeaders(env),
-		});
-	} catch (e) {
-		return { known: false, role: null };
-	}
-	if (!res.ok) return { known: false, role: null };
-	const rows = await res.json().catch(() => null);
-	if (!Array.isArray(rows)) return { known: false, role: null };
-	return { known: true, role: rows.length ? rows[0].role : null };
+  if (!userId) return { known: true, role: null };
+  let res;
+  try {
+    res = await fetch(
+      `${base}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(userId)}&select=role&limit=1`,
+      {
+        headers: supabaseHeaders(env),
+      },
+    );
+  } catch (e) {
+    return { known: false, role: null };
+  }
+  if (!res.ok) return { known: false, role: null };
+  const rows = await res.json().catch(() => null);
+  if (!Array.isArray(rows)) return { known: false, role: null };
+  return { known: true, role: rows.length ? rows[0].role : null };
 }
 
 /**
@@ -90,7 +93,7 @@ export async function lookupUserRole(env, base, userId) {
  * `lookupUserRole` where a null would instead permit something.
  */
 export async function getUserRole(env, base, userId) {
-	return (await lookupUserRole(env, base, userId)).role;
+  return (await lookupUserRole(env, base, userId)).role;
 }
 
 /**
@@ -99,10 +102,11 @@ export async function getUserRole(env, base, userId) {
  * role is 'admin' | 'moderator' | null.
  */
 export async function verifyUserAndRole(env, base, request) {
-	const user = await verifySupabaseUser(env, bearerToken(request));
-	if (!user) return { user: null, role: null };
-	const role = await getUserRole(env, base, user.id);
-	return { user, role };
+  const user = await verifySupabaseUser(env, bearerToken(request));
+  if (!user) return { user: null, role: null };
+  const role = await getUserRole(env, base, user.id);
+  return { user, role };
 }
 
-export const isModeratorRole = (role) => role === 'moderator' || role === 'admin';
+export const isModeratorRole = (role) =>
+  role === "moderator" || role === "admin";

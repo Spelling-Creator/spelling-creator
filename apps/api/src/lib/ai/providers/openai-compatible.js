@@ -22,42 +22,51 @@
 // with a 400. An operator who knows their server enforces schemas gets the
 // stricter behaviour by setting OPENAI_COMPATIBLE_JSON=schema.
 
-import { chatCompletion, firstModelThatAnswers, modelList } from './chatCompletions.js';
+import {
+  chatCompletion,
+  firstModelThatAnswers,
+  modelList,
+} from "./chatCompletions.js";
 
-export const id = 'openai-compatible';
+export const id = "openai-compatible";
 
 /** The chat-completions endpoint, tolerating a base URL given with or without /v1. */
 export function endpointFor(baseUrl) {
-	const base = String(baseUrl || '').replace(/\/+$/, '');
-	if (base.endsWith('/chat/completions')) return base;
-	// `/v1` is part of the OpenAI path, and operators supply it about half the
-	// time — accept both rather than making the difference a 404 to debug.
-	return base.endsWith('/v1') ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  if (base.endsWith("/chat/completions")) return base;
+  // `/v1` is part of the OpenAI path, and operators supply it about half the
+  // time — accept both rather than making the difference a 404 to debug.
+  return base.endsWith("/v1")
+    ? `${base}/chat/completions`
+    : `${base}/v1/chat/completions`;
 }
 
 export function isConfigured(env) {
-	// No API-key check: a local runtime normally has no auth at all, so the URL
-	// is what says whether this provider is available.
-	//
-	// The model list is read the same way generate() reads it, rather than merely
-	// tested for being non-empty: a value of ` , ` is a setting somebody meant to
-	// fill in and didn't, and reporting the provider as configured on the strength
-	// of it turns "no AI configured" into every suggestion failing with "No models
-	// configured".
-	return Boolean(env.OPENAI_COMPATIBLE_URL && modelList(env.OPENAI_COMPATIBLE_MODELS, []).length > 0);
+  // No API-key check: a local runtime normally has no auth at all, so the URL
+  // is what says whether this provider is available.
+  //
+  // The model list is read the same way generate() reads it, rather than merely
+  // tested for being non-empty: a value of ` , ` is a setting somebody meant to
+  // fill in and didn't, and reporting the provider as configured on the strength
+  // of it turns "no AI configured" into every suggestion failing with "No models
+  // configured".
+  return Boolean(
+    env.OPENAI_COMPATIBLE_URL &&
+    modelList(env.OPENAI_COMPATIBLE_MODELS, []).length > 0,
+  );
 }
 
 export async function generate({ prompt, schema, env }) {
-	const models = modelList(env.OPENAI_COMPATIBLE_MODELS, []);
-	return await firstModelThatAnswers(models, (model) =>
-		chatCompletion({
-			endpoint: endpointFor(env.OPENAI_COMPATIBLE_URL),
-			apiKey: env.OPENAI_COMPATIBLE_API_KEY,
-			model,
-			prompt,
-			schema,
-			jsonMode: env.OPENAI_COMPATIBLE_JSON === 'schema' ? 'schema' : 'object',
-			label: 'OpenAI-compatible',
-		}),
-	);
+  const models = modelList(env.OPENAI_COMPATIBLE_MODELS, []);
+  return await firstModelThatAnswers(models, (model) =>
+    chatCompletion({
+      endpoint: endpointFor(env.OPENAI_COMPATIBLE_URL),
+      apiKey: env.OPENAI_COMPATIBLE_API_KEY,
+      model,
+      prompt,
+      schema,
+      jsonMode: env.OPENAI_COMPATIBLE_JSON === "schema" ? "schema" : "object",
+      label: "OpenAI-compatible",
+    }),
+  );
 }

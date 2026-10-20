@@ -14,63 +14,63 @@
 // src/collab-room.test-worker.js), because the production entry would drag in
 // Puppeteer and the whole route table for no benefit.
 
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
-import { configDefaults } from 'vitest/config';
+import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { configDefaults } from "vitest/config";
 
 export default defineWorkersConfig({
-	test: {
-		name: 'workers',
-		// Image conversion runs in the Node project only, which is a limitation of
-		// this runner rather than a gap in the code. Its codecs arrive as `.wasm`
-		// imports from a dependency, and vitest-pool-workers cannot resolve one out
-		// of node_modules — it uses Vite's module graph, not wrangler's bundler.
-		//
-		// So a pass here would not have said much about production either way: what
-		// actually has to resolve those imports is `wrangler deploy`, and CI checks
-		// that directly by bundling the Worker (`pnpm --filter @spelling-creator/api
-		// bundle`). The half of the loader that only Node runs is covered by the
-		// Node project, which is the half that had no coverage at all before.
-		//
-		// Spread the defaults rather than replacing them: `exclude` is not additive,
-		// and vitest's default list is what keeps node_modules out. Dropping it
-		// hands the runner every test file in every installed dependency.
-		include: ['src/**/*.test.js'],
-		exclude: [
-			...configDefaults.exclude,
-			'src/imageConvert.test.js',
-			// The Node entry point and its filesystem-backed asset server. There is
-			// nothing here for workerd to run — this host is the other one.
-			'src/node/**',
-			// Fedify's OpenTelemetry dependency imports `node:process` on load, which
-			// this runner cannot resolve even with nodejs_compat (the real bundle
-			// can, which `pnpm --filter @spelling-creator/api bundle` checks). The
-			// federation is exercised under Node; the routes that call into it load
-			// it lazily, which is what keeps their own suites runnable here.
-			'src/lib/federation/**',
-		],
-		poolOptions: {
-			workers: {
-				main: './src/collab-room.test-worker.js',
-				// Isolated storage (a per-test storage stack) can't unwind a Durable Object
-				// that still holds open WebSockets — it fails on the room's SQLite journal.
-				// The collab tests each use their own room code, so they don't need it.
-				isolatedStorage: false,
-				miniflare: {
-					compatibilityDate: '2026-05-28',
-					compatibilityFlags: ['nodejs_compat'],
-					durableObjects: {
-						COLLAB_ROOM: { className: 'CollabRoom', useSQLite: true },
-						PRACTICE_ROOM: { className: 'PracticeRoom', useSQLite: true },
-					},
-					// A bucket and a namespace for the platform-adapter conformance suite
-					// (src/platform/cloudflare.test.js) to run against. Deliberately not
-					// named after the production bindings: these exist to exercise the
-					// adapters, and reusing IMAGES/RATE_LIMIT_KV here would invite a test
-					// to reach for a binding instead of the seam in front of it.
-					r2Buckets: ['TEST_BLOBS'],
-					kvNamespaces: ['TEST_KV'],
-				},
-			},
-		},
-	},
+  test: {
+    name: "workers",
+    // Image conversion runs in the Node project only, which is a limitation of
+    // this runner rather than a gap in the code. Its codecs arrive as `.wasm`
+    // imports from a dependency, and vitest-pool-workers cannot resolve one out
+    // of node_modules — it uses Vite's module graph, not wrangler's bundler.
+    //
+    // So a pass here would not have said much about production either way: what
+    // actually has to resolve those imports is `wrangler deploy`, and CI checks
+    // that directly by bundling the Worker (`pnpm --filter @spelling-creator/api
+    // bundle`). The half of the loader that only Node runs is covered by the
+    // Node project, which is the half that had no coverage at all before.
+    //
+    // Spread the defaults rather than replacing them: `exclude` is not additive,
+    // and vitest's default list is what keeps node_modules out. Dropping it
+    // hands the runner every test file in every installed dependency.
+    include: ["src/**/*.test.js"],
+    exclude: [
+      ...configDefaults.exclude,
+      "src/imageConvert.test.js",
+      // The Node entry point and its filesystem-backed asset server. There is
+      // nothing here for workerd to run — this host is the other one.
+      "src/node/**",
+      // Fedify's OpenTelemetry dependency imports `node:process` on load, which
+      // this runner cannot resolve even with nodejs_compat (the real bundle
+      // can, which `pnpm --filter @spelling-creator/api bundle` checks). The
+      // federation is exercised under Node; the routes that call into it load
+      // it lazily, which is what keeps their own suites runnable here.
+      "src/lib/federation/**",
+    ],
+    poolOptions: {
+      workers: {
+        main: "./src/collab-room.test-worker.js",
+        // Isolated storage (a per-test storage stack) can't unwind a Durable Object
+        // that still holds open WebSockets — it fails on the room's SQLite journal.
+        // The collab tests each use their own room code, so they don't need it.
+        isolatedStorage: false,
+        miniflare: {
+          compatibilityDate: "2026-05-28",
+          compatibilityFlags: ["nodejs_compat"],
+          durableObjects: {
+            COLLAB_ROOM: { className: "CollabRoom", useSQLite: true },
+            PRACTICE_ROOM: { className: "PracticeRoom", useSQLite: true },
+          },
+          // A bucket and a namespace for the platform-adapter conformance suite
+          // (src/platform/cloudflare.test.js) to run against. Deliberately not
+          // named after the production bindings: these exist to exercise the
+          // adapters, and reusing IMAGES/RATE_LIMIT_KV here would invite a test
+          // to reach for a binding instead of the seam in front of it.
+          r2Buckets: ["TEST_BLOBS"],
+          kvNamespaces: ["TEST_KV"],
+        },
+      },
+    },
+  },
 });

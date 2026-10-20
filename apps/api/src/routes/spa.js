@@ -27,7 +27,7 @@
 // deliberate: the alternative (serving an error page for anything unlisted)
 // turns a one-line omission into a broken route.
 
-import { textResponse } from '../lib/http.js';
+import { textResponse } from "../lib/http.js";
 
 const HOME_PATH = /^\/$/;
 const HUB_PATH = /^\/hub\/?$/;
@@ -44,7 +44,7 @@ const HUB_PATH = /^\/hub\/?$/;
 // typo indistinguishable from a route while reading either file. Adding a tab
 // means editing this list; that is the intended amount of friction.
 // `proposals` is the only tab with a child of its own (/proposals/:prId).
-const LESSON_TABS = 'practice|discussion|history|proposals(?:/[^/]+)?';
+const LESSON_TABS = "practice|discussion|history|proposals(?:/[^/]+)?";
 const LESSON_PATH = new RegExp(`^/hub/([^/]+)(?:/(?:${LESSON_TABS}))?/?$`);
 const PROFILE_PATH = /^\/users\/([^/]+)\/?$/;
 
@@ -61,16 +61,16 @@ const EDITOR_PATH = /^\/editor(\/|$)/;
 const OAUTH_AUTHORIZE_PATH = /^\/oauth\/authorize\/?$/;
 
 const APP_PATHS = [
-	HOME_PATH,
-	HUB_PATH,
-	LESSON_PATH,
-	PROFILE_PATH,
-	MODERATION_PATH,
-	SETTINGS_PATH,
-	LOGIN_PATH,
-	LIBRARY_PATH,
-	EDITOR_PATH,
-	OAUTH_AUTHORIZE_PATH,
+  HOME_PATH,
+  HUB_PATH,
+  LESSON_PATH,
+  PROFILE_PATH,
+  MODERATION_PATH,
+  SETTINGS_PATH,
+  LOGIN_PATH,
+  LIBRARY_PATH,
+  EDITOR_PATH,
+  OAUTH_AUTHORIZE_PATH,
 ];
 
 export { HUB_PATH, LESSON_PATH, PROFILE_PATH };
@@ -80,7 +80,7 @@ export { HUB_PATH, LESSON_PATH, PROFILE_PATH };
  * @param {string} pathname
  */
 export function isAppRoute(pathname) {
-	return APP_PATHS.some((re) => re.test(pathname));
+  return APP_PATHS.some((re) => re.test(pathname));
 }
 
 // Anything ending in an extension is asking for a file, not a page.
@@ -100,15 +100,15 @@ const DOCS_PATH = /^\/docs(\/|$)/;
  * the build should be in the business of knowing their names.
  */
 async function document(request, env, href, status) {
-	// HEAD is passed through so the asset layer can answer it with headers and no
-	// body; everything else wants the document, including the GET behind a HEAD-less
-	// client.
-	const method = request.method === 'HEAD' ? 'HEAD' : 'GET';
-	const res = await env.ASSETS.fetch(new Request(href, { method }));
-	if (!res.ok) return null;
-	// Same bytes and headers, the caller's status. `Content-Length` still describes
-	// the body, because it is the same body.
-	return new Response(res.body, { status, headers: res.headers });
+  // HEAD is passed through so the asset layer can answer it with headers and no
+  // body; everything else wants the document, including the GET behind a HEAD-less
+  // client.
+  const method = request.method === "HEAD" ? "HEAD" : "GET";
+  const res = await env.ASSETS.fetch(new Request(href, { method }));
+  if (!res.ok) return null;
+  // Same bytes and headers, the caller's status. `Content-Length` still describes
+  // the body, because it is the same body.
+  return new Response(res.body, { status, headers: res.headers });
 }
 
 /**
@@ -122,30 +122,37 @@ async function document(request, env, href, status) {
  * the whole reason this decision can live in one place.
  */
 export async function serveApp(request, env, url) {
-	const asset = await env.ASSETS.fetch(request);
-	if (asset.status !== 404) return asset;
+  const asset = await env.ASSETS.fetch(request);
+  if (asset.status !== 404) return asset;
 
-	const shell = (status) => document(request, env, `${url.origin}/index.html`, status);
+  const shell = (status) =>
+    document(request, env, `${url.origin}/index.html`, status);
 
-	if (isAppRoute(url.pathname)) return (await shell(200)) || textResponse('Not found.', 404);
+  if (isAppRoute(url.pathname))
+    return (await shell(200)) || textResponse("Not found.", 404);
 
-	// A missing file gets a plain 404 rather than a document. Handing HTML to a
-	// broken script tag surfaces as a baffling syntax error instead of a missing
-	// file — and handing it to a client that asked for /.well-known/something.json
-	// is how this whole route came to be wrong. Checked before the docs branch
-	// below, which is about pages: /docs/assets/app-abc123.js is a file.
-	if (FILE_PATH.test(url.pathname)) return textResponse('Not found.', 404);
+  // A missing file gets a plain 404 rather than a document. Handing HTML to a
+  // broken script tag surfaces as a baffling syntax error instead of a missing
+  // file — and handing it to a client that asked for /.well-known/something.json
+  // is how this whole route came to be wrong. Checked before the docs branch
+  // below, which is about pages: /docs/assets/app-abc123.js is a file.
+  if (FILE_PATH.test(url.pathname)) return textResponse("Not found.", 404);
 
-	// A missing docs page gets the docs site's own 404 rather than the app's. The
-	// two are different sites sharing an origin, and being dropped into the React
-	// app because a documentation link went stale is disorienting — VitePress
-	// builds a 404 carrying the docs' own nav, so use that when it is there.
-	if (DOCS_PATH.test(url.pathname)) {
-		const docs = await document(request, env, `${url.origin}/docs/404.html`, 404);
-		if (docs) return docs;
-	}
+  // A missing docs page gets the docs site's own 404 rather than the app's. The
+  // two are different sites sharing an origin, and being dropped into the React
+  // app because a documentation link went stale is disorienting — VitePress
+  // builds a 404 carrying the docs' own nav, so use that when it is there.
+  if (DOCS_PATH.test(url.pathname)) {
+    const docs = await document(
+      request,
+      env,
+      `${url.origin}/docs/404.html`,
+      404,
+    );
+    if (docs) return docs;
+  }
 
-	// An unknown page. The shell, so the app can render its own not-found page,
-	// with the status that says so.
-	return (await shell(404)) || textResponse('Not found.', 404);
+  // An unknown page. The shell, so the app can render its own not-found page,
+  // with the status that says so.
+  return (await shell(404)) || textResponse("Not found.", 404);
 }

@@ -25,18 +25,18 @@
  * @returns {Promise<boolean>}
  */
 export async function adminTokenMatches(provided, expected) {
-	// An unconfigured token matches nothing, rather than matching the empty
-	// header a caller sending nothing at all would produce.
-	if (!expected) return false;
+  // An unconfigured token matches nothing, rather than matching the empty
+  // header a caller sending nothing at all would produce.
+  if (!expected) return false;
 
-	const encoder = new TextEncoder();
-	const [a, b] = await Promise.all([
-		crypto.subtle.digest('SHA-256', encoder.encode(String(provided ?? ''))),
-		crypto.subtle.digest('SHA-256', encoder.encode(String(expected))),
-	]);
-	const left = new Uint8Array(a);
-	const right = new Uint8Array(b);
-	let diff = 0;
-	for (let i = 0; i < left.length; i += 1) diff |= left[i] ^ right[i];
-	return diff === 0;
+  const encoder = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(String(provided ?? ""))),
+    crypto.subtle.digest("SHA-256", encoder.encode(String(expected))),
+  ]);
+  const left = new Uint8Array(a);
+  const right = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < left.length; i += 1) diff |= left[i] ^ right[i];
+  return diff === 0;
 }

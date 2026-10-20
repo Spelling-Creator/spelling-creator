@@ -14,10 +14,10 @@
 // Anything else reads as turnstile, so a typo fails closed: the AI features
 // refuse until the setting is fixed, rather than quietly running with no check.
 
-import { verifyAltcha } from './altcha.js';
-import { verifyTurnstile } from './turnstile.js';
+import { verifyAltcha } from "./altcha.js";
+import { verifyTurnstile } from "./turnstile.js";
 
-export const AI_CHALLENGES = ['turnstile', 'altcha', 'none'];
+export const AI_CHALLENGES = ["turnstile", "altcha", "none"];
 
 /**
  * This instance's challenge.
@@ -25,10 +25,10 @@ export const AI_CHALLENGES = ['turnstile', 'altcha', 'none'];
  * @returns {'turnstile' | 'altcha' | 'none'}
  */
 export function aiChallengeMode(env) {
-	const mode = String(env.AI_CHALLENGE || '')
-		.trim()
-		.toLowerCase();
-	return AI_CHALLENGES.includes(mode) ? mode : 'turnstile';
+  const mode = String(env.AI_CHALLENGE || "")
+    .trim()
+    .toLowerCase();
+  return AI_CHALLENGES.includes(mode) ? mode : "turnstile";
 }
 
 /**
@@ -41,12 +41,17 @@ export function aiChallengeMode(env) {
  * @param {string} ip                 Passed to Turnstile as the solver's address.
  */
 export async function verifyAiChallenge(token, env, allowedHostnames, ip) {
-	switch (aiChallengeMode(env)) {
-		case 'none':
-			return { ok: true };
-		case 'altcha':
-			return verifyAltcha(token, env);
-		default:
-			return verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, allowedHostnames, ip);
-	}
+  switch (aiChallengeMode(env)) {
+    case "none":
+      return { ok: true };
+    case "altcha":
+      return verifyAltcha(token, env);
+    default:
+      return verifyTurnstile(
+        token,
+        env.TURNSTILE_SECRET_KEY,
+        allowedHostnames,
+        ip,
+      );
+  }
 }

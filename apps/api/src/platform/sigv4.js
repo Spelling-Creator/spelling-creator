@@ -19,11 +19,11 @@
 // single-chunk signed payloads, no session-token edge cases beyond passing one
 // through.
 
-import { hex, hmac, sha256Hex } from '../lib/crypto.js';
+import { hex, hmac, sha256Hex } from "../lib/crypto.js";
 
 const enc = new TextEncoder();
 
-const ALGORITHM = 'AWS4-HMAC-SHA256';
+const ALGORITHM = "AWS4-HMAC-SHA256";
 
 /**
  * Percent-encode per RFC 3986 as AWS defines it: unreserved characters pass
@@ -38,17 +38,17 @@ const ALGORITHM = 'AWS4-HMAC-SHA256';
  * @param {boolean} [keepSlash] Leave `/` unencoded — true for paths, false for query values.
  */
 export function uriEncode(value, keepSlash = false) {
-	let out = '';
-	for (const char of String(value)) {
-		if (/[A-Za-z0-9\-_.~]/.test(char) || (keepSlash && char === '/')) {
-			out += char;
-			continue;
-		}
-		for (const byte of enc.encode(char)) {
-			out += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
-		}
-	}
-	return out;
+  let out = "";
+  for (const char of String(value)) {
+    if (/[A-Za-z0-9\-_.~]/.test(char) || (keepSlash && char === "/")) {
+      out += char;
+      continue;
+    }
+    for (const byte of enc.encode(char)) {
+      out += `%${byte.toString(16).toUpperCase().padStart(2, "0")}`;
+    }
+  }
+  return out;
 }
 
 /**
@@ -62,11 +62,11 @@ export function uriEncode(value, keepSlash = false) {
  * @param {string} segment
  */
 function decodeSegment(segment) {
-	try {
-		return decodeURIComponent(segment);
-	} catch (e) {
-		return segment;
-	}
+  try {
+    return decodeURIComponent(segment);
+  } catch (e) {
+    return segment;
+  }
 }
 
 /**
@@ -76,10 +76,13 @@ function decodeSegment(segment) {
  * @param {URLSearchParams} params
  */
 export function canonicalQuery(params) {
-	const pairs = [];
-	for (const [name, value] of params) pairs.push([uriEncode(name), uriEncode(value)]);
-	pairs.sort((a, b) => (a[0] === b[0] ? (a[1] < b[1] ? -1 : 1) : a[0] < b[0] ? -1 : 1));
-	return pairs.map(([name, value]) => `${name}=${value}`).join('&');
+  const pairs = [];
+  for (const [name, value] of params)
+    pairs.push([uriEncode(name), uriEncode(value)]);
+  pairs.sort((a, b) =>
+    a[0] === b[0] ? (a[1] < b[1] ? -1 : 1) : a[0] < b[0] ? -1 : 1,
+  );
+  return pairs.map(([name, value]) => `${name}=${value}`).join("&");
 }
 
 /**
@@ -87,8 +90,8 @@ export function canonicalQuery(params) {
  * @param {Date} date
  */
 export function amzDate(date) {
-	const iso = date.toISOString().replace(/[:-]|\.\d{3}/g, '');
-	return { amzdate: iso, datestamp: iso.slice(0, 8) };
+  const iso = date.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  return { amzdate: iso, datestamp: iso.slice(0, 8) };
 }
 
 /**
@@ -97,10 +100,10 @@ export function amzDate(date) {
  * which is cheaper than reasoning about how long a derived key may be cached.
  */
 async function signingKey(secretAccessKey, datestamp, region, service) {
-	const dateKey = await hmac(`AWS4${secretAccessKey}`, datestamp);
-	const regionKey = await hmac(dateKey, region);
-	const serviceKey = await hmac(regionKey, service);
-	return await hmac(serviceKey, 'aws4_request');
+  const dateKey = await hmac(`AWS4${secretAccessKey}`, datestamp);
+  const regionKey = await hmac(dateKey, region);
+  const serviceKey = await hmac(regionKey, service);
+  return await hmac(serviceKey, "aws4_request");
 }
 
 /**
@@ -130,65 +133,79 @@ async function signingKey(secretAccessKey, datestamp, region, service) {
  * @returns {Promise<{ headers: Record<string, string>, canonicalRequest: string, stringToSign: string, signature: string }>}
  */
 export async function signRequest({
-	method,
-	url,
-	headers = {},
-	body,
-	accessKeyId,
-	secretAccessKey,
-	sessionToken,
-	region,
-	service = 's3',
-	date = new Date(),
+  method,
+  url,
+  headers = {},
+  body,
+  accessKeyId,
+  secretAccessKey,
+  sessionToken,
+  region,
+  service = "s3",
+  date = new Date(),
 }) {
-	const target = url instanceof URL ? url : new URL(url);
-	const { amzdate, datestamp } = amzDate(date);
-	const payloadHash = await sha256Hex(body === undefined || body === null ? '' : body);
+  const target = url instanceof URL ? url : new URL(url);
+  const { amzdate, datestamp } = amzDate(date);
+  const payloadHash = await sha256Hex(
+    body === undefined || body === null ? "" : body,
+  );
 
-	// Build the full header set first, then sign exactly what will be sent. The
-	// signed set and the sent set being the same object is the property that
-	// stops a header being added later and silently invalidating the signature.
-	const signed = { host: target.host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzdate };
-	for (const [name, value] of Object.entries(headers)) {
-		if (value !== undefined && value !== null) signed[name.toLowerCase()] = String(value).trim();
-	}
-	if (sessionToken) signed['x-amz-security-token'] = sessionToken;
+  // Build the full header set first, then sign exactly what will be sent. The
+  // signed set and the sent set being the same object is the property that
+  // stops a header being added later and silently invalidating the signature.
+  const signed = {
+    host: target.host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzdate,
+  };
+  for (const [name, value] of Object.entries(headers)) {
+    if (value !== undefined && value !== null)
+      signed[name.toLowerCase()] = String(value).trim();
+  }
+  if (sessionToken) signed["x-amz-security-token"] = sessionToken;
 
-	const names = Object.keys(signed).sort();
-	const canonicalHeaders = names.map((name) => `${name}:${signed[name]}\n`).join('');
-	const signedHeaders = names.join(';');
+  const names = Object.keys(signed).sort();
+  const canonicalHeaders = names
+    .map((name) => `${name}:${signed[name]}\n`)
+    .join("");
+  const signedHeaders = names.join(";");
 
-	// S3 canonicalises an object key's path with a *single* encoding, where most
-	// other services encode twice. `URL.pathname` is already percent-encoded, so
-	// the segments have to be decoded before being re-encoded — encoding what is
-	// there would turn `a%20b` into `a%2520b` and sign a path nobody asked for.
-	const canonicalPath = target.pathname
-		.split('/')
-		.map((segment) => uriEncode(decodeSegment(segment)))
-		.join('/');
+  // S3 canonicalises an object key's path with a *single* encoding, where most
+  // other services encode twice. `URL.pathname` is already percent-encoded, so
+  // the segments have to be decoded before being re-encoded — encoding what is
+  // there would turn `a%20b` into `a%2520b` and sign a path nobody asked for.
+  const canonicalPath = target.pathname
+    .split("/")
+    .map((segment) => uriEncode(decodeSegment(segment)))
+    .join("/");
 
-	const canonicalRequest = [
-		method.toUpperCase(),
-		canonicalPath || '/',
-		canonicalQuery(target.searchParams),
-		canonicalHeaders,
-		signedHeaders,
-		payloadHash,
-	].join('\n');
+  const canonicalRequest = [
+    method.toUpperCase(),
+    canonicalPath || "/",
+    canonicalQuery(target.searchParams),
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
 
-	const scope = `${datestamp}/${region}/${service}/aws4_request`;
-	const stringToSign = [ALGORITHM, amzdate, scope, await sha256Hex(canonicalRequest)].join('\n');
+  const scope = `${datestamp}/${region}/${service}/aws4_request`;
+  const stringToSign = [
+    ALGORITHM,
+    amzdate,
+    scope,
+    await sha256Hex(canonicalRequest),
+  ].join("\n");
 
-	const key = await signingKey(secretAccessKey, datestamp, region, service);
-	const signature = hex(await hmac(key, stringToSign));
+  const key = await signingKey(secretAccessKey, datestamp, region, service);
+  const signature = hex(await hmac(key, stringToSign));
 
-	return {
-		headers: {
-			...signed,
-			authorization: `${ALGORITHM} Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
-		},
-		canonicalRequest,
-		stringToSign,
-		signature,
-	};
+  return {
+    headers: {
+      ...signed,
+      authorization: `${ALGORITHM} Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
+    },
+    canonicalRequest,
+    stringToSign,
+    signature,
+  };
 }

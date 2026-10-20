@@ -16,33 +16,39 @@
 // The Worker has no need of any of this: it cannot reach a private network at
 // all, so it uses the ordinary fetch (see platform/cloudflare.js).
 
-import { lookup } from 'node:dns';
+import { lookup } from "node:dns";
 
-import { isValidPublicIPv4Address, isValidPublicIPv6Address } from '@fedify/fedify';
-import { Agent, fetch as undiciFetch } from 'undici';
+import {
+  isValidPublicIPv4Address,
+  isValidPublicIPv6Address,
+} from "@fedify/fedify";
+import { Agent, fetch as undiciFetch } from "undici";
 
-const isPublic = ({ address, family }) => (family === 6 ? isValidPublicIPv6Address(address) : isValidPublicIPv4Address(address));
+const isPublic = ({ address, family }) =>
+  family === 6
+    ? isValidPublicIPv6Address(address)
+    : isValidPublicIPv4Address(address);
 
 /**
  * A `lookup` for net and tls sockets that answers only with public addresses.
  * Exported for its test.
  */
 export function publicOnlyLookup(hostname, options, callback) {
-	lookup(hostname, { ...options, all: true }, (error, addresses) => {
-		if (error) return callback(error);
-		if (!addresses.length || !addresses.every(isPublic)) {
-			const refused = new Error(`${hostname} resolves to a private address`);
-			refused.code = 'EPRIVATE';
-			return callback(refused);
-		}
-		if (options?.all) return callback(null, addresses);
-		return callback(null, addresses[0].address, addresses[0].family);
-	});
+  lookup(hostname, { ...options, all: true }, (error, addresses) => {
+    if (error) return callback(error);
+    if (!addresses.length || !addresses.every(isPublic)) {
+      const refused = new Error(`${hostname} resolves to a private address`);
+      refused.code = "EPRIVATE";
+      return callback(refused);
+    }
+    if (options?.all) return callback(null, addresses);
+    return callback(null, addresses[0].address, addresses[0].family);
+  });
 }
 
 const publicOnly = new Agent({ connect: { lookup: publicOnlyLookup } });
 
 /** fetch, connecting only to public addresses. */
 export function publicFetch(input, init = {}) {
-	return undiciFetch(input, { ...init, dispatcher: publicOnly });
+  return undiciFetch(input, { ...init, dispatcher: publicOnly });
 }

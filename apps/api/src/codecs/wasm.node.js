@@ -13,8 +13,8 @@
 // slot so the next upload retries, matching how imageConvert.js treats a failed
 // init.
 
-import { readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 
 // Resolution goes through `createRequire` rather than `import.meta.resolve`,
 // which looks like the more modern choice and is the wrong one here: bundlers and
@@ -35,20 +35,23 @@ const compiled = new Map();
  * @returns {Promise<WebAssembly.Module>}
  */
 function compile(specifier) {
-	let pending = compiled.get(specifier);
-	if (!pending) {
-		pending = (async () => {
-			const bytes = await readFile(resolve(specifier));
-			return await WebAssembly.compile(bytes);
-		})().catch((e) => {
-			compiled.delete(specifier);
-			throw e;
-		});
-		compiled.set(specifier, pending);
-	}
-	return pending;
+  let pending = compiled.get(specifier);
+  if (!pending) {
+    pending = (async () => {
+      const bytes = await readFile(resolve(specifier));
+      return await WebAssembly.compile(bytes);
+    })().catch((e) => {
+      compiled.delete(specifier);
+      throw e;
+    });
+    compiled.set(specifier, pending);
+  }
+  return pending;
 }
 
-export const webpEncoderWasm = () => compile('@jsquash/webp/codec/enc/webp_enc_simd.wasm');
-export const pngDecoderWasm = () => compile('@jsquash/png/codec/pkg/squoosh_png_bg.wasm');
-export const jpegDecoderWasm = () => compile('@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm');
+export const webpEncoderWasm = () =>
+  compile("@jsquash/webp/codec/enc/webp_enc_simd.wasm");
+export const pngDecoderWasm = () =>
+  compile("@jsquash/png/codec/pkg/squoosh_png_bg.wasm");
+export const jpegDecoderWasm = () =>
+  compile("@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm");

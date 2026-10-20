@@ -19,22 +19,22 @@
 // project (vitest.workers.config.js), which is also where every suite listed
 // here runs a second time.
 
-import { configDefaults, defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
-	test: {
-		name: 'node',
-		environment: 'node',
-		include: ['src/**/*.test.js'],
-		// The defaults are spread rather than replaced: `exclude` is not additive,
-		// and the default list is what keeps node_modules out.
-		exclude: [
-			...configDefaults.exclude,
-			// Runs against real R2/KV bindings via `cloudflare:test`.
-			'src/platform/cloudflare.test.js',
-			// Durable Objects; there is no Node equivalent to run them against.
-			'src/collab-room.test.js',
-			'src/practice-room.test.js',
-		],
-	},
+  test: {
+    name: "node",
+    environment: "node",
+    include: ["src/**/*.test.js"],
+    // The defaults are spread rather than replaced: `exclude` is not additive,
+    // and the default list is what keeps node_modules out.
+    exclude: [
+      ...configDefaults.exclude,
+      // Runs against real R2/KV bindings via `cloudflare:test`.
+      "src/platform/cloudflare.test.js",
+      // Durable Objects; there is no Node equivalent to run them against.
+      "src/collab-room.test.js",
+      "src/practice-room.test.js",
+    ],
+  },
 });
