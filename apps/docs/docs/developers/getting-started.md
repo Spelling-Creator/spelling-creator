@@ -344,11 +344,11 @@ pnpm run fmt && pnpm run lint
 
 - **`.oxfmtrc.json`** (root): `printWidth` is pinned to `80` (Prettier's
   default, and what the existing code is wrapped to; oxfmt's own default is
-  `100`), plus the ignore list that used to live in `.prettierignore`.
-- **`apps/api/.oxfmtrc.json`**: the API keeps its own style (tabs, single
-  quotes, 140 columns), previously `apps/api/.prettierrc`. Oxfmt discovers
-  nested configs automatically, so running `pnpm fmt` from the root still
-  applies it.
+  `100`), plus the ignore list that used to live in `.prettierignore`. It's the
+  only one: every package, the API included, shares the same style.
+- **`.editorconfig`** (root): the same settings for your editor, so it writes
+  what `pnpm fmt` would (2 spaces, 80 columns). Shell scripts use tabs because
+  their heredocs use `<<-`, which only strips leading tabs.
 - **`.oxlintrc.json`** (root): the `eslint` and `react` plugins with the
   `correctness` category as errors, mirroring the old flat config's
   `js/recommended` + `eslint-plugin-react` + `eslint-plugin-react-hooks` setup.

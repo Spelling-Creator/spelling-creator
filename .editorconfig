@@ -1,0 +1,19 @@
+# https://editorconfig.org
+root = true
+
+# Matches .oxfmtrc.json, so the editor writes what `pnpm fmt` would.
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = 80
+
+# The scripts' heredocs use <<-, which only strips leading tabs.
+[*.sh]
+indent_style = tab
+
+[*.py]
+indent_size = 4
