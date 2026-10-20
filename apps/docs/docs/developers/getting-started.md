@@ -349,6 +349,10 @@ pnpm run fmt && pnpm run lint
 - **`.editorconfig`** (root): the same settings for your editor, so it writes
   what `pnpm fmt` would (2 spaces, 80 columns). Shell scripts use tabs because
   their heredocs use `<<-`, which only strips leading tabs.
+- **`.git-blame-ignore-revs`** (root): commits that only reformat code, so
+  `git blame` skips them. GitHub reads it on its own; locally, run
+  `git config blame.ignoreRevsFile .git-blame-ignore-revs` once per clone. Add
+  a commit's full hash here whenever it does nothing but run `pnpm fmt`.
 - **`.oxlintrc.json`** (root): the `eslint` and `react` plugins with the
   `correctness` category as errors, mirroring the old flat config's
   `js/recommended` + `eslint-plugin-react` + `eslint-plugin-react-hooks` setup.
