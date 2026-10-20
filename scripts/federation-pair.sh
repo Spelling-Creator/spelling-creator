@@ -80,13 +80,19 @@ PORT_B=${PORTS#*,}
 case "$PORT_A$PORT_B" in
 	*[!0-9]* | '') fail "--ports takes two port numbers, like 8080,8081." ;;
 esac
-[ "$PORT_A" != "$PORT_B" ] || fail "The two instances need different ports."
 # The https ports are published too, even though nothing here uses https, so
-# they have to differ as well. 8080 goes with 8443, as in the compose defaults.
+# all four have to differ: --ports 8443,8080 would have hub-a's http port be
+# hub-b's https one. 8080 goes with 8443, as in the compose defaults.
 HTTPS_A=$((PORT_A + 363))
 HTTPS_B=$((PORT_B + 363))
+_published="$PORT_A $PORT_B $HTTPS_A $HTTPS_B"
+_distinct=$(printf '%s\n' $_published | sort -u | wc -l | tr -d ' ')
+[ "$_distinct" -eq 4 ] || fail "Ports collide: the two instances would publish $_published (http, then https at 363 above each). Pick ports further apart."
 
-if [ "$BUILD" -eq 1 ] || [ "$START" -eq 1 ]; then
+# --no-start writes the configs and nothing else, so it needs no Docker and
+# builds nothing.
+[ "$START" -eq 1 ] || BUILD=0
+if [ "$START" -eq 1 ]; then
 	command -v docker >/dev/null 2>&1 || fail "docker was not found."
 	docker compose version >/dev/null 2>&1 || fail "docker compose (v2) was not found."
 fi
@@ -201,9 +207,8 @@ fi
 
 if [ "$START" -eq 0 ]; then
 	say ""
-	say "Configured, not started. Start each with:"
-	say "  cd $BASE/hub-a && docker compose up -d --pull never"
-	say "  cd $BASE/hub-b && docker compose up -d --pull never"
+	say "Configured, not started. Run this again without --no-start to build"
+	say "the image and start both."
 	exit 0
 fi
 
@@ -212,8 +217,10 @@ fi
 say ""
 for _name in hub-a hub-b; do
 	say "Starting $_name..."
-	# --pull never: the tag only exists here, and a pull would fail on it.
-	(cd "$BASE/$_name" && docker compose -p "$_name" up -d --pull never)
+	# --pull missing: Postgres, the identity service and the rest come from
+	# their registries on a fresh host, and the app image is already here
+	# under a tag no registry has, so it is never pulled.
+	(cd "$BASE/$_name" && docker compose -p "$_name" up -d --pull missing)
 done
 
 # Up means the app answers through its gateway. The schema step waits for the
@@ -270,6 +277,7 @@ fi
 if [ "$REACH_OK" -eq 0 ]; then
 	say "  Federation will not work until it can. Usually the host firewall: allow"
 	say "  ports $PORT_A and $PORT_B from the Docker networks to $ADDRESS."
+	say "  Both are running; the summary below still applies once that is fixed."
 fi
 
 # ---- What next --------------------------------------------------------------
@@ -280,9 +288,11 @@ cat <<-DONE
 	  hub-a  http://$ADDRESS:$PORT_A
 	  hub-b  http://$ADDRESS:$PORT_B
 
-	From another machine, either open those directly, or tunnel them:
+	From another machine, tunnel them (or open them directly):
 	  ssh -L $PORT_A:localhost:$PORT_A -L $PORT_B:localhost:$PORT_B <this host>
-	and open http://localhost:$PORT_A and http://localhost:$PORT_B.
+	and open http://localhost:$PORT_A and http://localhost:$PORT_B. Pictures
+	only work through the tunnel: a browser withholds the hashing they need
+	from a plain http address that is not localhost.
 
 	Sign in on each with "Create one" (username and password, no mail needed).
 	When pasting a lesson address from one instance into the other, use the
@@ -293,3 +303,6 @@ cat <<-DONE
 	Start over: docker compose down -v in each, which deletes their data, then
 	            delete $BASE and run this again.
 DONE
+
+# A pair that cannot reach each other is not set up, whatever else worked.
+[ "$REACH_OK" -eq 1 ] || exit 1
