@@ -184,6 +184,7 @@ export function summary(l) {
     published: l.published,
     shadowbanned: false,
     forkedFrom: l.forkedFrom,
+    forkedFromUrl: l.forkedFromUrl ?? null,
     createdAt: l.createdAt,
   };
 }

@@ -40,6 +40,13 @@ export function extFromMime(mime) {
   return "png";
 }
 
+/**
+ * The largest picture the hub stores. The Worker refuses an upload above it
+ * (apps/api/src/lib/images.js), and the editor refuses to keep a picture it
+ * could never upload, such as one copied from another instance.
+ */
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
 export const DEFAULT_IMAGE_SIZE = "full";
 export const DEFAULT_IMAGE_ALIGN = "center";
 

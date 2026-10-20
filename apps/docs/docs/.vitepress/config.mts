@@ -233,6 +233,10 @@ export default defineConfig({
             { text: "The platform seam", link: "/developers/platform-seam" },
             { text: "Lesson images", link: "/developers/lesson-images" },
             { text: "Version history", link: "/developers/version-history" },
+            {
+              text: "Federation (ActivityPub)",
+              link: "/developers/federation",
+            },
           ],
         },
         {
@@ -465,6 +469,7 @@ export default defineConfig({
             { text: "Live collaboration", link: "/guide/live-collaboration" },
             { text: "Variations", link: "/guide/variations" },
             { text: "Proposing changes", link: "/guide/pull-requests" },
+            { text: "Following from the fediverse", link: "/guide/federation" },
             { text: "Moderation", link: "/guide/moderation" },
           ],
         },

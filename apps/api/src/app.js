@@ -21,9 +21,11 @@
 // would swallow them. Hence `registerFrontend`, called by each entry once it has
 // finished adding its own.
 
+import { federation as fedifyMiddleware } from '@fedify/hono';
 import { Hono } from 'hono';
 
 import { allowedHostnames, corsHeaders } from './lib/cors.js';
+import { federationFor } from './lib/federation/index.js';
 
 import { handleAi } from './routes/ai.js';
 import { handleAltchaChallenge } from './routes/altcha.js';
@@ -36,6 +38,7 @@ import { handleLessonResponses, handleLessonResponseDelete } from './routes/less
 import { handleTextFeedback } from './routes/feedback.js';
 import { handleNotifications } from './routes/notifications.js';
 import { handleProfile } from './routes/profile.js';
+import { handleRemoteInfo, handleRemoteLesson, handleRemotePack } from './routes/remote.js';
 import { handleUsers } from './routes/users.js';
 import { handleFollow, handleFollowList, handleFollowingFeed } from './routes/follows.js';
 import { handleModeration } from './routes/moderation.js';
@@ -49,6 +52,50 @@ import { handleDiagnostics, handleHealth } from './routes/diagnostics.js';
 export const req = (c) => c.req.raw;
 export const cors = (c) => c.get('cors');
 export const urlOf = (c) => new URL(c.req.url);
+
+// One Fedify middleware per Federation (which is one per `env`), built on first
+// use. The middleware answers the ActivityPub requests (WebFinger, actor
+// documents, inboxes, collections, and the Article form of a lesson page) and
+// hands everything else on, including a browser's request for the very same
+// paths, which is told apart by its Accept header.
+const fediMiddlewares = new WeakMap();
+async function federationMiddleware(c, next) {
+	// Federation failing to start must not take the rest of the hub with it:
+	// the request carries on without it, and the next one tries again (a failed
+	// build is not cached; see federationFor).
+	let fedi;
+	try {
+		fedi = await federationFor(c.env);
+	} catch (error) {
+		console.error('federation: could not start:', error);
+		fedi = null;
+	}
+	if (!fedi) return next();
+	let middleware = fediMiddlewares.get(fedi);
+	if (!middleware) {
+		middleware = fedifyMiddleware(fedi, (hc) => ({ env: hc.env }));
+		fediMiddlewares.set(fedi, middleware);
+	}
+	// An ActivityPub request Fedify has nothing for (a deleted lesson, a draft,
+	// an account that does not exist) is answered here rather than handed on.
+	// Handed on, it reached the web app, which answers every page path with its
+	// shell and a 200, so a remote server asking for a deleted lesson was told it
+	// exists and given HTML.
+	return middleware(c, async () => {
+		if (wantsActivityPub(c.req.raw)) {
+			c.res = new Response('Not found.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', Vary: 'Accept' } });
+			return;
+		}
+		await next();
+	});
+}
+
+/** Whether a request asks for ActivityPub JSON rather than a page or the API's own JSON. */
+export function wantsActivityPub(request) {
+	const accept = (request.headers.get('accept') || '').toLowerCase();
+	if (accept.includes('text/html')) return false;
+	return accept.includes('application/activity+json') || accept.includes('application/ld+json');
+}
 
 /**
  * Build the app with every route both hosts can serve.
@@ -71,6 +118,13 @@ export function createApp() {
 		}
 		await next();
 	});
+
+	// Federation, when FEDERATION_ORIGIN is set (see lib/federation/). Before
+	// every route because it shares paths with two of them: /users/:id is an
+	// actor to another server and a profile page to a browser, and /hub/:id an
+	// Article and a lesson page. Fedify decides by Accept header and calls the
+	// next handler for anything that is not for it.
+	app.use('*', federationMiddleware);
 
 	// Lesson images, addressed by content hash. GET/HEAD is public; PUT is
 	// authenticated and verifies the body against the hash. Registered before the
@@ -105,8 +159,19 @@ export function createApp() {
 		handlePulls(req(c), c.env, c.req.param('id'), c.req.param('pullId'), c.req.param('action'), cors(c)),
 	);
 	app.all('/lessons/:id/pulls', (c) => handlePulls(req(c), c.env, c.req.param('id'), '', '', cors(c)));
-	app.all('/lessons', (c) => handleLessons(req(c), c.env, urlOf(c), cors(c)));
-	app.all('/lessons/*', (c) => handleLessons(req(c), c.env, urlOf(c), cors(c)));
+	// The execution context rides along so a lesson's followers on other servers
+	// can be told about it after the response has gone (see announceLesson).
+	app.all('/lessons', (c) => handleLessons(req(c), c.env, urlOf(c), cors(c), c.executionCtx));
+	app.all('/lessons/*', (c) => handleLessons(req(c), c.env, urlOf(c), cors(c), c.executionCtx));
+
+	// A lesson on another federating instance, read on a signed-in visitor's
+	// behalf so it can be forked here: the lesson itself, then its packed history
+	// (see routes/remote.js). Its own top-level path for the reason /git has one.
+	// The bare path says whether this instance can do it at all, which the hub
+	// asks before showing its button (as the Practice page asks GET /practice).
+	app.get('/remote', (c) => handleRemoteInfo(c.env, cors(c)));
+	app.all('/remote/lesson', (c) => handleRemoteLesson(req(c), c.env, urlOf(c), cors(c)));
+	app.all('/remote/pack', (c) => handleRemotePack(req(c), c.env, urlOf(c), cors(c)));
 
 	// Negative feedback on a cached AI text suggestion (Supabase-JWT gated, not
 	// Turnstile, so handled before the AI flow).
@@ -143,8 +208,8 @@ export function createApp() {
 	// client-side one would swallow that page's direct loads/reloads (a real GET,
 	// with no Authorization header) and this handler would always answer them with
 	// 401, never actually serving the SPA.
-	app.all('/mod', (c) => handleModeration(req(c), c.env, urlOf(c), cors(c)));
-	app.all('/mod/*', (c) => handleModeration(req(c), c.env, urlOf(c), cors(c)));
+	app.all('/mod', (c) => handleModeration(req(c), c.env, urlOf(c), cors(c), c.executionCtx));
+	app.all('/mod/*', (c) => handleModeration(req(c), c.env, urlOf(c), cors(c), c.executionCtx));
 
 	// Is this instance alive, and are the things it depends on working? Named with
 	// a leading underscore so they cannot collide with a client-side route, the

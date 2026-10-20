@@ -159,6 +159,27 @@ describe("the git engine on an in-memory repo", () => {
     ).toBe(packed.head);
   });
 
+  it("clones where crypto.randomUUID is missing, as on a plain-http origin", async () => {
+    // Browsers only offer randomUUID on a secure origin, and a self-hosted
+    // instance at http://192.168.x is not one. Naming the pack file with it made
+    // every fork and history clone there throw.
+    const origin = memRepo("origin");
+    await commitDoc({ ...origin, doc: doc("Tides", "High"), author });
+    // Without the filename packRepo hands back: a pack downloaded from a hub
+    // arrives with none, which is the path that names the file itself.
+    const { filename: _local, ...downloaded } = await packRepo(origin);
+
+    const real = globalThis.crypto.randomUUID;
+    globalThis.crypto.randomUUID = undefined;
+    try {
+      const fork = memRepo("fork");
+      await cloneFromPack({ ...fork, ...downloaded });
+      expect(await headOid(fork)).toBe(downloaded.head);
+    } finally {
+      globalThis.crypto.randomUUID = real;
+    }
+  });
+
   it("keeps two in-memory repos out of each other's way", async () => {
     const a = memRepo();
     const b = memRepo();

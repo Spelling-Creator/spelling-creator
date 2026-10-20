@@ -328,8 +328,8 @@ storage ones; the rest are read by the routes as they would be on the Worker.
 
 The names are historical: they are the two upstream projects, whoever runs them.
 Apply [`apps/api/schema.sql`](https://github.com/Spelling-Creator/spelling-creator/blob/main/apps/api/schema.sql)
-once (the compose stack does it for you); it creates the hub tables and the
-`kv_store` table this host needs. It does not create the `anon`,
+once (the compose stack does it for you); it creates the hub tables, the
+`kv_store` table this host needs, and the two federation tables. It does not create the `anon`,
 `authenticated` and `service_role` roles PostgREST switches between, which
 Supabase already has; the compose file's `roles-sql` config shows what a plain
 Postgres needs.
@@ -369,6 +369,7 @@ compose stack the app and `storage-init` read it from the same variable.
 | `AUTH_MODE`           | `magic-link`            | How people sign in; see [Sign-in](#sign-in).                    |
 | `USERNAME_DOMAIN`     | `users.noreply.invalid` | The domain usernames become addresses under.                    |
 | `ADMIN_MIGRATE_TOKEN` | (none)                  | Gates `/_diagnostics` and the one-time admin backfills.         |
+| `FEDERATION_ORIGIN`   | (none)                  | Joins the fediverse; see [Federation](#federation).             |
 
 `ALLOWED_HOSTNAMES` can stay unset when the SPA and the API share an origin, as
 they do in the compose stack, but the AI features need it either way (see
@@ -617,6 +618,33 @@ lets anyone spend the instance's AI quota.
 
 Pixabay search also needs `PIXABAY_API_KEY`. Wikimedia Commons search needs
 nothing, since the browser talks to Wikimedia directly.
+
+### Federation
+
+Set `FEDERATION_ORIGIN` to the instance's public origin (the same value as
+`PUBLIC_URL` in the compose stack) and every author becomes an ActivityPub
+actor that people on Mastodon, or on another instance of this app, can follow;
+each lesson they publish is delivered to those followers. Leave it empty and
+none of that runs. See [Federation](./federation.md) for what it sends and what
+it accepts.
+
+The origin goes into every actor's id, so it has to be the https address other
+servers reach, and it must not change once anyone follows someone here. The
+dependency check reports it on its `federation` line, including a misspelled
+value, which would otherwise silently leave federation off.
+
+Fedify's caches go in the `kv_store` table, under their own prefix, and
+outgoing deliveries queue in memory: they are retried while the process runs and
+lost when it stops. That is the right trade for an instance with a handful of
+followers; see [Per host](./federation.md#per-host) for where a durable queue
+would go.
+
+To try federation between two instances on one machine or private network,
+whose origins are private addresses, set `FEDERATION_ALLOW_PRIVATE_ADDRESSES=true`
+on both; without it each refuses to talk to the other, as it should on the
+internet. Two compose stacks on one machine need their own directory, `.env`
+and `COMPOSE_PROJECT_NAME`, and different `PUBLIC_PORT`s; see
+[Trying it with two instances](./federation.md#trying-it-with-two-instances).
 
 ## Notes on running it
 

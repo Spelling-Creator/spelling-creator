@@ -62,12 +62,16 @@ function envWith(routes, platformOverrides = {}) {
 		ALLOWED_HOSTNAMES: 'app.test',
 		// The one AI check a healthy instance can pass with nothing else set.
 		AI_CHALLENGE: 'altcha',
+		FEDERATION_ORIGIN: 'https://app.test',
 		PLATFORM: {
 			images: blobStore(async () => ({ objects: [], cursor: '', truncated: false })),
 			lessonGit: blobStore(async () => ({ objects: [], cursor: '', truncated: false })),
 			rateLimit: kvStore(),
 			oauthState: kvStore(),
 			cache: { match: async () => null, put: async () => {}, delete: async () => {} },
+			// The federation check only asks whether these exist.
+			federationKv: {},
+			federationQueue: {},
 			clientIp: () => '',
 			...platformOverrides,
 		},
@@ -119,8 +123,45 @@ describe('runDiagnostics — everything working', () => {
 				'lesson-history',
 				'key-value',
 				'ai-challenge',
+				'federation',
 			]);
 			expect(result.checks.every((c) => c.state === 'ok')).toBe(true);
+		});
+	});
+
+	describe('federation', () => {
+		const check = async (env, platform) =>
+			withFetch(async () => find(await runDiagnostics({ ...envWith(HEALTHY_ROUTES, platform), ...env }), 'federation'));
+
+		it('is skipped, not failed, when nobody asked for it', async () => {
+			const result = await check({ FEDERATION_ORIGIN: '' });
+			expect(result.state).toBe('skipped');
+			expect(result.detail).toContain('FEDERATION_ORIGIN');
+		});
+
+		it('fails on an origin that is not one, since that silently turns federation off', async () => {
+			const result = await check({ FEDERATION_ORIGIN: 'spelling.example.org' });
+			expect(result.state).toBe('failed');
+			expect(result.detail).toContain('spelling.example.org');
+		});
+
+		it('says why a plain http origin is off, and what turns it on for a test', async () => {
+			const result = await check({ FEDERATION_ORIGIN: 'http://192.168.5.129:8080' });
+			expect(result.state).toBe('failed');
+			expect(result.fix).toContain('FEDERATION_ALLOW_PRIVATE_ADDRESSES');
+			const test = await check({ FEDERATION_ORIGIN: 'http://192.168.5.129:8080', FEDERATION_ALLOW_PRIVATE_ADDRESSES: 'true' });
+			expect(test.state).toBe('ok');
+		});
+
+		it('fails when the host has nowhere to keep the caches', async () => {
+			const result = await check({}, { federationKv: null });
+			expect(result.state).toBe('failed');
+		});
+
+		it('says when deliveries will not be retried', async () => {
+			const result = await check({}, { federationQueue: null });
+			expect(result.state).toBe('ok');
+			expect(result.detail).toContain('without retries');
 		});
 	});
 

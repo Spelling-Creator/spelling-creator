@@ -8,8 +8,9 @@ import { imageStore } from '../platform/index.js';
 
 // A valid image object key is a 64-char lowercase hex SHA-256.
 export const IMAGE_HASH_RE = /^[0-9a-f]{64}$/;
-// Cap a single image so one PUT can't fill the bucket (also mirrored client-side).
-export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+// Cap a single image so one PUT can't fill the bucket. The one copy of the
+// number lives in core, so the editor refuses what this would refuse.
+export { MAX_IMAGE_BYTES } from '@spelling-creator/core/image';
 
 // Lowercase hex SHA-256 of the given bytes, which matches the hash the browser
 // computes (web/src/lib/imageStore.js) so a content-addressed object key is

@@ -14,7 +14,9 @@ follow people.
 
 Open **Lesson hub** from the menu. Lessons are listed newest first. Use
 **Search lessons** to find one by its title or its author's name, and the RSS
-button to subscribe to new lessons in a feed reader.
+button to subscribe to new lessons in a feed reader. If you use Mastodon or
+another fediverse app, you can also follow an author there; see
+[Following from the fediverse](./federation.md).
 
 Click a lesson to open its page. The page is split into tabs:
 

@@ -128,7 +128,10 @@ import {
   migrateToLibrary,
 } from "@spelling-creator/core/browser/storage";
 import { convertDocImages } from "@spelling-creator/core/browser/imageRef";
-import { ensureImagesUploaded } from "@spelling-creator/core/imagesClient";
+import {
+  copyRemoteImages,
+  ensureImagesUploaded,
+} from "@spelling-creator/core/imagesClient";
 // exportJson is a Blob and an <a> — no heavy dependency, so it stays static.
 // (exportOslfXml loads its XML writer itself, on first use.)
 // The docx/PDF/import pipeline is not: it loads on demand through
@@ -145,8 +148,10 @@ import {
   publishLesson,
   updateLesson,
   fetchLesson,
+  fetchRemoteLesson,
   EDIT_REQUEST_KEY,
   FORK_REQUEST_KEY,
+  REMOTE_FORK_REQUEST_KEY,
 } from "@spelling-creator/core/lessons";
 import {
   fetchPullRequests,
@@ -320,6 +325,10 @@ export default function EditorPage() {
   // histories against the commit they diverged from. Persisted with the draft.
   const [forkedFrom, setForkedFrom] = useState(null);
   const [forkedFromTitle, setForkedFromTitle] = useState("");
+  // Or, for a lesson forked from another instance, the page it came from
+  // there. Recorded on the hub row when the lesson is published, so the lesson
+  // page can say where it came from; there is no syncing against it yet.
+  const [forkedFromUrl, setForkedFromUrl] = useState(null);
   // Whether this fork's work can be offered back to the original at all — which
   // it can, by anyone but the original's own author, since a proposal writes
   // nothing until someone with the authority to merge it says so.
@@ -501,6 +510,7 @@ export default function EditorPage() {
     setEditingId(record.lessonId || null);
     setEditingPublished(record.published !== false);
     setForkedFrom(record.forkedFrom || null);
+    setForkedFromUrl(record.forkedFromUrl || null);
     setCurrentLessonId(record.id);
   }, []);
 
@@ -673,8 +683,16 @@ export default function EditorPage() {
       lessonId: editingId,
       published: editingId ? editingPublished : true,
       forkedFrom,
+      forkedFromUrl,
     });
-  }, [localId, editingId, editingPublished, forkedFrom, hydrated]);
+  }, [
+    localId,
+    editingId,
+    editingPublished,
+    forkedFrom,
+    forkedFromUrl,
+    hydrated,
+  ]);
 
   // ---- the library ---------------------------------------------------------
   //
@@ -1055,6 +1073,8 @@ export default function EditorPage() {
     source,
     published,
     forkedFrom: incomingFork,
+    forkedFromUrl: incomingForkUrl,
+    remote,
   }) => {
     await flushCurrentLesson();
 
@@ -1087,6 +1107,11 @@ export default function EditorPage() {
       // A lesson published before this feature has no repo to clone. The fork
       // still works and still gets history from here on; it just has no common
       // ancestor with the original, so a later sync compares the two directly.
+      //
+      // A lesson from another instance (`remote`) is the same fork with its
+      // pieces fetched through this hub's API: the pack from the address the
+      // API handed back, and the pictures straight from that instance, since
+      // this hub's image store has never seen them (copyRemoteImages).
       const record = await createLesson({
         doc: {
           ...nextDoc,
@@ -1094,21 +1119,59 @@ export default function EditorPage() {
             title: nextDoc.title || t("labels.untitledLesson"),
           }),
         },
-        forkedFrom: id,
+        forkedFrom: remote ? null : id,
+        forkedFromUrl: remote ? remote.url : null,
       });
       let cloned = false;
       try {
         const engine = await loadGitEngine();
-        cloned = Boolean(await engine.forkLessonRepo(id, record.id));
+        cloned = Boolean(
+          remote
+            ? await engine.forkRemoteLessonRepo(
+                remote.packUrl,
+                record.id,
+                accessToken,
+              )
+            : await engine.forkLessonRepo(id, record.id),
+        );
       } catch {
         /* no history to clone — fall through to a fresh one */
       }
-      adoptRecord(record);
+      let adopted = record;
+      let imagesMissing = 0;
+      if (remote) {
+        try {
+          const copied = await copyRemoteImages(record.doc, remote.origin);
+          imagesMissing = copied.failed;
+          if (copied.doc !== record.doc) {
+            await saveLessonDoc(record.id, copied.doc);
+            adopted = { ...record, doc: copied.doc };
+          }
+        } catch {
+          /* the lesson is still usable; the pictures show as missing */
+        }
+      }
+      adoptRecord(adopted);
+      // A remote copy can lose either of its two parts, and the notice says
+      // which, since both fail quietly above: the pictures, and the history (a
+      // lesson with none, or a clone that did not work).
+      const host = remote ? remote.origin.replace(/^https?:\/\//, "") : "";
       notify({
-        severity: "info",
-        message: cloned
-          ? t("messages.forkedWithHistory")
-          : t("messages.forkedWithoutHistory"),
+        severity: remote && (imagesMissing || !cloned) ? "warning" : "info",
+        message: remote
+          ? imagesMissing
+            ? t(
+                cloned
+                  ? "messages.forkedFromRemoteImagesMissing"
+                  : "messages.forkedFromRemoteImagesAndHistoryMissing",
+                { host, count: imagesMissing },
+              )
+            : cloned
+              ? t("messages.forkedFromRemote", { host })
+              : t("messages.forkedFromRemoteHistoryMissing", { host })
+          : cloned
+            ? t("messages.forkedWithHistory")
+            : t("messages.forkedWithoutHistory"),
       });
       return;
     }
@@ -1137,6 +1200,7 @@ export default function EditorPage() {
         lessonId: id,
         published,
         forkedFrom: incomingFork || null,
+        forkedFromUrl: incomingForkUrl || null,
       });
       record = await getLesson(existing.id);
       differs = diffDocs(record?.doc, nextDoc).length > 0;
@@ -1146,6 +1210,7 @@ export default function EditorPage() {
         lessonId: id,
         published,
         forkedFrom: incomingFork || null,
+        forkedFromUrl: incomingForkUrl || null,
       });
     }
     adoptRecord(record);
@@ -1183,6 +1248,7 @@ export default function EditorPage() {
     // author's own draft before this effect's one-shot guard could retry.
     if (!hydrated || authLoading || editRequestedRef.current) return;
     let lessonId = null;
+    let remoteUrl = null;
     let mode = "edit";
     try {
       lessonId = sessionStorage.getItem(EDIT_REQUEST_KEY);
@@ -1190,22 +1256,40 @@ export default function EditorPage() {
         lessonId = sessionStorage.getItem(FORK_REQUEST_KEY);
         mode = "fork";
       }
+      if (!lessonId) {
+        // A lesson on another instance, by its address there. Still a fork, from
+        // material this hub's API fetches for us (see fetchRemoteLesson).
+        remoteUrl = sessionStorage.getItem(REMOTE_FORK_REQUEST_KEY);
+      }
     } catch {
       /* sessionStorage unavailable — nothing to load */
     }
-    if (!lessonId) return;
+    if (!lessonId && !remoteUrl) return;
     editRequestedRef.current = true;
     try {
       sessionStorage.removeItem(EDIT_REQUEST_KEY);
       sessionStorage.removeItem(FORK_REQUEST_KEY);
+      sessionStorage.removeItem(REMOTE_FORK_REQUEST_KEY);
     } catch {
       /* ignore */
     }
 
     setEditLoading(true);
-    fetchLesson(lessonId, accessToken)
-      .then((lesson) => {
-        const incoming = {
+    const load = remoteUrl
+      ? fetchRemoteLesson(remoteUrl, accessToken).then((lesson) => ({
+          id: null,
+          title: lesson.title,
+          doc: lesson.doc,
+          mode: "fork",
+          published: true,
+          forkedFrom: null,
+          remote: {
+            url: lesson.url,
+            origin: lesson.origin,
+            packUrl: lesson.packUrl,
+          },
+        }))
+      : fetchLesson(lessonId, accessToken).then((lesson) => ({
           id: lesson.id,
           title: lesson.title,
           doc: lesson.doc,
@@ -1214,13 +1298,17 @@ export default function EditorPage() {
           // a re-save keeps them private until the author chooses to publish.
           published: lesson.published !== false,
           // Re-opening a lesson that is itself a fork keeps its link home, so the
-          // "sync with the original" action stays available across sessions.
+          // "sync with the original" action stays available across sessions,
+          // and so does a fork of a lesson on another instance.
           forkedFrom: lesson.forkedFrom || null,
-        };
+          forkedFromUrl: lesson.forkedFromUrl || null,
+        }));
+    load
+      .then((incoming) => {
         // Straight in. Nothing is at risk: an edit reopens the copy this device
         // already has of that lesson (or makes one), and a fork always becomes a
         // lesson of its own.
-        applyEditRef.current(incoming);
+        return applyEditRef.current(incoming);
       })
       .catch((err) => {
         notify({
@@ -1672,8 +1760,10 @@ export default function EditorPage() {
         const lesson = await publishLesson(converted, accessToken, {
           published: publish,
           // Record what this lesson was forked from, so it can pull the
-          // original's later changes in (see handleSyncUpstream).
+          // original's later changes in (see handleSyncUpstream), or, for a
+          // lesson from another instance, where it came from.
           forkedFrom,
+          forkedFromUrl,
         });
         if (lesson?.id) {
           lessonId = lesson.id;

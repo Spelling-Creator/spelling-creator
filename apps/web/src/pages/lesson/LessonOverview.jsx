@@ -33,6 +33,15 @@ import TranslatableLesson from "../../components/LessonTranslation.jsx";
 import MyLessonAnswers from "../../components/MyLessonAnswers.jsx";
 import { useLesson } from "./LessonLayout.jsx";
 
+// The host a remote origin is on, for saying where a fork came from.
+function remoteHost(url) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
 // One line of the About rail: an icon, a label, and a value.
 function Fact({ icon: Icon, label, children }) {
   return (
@@ -137,15 +146,31 @@ export default function LessonOverview() {
           )}
 
           {/* Where this lesson came from, when it came from somewhere. A fork
-              that hides its origin is the one thing a lesson host shouldn't do. */}
-          {lesson.sourceLessonId && (
+              that hides its origin is the one thing a lesson host shouldn't do.
+              The origin is a lesson on this hub, or a page on another instance
+              (see the federation docs); never both. */}
+          {lesson.forkedFrom && (
             <Fact icon={GitForkIcon} label={t("about.forkedFrom")}>
               <RouterLink
-                to={`/hub/${lesson.sourceLessonId}`}
+                to={`/hub/${lesson.forkedFrom}`}
                 className="text-inherit no-underline hover:underline"
               >
                 {t("about.theOriginal")}
               </RouterLink>
+            </Fact>
+          )}
+          {!lesson.forkedFrom && lesson.forkedFromUrl && (
+            <Fact icon={GitForkIcon} label={t("about.forkedFrom")}>
+              <a
+                href={lesson.forkedFromUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-inherit no-underline hover:underline"
+              >
+                {t("about.theOriginalOn", {
+                  host: remoteHost(lesson.forkedFromUrl),
+                })}
+              </a>
             </Fact>
           )}
 

@@ -134,7 +134,11 @@ The API also has the profile, notification and moderation endpoints documented
 on their own pages.
 
 A **LessonSummary** is
-`{ id, authorId, title, author, sectionCount, published, shadowbanned, forkedFrom, createdAt }`.
+`{ id, authorId, title, author, sectionCount, published, shadowbanned, forkedFrom, forkedFromUrl, createdAt }`.
+`forkedFrom` is the hub lesson this one was forked from, and `forkedFromUrl`
+the page it was forked from on another instance (see
+[Federation](../federation.md#forking-a-lesson-from-another-instance)); a
+lesson has at most one of the two.
 
 | Method and path                               | Auth                    | Response                                                                                                           |
 | --------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -153,6 +157,9 @@ A **LessonSummary** is
 | `GET/POST /lessons/:id/responses`             | `Bearer <Supabase JWT>` | Your own saved answers from interactive mode, private to the caller; see [Interactive mode](./interactive-mode.md) |
 | `DELETE /lessons/:id/responses/:rid`          | `Bearer <Supabase JWT>` | `{ ok: true }`; deletes one of your own saved run-throughs; anyone else's matches nothing and `404`s               |
 | `POST /ai-text/dislike`                       | `Bearer <Supabase JWT>` | `{ ok: true }`; evicts the cached text for `{ subject, documentName }`                                             |
+| `GET /remote`                                 | none                    | `{ available }`: whether this instance can copy lessons from others (it federates)                                 |
+| `GET /remote/lesson?url=`                     | `Bearer <Supabase JWT>` | `{ lesson }` for a lesson page on another federating instance; see [Federation](../federation.md)                  |
+| `GET /remote/pack?url=`                       | `Bearer <Supabase JWT>` | That lesson's packed history, as `GET /git/:id/pack` serves one                                                    |
 
 \* A published, non-shadowbanned lesson needs no auth. A **draft**
 (`published: false`) or a **shadowbanned** lesson is private: having the id or
@@ -181,14 +188,16 @@ Notes:
   a draft or shadowbanned.
 - `doc` is the editor document shape used throughout the app:
   `{ title, sections: [{ id, name, blocks: [...] }] }`, stored as `jsonb`.
-- **`POST /lessons`** body is `{ title, doc, published?, forkedFrom? }`. The
-  caller must not be banned (`403 "Your access has been suspended."`) and must
-  have a display name (`403` otherwise). `doc.sections` must be a non-empty
-  array (`400`). The title falls back to `doc.title`, then "Untitled Lesson",
-  and is cut to 300 characters. `published` defaults to `true` when omitted, so
-  an older client still publishes. An invalid `forkedFrom` is dropped rather
-  than failing the save. The author's IP is recorded in `author_ip` for
-  moderation.
+- **`POST /lessons`** body is
+  `{ title, doc, published?, forkedFrom?, forkedFromUrl? }`. The caller must
+  not be banned (`403 "Your access has been suspended."`) and must have a
+  display name (`403` otherwise). `doc.sections` must be a non-empty array
+  (`400`). The title falls back to `doc.title`, then "Untitled Lesson", and is
+  cut to 300 characters. `published` defaults to `true` when omitted, so an
+  older client still publishes. An invalid `forkedFrom` or `forkedFromUrl`
+  (anything but an http(s) address) is dropped rather than failing the save,
+  and `forkedFromUrl` is ignored when `forkedFrom` is given. The author's IP
+  is recorded in `author_ip` for moderation.
 - **Draft cap.** A user may hold at most `MAX_DRAFTS` (8) private drafts. A save
   that would create a ninth, by `POST` or by a `PUT` that turns a published
   lesson into a draft, is rejected with `409`. Re-saving an existing draft never
@@ -246,9 +255,10 @@ Besides `lessons`, `comments` and `ratings` below, the file defines
 [Profiles](./profiles.md)), `lesson_pull_requests` (see
 [Pull requests](./pull-requests.md)), the moderation tables `user_roles`,
 `banned_names`, `banned_ips` and `lesson_delete_requests` (see
-[Moderation](./moderation.md)), and `kv_store`, the expiring key-value table a
+[Moderation](./moderation.md)), `kv_store`, the expiring key-value table a
 self-hosted instance uses in place of Cloudflare KV (see
-[Platform seam](../platform-seam.md)).
+[Platform seam](../platform-seam.md)), and `federation_keys` and
+`federation_followers` (see [Federation](../federation.md)).
 
 **Row level security.** The API connects with the service-role key, which
 bypasses RLS, so it is the only writer. RLS is enabled on every table anyway as

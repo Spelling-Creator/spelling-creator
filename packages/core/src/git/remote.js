@@ -14,7 +14,12 @@
 // Because a lesson has more than one possible writer, PUT is a compare-and-swap:
 // see pushPack below.
 import { apiUrl, hasApi } from "../config.js";
-import { DEFAULT_BRANCH, parseRefMap, serializeRefMap } from "./refs.js";
+import {
+  DEFAULT_BRANCH,
+  OID_RE,
+  parseRefMap,
+  serializeRefMap,
+} from "./refs.js";
 
 /** Whether the lesson hub (and so the shared history) is reachable at all. */
 
@@ -74,9 +79,48 @@ export async function fetchPack(lessonId) {
   }
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("Could not download the lesson history.");
+  return packFromResponse(res);
+}
 
-  const head = res.headers.get("X-Git-Head");
-  if (!head) return null; // a pack with no tip is unusable
+/**
+ * Download the packed history of a lesson on ANOTHER instance, through this
+ * hub's API, which fetches it on the caller's behalf (the other instance does
+ * not answer a browser from here, and should not). `packUrl` is the address
+ * the API handed back with the lesson (see fetchRemoteLesson in lessons.js).
+ * The response has the shape fetchPack reads, tip and branch map included.
+ *
+ * @returns {Promise<{ packfile: Uint8Array, head: string, refs: object } | null>}
+ *          null when the lesson has no history there.
+ */
+export async function fetchRemotePackFile(packUrl, accessToken) {
+  if (!hasApi() || !packUrl) return null;
+  if (!accessToken) throw new Error("Please sign in before copying a lesson.");
+
+  let res;
+  try {
+    res = await fetch(
+      `${apiUrl()}/remote/pack?url=${encodeURIComponent(packUrl)}`,
+      { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+  } catch {
+    throw new Error("Could not reach the lesson history.");
+  }
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(detail || "Could not download the lesson history.");
+  }
+  return packFromResponse(res);
+}
+
+/** The pack and the refs that travel in its headers, or null for an unusable one. */
+async function packFromResponse(res) {
+  const head = (res.headers.get("X-Git-Head") || "").trim();
+  // A pack with no tip is unusable, and so is one whose tip is not a commit
+  // id: cloning it would leave a history pointing at nothing. A remote pack
+  // passes through this hub from somebody else's server, so it is checked
+  // here as well as there.
+  if (!OID_RE.test(head)) return null;
 
   const bytes = new Uint8Array(await res.arrayBuffer());
   if (bytes.byteLength === 0) return null;

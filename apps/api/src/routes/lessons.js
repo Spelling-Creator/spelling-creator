@@ -5,9 +5,10 @@
 import { supabaseHeaders, verifySupabaseUser } from '../lib/supabase.js';
 import { authorFromUser, bearerToken, clientIp, displayNameOf, isModeratorRole, verifyUserAndRole } from '../lib/auth.js';
 import { bannedResponse } from '../lib/bans.js';
-import { fetchLessonRow, isTrustedCollaborator, rowToLesson } from '../lib/lesson.js';
+import { fetchLessonRow, forkedFromUrlOf, isTrustedCollaborator, rowToLesson } from '../lib/lesson.js';
 import { fetchRatingStats } from '../lib/ratings.js';
 import { LESSON_ID_RE, deleteLessonGit, deleteLessonPullGit } from '../lib/lessonGit.js';
+import { announceLesson } from '../lib/federation/index.js';
 import { createNotification } from './notifications.js';
 import { textResponse, jsonResponse } from '../lib/http.js';
 
@@ -52,8 +53,11 @@ async function countUserDrafts(env, base, userId, excludeId) {
  * Each user may hold at most MAX_DRAFTS private drafts at once (published lessons are
  * unlimited); a save that would exceed it is rejected with 409.
  * Errors are short plain-text reasons so the frontend can surface res.text().
+ *
+ * `ctx` is the execution context, for telling the author's followers on other
+ * servers about a change after the response has gone (lib/federation/).
  */
-export async function handleLessons(request, env, url, cors) {
+export async function handleLessons(request, env, url, cors, ctx) {
 	if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
 		return textResponse('Server misconfiguration: Supabase is not configured', 500, cors);
 	}
@@ -75,7 +79,7 @@ export async function handleLessons(request, env, url, cors) {
 
 		const query = `author_id=eq.${encodeURIComponent(
 			user.id,
-		)}&select=id,author_id,title,author,section_count,published,forked_from,created_at&order=created_at.desc`;
+		)}&select=id,author_id,title,author,section_count,published,forked_from,forked_from_url,created_at&order=created_at.desc`;
 		let res;
 		try {
 			res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
@@ -98,7 +102,7 @@ export async function handleLessons(request, env, url, cors) {
 	// turns out to need it — a normal published, non-shadowbanned read stays
 	// token-free.
 	if (request.method === 'GET' && id) {
-		const query = `id=eq.${encodeURIComponent(id)}&select=id,author_id,title,author,section_count,published,shadowbanned,author_ip,forked_from,created_at,doc&limit=1`;
+		const query = `id=eq.${encodeURIComponent(id)}&select=id,author_id,title,author,section_count,published,shadowbanned,author_ip,forked_from,forked_from_url,created_at,doc&limit=1`;
 		let res;
 		try {
 			res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
@@ -165,7 +169,7 @@ export async function handleLessons(request, env, url, cors) {
 	// excluded; section_count gives the summary its count without shipping every block.
 	if (request.method === 'GET') {
 		const query =
-			'published=eq.true&shadowbanned=eq.false&select=id,author_id,title,author,section_count,published,forked_from,created_at&order=created_at.desc';
+			'published=eq.true&shadowbanned=eq.false&select=id,author_id,title,author,section_count,published,forked_from,forked_from_url,created_at&order=created_at.desc';
 		let res;
 		try {
 			res = await fetch(`${base}/rest/v1/lessons?${query}`, { headers: supabaseHeaders(env) });
@@ -227,6 +231,9 @@ export async function handleLessons(request, env, url, cors) {
 		// and merge against (see web/src/lib/git/sync.js). A bad id is dropped rather
 		// than rejected — losing the link is survivable, failing the save is not.
 		const forkedFrom = typeof body.forkedFrom === 'string' && LESSON_ID_RE.test(body.forkedFrom) ? body.forkedFrom : null;
+		// Or the page it was forked from on another instance (see routes/remote.js).
+		// One or the other: a lesson from elsewhere has no row here to point at.
+		const forkedFromUrl = forkedFrom ? null : forkedFromUrlOf(body.forkedFromUrl);
 
 		const insert = {
 			author_id: user.id,
@@ -235,21 +242,25 @@ export async function handleLessons(request, env, url, cors) {
 			doc,
 			published,
 			forked_from: forkedFrom,
+			forked_from_url: forkedFromUrl,
 			// Recorded so an admin can later ban the address from a lesson of theirs.
 			author_ip: clientIp(env, request) || null,
 		};
 
 		let res;
 		try {
-			res = await fetch(`${base}/rest/v1/lessons?select=id,author_id,title,author,section_count,published,forked_from,created_at`, {
-				method: 'POST',
-				headers: {
-					...supabaseHeaders(env),
-					'Content-Type': 'application/json',
-					Prefer: 'return=representation',
+			res = await fetch(
+				`${base}/rest/v1/lessons?select=id,author_id,title,author,section_count,published,forked_from,forked_from_url,created_at`,
+				{
+					method: 'POST',
+					headers: {
+						...supabaseHeaders(env),
+						'Content-Type': 'application/json',
+						Prefer: 'return=representation',
+					},
+					body: JSON.stringify(insert),
 				},
-				body: JSON.stringify(insert),
-			});
+			);
 		} catch (e) {
 			return textResponse('Could not reach the lesson store.', 502, cors);
 		}
@@ -258,6 +269,9 @@ export async function handleLessons(request, env, url, cors) {
 		if (!Array.isArray(rows) || rows.length === 0) {
 			return textResponse('Could not save the lesson.', 502, cors);
 		}
+		// A new public lesson is news to the author's followers elsewhere; a draft
+		// is nobody's business until it is published.
+		if (published) announceLesson(env, ctx, { ...rows[0], doc }, 'create');
 		return jsonResponse({ lesson: rowToLesson(rows[0]) }, 201, cors);
 	}
 
@@ -349,7 +363,7 @@ export async function handleLessons(request, env, url, cors) {
 			res = await fetch(
 				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(
 					id,
-				)}&select=id,author_id,title,author,section_count,published,forked_from,created_at`,
+				)}&select=id,author_id,title,author,section_count,published,shadowbanned,forked_from,forked_from_url,created_at`,
 				{
 					method: 'PATCH',
 					headers: {
@@ -369,6 +383,17 @@ export async function handleLessons(request, env, url, cors) {
 			return textResponse('Could not save the lesson.', 502, cors);
 		}
 
+		// What followers on other servers hear depends on whether the lesson was,
+		// and now is, public. A shadowbanned lesson is never public to them, so a
+		// save to one says nothing; the moderator's toggle speaks for it. "Now" is
+		// the row the write returned, so the answer is the saved state rather than
+		// what this handler assumed it would be.
+		const wasPublic = Boolean(existing.published) && !existing.shadowbanned;
+		const isPublic = Boolean(rows[0].published) && !rows[0].shadowbanned;
+		if (isPublic && !wasPublic) announceLesson(env, ctx, { ...rows[0], doc: patch.doc }, 'create');
+		else if (!isPublic && wasPublic) announceLesson(env, ctx, rows[0], 'delete');
+		else if (isPublic) announceLesson(env, ctx, { ...rows[0], doc: patch.doc }, 'update');
+
 		// Tell the author someone else saved their lesson — it changed under them,
 		// and they didn't do it. Best-effort: never fail the save over a notification.
 		if (isTrusted) {
@@ -381,7 +406,10 @@ export async function handleLessons(request, env, url, cors) {
 			}).catch(() => {});
 		}
 
-		return jsonResponse({ lesson: rowToLesson(rows[0]) }, 200, cors);
+		// `shadowbanned` was selected for the decision above and stays out of the
+		// answer: the author saving a hidden lesson must not learn it is hidden.
+		const { shadowbanned: _hidden, ...saved } = rows[0];
+		return jsonResponse({ lesson: rowToLesson(saved) }, 200, cors);
 	}
 
 	// DELETE /lessons/:id — remove a lesson the signed-in user published. Requires
@@ -408,7 +436,7 @@ export async function handleLessons(request, env, url, cors) {
 		let ownRes;
 		try {
 			ownRes = await fetch(
-				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(id)}&author_id=eq.${encodeURIComponent(user.id)}&select=id&limit=1`,
+				`${base}/rest/v1/lessons?id=eq.${encodeURIComponent(id)}&author_id=eq.${encodeURIComponent(user.id)}&select=id,author_id,published,shadowbanned&limit=1`,
 				{ headers: supabaseHeaders(env) },
 			);
 		} catch (e) {
@@ -463,6 +491,11 @@ export async function handleLessons(request, env, url, cors) {
 		// (4) Drop the lesson's stored version history so its packfile doesn't
 		// outlive it in the bucket. Best-effort — the lesson row is already gone.
 		await deleteLessonGit(env, id);
+
+		// (5) Followers on other servers hold a copy of the Article; tell them it
+		// is gone. Only if they ever heard of it: a draft was never announced.
+		const was = ownRows[0];
+		if (was.published && !was.shadowbanned) announceLesson(env, ctx, was, 'delete');
 
 		return jsonResponse({ ok: true }, 200, cors);
 	}

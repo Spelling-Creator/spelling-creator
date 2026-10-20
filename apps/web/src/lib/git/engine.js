@@ -84,6 +84,7 @@ export {
   completeMerge,
   forkLessonRepo,
   forkLocalRepo,
+  forkRemoteLessonRepo,
   prepareBranchMerge,
   prepareMerge,
   prepareRevert,

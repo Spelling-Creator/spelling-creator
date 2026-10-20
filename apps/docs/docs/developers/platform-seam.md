@@ -22,18 +22,22 @@ so a handler can ask for "the image store" rather than for `env.IMAGES`.
 
 ```text
 platform(env) -> {
-  images,      BlobStore | null   lesson images, keyed by content hash
-  lessonGit,   BlobStore | null   lesson history packfiles
-  rateLimit,   KvStore   | null   rate-limit buckets + the AI answer cache
-  oauthState,  KvStore   | null   short-lived MCP OAuth authorization state
-  cache,       ResponseCache      HTTP response cache (never null; may no-op)
+  images,          BlobStore | null   lesson images, keyed by content hash
+  lessonGit,       BlobStore | null   lesson history packfiles
+  rateLimit,       KvStore   | null   rate-limit buckets + the AI answer cache
+  oauthState,      KvStore   | null   short-lived MCP OAuth authorization state
+  cache,           ResponseCache      HTTP response cache (never null; may no-op)
+  federationKv,    Fedify KvStore | null       ActivityPub caches
+  federationQueue, Fedify MessageQueue | null  outgoing deliveries
+  remoteFetch(input, init) -> Response         fetch for an address a visitor chose
   clientIp(request) -> string
 }
 ```
 
 Handlers reach for these through the named helpers in `platform/index.js`
-(`imageStore`, `gitStore`, `rateLimitStore`, `oauthStateStore`, `responseCache`
-and `clientIp`) rather than the object:
+(`imageStore`, `gitStore`, `rateLimitStore`, `oauthStateStore`, `responseCache`,
+`federationKvStore`, `federationQueue`, `remoteFetch` and `clientIp`) rather
+than the object:
 
 ```js
 import {
@@ -79,6 +83,14 @@ is something any host can implement, including by not implementing it at all.
 Every method is best-effort: a cache that fails must change how much work a
 handler did, never what it returned. Its users are image bytes, crawler
 prerender snapshots and og-image screenshots.
+
+The two federation members are not the seam's own interfaces but
+[Fedify](https://fedify.dev)'s, because Fedify is the one reading them: its
+`KvStore` (keys are arrays of strings, values are JSON, prefixes can be listed)
+and its `MessageQueue`. They sit in the seam for the same reason as the rest:
+which store backs them is the host's business. See
+[Federation](./federation.md#per-host) for what each host provides, and
+`platform/postgrestFedifyKv.js` for the PostgREST-backed `KvStore`.
 
 ## The conformance suite
 
@@ -246,10 +258,21 @@ env.PLATFORM = {
   rateLimit: kv,
   oauthState: kv,
   cache: noopCache,
+  federationKv: postgrestFedifyKv({ url, apiKey }),
+  federationQueue: new InProcessMessageQueue(),
+  // Connects only to public addresses, checked as the socket opens.
+  remoteFetch: publicFetch,
   // NOT `headers.get("x-forwarded-for")`. See below.
   clientIp: clientIpFrom(env),
 };
 ```
+
+`remoteFetch` is the fetch for addresses a visitor chose, such as a lesson on
+another instance. A Worker cannot reach a private network, so on Cloudflare it
+is the ordinary fetch. A Node process can, so there it refuses, when each
+socket opens, any name that resolves to a private address
+(`node/remoteFetch.js`), which is what makes a check-then-fetch safe against
+DNS rebinding. See [Federation](./federation.md#forking-a-lesson-from-another-instance).
 
 One table serves both KV roles there, as one KV namespace could have; they stay
 separate names in the seam so that a host that wants to split them can.

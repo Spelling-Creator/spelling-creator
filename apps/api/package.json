@@ -19,6 +19,10 @@
 	"dependencies": {
 		"@cloudflare/puppeteer": "^1.4.0",
 		"@cloudflare/workers-oauth-provider": "^0.10.3",
+		"@fedify/cfworkers": "^2.4.4",
+		"@fedify/fedify": "^2.4.4",
+		"@fedify/hono": "^2.4.4",
+		"@fedify/vocab": "^2.4.4",
 		"@hono/node-server": "^2.1.1",
 		"@jsquash/jpeg": "^1.6.0",
 		"@jsquash/png": "^3.1.1",
@@ -30,6 +34,8 @@
 		"glin-profanity": "^3.3.0",
 		"hono": "^4.13.2",
 		"parse5": "^8.0.1",
+		"temporal-polyfill": "^1.0.6",
+		"undici": "^8.12.3",
 		"yjs": "^13.6.32"
 	},
 	"devDependencies": {

@@ -4,6 +4,7 @@
 
 import { supabaseHeaders } from './supabase.js';
 import { isModeratorRole, verifyUserAndRole } from './auth.js';
+import { announceLesson } from './federation/index.js';
 import { deleteLessonGit, deleteLessonPullGit } from './lessonGit.js';
 
 /**
@@ -117,6 +118,21 @@ export function stripCollaborators(doc) {
 }
 
 /**
+ * The `forkedFromUrl` a save sent, as the string to store, or null when it is
+ * absent or not a web address. Dropped rather than refused, like a bad
+ * `forkedFrom`: losing the link home is survivable, failing the save is not.
+ */
+export function forkedFromUrlOf(value) {
+	if (typeof value !== 'string' || !value.trim() || value.length > 2048) return null;
+	try {
+		const url = new URL(value.trim());
+		return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Map a Supabase `lessons` row to the camelCase summary the frontend expects.
  *
  * @param {object}  row
@@ -152,6 +168,9 @@ export function rowToLesson(row, { withDoc = false, includeMod = false, includeC
 		// so the editor can offer to pull the original's later changes in, merging the
 		// two histories against the commit they diverged from (see web/src/lib/git/).
 		forkedFrom: row.forked_from ?? null,
+		// Or, for a lesson forked from another instance, the page it was forked
+		// from there. The two never both apply.
+		forkedFromUrl: row.forked_from_url ?? null,
 		createdAt: row.created_at,
 	};
 	if (withDoc) lesson.doc = includeCollaborators ? row.doc : stripCollaborators(row.doc);
@@ -167,8 +186,14 @@ export function rowToLesson(row, { withDoc = false, includeMod = false, includeC
  * Mirrors the author DELETE path's comments-first ordering so it works even on a
  * database whose comments FK doesn't cascade. Returns true if a lesson row was
  * actually removed.
+ *
+ * `ctx` is the execution context, for telling the author's followers on other
+ * servers the lesson is gone once it is (see lib/federation/).
  */
-export async function fullyDeleteLesson(env, base, lessonId) {
+export async function fullyDeleteLesson(env, base, lessonId, ctx) {
+	// Who the lesson belonged to, and whether anyone elsewhere was ever told
+	// about it, read now because the row is about to go.
+	const row = await fetchLessonRow(env, base, lessonId);
 	// Sweep the packs of any pull requests against this lesson first: their rows
 	// go with the lesson (the FK cascades), taking with them the ids we need to
 	// find the packs, so this has to happen while the lesson is still there.
@@ -196,5 +221,6 @@ export async function fullyDeleteLesson(env, base, lessonId) {
 	// Drop the lesson's stored version history too, so its packfile doesn't outlive
 	// it in the bucket. Best-effort — the row is already gone either way.
 	if (deleted) await deleteLessonGit(env, lessonId);
+	if (deleted && row && row.published && !row.shadowbanned) announceLesson(env, ctx, row, 'delete');
 	return deleted;
 }

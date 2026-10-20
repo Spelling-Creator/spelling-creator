@@ -25,6 +25,23 @@
 		"SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhma2dycWloYXdnb3NhbGx0anB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzQ4NDMsImV4cCI6MjA5NTY1MDg0M30.G-Ait5_9WqUfBQLfinHiOPl3w_LwwK5jA_G_aGw97CU",
 		// Self-referential base URL the MCP tool layer calls back into (routes/mcp.js).
 		"SPELLING_CREATOR_API_URL": "https://spellingcreator.org",
+		// Turns federation on: every author is an ActivityPub actor and every
+		// published lesson an Article at this origin, which goes into their ids
+		// (src/lib/federation/). Unset it to turn federation off. The dev script
+		// overrides it with the local address.
+		"FEDERATION_ORIGIN": "https://spellingcreator.org",
+	},
+
+	// Outgoing ActivityPub deliveries. Fedify enqueues them here and the Worker's
+	// `queue()` export (src/index.js) works through them with the queue's own
+	// retries; without the binding they would be sent from the request that
+	// caused them and never retried. The queue is created by the first deploy:
+	// wrangler provisions a named queue that does not exist yet (its
+	// `experimental-provision` and `experimental-auto-create` flags are on by
+	// default), so there is nothing to run by hand.
+	"queues": {
+		"producers": [{ "binding": "FEDERATION_QUEUE", "queue": "spelling-creator-federation" }],
+		"consumers": [{ "queue": "spelling-creator-federation", "max_retries": 10 }],
 	},
 
 	// Serve the built web SPA as static assets. The Worker runs first on every
