@@ -38,7 +38,7 @@
 // payload and a single keystroke all travel the same path.
 //
 // EDITED is how a peer learns who made an edit, which version history needs to
-// credit everyone in a session (see coAuthorTrailers in git/repo.js). It is a
+// credit everyone in a session (see coAuthorTrailers in git/repo.ts). It is a
 // frame of its own, sent just before the UPDATE it describes, rather than a
 // slot added to UPDATE itself. A client that predates it skips a frame type it
 // doesn't know; one handed an UPDATE with two extra bytes at the front would

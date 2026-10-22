@@ -131,7 +131,7 @@ export function createApi(config, auth) {
   /**
    * Upload a packfile — a lesson's history, or a proposal's snapshot of one. The
    * tip travels in X-Git-Head so the bytes and the ref they belong to can never
-   * be paired from two different moments (see core/git/remote.js).
+   * be paired from two different moments (see core/git/remote.ts).
    */
   async function putPack(
     url,
@@ -277,7 +277,7 @@ export function createApi(config, auth) {
     // packages/core/src/git/). These are what forking, proposing and reviewing
     // need: read a lesson's history, write a fork's, open a proposal carrying
     // it, and read that proposal back to diff or merge it.
-    // Unlike the browser's equivalents (core/git/remote.js, core/pulls.ts) these
+    // Unlike the browser's equivalents (core/git/remote.ts, core/pulls.ts) these
     // always send the caller's token — a fork starts life as a private draft, so
     // its own history is not a public read.
 

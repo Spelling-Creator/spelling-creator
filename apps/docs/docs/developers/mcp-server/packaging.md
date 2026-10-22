@@ -73,7 +73,7 @@ package and the file:
 
 ```
 The @spelling-creator/core modules this server imports reach packages npm won't install as core expects:
-  isomorphic-git (from src/git/pack.js): not a dependency
+  isomorphic-git (from src/git/pack.ts): not a dependency
 ```
 
 If that fires, give `apps/mcp/package.json` the package at core's range. The

@@ -5,7 +5,7 @@
 // `s2c-lesson-maker` store that holds the working doc and image blobs (see
 // imageStore.js), so a repo can never collide with a lesson image.
 //
-// One repository per lesson, bare (no working tree — see repo.js):
+// One repository per lesson, bare (no working tree — see repo.ts):
 //
 //   /lessons/<repoId>/.git      the object store, refs and config
 //
@@ -32,7 +32,7 @@ export function gitFs() {
   return fsInstance;
 }
 
-/** `{ fs, gitdir }` — the context every function in repo.js/pack.js takes. */
+/** `{ fs, gitdir }` — the context every function in repo.ts/pack.ts takes. */
 export function repoCtx(repoId) {
   return { fs: gitFs(), gitdir: `${ROOT}/${repoId}/.git` };
 }

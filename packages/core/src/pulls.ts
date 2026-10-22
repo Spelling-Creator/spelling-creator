@@ -23,7 +23,7 @@
 //   status  'open' | 'merged' | 'closed'
 //   ready   whether its packfile has landed — an unready request has nothing to
 //           review yet, and is only ever listed to the person who opened it.
-//   head    the commit the stored pack points at (see git/remote.js for how the
+//   head    the commit the stored pack points at (see git/remote.ts for how the
 //           changes themselves travel).
 import { apiUrl, hasApi } from "./config.ts";
 
@@ -238,7 +238,7 @@ export async function uploadPullPack(
  * Download a proposal's packfile, so it can be indexed into the lesson's own
  * repository and merged from there.
  *
- * As in git/remote.js fetchPack, the tip comes back in the response's own
+ * As in git/remote.ts fetchPack, the tip comes back in the response's own
  * X-Git-Head header rather than from a separate call, so bytes and ref can never
  * be paired from two different moments.
  * @returns null when the proposal's changes are no longer stored (it was merged

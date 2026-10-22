@@ -19,7 +19,7 @@
 //
 // ---- Why there is no state between calls ------------------------------------
 //
-// A repository here lives in memory (core/git/memfs.js) and is thrown away when
+// A repository here lives in memory (core/git/memfs.ts) and is thrown away when
 // the tool call returns. It doesn't need to survive, because the durable state is
 // the lesson's row (its document) and its packfile in R2. Each call rebuilds
 // exactly what it needs by cloning that pack, which means the history survives
@@ -319,7 +319,7 @@ export async function forkLesson(api, { lessonId, title }) {
     throw new Error("That lesson has no content to fork.");
   }
 
-  // The fork's document. Local-only fields never travel (see core/git/doc.js):
+  // The fork's document. Local-only fields never travel (see core/git/doc.ts):
   // the trusted-collaborator list belongs to the lesson it was named on, not to
   // a copy of it, and it must not be carried into a new lesson's document.
   const doc = stripLocalFields(source.doc);
@@ -631,7 +631,7 @@ async function proposedOps(ctx, doc) {
  * function: that one is bound to the browser's filesystem through repoCtx, and the
  * three calls it makes (fetchRemotePack, mergeBase, readDocAt) are the platform-
  * neutral ones this uses directly. Keeping the answers identical matters more than
- * sharing the wrapper, so review.test.js in core pins the shape both rely on.
+ * sharing the wrapper, so review.test.ts in core pins the shape both rely on.
  *
  * Nothing is written anywhere: no commit, no push, no branch moved. A reviewer
  * reading a proposal has not yet decided anything, and this must not act as
@@ -829,7 +829,7 @@ export async function mergeProposal(api, { lessonId, pullId, title, client }) {
   }
 
   // Local-only fields belong to the lesson they were named on and never travel
-  // in a pack (core/git/doc.js), so the merged document has to take them back
+  // in a pack (core/git/doc.ts), so the merged document has to take them back
   // from the lesson's own — a merge must not drop its trusted-collaborator list.
   const doc = preserveLocalFields(merged.doc, lesson.doc || {});
   const ops = diffDocs(current, doc);

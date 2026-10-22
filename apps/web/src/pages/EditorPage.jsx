@@ -721,7 +721,7 @@ export default function EditorPage() {
 
   // Get the open lesson fully onto disk: the debounced document save, then a
   // version-control checkpoint. Both are skipped when there's nothing new —
-  // committing an unchanged document is already a no-op (see repo.js).
+  // committing an unchanged document is already a no-op (see repo.ts).
   const flushCurrentLesson = useCallback(async () => {
     if (!localId) return;
     pendingSaveRef.current = null;

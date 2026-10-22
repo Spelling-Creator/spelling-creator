@@ -201,7 +201,7 @@ the stored block to something else, and split it first with
   session's reader). An assistant is told to keep the attribution out of the
   caption and pass `credit` through, so shown a combined caption it would drop
   the attribution.
-- **Three-way merges** (`git/merge.js`). Without it, a caption edit on one side
+- **Three-way merges** (`git/merge.ts`). Without it, a caption edit on one side
   and a credit fix on the other would both change `caption`, and both add
   `credit`, and come out as conflicts.
 

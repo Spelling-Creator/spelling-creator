@@ -55,7 +55,7 @@ function isYType(v: unknown): v is Y.Map<unknown> | Y.Array<unknown> | Y.Text {
  * about what it is handed. (The app does not in fact send it the lesson's
  * trusted-collaborator list: those are email addresses, and the room is mirrored
  * to everyone the host admits, so lib/collab.js strips the field before
- * reconciling. See stripLocalFields in git/doc.js.)
+ * reconciling. See stripLocalFields in git/doc.ts.)
  */
 export function keyOf(item: unknown): string | null {
   if (!isPlainObject(item)) return null;

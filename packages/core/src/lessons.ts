@@ -209,7 +209,7 @@ export async function remoteForkAvailable(): Promise<boolean> {
  * A lesson on another instance, read through this hub's API so it can be forked
  * here. The address is the lesson's page there; the API finds the lesson through
  * federation and answers with its document and where its history can be fetched
- * from (`packUrl`, which fetchRemotePackFile in git/remote.js takes). Needs a
+ * from (`packUrl`, which fetchRemotePackFile in git/remote.ts takes). Needs a
  * signed-in session, since the API fetches on the caller's behalf.
  * @param accessToken  Supabase session JWT.
  */

@@ -9,7 +9,7 @@
 // than a stub — a merge writes to three places in a fixed order, and the Worker
 // rejects the last one unless the first two landed, so the order IS the
 // behaviour. These build actual packfiles for a lesson and a fork of it, exactly
-// as core's review.test.js does, so the ancestry the diff and the merge base
+// as core's review.test.ts does, so the ancestry the diff and the merge base
 // depend on is real ancestry and not a fixture.
 
 import assert from "node:assert/strict";

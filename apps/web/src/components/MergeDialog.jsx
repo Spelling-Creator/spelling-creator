@@ -18,7 +18,7 @@
 // framing differs — merging a proposal changes the published lesson for
 // everyone, so it says so.
 //
-// See lib/git/merge.js for the merge itself; this component only chooses.
+// See core/git/merge.ts for the merge itself; this component only chooses.
 
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";

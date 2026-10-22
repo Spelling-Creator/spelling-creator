@@ -523,7 +523,7 @@ everything goes straight through plumbing (`writeBlob`, then `writeTree`, then
 isomorphic-git and LightningFS are about 200 KB that only the editor needs, so they're
 split into their own chunk (`engine.js`) and fetched on demand when the editor
 mounts (`load.js`). Nobody reading the homepage or browsing the hub downloads a
-git implementation. The pure parts (`doc.js`, `ops.js`, `merge.js`) have no git
+git implementation. The pure parts (`doc.ts`, `ops.ts`, `merge.ts`) have no git
 dependency, so the history and merge dialogs render without it.
 
 `engine.js` also installs the `Buffer` polyfill (from the `buffer` package),

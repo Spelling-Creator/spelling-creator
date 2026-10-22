@@ -387,7 +387,7 @@ way.)
 In [version history](../version-history.md), the sources are stored in
 `lesson.json` next to the title, and show up as their own operations ("add
 source", "edit source", "remove source", "reorder sources"; see
-`packages/core/src/git/ops.js`). When merging, a text block's words are treated as one
+`packages/core/src/git/ops.ts`). When merging, a text block's words are treated as one
 field whichever shape they're in. So one side formatting a word while the other
 fixes a typo is a conflict the user sees, rather than two edits to different
 fields that merge "cleanly" and hide the typo fix. Sources merge without asking:

@@ -3,7 +3,7 @@
 // Forking a lesson clones its repository. Merging compares block ids against the
 // commit the two histories share. Pushing sends a history back to the hub. These
 // are the flows that make the version control worth having, and they're all a
-// handful of calls over the primitives in repo.js / pack.js / merge.js.
+// handful of calls over the primitives in repo.ts / pack.ts / merge.ts.
 //
 // Three things to understand here.
 //
@@ -373,7 +373,7 @@ async function mergeAgainstCommit({ repoId, theirs, doc }) {
 /**
  * Undo one commit, leaving everything since it alone.
  *
- * `restoreCommit` (repo.js) is the blunt instrument: it takes the whole document
+ * `restoreCommit` (repo.ts) is the blunt instrument: it takes the whole document
  * back to a point and drops every change after it. This is the precise one — undo
  * *that* change, keep the rest — and it is the same three-way merge as everything
  * else here, with the sides pointed backwards:

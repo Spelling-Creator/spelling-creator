@@ -6,7 +6,7 @@
 // document, and a commit is taken when the user *pauses* (IDLE_MS) — or, if they
 // never pause, at least every MAX_WAIT_MS, so a long uninterrupted stretch of
 // typing still gets checkpointed. A commit whose tree matches HEAD is skipped
-// outright (see repo.js commitDoc), so an idle editor never accretes empty
+// outright (see repo.ts commitDoc), so an idle editor never accretes empty
 // commits.
 //
 // The repository is set up lazily on mount:
@@ -466,7 +466,7 @@ export function useLessonGit({
    * Start a variation from where we are and switch to it.
    *
    * `label` is what the author typed; the branch takes the name that survives
-   * git's rules (see core/git/refs.js). An empty result means they typed nothing
+   * git's rules (see core/git/refs.ts). An empty result means they typed nothing
    * git could keep, which is the caller's to report.
    */
   const createVariation = useCallback(

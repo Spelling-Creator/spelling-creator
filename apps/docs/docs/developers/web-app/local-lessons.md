@@ -55,7 +55,7 @@ images.
 at which point the repository moves under the hub's id for it (`adoptDraftRepo`
 in `packages/core/src/browser/git/fs.js`) and follows the lesson to your other
 devices, while its metadata and document stay where they are.
-`repoIdFor(lessonId, localId)` in `packages/core/src/git/doc.js` is the one
+`repoIdFor(lessonId, localId)` in `packages/core/src/git/doc.ts` is the one
 place that decides. See [Version history](../version-history.md) for what that
 repository holds.
 
@@ -95,6 +95,6 @@ loads, and both are idempotent:
 
 The migrated lesson is given the id `draft`, which is not arbitrary: `draft` is
 the name the old working lesson's repository already has on disk (`DRAFT_REPO`
-in `packages/core/src/git/doc.js`), and a local lesson's id _is_ its repo id, so
+in `packages/core/src/git/doc.ts`), and a local lesson's id _is_ its repo id, so
 the whole timeline carries across without a single git object being copied.
 Lessons made after it get ordinary random ids.

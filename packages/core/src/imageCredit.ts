@@ -124,7 +124,7 @@ export function hasPicture(
  * picture, and unchanged when it doesn't. For the places a block leaves the
  * app's own renderers, where a reader would otherwise see an older block's
  * combined caption as it's stored: what an assistant is shown (presentDoc)
- * and what a three-way merge compares (git/merge.js).
+ * and what a three-way merge compares (git/merge.ts).
  *
  * The editor doesn't apply it on load. Doing so would change every older
  * picture in the stored lesson the moment it was opened, which version
