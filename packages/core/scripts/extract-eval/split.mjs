@@ -9,7 +9,7 @@ import {
   classifyLine,
   splitSections as splitCore,
 } from "../../src/documentImport.js";
-import { sectionPromptText } from "../../src/documentImportModel.js";
+import { sectionPromptText } from "../../src/documentImportModel.ts";
 
 export { classifyLine };
 

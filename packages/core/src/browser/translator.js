@@ -8,7 +8,7 @@
 // to read a comment at all is worth a heavier fallback. So when the browser
 // can't translate a pair, we fall back to running a translation model in the
 // page with transformers.js (fallbackTranslator.js): a small per-pair Opus-MT
-// model for the into-English pairs opusMtModels.js lists, NLLB-200 for every
+// model for the into-English pairs opusMtModels.ts lists, NLLB-200 for every
 // other pair.
 //
 // The fallback is a large download (the library plus quantised models:

@@ -14,7 +14,7 @@
 // objects, so the editor's memoised cards for everything else stay as they are.
 //
 // Text blocks are written with withTextBlockDocument, the way the editor writes
-// them (see lessonText.js for why a touched block always stores `content`).
+// them (see lessonText.ts for why a touched block always stores `content`).
 
 import { isCapsSpan } from "./lessonChecks.js";
 import {

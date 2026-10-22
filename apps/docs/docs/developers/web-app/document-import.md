@@ -123,7 +123,7 @@ section-sized pieces the same way (a `loose` split, which the preview and
 model. Only a text with no passage at all goes to it as one piece.
 
 The sections are still split by the rules, one call per section, with the
-same prompt the model was trained on (`packages/core/src/documentImportModel.js`,
+same prompt the model was trained on (`packages/core/src/documentImportModel.ts`,
 shared with the training scripts so the two cannot drift). A reply cut off at
 the token cap is closed up and keeps what it finished. Sections the parser
 read keep the parser's result; only the ones it could not are replaced by the
@@ -174,7 +174,7 @@ See the [experiment](../document-import-experiment.md) for the scores.
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `sectionNeedsModel`, `deriveQuestionType`, `previewLessonText`, `lessonFromSections`, `importLessonText`, `DocumentImportError`. Runtime-neutral. |
 | `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                                                                                                 |
-| `packages/core/src/documentImportModel.js`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                                                                                   |
+| `packages/core/src/documentImportModel.ts`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                                                                                   |
 | `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                                                                                    |
 | `packages/core/src/browser/documentModelEngine.js`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                                                                                                                      |
 | `apps/web/src/components/editor/DocumentImportDialog.jsx` | The dialog: text box, file picker, live preview, import.                                                                                                                                                                               |

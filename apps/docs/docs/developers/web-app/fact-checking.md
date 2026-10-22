@@ -269,7 +269,7 @@ read; an older one has no record, and is left to Wikidata and Wikipedia.
 
 When the structured sources can't settle a fact, the checker reads the subject's English
 Wikipedia article as plain text (`articleText` in `packages/core/src/wikipedia.js`) and
-looks for a sentence that says the same thing (`packages/core/src/factText.js`). That is
+looks for a sentence that says the same thing (`packages/core/src/factText.ts`). That is
 when no source has a value (`no-value`), and also when the value a source had could only
 ever confirm the fact: one that `varies`, or an eruption from `before-record`. A match
 there turns the fact into agrees; no match leaves it as it was.
@@ -424,7 +424,7 @@ is Turnstile, a Turnstile key.
 | `packages/core/src/wikidata.js`                       | The Wikidata requests: name search and SPARQL, shared with the [image search](./images.md).                                      |
 | `packages/core/src/wikipedia.js`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article. `articleText`: an article as plain text.             |
 | `packages/core/src/smithsonian.js`                    | The Global Volcanism Program: a volcano's record, and comparing eruption dates.                                                  |
-| `packages/core/src/factText.js`                       | Reading an article's sentences: the quantities, dates and names in each.                                                         |
+| `packages/core/src/factText.ts`                       | Reading an article's sentences: the quantities, dates and names in each.                                                         |
 | `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                                       |
 | `apps/api/src/routes/ai.js`                           | The `factCheck` mode: the AI check, rate limit, cache.                                                                           |
 | `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                                                |

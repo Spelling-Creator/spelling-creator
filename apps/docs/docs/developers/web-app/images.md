@@ -173,7 +173,7 @@ Older lessons still have the credit at the end of the caption. They aren't
 rewritten in storage: that would show up as an edit to every picture in
 [version history](../version-history.md), and could race collaborators in a
 live session. Instead the split happens when a lesson is read
-(`imageCaptionParts` in `packages/core/src/imageCredit.js`).
+(`imageCaptionParts` in `packages/core/src/imageCredit.ts`).
 
 It only recognizes the credit lines this app wrote itself, at the very end of a
 caption:

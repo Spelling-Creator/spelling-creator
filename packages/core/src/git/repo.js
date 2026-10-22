@@ -81,7 +81,7 @@ const DEFAULT_AUTHOR = { name: "Spelling Creator", email: "lessons@local" };
 // lesson to whoever clones it. The account id stands in instead: stable, so
 // one person's commits still group together, and already public on their
 // profile. The domain is a `.invalid` one, reserved so it can never resolve,
-// for the reason usernames use one (see ../username.js).
+// for the reason usernames use one (see ../username.ts).
 export const COMMIT_EMAIL_DOMAIN = "users.spelling-creator.invalid";
 
 // An account id is interpolated into a signature, so only the characters a

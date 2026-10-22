@@ -427,7 +427,7 @@ function QuestionBlock({ block, si, bi, translation }) {
           style={{
             "--s2c-label": meta.color,
             // The one type that shares its colour with another is set in italic
-            // instead (see questions.js), here as in the export.
+            // instead (see questions.ts), here as in the export.
             fontStyle: meta.italic ? "italic" : undefined,
           }}
         >

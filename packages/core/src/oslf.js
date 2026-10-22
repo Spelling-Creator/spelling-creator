@@ -1,7 +1,7 @@
 // The Open Spelling Lesson Format (OSLF): reading and writing a lesson as the
 // method-neutral file other tools can read.
 //
-// OSLF is the vocabulary the app's question types follow (see questions.js),
+// OSLF is the vocabulary the app's question types follow (see questions.ts),
 // written down as a JSON file with a published schema:
 // https://github.com/playforge-coding/open-spelling-lesson-format. This
 // module maps the app's own document (the shape buildDoc produces and the hub
@@ -13,7 +13,7 @@
 //
 //   - A caption or heading is rich text in OSLF and a plain string here, so
 //     marks and notes on those come back as their text alone. A prompt and a
-//     math question's working are inline text (see inlineText.js), which
+//     math question's working are inline text (see inlineText.ts), which
 //     holds everything the format's rich text does but a note, so a note in
 //     one of those comes back as nothing.
 //   - An image is referred to by URL in OSLF. Exporting writes the public URL

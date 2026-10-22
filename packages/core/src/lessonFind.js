@@ -1,5 +1,5 @@
 // Find in lesson: the search box the editor and the lesson page put over one
-// lesson, as distinct from the hub's search over many (lessonSearch.js).
+// lesson, as distinct from the hub's search over many (lessonSearch.ts).
 //
 // A finished lesson is about a thousand words of prose and ninety short
 // questions, and whoever is searching it usually knows the word they want:

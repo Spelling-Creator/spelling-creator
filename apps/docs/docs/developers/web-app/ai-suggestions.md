@@ -58,7 +58,7 @@ with a stand-in Turnstile and answers from saved answers or `claude -p`.
 
 `suggestLessonIdeas(ageRange, token)` sends `{ mode: "lessonIdea", ageRange,
 token }`. The age range is the lesson's `doc.ageRange`, one of `AGE_RANGES` in
-`packages/core/src/ageRanges.js` (`"3-5 years"` through `"16+ years"`, or empty
+`packages/core/src/ageRanges.ts` (`"3-5 years"` through `"16+ years"`, or empty
 for any age), stored verbatim so the prompt can use it directly. The Worker
 caps it at 60 characters.
 
@@ -116,7 +116,7 @@ After a dislike, the dialog offers **Generate fresh** and demotes **Insert** to
 existingQuestions })` sends `mode: "question"` with:
 
 - `questionType`, one of the keys in `QUESTION_TYPE_MENU`
-  (`packages/core/src/questions.js`), the same list as the **Add question**
+  (`packages/core/src/questions.ts`), the same list as the **Add question**
   menu. The dialog defaults to `single`. (The Worker also still accepts the
   legacy `open` key.)
 - `sectionText`, the section's existing text, so the question is answerable
@@ -126,7 +126,7 @@ existingQuestions })` sends `mode: "question"` with:
   first 50 non-empty ones), so the model asks something new.
 
 The Worker answers with JSON matching that type's entry in `QUESTION_SCHEMAS`.
-`buildQuestionBlock(newId, questionType, data)` in `questions.js` maps it onto
+`buildQuestionBlock(newId, questionType, data)` in `questions.ts` maps it onto
 the same block shape `createQuestionBlock` makes: each `answers` string becomes
 an `{ id, text }` row (with at least one row, even if empty), `steps` strings
 become step rows, and a number answer is stored as a string. The block is

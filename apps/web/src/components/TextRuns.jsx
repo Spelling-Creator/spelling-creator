@@ -37,7 +37,7 @@ export function TextRuns({ runs, renderFootnote = () => null }) {
 }
 
 // A citation or Sources list entry: italic titles, and addresses as links that
-// open away from the lesson. sources.js only emits a `url` part for an address
+// open away from the lesson. sources.ts only emits a `url` part for an address
 // that passed isSafeLink, so a stored `javascript:` never reaches an href.
 export function CitationParts({ parts }) {
   return parts.map((part, i) => {

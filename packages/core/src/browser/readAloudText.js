@@ -10,7 +10,7 @@
 // Both follow kokoro.js (github.com/hexgrad/kokoro, Apache-2.0), the reference
 // JavaScript port, so what the model hears matches what it expects.
 //
-// Spoken text (see core/speech.js) adds the lesson's read-aloud hints on top: a
+// Spoken text (see core/speech.ts) adds the lesson's read-aloud hints on top: a
 // pronunciation goes in as written, an alias or a spelled-out word goes through
 // the same two steps in place of its text, and a short pause is a comma.
 //
@@ -188,7 +188,7 @@ export function kokoroIpa(ipa) {
 }
 
 /**
- * Spoken text (see core/speech.js) to the IPA string Kokoro takes. Words go
+ * Spoken text (see core/speech.ts) to the IPA string Kokoro takes. Words go
  * through espeak-ng as usual; a pronunciation goes in as written; an alias or
  * a spelled-out word is turned into phonemes in place of its text; and a short
  * pause is a comma, which Kokoro pauses at. (A long pause never reaches here:

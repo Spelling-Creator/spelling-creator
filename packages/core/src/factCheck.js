@@ -26,7 +26,7 @@
 //   Smithsonian  a volcano's height and eruptions, from the Global Volcanism
 //                Program (./smithsonian.js), for an item Wikidata gives a GVP
 //                number. Asked alongside Wikidata, not instead of it.
-//   Wikipedia    the subject's article (./factText.js), read when neither can
+//   Wikipedia    the subject's article (./factText.ts), read when neither can
 //                settle the claim: no value to compare with, or a value that
 //                could only ever confirm it ("varies" and "before-record",
 //                below). It can confirm a claim, never contradict one: prose is

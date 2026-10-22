@@ -160,7 +160,7 @@ export function isInteractivePlayable(doc) {
 
 /**
  * What one step says, for text-to-speech (see the web app's useSpeech hook):
- * lines of spoken text (see speech.js), one idea per line. Reading order
+ * lines of spoken text (see speech.ts), one idea per line. Reading order
  * matches what's on screen: the section name first, then each block's words. A
  * text block's lines and a question's prompt carry their pronunciations,
  * substitutions, spell-outs, pauses and formulas; everything else is plain
@@ -244,7 +244,7 @@ export function stepSpeechText(step) {
  * distinct from an empty answer, so a presenter is told the question has no set
  * answer instead of being shown a gap and left wondering.
  *
- * The steps are inline text (see inlineText.js), each as stored: the reveal
+ * The steps are inline text (see inlineText.ts), each as stored: the reveal
  * draws them with their formulas, and a step is shown as its plain words
  * everywhere else.
  *

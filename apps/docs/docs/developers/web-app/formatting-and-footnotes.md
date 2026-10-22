@@ -8,7 +8,7 @@ For how to use this, see
 [Formatting, footnotes & sources](../../guide/formatting-and-footnotes.md).
 
 Lesson text blocks can carry a little formatting (bold, italic, underline, the
-`TEXT_MARKS` in `lessonText.js`), footnotes, citations of the lesson's sources,
+`TEXT_MARKS` in `lessonText.ts`), footnotes, citations of the lesson's sources,
 read-aloud hints and pauses (see [Read-aloud hints](#read-aloud-hints)), and
 formulas (see [Formulas](#formulas)). A source is written once, in the lesson's Sources list, and a footnote
 anywhere in the text can cite it. Every footnote is numbered in reading order
@@ -18,7 +18,7 @@ list.
 The text block's tiptap editor turns off headings, lists, code, links, line
 breaks and strikethrough (`LessonTextInput.jsx`), and pasted line breaks become
 spaces. A source prints only when it has a title, an author or a link
-(`sourceHasContent` in `sources.js`). Removing a cited source goes through
+(`sourceHasContent` in `sources.ts`). Removing a cited source goes through
 `removeSourceCitations`, which drops a footnote that only cited it and keeps
 one that also had a note, as a plain note.
 
@@ -282,7 +282,7 @@ accessibility tools) turns MathML into words: "60 over 5 equals 12", "x
 squared", "the square root of 81". `core/browser/formulaSpeech.js` loads it
 with ClearSpeak rules fed from the app's own assets (the engine's `base` and
 `en` rule files, about 100 KB compressed), never its default CDN. In spoken
-text (`core/speech.js`) a formula is its author's `spoken` words, or a
+text (`core/speech.ts`) a formula is its author's `spoken` words, or a
 `{ text: source, formula }` run that `withFormulaSpeech` replaces with the
 engine's words just before a step is spoken (`useSpeech.js`); a formula that
 can't be parsed is read as its source.
@@ -336,7 +336,7 @@ document on each keystroke.
   the PDF can style it and the importer can recognize it (`S2C Sources
 Heading` and `S2C Source Entry`; the footnote locator and note are the
   character styles `S2C Footnote Locator` and `S2C Footnote Note`, all defined in
-  `lessonLayout.js`; the `S2C` prefix is a historical name kept so Word round
+  `lessonLayout.ts`; the `S2C` prefix is a historical name kept so Word round
   trips keep working). The PDF goes through
   mammoth, which turns the footnotes into a list at the end; `layoutNotes` in
   `pdfExport.js` moves that list above the Sources list and heads it "Notes".
@@ -408,5 +408,5 @@ is full of braces and backslashes), so its braces have to balance; one whose
 braces don't is written with `escaped` after the notation and a backslash
 before each brace and backslash, which `contentToMarkup` does itself. A `{` in
 plain text is escaped as `\{`, so text read out of a lesson can be written
-straight back (`contentToMarkup` and `markupToContent` in `lessonText.js`). See
+straight back (`contentToMarkup` and `markupToContent` in `lessonText.ts`). See
 [Lesson validation](../mcp-server/lesson-validation.md) and [Tools](../mcp-server/tools.md).

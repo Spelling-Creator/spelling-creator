@@ -15,7 +15,7 @@
 // where it's missing the hook reports `supported: false` and the UI hides the
 // controls entirely instead of offering a button that can't work.
 //
-// What to say arrives as spoken text (see core/speech.js): lines of words that
+// What to say arrives as spoken text (see core/speech.ts): lines of words that
 // can carry a pronunciation, a substitution, a spell-out or a pause. The
 // natural voice follows all of them; the browser's voice is given plain words
 // (spokenForBrowser), so it says an alias and spells a word out but reads a
@@ -160,7 +160,7 @@ function createProgress() {
  * useSyncExternalStore, so that ticking doesn't re-render whatever holds this
  * object.
  *
- * What `speak` and `prepare` take is what speechLines in core/speech.js does:
+ * What `speak` and `prepare` take is what speechLines in core/speech.ts does:
  * a string, one idea per line, or a list of lines that are each a string or
  * spoken runs.
  *

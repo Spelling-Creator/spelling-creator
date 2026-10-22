@@ -56,13 +56,13 @@ export function mergeBlockFields(base, ours, theirs) {
   // so a caption edit there and a credit fix on the other would both touch
   // `caption` and both add `credit`: two conflicts over two edits that never
   // met. Every side is compared with the two fields split (see
-  // ../imageCredit.js), which also leaves the merged block split.
+  // ../imageCredit.ts), which also leaves the merged block split.
   if ([base, ours, theirs].some(hasPicture)) {
     const split = (b) => (b ? withSeparateCredit(b) : b);
     return mergeFields(split(base), split(ours), split(theirs));
   }
   // A text block keeps its words in `text` or in `content` depending on whether
-  // any of them are formatted (see lessonText.js), so one side formatting a word
+  // any of them are formatted (see lessonText.ts), so one side formatting a word
   // while the other fixes a typo would otherwise touch two different fields,
   // merge "cleanly", and lose the typo fix behind the formatted copy. Merged as
   // the one field they are, that is a conflict the user gets to see.

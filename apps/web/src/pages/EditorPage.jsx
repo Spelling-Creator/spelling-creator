@@ -1339,7 +1339,7 @@ export default function EditorPage() {
   const setTrustedCollaborators = (next) =>
     setDoc((d) => ({ ...d, trustedCollaborators: next }));
 
-  // The lesson's sources (see core/sources.js). Stable callbacks: addSource
+  // The lesson's sources (see core/sources.ts). Stable callbacks: addSource
   // reaches every text block's footnote form through LessonSourcesProvider, and
   // a new function each render would re-render all of them.
   const addSource = useCallback((fields = {}) => {

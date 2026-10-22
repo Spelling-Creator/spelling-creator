@@ -254,7 +254,7 @@ export function aiEditsToOperations(doc, finding, edits) {
 
 // A rebuilt list keeps the ids of the items whose text didn't change, so the
 // editor's fields (and anyone else's cursor in them) stay put. A step's text
-// can be a document (see inlineText.js), so the two are compared as JSON.
+// can be a document (see inlineText.ts), so the two are compared as JSON.
 function keepItemIds(before, after) {
   if (!Array.isArray(before) || !Array.isArray(after)) return after;
   const unused = [...before];

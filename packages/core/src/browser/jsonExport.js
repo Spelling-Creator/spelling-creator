@@ -1,5 +1,5 @@
 // Download a lesson as a .json file. The envelope itself lives in
-// ../lessonFile.js, which the importer and the MCP server share; this is only
+// ../lessonFile.ts, which the importer and the MCP server share; this is only
 // the part that needs a document to click an <a> for the user.
 
 import { buildLessonFile, lessonFileName } from "../lessonFile.ts";

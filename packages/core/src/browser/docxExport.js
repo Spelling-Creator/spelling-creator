@@ -103,7 +103,7 @@ import {
 } from "../vakt.ts";
 
 // Re-exported for callers that already reach for it here. New code that wants
-// only the constant should import ../lessonLayout.js directly — this module
+// only the constant should import ../lessonLayout.ts directly — this module
 // pulls in the whole `docx` library.
 export { DOCX_MAX_IMAGE_WIDTH };
 
@@ -137,7 +137,7 @@ const ROLE_STYLES = {
   note: FOOTNOTE_NOTE_STYLE_ID,
 };
 
-// Runs ({ text, italic?, url?, role? }, from sources.js and lessonText.js) as
+// Runs ({ text, italic?, url?, role? }, from sources.ts and lessonText.ts) as
 // docx children: a link becomes a real hyperlink, everything else a plain run.
 function partRuns(parts, size) {
   return parts.map((part) =>
@@ -718,7 +718,7 @@ function pageFooter(meta, legendTypes) {
         text: questionLegendText(type),
         size: 16,
         color: hex(type.color),
-        // Two types share the amber (see questions.js), so the legend has to
+        // Two types share the amber (see questions.ts), so the legend has to
         // repeat the italic that tells them apart in the body above it —
         // otherwise it prints the same swatch twice under two names.
         italics: Boolean(type.italic),
@@ -747,7 +747,7 @@ function pageHeader() {
 }
 
 // One Word character style per question type, plus one for VAKT activities, so
-// the colour coding survives the round trip through mammoth (see questions.js
+// the colour coding survives the round trip through mammoth (see questions.ts
 // for why these exist at all).
 function colourCharacterStyles() {
   return [

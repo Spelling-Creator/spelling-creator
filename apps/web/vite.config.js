@@ -264,7 +264,7 @@ function portlessStub(mode) {
 
 // `VITE_`-prefixed env vars from apps/web/.env are exposed to client code as
 // `import.meta.env.VITE_*` natively — no config needed. src/main.jsx is the
-// only place in the app that reads them (see packages/core/src/config.js).
+// only place in the app that reads them (see packages/core/src/config.ts).
 export default defineConfig(({ isSsrBuild, mode }) => ({
   plugins: [
     isSsrBuild && stubUnreachableOnServer(),

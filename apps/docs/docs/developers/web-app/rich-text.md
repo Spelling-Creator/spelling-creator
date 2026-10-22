@@ -40,7 +40,7 @@ also gets the `target` and `rel` the server adds (see [Links](#links)).
 | File                                              | Role                                                                         |
 | ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `@spelling-creator/core/richText`                 | **The policy.** Allow-list, link schemes, link `rel`/`target`, HTML to text. |
-| `packages/core/src/richText.test.js`              | Its tests: link safety, the allow-list, the browser-side helpers.            |
+| `packages/core/src/richText.test.ts`              | Its tests: link safety, the allow-list, the browser-side helpers.            |
 | `apps/api/src/lib/richtext.js`                    | **The boundary.** Sanitizes on write (parse5).                               |
 | `apps/api/src/lib/richtext.test.js`               | Its tests: media, XSS, links, legacy values.                                 |
 | `apps/web/src/components/RichTextInput.jsx`       | The editor (limits, link rule, no media affordances).                        |

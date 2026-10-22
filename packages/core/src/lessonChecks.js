@@ -1384,7 +1384,7 @@ export function isCapsSpan(text) {
 
 // Every formatted span in a section's text blocks (textBlockFormattedSpans)
 // and in its questions' prompts and steps, which take the same formatting
-// (see inlineText.js), tagged with the block it sits in, and the length of the
+// (see inlineText.ts), tagged with the block it sits in, and the length of the
 // prose around them.
 function formattedSpans(blocks) {
   const spans = [];

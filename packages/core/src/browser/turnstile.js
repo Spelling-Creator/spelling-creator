@@ -5,7 +5,7 @@
 // is available, so components can render a widget as soon as the script loads.
 //
 // The site key itself comes from the config seam (`turnstileSiteKey()`), not a
-// build-time constant — see ../config.js.
+// build-time constant — see ../config.ts.
 
 let readyPromise = null;
 

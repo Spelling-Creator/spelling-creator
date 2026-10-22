@@ -311,7 +311,7 @@ function normalizeQuestion(block) {
     id: keepId(block.id),
     type: "question",
     questionType: block.questionType,
-    // A string or a one-paragraph document (see inlineText.js); anything
+    // A string or a one-paragraph document (see inlineText.ts); anything
     // else, or a document holding nothing, is an empty prompt.
     prompt: normalizeInlineText(block.prompt),
   };
@@ -380,7 +380,7 @@ function normalizeTextItem(item) {
 }
 
 // A working step: like a text item, but its text is inline text, so it may
-// be a document as well as a string (see inlineText.js).
+// be a document as well as a string (see inlineText.ts).
 function normalizeStepItem(item) {
   if (typeof item === "string") return normalizeTextItem(item);
   if (!item || typeof item !== "object") return null;

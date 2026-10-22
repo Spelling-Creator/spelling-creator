@@ -248,7 +248,7 @@ const ALIGN_CONTROLS = {
 
 // The alignment and size toggles that frame a picture. Shared by the image block
 // and the VAKT activity's optional picture: the two differ in what they default
-// to (see core/vakt.js), not in what an author can pick, so they offer the same
+// to (see core/vakt.ts), not in what an author can pick, so they offer the same
 // three alignments and the same four sizes from the same controls.
 function ImageFramingControls({ align, size, onChange }) {
   const { t } = useTranslation("editorSections");
@@ -301,7 +301,7 @@ function previewMargin(align) {
 }
 
 // A picture's caption, which the author writes, and its credit, which the
-// picture's license asks for, as two fields (see core/imageCredit.js). Editing
+// picture's license asks for, as two fields (see core/imageCredit.ts). Editing
 // either writes both back as separate fields, so a block from before credits
 // had their own field stops depending on the split made when it's read.
 //
@@ -527,7 +527,7 @@ function ImageBlock({
 // the two optional extras an activity can carry, a picture and a set of links.
 //
 // The "VAKT:" label is rendered here rather than typed into the field. It is
-// added by every renderer (see core/vakt.js), so having the author type it too
+// added by every renderer (see core/vakt.ts), so having the author type it too
 // would either double it up or make the stored text depend on whether they
 // remembered — and this way it can be translated on screen while the printed
 // lesson keeps its canonical form.
@@ -990,7 +990,7 @@ function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
             )}
           </div>
           {/* The prompt and the steps are inline text (one line that can
-              carry a formula or a read-aloud hint; see core/inlineText.js),
+              carry a formula or a read-aloud hint; see core/inlineText.ts),
               so they get the one-line lesson editor rather than a plain
               field. */}
           <Field>
@@ -1199,7 +1199,7 @@ function HeadingBlock({ block, onChange, controls }) {
 }
 
 // The three-board mark and the Besides line, on a multiple-answers question
-// only (see questions.js). The Besides picker offers the question's own
+// only (see questions.ts). The Besides picker offers the question's own
 // answers, since the line names one of them and asks for another; an answer
 // edited or removed after it was picked leaves the picker showing "None",
 // which is also what prints.

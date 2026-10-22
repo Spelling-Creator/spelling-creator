@@ -65,7 +65,7 @@ function ValueText({ value, field }) {
       </p>
     );
   }
-  // A formatted prompt, likewise (see core/inlineText.js).
+  // A formatted prompt, likewise (see core/inlineText.ts).
   if (field === "prompt" && value && typeof value === "object") {
     return <p className="text-sm">{inlineTextPlain(value)}</p>;
   }

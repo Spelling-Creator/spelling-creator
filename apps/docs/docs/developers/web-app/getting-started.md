@@ -38,7 +38,7 @@ Optional features are configured in `apps/web/.env`; Vite reads env files from
 the package holding `vite.config.js`, not from the monorepo root, and exposes
 only `VITE_`-prefixed vars to client code. `apps/web/src/main.jsx` is the only
 place that reads them, and hands them to `configureCore` in
-`packages/core/src/config.js`. (A self-hosted Node server can also write these
+`packages/core/src/config.ts`. (A self-hosted Node server can also write these
 settings into the page at runtime, which takes precedence; see
 [How the browser gets its settings](../self-hosting.md#how-the-browser-gets-its-settings).)
 
@@ -59,7 +59,7 @@ default), a password, or either. Password accounts are registered with a
 username, for instances with no mail server, and signing in takes a username
 or an address; the username is turned into a synthetic email address under
 `VITE_USERNAME_DOMAIN`, which defaults to a reserved `.invalid` domain that can
-never receive mail (see `packages/core/src/username.js`).
+never receive mail (see `packages/core/src/username.ts`).
 
 `VITE_AI_CHALLENGE` says which check the AI dialogs and Pixabay search show
 before a request: Cloudflare Turnstile, an ALTCHA proof of work served by the

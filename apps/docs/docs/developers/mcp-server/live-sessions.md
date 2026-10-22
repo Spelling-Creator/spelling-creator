@@ -178,7 +178,7 @@ listening: the session tools are built on the collaboration model the web app al
 ## What does not merge
 
 Text within **one field** is still last-write-wins: `reconcile` stores it as a plain
-string (see `packages/core/src/ydoc.js`), so two people typing in the same paragraph means
+string (see `packages/core/src/ydoc.ts`), so two people typing in the same paragraph means
 one of them loses a sentence.
 
 `edit_collab_doc` therefore refuses any operation addressing a block another participant's
@@ -231,7 +231,7 @@ and the host's next save discards it.
 ## The wire protocol
 
 The room (`apps/api/src/collab-room.js`) and the browser (`apps/web/src/lib/collab.js`)
-speak the frame format defined once in `packages/core/src/collabFrames.js`. It used to live
+speak the frame format defined once in `packages/core/src/collabFrames.ts`. It used to live
 as two copies joined by a comment reading "must match T in collab-room.js", which is a
 convention rather than a guarantee; a renumbered frame is not a crash but a silent misread,
 on a byte array nobody can eyeball.

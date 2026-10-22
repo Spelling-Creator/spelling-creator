@@ -2,21 +2,21 @@
 // the MCP server's tools accept. The Worker stores `doc` verbatim and the web
 // editor renders it, so the shapes here must match the editor's exactly. They
 // are kept in sync with:
-//   • ./questions.js  (question block shapes and types)
-//   • ./spelling.js   (spelling block shape)
-//   • ./vakt.js       (VAKT activity block shape)
-//   • ./heading.js    (heading block shape)
+//   • ./questions.ts  (question block shapes and types)
+//   • ./spelling.ts   (spelling block shape)
+//   • ./vakt.ts       (VAKT activity block shape)
+//   • ./heading.ts    (heading block shape)
 //
 // The canonical doc is:
 //   { title, sources?, sections: [ { id, name, blocks: [ Block, ... ] } ] }
 //
 // Text blocks are written in a small markup (see "Markup" in
-// packages/core/src/lessonText.js): **bold**, *italic*, <u>underline</u>, and
+// packages/core/src/lessonText.ts): **bold**, *italic*, <u>underline</u>, and
 // footnotes as ^[a note] or ^[@sourceId, p. 12 | a note]. A block with none of
 // that is stored as a plain `text` string, exactly as before; one with any of it
 // is stored as a formatted `content` document. A question's prompt and a math
 // question's steps take the same markup, less the footnotes, and are stored
-// the way inlineText.js says (a plain string, or a one-paragraph document).
+// the way inlineText.ts says (a plain string, or a one-paragraph document).
 // presentDoc turns stored blocks back into the same markup, so what get_lesson
 // shows can be sent straight back.
 // Blocks carry a stable `id`; we generate every id here so callers (and the AI
@@ -44,7 +44,7 @@ import { newId } from "./id.ts";
 export { newId };
 
 // `open` is accepted for lessons written before tight and broad opens were
-// told apart; a new question is one or the other (see questions.js).
+// told apart; a new question is one or the other (see questions.ts).
 export const QUESTION_TYPES = [
   "number",
   "single",
@@ -137,7 +137,7 @@ function buildVaktBlock(block, where) {
   const rawLinks = Array.isArray(block.links) ? block.links : [];
   const links = rawLinks.map((link, i) => {
     const url = typeof link?.url === "string" ? link.url.trim() : "";
-    // The same rule the editor and the renderers apply (core/vakt.js), rather
+    // The same rule the editor and the renderers apply (core/vakt.ts), rather
     // than a stricter http-only one: mailto is a legitimate destination for a
     // VAKT link, and a tool that refused one would contradict both the schema
     // and every other path a VAKT block can be written through.
@@ -168,7 +168,7 @@ function buildVaktBlock(block, where) {
   // The picture, in exactly an image block's shape and produced the same way —
   // by add_image, never by hand. Its framing comes through too: a VAKT picture
   // takes the same "size" and "align" an image block does, only defaulting
-  // smaller when neither is given (see core/vakt.js).
+  // smaller when neither is given (see core/vakt.ts).
   if (block.image) {
     const image = buildImageBlock(block, where);
     out.image = image.image;
@@ -327,7 +327,7 @@ function buildImageBlock(block, where) {
   if (Number.isFinite(block.width)) out.width = block.width;
   if (Number.isFinite(block.height)) out.height = block.height;
   if (typeof block.caption === "string") out.caption = block.caption;
-  // The license credit, apart from the caption (see ./imageCredit.js).
+  // The license credit, apart from the caption (see ./imageCredit.ts).
   if (typeof block.credit === "string") out.credit = block.credit;
   if (IMAGE_ALIGNS.includes(block.align)) out.align = block.align;
   if (typeof block.size === "string" && block.size) out.size = block.size;
@@ -418,7 +418,7 @@ function sameSource(raw, stored) {
  * back to replace_block or update_lesson unchanged.
  *
  * Every picture comes out with its caption and credit as separate fields, even
- * one stored from before credits had their own (see ./imageCredit.js). The
+ * one stored from before credits had their own (see ./imageCredit.ts). The
  * tools tell the assistant to keep the attribution out of the caption and pass
  * `credit` through, which, shown the combined caption, it would do by dropping
  * the attribution for good.

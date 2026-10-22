@@ -13,13 +13,13 @@ import { getImageBlob, putImageBlob } from "./imageStore.js";
 
 // Public Worker/R2 URL for an uploaded image. Reads the base URL through the
 // config seam rather than the bundler's env, so this module is not tied to one
-// build tool — see ../config.js.
+// build tool — see ../config.ts.
 export function imagePublicUrl(hash) {
   return `${apiUrl()}/images/${hash}`;
 }
 
 // docx ImageRun wants one of: png | jpg | gif | bmp. The rule lives in
-// ../image.js so blocks built here, by the Worker and by the MCP server all
+// ../image.ts so blocks built here, by the Worker and by the MCP server all
 // store the same ext; re-exported for this module's existing importers.
 export { extFromMime };
 

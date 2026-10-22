@@ -298,7 +298,7 @@ client it hydrates into agree.
 Readers resolve **lazily** (`apiUrl()`, not a captured constant), which matters:
 ES imports are hoisted, so `configureCore` runs after every module in the graph has
 already been evaluated. Anything capturing the value at import time would capture
-`""`. `packages/core/src/config.test.js` pins that behavior.
+`""`. `packages/core/src/config.test.ts` pins that behavior.
 
 The same reasoning is why `browser/supabase` builds its client inside
 `getSupabase()` rather than at module scope, memoizing it so the SDK's session and

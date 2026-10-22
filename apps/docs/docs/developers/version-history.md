@@ -327,7 +327,7 @@ A picture's caption and credit get the same treatment the other way round. A
 picture from before credits had their own field keeps its credit inside
 `caption`, so a caption edit on one side and a credit fix on the other would
 both appear to touch `caption`. The merge splits the credit out on every side
-first (`withSeparateCredit`, in `packages/core/src/imageCredit.js`), so those
+first (`withSeparateCredit`, in `packages/core/src/imageCredit.ts`), so those
 two edits merge cleanly and the result keeps the fields split.
 
 The lesson's sources merge quietly, by id and field by field, like structure: a

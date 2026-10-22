@@ -42,7 +42,7 @@ export function lessonFormulas(doc) {
       if (block?.type === "text") {
         for (const paragraph of textBlockParagraphs(block)) collect(paragraph);
       } else if (block?.type === "question") {
-        // A prompt and a step can hold a formula too (see inlineText.js).
+        // A prompt and a step can hold a formula too (see inlineText.ts).
         collect(inlineTextRuns(block.prompt));
         for (const step of block.steps || []) {
           collect(inlineTextRuns(step?.text));

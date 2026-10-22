@@ -2,11 +2,11 @@
 // a lesson rebuilt from it passes the lesson checks.
 
 import { deriveQuestionType } from "../../src/documentImport.js";
-import { inlineTextPlain } from "../../src/inlineText.js";
+import { inlineTextPlain } from "../../src/inlineText.ts";
 import { normalizeLessonFile } from "../../src/jsonImport.js";
 import { validateLesson } from "../../src/lessonChecks.js";
-import { textBlockPlain } from "../../src/lessonText.js";
-import { questionAnswerItems } from "../../src/questions.js";
+import { textBlockPlain } from "../../src/lessonText.ts";
+import { questionAnswerItems } from "../../src/questions.ts";
 
 export function groundTruthSection(section) {
   const blocks = section.blocks;

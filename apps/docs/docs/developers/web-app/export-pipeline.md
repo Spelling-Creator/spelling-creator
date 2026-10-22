@@ -26,7 +26,7 @@ For how to use this, see [Exporting & printing](../../guide/exporting.md) and
 
 The question types, their labels, the one-line descriptions shown in the
 **Add question** menu, their tags, their colors and their default block shapes
-live in one place, `packages/core/src/questions.js` (`QUESTION_TYPES`), so the
+live in one place, `packages/core/src/questions.ts` (`QUESTION_TYPES`), so the
 editor and both exporters stay in sync. Question type labels are not localized:
 the menu reads `label` and `description` straight from that file. The keys are
 the app's own names for the
@@ -58,7 +58,7 @@ told apart. It carries `legacy: true`, which keeps it out of
 `QUESTION_TYPE_MENU` (the **Add question** menu and the AI question dialog use
 that list), while `QUESTION_TYPE_LIST` still has it for everything that reads a
 stored lesson. Stored blocks are never rewritten on load, for the reason
-`imageCredit.js` gives (it would show as an edit in version history and
+`imageCredit.ts` gives (it would show as an edit in version history and
 broadcast to a live session), so `resolveOpenType(block)` is how the checks,
 the text importer and the file export decide which kind a legacy question is:
 its own type for anything else, and for `open` the type its wording reads as.
@@ -105,7 +105,7 @@ editor:
   lesson with no author or publication date simply prints without those lines.
 - **No section headings.** A section's name is an organizing device for the
   editor; the printed lesson runs straight through from one block to the next.
-  A `heading` block (`packages/core/src/heading.js`) is content, not a
+  A `heading` block (`packages/core/src/heading.ts`) is content, not a
   section: it prints in bold where it sits, in a paragraph style of its own
   (`S2C Heading`, `HEADING_STYLE_CLASS`) rather than a Word heading level,
   because the importer reads Word headings as section breaks and a heading
@@ -128,7 +128,7 @@ editor:
   the importer attaches it to the question above instead of reading a new
   one, and the label run wears the question's character style, which is how
   the PDF (where mammoth drops run colors) colors the label and leaves the
-  answers black. `questionBesides` and `besidesAnswers` in `questions.js`
+  answers black. `questionBesides` and `besidesAnswers` in `questions.ts`
   decide both halves, and return nothing when the named answer is no longer
   in the list.
 - **Spelling words on one running line**, `Spell:` followed by the words as
@@ -174,7 +174,7 @@ to `<span class="s2c-q-{key}">`), one for the type tag in front of the prompt
 (`S2C Question Tag`, mapped by `questionTagStyleMap` to
 `<span class="s2c-q-tag">`), and one paragraph style for the title lines
 (`S2C Title Line`). `pdfExport` maps those onto CSS classes with a `styleMap`
-and colors them again from `questions.js`. The `S2C` and `s2c-` prefixes are
+and colors them again from `questions.ts`. The `S2C` and `s2c-` prefixes are
 historical names; they stay because renaming them would break the round trip
 for every document already exported. A type's label is part of its style name
 for the same reason, so when four labels changed to the format's names, the
@@ -195,7 +195,7 @@ to carry them, so a DOCX round trip collapses a lesson into a single section
 Export/Import **JSON** is the lossless one. A document that was never exported from
 here at all, a hand-typed page or a Word file written elsewhere, goes through
 [Document import](./document-import.md) instead, which reads the lesson by its
-structure rather than by styles. Export/Import **JSON** (`lessonFile.js`) carries
+structure rather than by styles. Export/Import **JSON** (`lessonFile.ts`) carries
 the title, the age range, the lesson's sources and every section. The one thing
 it leaves out on purpose is the lesson's trusted-collaborator list, because that
 is a list of email addresses and a lesson file is something people pass around.

@@ -13,7 +13,7 @@ import {
 } from "@huggingface/transformers";
 
 // The schema, the type guide and the reply handling live in core
-// (src/documentImportModel.js), which the app's import uses too, so the
+// (src/documentImportModel.ts), which the app's import uses too, so the
 // prompt the model is trained and scored with is the one the app sends.
 import {
   QUESTION_TYPE_KEYS,
@@ -21,7 +21,7 @@ import {
   TYPE_GUIDE,
   parseModelJson,
   parseModelReply,
-} from "../../src/documentImportModel.js";
+} from "../../src/documentImportModel.ts";
 
 export { QUESTION_TYPE_KEYS, SCHEMA, TYPE_GUIDE };
 export const parseJson = parseModelJson;

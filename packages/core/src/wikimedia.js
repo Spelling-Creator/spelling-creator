@@ -49,7 +49,7 @@ export function stripCommonsHtml(html) {
  * Build the credit line Commons' licensing norms expect: author (when known) +
  * license short name + the source. Authors and licenses vary widely, so this
  * degrades gracefully when either is missing. It goes in an image block's
- * `credit`, never its caption (see ./imageCredit.js).
+ * `credit`, never its caption (see ./imageCredit.ts).
  * @param {string} author
  * @param {string} license
  * @returns {string}

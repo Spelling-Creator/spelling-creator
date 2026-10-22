@@ -9,7 +9,7 @@
 // vite.config.js additionally stubs it out of the Worker's SSR build.
 //
 // The prompt, the section text and the reply handling live in
-// core/documentImportModel.js, shared with the scripts that trained the
+// core/documentImportModel.ts, shared with the scripts that trained the
 // model, so what the app sends is exactly what the model learned.
 //
 // Model: https://huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson-ONNX

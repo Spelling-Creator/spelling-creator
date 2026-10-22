@@ -3,7 +3,7 @@
 // page with transformers.js. Two kinds of model share the work:
 //
 //   - Opus-MT: one small per-pair model, for the into-English pairs listed in
-//     opusMtModels.js. A ~110-140 MB one-time download.
+//     opusMtModels.ts. A ~110-140 MB one-time download.
 //   - NLLB-200 (distilled, 600M): every other pair. A ~600 MB one-time
 //     download, but one download covers the whole language table in both
 //     directions.
@@ -21,12 +21,12 @@
 // Worker's SSR build, where it could never run anyway.
 //
 // Models:
-//   https://huggingface.co/Xenova/opus-mt-de-en and friends (opusMtModels.js)
+//   https://huggingface.co/Xenova/opus-mt-de-en and friends (opusMtModels.ts)
 //   https://huggingface.co/Xenova/nllb-200-distilled-600M
 //   https://huggingface.co/onnx-community/xlm-roberta-base-language-detection-ONNX
 //     (papluca/xlm-roberta-base-language-detection converted for transformers.js;
 //     classifies 20 widely used languages, labelled with the same two-letter
-//     codes translationLanguages.js keys on)
+//     codes translationLanguages.ts keys on)
 
 import { pipeline } from "@huggingface/transformers";
 import { createDownloadProgress } from "./downloadProgress.js";
@@ -104,7 +104,7 @@ export async function detectLanguage(
 
 /**
  * Translate text blocks with an in-page model: the pair's Opus-MT model when
- * opusMtModels.js lists one (into English only), NLLB for everything else.
+ * opusMtModels.ts lists one (into English only), NLLB for everything else.
  * Same contract as translator.js's translateBlocks, minus the "browser"
  * engine.
  *

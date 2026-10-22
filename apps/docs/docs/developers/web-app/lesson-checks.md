@@ -17,7 +17,7 @@ follow the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format),
 and the split of the "semi-open" orange type into a tight and a loose end, with
 their order, is the app's own (see the comments in
-`packages/core/src/questions.js` and at `ORANGE_TIGHT` in
+`packages/core/src/questions.ts` and at `ORANGE_TIGHT` in
 `lessonChecks.js`); the short answer rules come from letterboard spelling,
 where every letter is pointed to; the lesson shape (`SECTION_COUNT`,
 `SPELLING_WORDS_PER_SECTION`, `QUESTION_ORDER`) is the app's own default. Other

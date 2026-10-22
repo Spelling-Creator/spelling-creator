@@ -93,7 +93,7 @@ with its formatting and formulas, since a step is inline text), and
 
 The two semi-open types share a color and an `answers` list because the app's
 default treats them as one family (see the comment in
-`packages/core/src/questions.js`). Other Spelling practitioners categorize
+`packages/core/src/questions.ts`). Other Spelling practitioners categorize
 questions differently, and the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
 lists the loose end as an open question.
@@ -282,7 +282,7 @@ Three platform quirks are handled between the two files. `speechPrefs.js` takes
 the one that belongs to the voice list: voices load asynchronously, announced by
 `voiceschanged`. `useSpeech.js` takes the two that belong to speaking: Chromium
 cuts off a single utterance after about 15 seconds (so text is split into chunks
-of at most 180 characters, `MAX_CHUNK` in `core/speech.js`, and queued), and
+of at most 180 characters, `MAX_CHUNK` in `core/speech.ts`, and queued), and
 `cancel()` isn't synchronous (so a new utterance is deferred a tick after one).
 
 ### Natural voices (Kokoro)
@@ -447,7 +447,7 @@ What the numbers decided:
 | `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice lists, shared with the settings page.                     |
 | `apps/web/src/components/SpeechVoiceSelect.jsx`    | The voice picker the popover and the settings page share.                                      |
 | `packages/core/src/browser/readAloud.js`           | The device check for natural voices, the cache check, and the door to their engine.            |
-| `packages/core/src/speech.js`                      | Spoken text: a text block's hints and pauses, chunking, plain text for the browser's voice.    |
+| `packages/core/src/speech.ts`                      | Spoken text: a text block's hints and pauses, chunking, plain text for the browser's voice.    |
 | `packages/core/src/browser/readAloudText.js`       | Kokoro's input: text clean-up, espeak-ng phonemes, read-aloud hints.                           |
 | `packages/core/src/browser/readAloudEngine.js`     | Kokoro: the model, made from the phonemes readAloudText.js gives.                              |
 | `packages/core/src/browser/readAloudVoices.js`     | The model id and pin, and the Kokoro voices on offer, listable without loading the engine.     |
