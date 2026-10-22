@@ -15,7 +15,7 @@
 // Sync model — a CRDT (Yjs). Each participant keeps a Y.Doc mirroring the editor's
 // plain document; the room merges and relays the updates. Two people editing
 // different blocks both keep their work, where the previous whole-document
-// last-write-wins model silently dropped one of them. lib/ydoc.js owns the
+// last-write-wins model silently dropped one of them. Core's ydoc.ts owns the
 // document model and the plain-JSON <-> Yjs bridge; this file owns the socket.
 //
 // The loop, and why it settles:

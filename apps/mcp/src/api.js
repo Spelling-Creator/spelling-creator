@@ -375,7 +375,7 @@ export function createApi(config, auth) {
      * doesn't, because a proposal marked merged whose changes are in no
      * published commit is a lie the reviewer can't see. So the history is pushed
      * and the lesson saved *before* this is called — see mergeProposal in
-     * pulls.js, which is the only caller and does them in that order.
+     * git.js, which is the only caller and does them in that order.
      */
     async mergePull(lessonId, pullId, mergeCommit) {
       const data = await call(

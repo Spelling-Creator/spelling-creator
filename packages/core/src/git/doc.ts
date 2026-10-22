@@ -100,7 +100,8 @@ export function docBlocks(doc: DocLike): BlockMap {
 /**
  * Top-level doc fields that never leave this browser.
  *
- * `trustedCollaborators` holds collaborator *email addresses* (see lib/collab.js).
+ * `trustedCollaborators` holds collaborators' *email addresses*, as
+ * `{ email, name? }` rows (see apps/web/src/lib/collab.js).
  * The lesson document travels in three ways, and the field must not go with it in
  * any of them:
  *

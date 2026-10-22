@@ -30,7 +30,7 @@ const MAX_WORDS = 600;
 /**
  * Pull every spelling word out of an editor doc, in reading order. Spelling
  * blocks have the shape { type: "spelling", words: [{ id, text }] } (see
- * apps/web/src/lib/spelling.js); we read each row's trimmed `text`.
+ * packages/core/src/spelling.ts); we read each row's trimmed `text`.
  */
 function wordsFromDoc(doc) {
   const out = [];
