@@ -8,7 +8,7 @@
 // per *changed* block rather than a filesystem sync of the whole lesson.
 //
 // Everything takes `{ fs, gitdir }` so it runs unchanged against LightningFS in
-// the browser and node:fs in tests. See fs.js for the browser binding.
+// the browser and node:fs in tests. See browser/git/fs.ts for the browser binding.
 
 import * as git from "isomorphic-git";
 import type { PromiseFsClient } from "isomorphic-git";

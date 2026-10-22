@@ -363,7 +363,7 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         runtimeCaching: [
           {
             // Lesson images are addressed by the SHA-256 of their bytes
-            // (packages/core/src/browser/imageRef.js), so a given URL can never
+            // (packages/core/src/browser/imageRef.ts), so a given URL can never
             // change content — cache-first, and never revalidate. Matched by a
             // callback rather than a RegExp because VITE_API_URL may point at a
             // different origin, and Workbox only applies a RegExp route

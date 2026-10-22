@@ -25,7 +25,7 @@
 // sees it.
 //
 // Until then it is also written to this browser as they type (see
-// core/browser/interactiveProgress.js), so a lesson closed half-way reopens
+// core/browser/interactiveProgress.ts), so a lesson closed half-way reopens
 // where it was left, answers and all. That local copy never leaves the device
 // and is dropped as soon as the run-through it belongs to is finished and filed.
 //

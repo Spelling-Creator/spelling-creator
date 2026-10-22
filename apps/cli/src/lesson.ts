@@ -10,7 +10,7 @@
 //
 // A Word file is read as plain text here, even one this app exported. The
 // styled import that reads question types back from the exporter's character
-// styles (core's browser/docxImport.js) needs a DOM and the browser's image
+// styles (core's browser/docxImport.ts) needs a DOM and the browser's image
 // store, so it stays in the browser for now; the rules read an exported file
 // well enough, since its "Spell:" line and answer gaps are shapes they know.
 //

@@ -154,7 +154,7 @@ async function packFromResponse(res: Response): Promise<FetchedPack | null> {
  * Thrown when a push is rejected because the lesson's history moved on since we
  * last synced — someone else (the author, or another trusted collaborator) pushed
  * in the meantime. The caller must merge their changes and try again; see
- * pushHistory() in sync.js, which does exactly that.
+ * pushHistory() in browser/git/sync.ts, which does exactly that.
  */
 export class HistoryMovedError extends Error {
   constructor(message?: string) {

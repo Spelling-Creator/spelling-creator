@@ -1,4 +1,4 @@
-// Import a lesson from a JSON file produced by "Export JSON" (jsonExport.js) or
+// Import a lesson from a JSON file produced by "Export JSON" (jsonExport.ts) or
 // by the MCP server's `create_lesson_file` tool. Unlike the DOCX import this is
 // a lossless, exact-shape format, so we mostly validate and normalise: we accept
 // the lesson-file envelope { format, version, doc } or a bare { title, sections }

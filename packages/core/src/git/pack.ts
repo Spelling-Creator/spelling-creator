@@ -15,7 +15,7 @@
 // theirs) later on, instead of guessing at two.
 //
 // Lesson images are NOT in the pack. Blocks reference images by content hash and
-// the bytes live in R2 already (see lib/imageStore.js and the /images routes), so
+// the bytes live in R2 already (see browser/imageStore.ts and the /images routes), so
 // a pack is pure JSON and stays small.
 
 import * as git from "isomorphic-git";

@@ -2,7 +2,7 @@
 //
 // repo.ts and pack.ts take `{ fs, gitdir }` precisely so they don't care where
 // the objects live: the browser hands them LightningFS over IndexedDB (see
-// browser/git/fs.js), and everywhere else hands them this. "Everywhere else" is
+// browser/git/fs.ts), and everywhere else hands them this. "Everywhere else" is
 // the MCP server (apps/mcp), which forks a lesson and opens a pull request on an
 // assistant's behalf — in Node when it runs over stdio, and inside the Cloudflare
 // Worker when it runs remotely. Neither has a disk, and the Worker can't have

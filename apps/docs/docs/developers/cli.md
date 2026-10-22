@@ -151,7 +151,7 @@ result.
 
 A Word document is read as plain text even when this app exported it. The
 styled import that reads question types back from the exporter's character
-styles (`packages/core/src/browser/docxImport.js`) needs a DOM and the
+styles (`packages/core/src/browser/docxImport.ts`) needs a DOM and the
 browser's image store, so for now it only runs in the editor. The rules read
 an exported file well regardless, since its `Spell:` line and answer gaps are
 shapes they know; images are the one thing lost.

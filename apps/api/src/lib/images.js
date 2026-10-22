@@ -1,6 +1,6 @@
 // Content-addressed image storage helpers. Lesson images live in the object
 // store keyed by the SHA-256 of their (pre-conversion) bytes; the browser
-// computes the same hash (web/src/lib/imageStore.js), so an object key is
+// computes the same hash (core/browser/imageStore.ts), so an object key is
 // verifiable from its bytes.
 
 import { convertImageToWebp } from "../imageConvert.js";
@@ -13,7 +13,7 @@ export const IMAGE_HASH_RE = /^[0-9a-f]{64}$/;
 export { MAX_IMAGE_BYTES } from "@spelling-creator/core/image";
 
 // Lowercase hex SHA-256 of the given bytes, which matches the hash the browser
-// computes (web/src/lib/imageStore.js) so a content-addressed object key is
+// computes (core/browser/imageStore.ts) so a content-addressed object key is
 // verifiable from its bytes. Re-exported for the routes that hash images.
 export { sha256Hex } from "./crypto.js";
 

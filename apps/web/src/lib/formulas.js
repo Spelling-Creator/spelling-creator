@@ -2,7 +2,7 @@
 // it appears (the lesson page, the preview, interactive mode, the editor).
 //
 // MathJax is loaded the first time a formula is drawn, through the door in
-// core/browser/formulas.js, so a lesson without math never fetches it. A
+// core/browser/formulas.ts, so a lesson without math never fetches it. A
 // render is cached by the formula's key, and handed out as copies of its
 // nodes, so the same formula in two places doesn't take one node from the
 // other.

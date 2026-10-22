@@ -23,7 +23,7 @@
 //
 // A formula is spoken from the MathML MathJax parses it into, by a speech
 // rule engine. Both load the first time a formula is about to be read (see
-// core/browser/formulas.js), so a step with math in it starts a moment later
+// core/browser/formulas.ts), so a step with math in it starts a moment later
 // the first time, and a lesson without math never loads them. The words are
 // worked out before the step is spoken (withFormulaSpeech), for both voices.
 //

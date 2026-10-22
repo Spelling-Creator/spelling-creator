@@ -4,7 +4,7 @@
 // Pure arithmetic, deliberately kept out of the browser tier: the import/export
 // paths and the lesson-file parser need these constants, and none of them should
 // have to pull in a module that touches a <canvas>. Reading a File and encoding
-// it lives in ./browser/imageFile.js instead.
+// it lives in ./browser/imageFile.ts instead.
 
 // Selectable image sizes, expressed as a fraction of the available width.
 // "full" is the default and matches the original (un-scaled) behaviour for
@@ -31,13 +31,13 @@ export type ImageAlign = (typeof IMAGE_ALIGNS)[number];
 
 /**
  * The short extension an image block stores for a mime type. The one copy of
- * this rule: the web editor (browser/imageRef.js), the Worker
+ * this rule: the web editor (browser/imageRef.ts), the Worker
  * (apps/api/src/lib/images.js) and the MCP server all take it from here, so a
  * block built anywhere carries the same ext for the same mime.
  *
  * The exts are the ones the docx export's ImageRun accepts (png, jpg, gif,
  * bmp). webp, svg and anything unknown map to png: the export transcodes webp
- * bytes to PNG to match (see getImageBytes in browser/imageRef.js).
+ * bytes to PNG to match (see getImageBytes in browser/imageRef.ts).
  */
 export function extFromMime(mime: string | null | undefined): string {
   const raw = (mime || "").toLowerCase().replace(/^image\//, "");

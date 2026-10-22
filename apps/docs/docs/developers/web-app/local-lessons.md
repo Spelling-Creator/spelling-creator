@@ -53,7 +53,7 @@ images.
 
 `repoId` is that local id too, right up until the lesson is saved to the cloud,
 at which point the repository moves under the hub's id for it (`adoptDraftRepo`
-in `packages/core/src/browser/git/fs.js`) and follows the lesson to your other
+in `packages/core/src/browser/git/fs.ts`) and follows the lesson to your other
 devices, while its metadata and document stay where they are.
 `repoIdFor(lessonId, localId)` in `packages/core/src/git/doc.ts` is the one
 place that decides. See [Version history](../version-history.md) for what that
@@ -77,9 +77,9 @@ repository holds.
 
 | File                                      | What it holds                                                                    |
 | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| `packages/core/src/browser/storage.js`    | The library API: list, get, create, save, delete, and the two migrations         |
-| `packages/core/src/browser/imageStore.js` | The IndexedDB stores themselves (`lessons`, `lessonDocs`, `images`, `app`)       |
-| `packages/core/src/browser/git/fs.js`     | The LightningFS layout, and moving a draft repository under its hub id           |
+| `packages/core/src/browser/storage.ts`    | The library API: list, get, create, save, delete, and the two migrations         |
+| `packages/core/src/browser/imageStore.ts` | The IndexedDB stores themselves (`lessons`, `lessonDocs`, `images`, `app`)       |
+| `packages/core/src/browser/git/fs.ts`     | The LightningFS layout, and moving a draft repository under its hub id           |
 | `apps/web/src/pages/LibraryPage.jsx`      | The library page: opening, renaming, duplicating and deleting                    |
 | `apps/web/src/pages/EditorPage.jsx`       | Opening, creating, and saving the lesson on screen before it switches to another |
 

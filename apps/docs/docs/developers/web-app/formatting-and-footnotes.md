@@ -243,11 +243,11 @@ package (`@mathjax/src`) rather than a prebuilt bundle, so the app loads
 exactly the TeX and AsciiMath parsers and the SVG output it uses, as one lazy
 chunk. It is heavy (about half a megabyte compressed with its font), so:
 
-- `core/browser/formulas.js` is the light door: `lessonFormulas(doc)`,
-  `loadFormulas()` (one dynamic `import()` of `formulaBrowser.js` per page),
+- `core/browser/formulas.ts` is the light door: `lessonFormulas(doc)`,
+  `loadFormulas()` (one dynamic `import()` of `formulaBrowser.ts` per page),
   `renderLessonFormulas(doc)` for the exports and `formulaWords(formula)` for
   speech. A lesson without a formula never loads MathJax.
-- `core/browser/formulaEngine.js` makes a renderer for a MathJax DOM adaptor
+- `core/browser/formulaEngine.ts` makes a renderer for a MathJax DOM adaptor
   (the browser's, or the lite one in tests): `render({ format, source,
 display })` gives the MathML tree and string and the typeset SVG as a node,
   and `error` when the source didn't parse (MathJax's `noerrors` and
@@ -262,7 +262,7 @@ display })` gives the MathML tree and string and the typeset SVG as a node,
   few lines to name the functions instead; the patch applies on install
   (`patchedDependencies` in `pnpm-workspace.yaml`) and has to be carried
   forward when MathJax is updated.
-- `core/browser/formulaBrowser.js` is the browser wiring: the page's own
+- `core/browser/formulaBrowser.ts` is the browser wiring: the page's own
   document, MathJax's stylesheet appended once, the font's dynamic glyph files
   (double-struck, script and so on) as chunks of the build found by
   `import.meta.glob`, and `formulaImage(node)`, a formula as a PNG for the
@@ -279,7 +279,7 @@ display })` gives the MathML tree and string and the typeset SVG as a node,
 
 The speech rule engine (`speech-rule-engine`, the engine behind MathJax's own
 accessibility tools) turns MathML into words: "60 over 5 equals 12", "x
-squared", "the square root of 81". `core/browser/formulaSpeech.js` loads it
+squared", "the square root of 81". `core/browser/formulaSpeech.ts` loads it
 with ClearSpeak rules fed from the app's own assets (the engine's `base` and
 `en` rule files, about 100 KB compressed), never its default CDN. In spoken
 text (`core/speech.ts`) a formula is its author's `spoken` words, or a
@@ -289,14 +289,14 @@ can't be parsed is read as its source.
 
 ### Word and PDF
 
-`formulaDocx.js` turns the MathML tree into the `docx` library's math
+`formulaDocx.ts` turns the MathML tree into the `docx` library's math
 components (fraction, superscript, subscript, radical, runs), which Word
 writes as a native equation. The exports render every formula first
 (`renderLessonFormulas`) and hand the map to `buildDocument`; without it a
 formula prints as its source. The PDF path's docx goes through mammoth, which
 drops equations, so that path asks for formulas as pictures
 (`formulasAs: "image"`): each is an `ImageRun` of the PNG `formulaImage`
-made, with alt text that names the formula so `pdfExport.js` can give the
+made, with alt text that names the formula so `pdfExport.ts` can give the
 `<img>` mammoth makes its size. A display formula is a centered paragraph of
 its own, and in the PDF counts as a picture in the `embedded` list, since it
 sits alone in its paragraph the way a lesson picture does.
@@ -339,7 +339,7 @@ Heading` and `S2C Source Entry`; the footnote locator and note are the
   `lessonLayout.ts`; the `S2C` prefix is a historical name kept so Word round
   trips keep working). The PDF goes through
   mammoth, which turns the footnotes into a list at the end; `layoutNotes` in
-  `pdfExport.js` moves that list above the Sources list and heads it "Notes".
+  `pdfExport.ts` moves that list above the Sources list and heads it "Notes".
 - **Word import.** Bold, italics and underlining come back. Word footnotes and
   endnotes come back as footnotes. A Sources list this app exported is read back
   into the lesson's sources. Inside each footnote the exporter gives the locator

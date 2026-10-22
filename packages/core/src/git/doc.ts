@@ -3,7 +3,7 @@
 // These are deliberately kept free of any git dependency: the diff (ops.ts) and
 // the merge (merge.ts) are pure functions over documents, and the editor's
 // history UI imports them. Only the modules that actually touch the object store
-// (layout.ts, repo.ts, pack.ts, sync.js) pull in isomorphic-git, which lets the
+// (layout.ts, repo.ts, pack.ts, sync.ts) pull in isomorphic-git, which lets the
 // whole git engine be loaded on demand rather than shipped to every visitor —
 // see load.js.
 
@@ -153,7 +153,7 @@ export function stripLocalFields<T extends DocLike>(doc: T): T {
 
 /**
  * The repo id of the one working lesson the editor used to have, and the id the
- * library's migration gives it (see browser/storage.js) so its history survives.
+ * library's migration gives it (see browser/storage.ts) so its history survives.
  */
 export const DRAFT_REPO = "draft";
 

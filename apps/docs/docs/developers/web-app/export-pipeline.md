@@ -226,9 +226,9 @@ footer.
 ### Formulas
 
 A formula in a text block is a Word equation in the docx (OMML, built from the
-MathML MathJax parses the formula into; `formulaDocx.js`) and a picture in the
+MathML MathJax parses the formula into; `formulaDocx.ts`) and a picture in the
 PDF, since mammoth drops equations. The exports render every formula with
-MathJax first (`renderLessonFormulas` in `core/browser/formulas.js`, which
+MathJax first (`renderLessonFormulas` in `core/browser/formulas.ts`, which
 loads nothing for a lesson without one) and pass the result to
 `buildDocument`; the PDF path asks for them as pictures (`formulasAs:
 "image"`) and gives each `<img>` mammoth makes its size by the formula's alt
@@ -281,7 +281,7 @@ own lesson file stays what it is, a lossless dump of the editor's document;
 OSLF is for passing a lesson to something that isn't this app, and for
 reading one that something else wrote.
 
-- **Export OSLF** (`exportOslf` in `browser/jsonExport.js`) writes
+- **Export OSLF** (`exportOslf` in `browser/jsonExport.ts`) writes
   `<title>.oslf.json`. A stored picture becomes its public URL on the hub
   (`imagePublicUrl`), a block already carrying a `src` data URL keeps it, and
   a picture with no URL either way is left out, since the format needs one.
@@ -322,7 +322,7 @@ never the lesson: `toOslfXml(file)` writes what `toOslf` made, and
 lesson to the format stays in `oslf.ts` alone, and an XML lesson goes through
 exactly the same import as a JSON one.
 
-- **Export OSLF (XML)** (`exportOslfXml` in `browser/jsonExport.js`) writes
+- **Export OSLF (XML)** (`exportOslfXml` in `browser/jsonExport.ts`) writes
   `<title>.oslf.xml`. **Import JSON or OSLF** accepts `.xml` too
   (`importOslfXml` in `jsonImport.ts`). The CLI reads and writes
   `.oslf.xml`. Both directions load `oslfXml.ts` with a dynamic `import()`, so
@@ -420,7 +420,7 @@ and re-export it, rather than importing the module for the constant's sake.
 **Save to Google Docs** (in the editor's **Export** menu, or the **Lesson
 actions** menu on a phone) uploads the current lesson to the user's Google
 Drive as an editable Google Doc. The flow is entirely client-side, in
-`packages/core/src/browser/googleDrive.js`:
+`packages/core/src/browser/googleDrive.ts`:
 
 1. [Google Identity Services](https://developers.google.com/identity/oauth2/web/guides/overview)
    (loaded by a script tag in `apps/web/index.html`) issues a short-lived OAuth2

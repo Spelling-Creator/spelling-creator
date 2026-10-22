@@ -256,7 +256,7 @@ changes only in who a commit credits.
 | `apps/api/src/routes/collab.js`                 | `handleCollab` and `handleCollabAgent`: sign-in gate, join limits, forwarding  |
 | `packages/core/src/collabFrames.ts`             | The binary frame shapes, shared by the room and the browser                    |
 | `packages/core/src/ydoc.ts`                     | Plain lesson document to Yjs and back (`reconcile`, `docFromY`)                |
-| `packages/core/src/browser/presence.js`         | Caret offsets and positions inside a text block                                |
+| `packages/core/src/browser/presence.ts`         | Caret offsets and positions inside a text block                                |
 | `apps/web/src/lib/collab.js`                    | `useCollaboration`: socket, Yjs document, roster, admission, chat, `coAuthors` |
 | `apps/web/src/lib/useSelectionBroadcast.js`     | Reports the local selection                                                    |
 | `apps/web/src/components/CollaborateDialog.jsx` | The control panel                                                              |

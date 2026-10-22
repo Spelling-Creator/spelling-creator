@@ -48,7 +48,7 @@ export function sessionFor(key) {
 
 /**
  * The localStorage key supabase-js keeps its session under, which it derives
- * from the Supabase URL's hostname (see packages/core/src/browser/supabase.js).
+ * from the Supabase URL's hostname (see packages/core/src/browser/supabase.ts).
  */
 export function storageKey(supabaseUrl) {
   return `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`;

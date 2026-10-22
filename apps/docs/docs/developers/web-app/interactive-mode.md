@@ -110,7 +110,7 @@ compares the typed answer with the author's anywhere.
 
 ## Progress on the device
 
-`packages/core/src/browser/interactiveProgress.js` keeps the unfinished
+`packages/core/src/browser/interactiveProgress.ts` keeps the unfinished
 run-through (every answer, plus the current step's key) in `localStorage` under
 `spelling-creator:interactive-progress`.
 
@@ -264,7 +264,7 @@ is marked `pauseAfter`. The two kinds of voice then take it differently:
 A formula in a text block is either its author's spoken words or a formula run
 (`{ text: source, formula }`). Before a step with one is spoken, `useSpeech`
 has `withFormulaSpeech` replace each with the words the speech rule engine
-makes from the formula's MathML (`formulaWords` in `core/browser/formulas.js`;
+makes from the formula's MathML (`formulaWords` in `core/browser/formulas.ts`;
 see [Formulas](./formatting-and-footnotes.md#formulas)), for both voices. The
 first such step loads MathJax and the engine, so it starts a moment later;
 `prepare` does the same for the step after. A lesson without formulas never
@@ -435,7 +435,7 @@ What the numbers decided:
 | File                                               | What it does                                                                                   |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `packages/core/src/interactive.ts`                 | Turns a document into steps; speech text; the answers the reveal shows; limits and validation. |
-| `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning.                        |
+| `packages/core/src/browser/interactiveProgress.ts` | The unfinished run-through kept on the device: resume, expiry, pruning.                        |
 | `packages/core/src/lessonResponses.ts`             | Client for the three endpoints above.                                                          |
 | `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                                        |
 | `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough, the reveal, speech controls, resume, summary and the letterboard. |

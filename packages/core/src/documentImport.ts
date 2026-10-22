@@ -1,7 +1,7 @@
 // Import a lesson from a document that was never a lesson file: text pasted
 // from anywhere, a .txt, or a Word file written by hand rather than exported
 // from this app. The app's own exports have lossless paths of their own
-// (jsonImport.ts, browser/docxImport.js); this is for everything else.
+// (jsonImport.ts, browser/docxImport.ts); this is for everything else.
 //
 // It is rules, not a model. An experiment (docs: "Document import experiment")
 // put small on-device models up against these rules on seven document layouts

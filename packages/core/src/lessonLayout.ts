@@ -3,7 +3,7 @@
 // draws both the public lesson page and the editor's preview dialog.
 //
 // This lives here — outside `browser/` and free of dependencies — deliberately.
-// It used to sit next to the code that first needed it (browser/docxExport.js),
+// It used to sit next to the code that first needed it (browser/docxExport.ts),
 // which meant importing the constant dragged in `docx` + `mammoth` (~1.1 MB of
 // source). LessonView.jsx wants only this value, so it was paying for the whole
 // Word pipeline just to show a lesson.

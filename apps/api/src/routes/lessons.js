@@ -301,7 +301,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
 
     // The lesson this one was forked from, if any. Recorded so the fork can later
     // pull the original's changes in: it tells the editor whose history to fetch
-    // and merge against (see web/src/lib/git/sync.js). A bad id is dropped rather
+    // and merge against (see core/browser/git/sync.ts). A bad id is dropped rather
     // than rejected — losing the link is survivable, failing the save is not.
     const forkedFrom =
       typeof body.forkedFrom === "string" && LESSON_ID_RE.test(body.forkedFrom)

@@ -9,7 +9,7 @@
 // of that. Both packs are public exactly as far as the lesson is, so the diff is
 // computed right here from the objects themselves — index the proposal's pack
 // beside the lesson's, find the commit the two diverged at, and diff. See
-// prepareProposalReview in core/browser/git/sync.js.
+// prepareProposalReview in core/browser/git/sync.ts.
 //
 // So "Review & merge" still hands the editor the lesson and the proposal id, and
 // the block-by-block merge still happens there. What changed is that nobody has

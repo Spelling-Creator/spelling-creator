@@ -249,7 +249,7 @@ export async function fetchRemoteLesson(
  * @param opts
  *        `forkedFrom` is the id of the lesson this one was forked from, when it
  *        was. The server records it so the fork can later pull the original's
- *        changes in (see lib/git/sync.js). `forkedFromUrl` is the same pointer
+ *        changes in (see browser/git/sync.ts). `forkedFromUrl` is the same pointer
  *        home for a lesson forked from another instance: the page it was forked
  *        from there.
  */

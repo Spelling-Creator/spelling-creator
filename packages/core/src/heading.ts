@@ -3,7 +3,7 @@
 // Lesson Format's `heading` block, stored under the same name.
 //
 // A heading is not a section. Sections are the editor's organising device and
-// never print (see docxExport.js); a heading block is part of the lesson's
+// never print (see docxExport.ts); a heading block is part of the lesson's
 // content and prints where it sits. It carries nothing but its text, is never
 // answered, and is not counted by interactive mode's progress or the checks.
 //

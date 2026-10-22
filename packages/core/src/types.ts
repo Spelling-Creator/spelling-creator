@@ -43,7 +43,7 @@ export interface StepItem {
   text: InlineText;
 }
 
-/** A stored picture, by the hash of its bytes (see browser/imageRef.js). */
+/** A stored picture, by the hash of its bytes (see browser/imageRef.ts). */
 export interface ImageRef {
   hash: string;
   mime: string;

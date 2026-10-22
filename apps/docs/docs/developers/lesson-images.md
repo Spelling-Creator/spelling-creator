@@ -13,7 +13,7 @@ carries a picture.
 
 On the device, the blobs sit in the `images` object store (keyed by `hash`) of
 the `s2c-lesson-maker` IndexedDB database, next to the lesson library's own
-stores (`packages/core/src/browser/imageStore.js`). The database name is a
+stores (`packages/core/src/browser/imageStore.ts`). The database name is a
 historical one and stays as it is, because renaming it would strand every saved
 lesson.
 
@@ -25,7 +25,7 @@ Worker endpoints (`apps/api/src/routes/images.js`, registered in
 - `PUT /images/:hash`: authenticated (Supabase JWT); the body must have an
   `image/*` content type, be at most 8 MB, and hash to `:hash` before it is
   stored. Called on save/publish to upload locally drafted images
-  (`packages/core/src/browser/imagesClient.js`). On the way in, the Worker re-compresses
+  (`packages/core/src/browser/imagesClient.ts`). On the way in, the Worker re-compresses
   raster images to **WEBP** (`convertImageToWebp` in
   `apps/api/src/imageConvert.js`), falling back to the original bytes for
   formats it can't decode or when the WEBP isn't smaller. The key is still the
@@ -55,7 +55,7 @@ project (`apps/api/vitest.workers.config.js`) rather than made to limp along in
 it.
 
 The browser also tries to do this conversion itself before an image ever reaches
-the Worker: `readImageFile` (`packages/core/src/browser/imageFile.js`)
+the Worker: `readImageFile` (`packages/core/src/browser/imageFile.ts`)
 re-encodes PNG/JPEG picks to WEBP on a canvas (same quality target, same
 keep-whichever-is-smaller rule) while it's already decoding the file to measure
 its dimensions. This is purely an optimization (it saves upload bandwidth and R2
@@ -99,7 +99,7 @@ curl -X POST https://<worker-host>/admin/migrate-images \
 Local lessons migrate automatically on first load (the old `localStorage` doc
 moves to IndexedDB, then to the [lesson library](web-app/local-lessons.md); see
 `migrateLocalStorage` and `migrateToLibrary` in
-`packages/core/src/browser/storage.js`). Readers tolerate legacy base64
+`packages/core/src/browser/storage.ts`). Readers tolerate legacy base64
 throughout, so the backfill can run any time after deploy. Deploy order: deploy
 the Worker (so `/images` exists), then ship the web build, then run the
 backfill.
@@ -133,7 +133,7 @@ class-B (read) ops/month. The design keeps usage well inside these:
   number of saves.
   Images are content-addressed, so `PUT /images/:hash` first does a `head()`
   (class B) and only `put()`s when the object is missing; the client also caches
-  which hashes it has uploaded this session (`imagesClient.js`), so re-saving a
+  which hashes it has uploaded this session (`imagesClient.ts`), so re-saving a
   lesson uploads nothing new. Identical images (across all users/lessons) share
   one object.
 - **Class B (reads)** stays low because `GET /images/:hash` responses are cached

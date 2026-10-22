@@ -3,7 +3,7 @@
 // and the Worker).
 //
 // An image block references its bytes by content hash, exactly like the web app
-// (see apps/web/src/lib/imageRef.js):  image: { hash, mime, ext }. The hash is the
+// (see packages/core/src/browser/imageRef.ts):  image: { hash, mime, ext }. The hash is the
 // lowercase-hex SHA-256 of the raw bytes, which is also the R2 object key the
 // Worker stores them under and recomputes on upload (PUT /images/:hash).
 

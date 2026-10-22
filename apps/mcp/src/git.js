@@ -4,7 +4,7 @@
 // which are the proposal view's half of this file).
 //
 // This is the assistant's version of what the editor does in the browser (see
-// packages/core/src/browser/git/sync.js, which is the same flow bound to
+// packages/core/src/browser/git/sync.ts, which is the same flow bound to
 // LightningFS). Two rules it exists to respect, both the hub's rather than ours:
 //
 //   - Every edit is a commit. A lesson is a real git repository (see
@@ -624,7 +624,7 @@ async function proposedOps(ctx, doc) {
  * Read a proposal without merging it: what it changes, and whether it would go
  * in cleanly.
  *
- * This is the server-side twin of prepareProposalReview (core/browser/git/sync.js),
+ * This is the server-side twin of prepareProposalReview (core/browser/git/sync.ts),
  * which the proposal page in the web app draws from. The two answer the same two
  * questions off the same objects, and the only difference is where the repository
  * lives — LightningFS there, memory here. It is worth saying why they are not one

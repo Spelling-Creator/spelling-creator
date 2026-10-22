@@ -291,7 +291,7 @@ export default function EditorPage() {
   const jsonInputRef = useRef(null);
 
   // Which of this device's lessons is open. Every lesson in the library
-  // (core/browser/storage.js) has one of these ids, and it is also the name of
+  // (core/browser/storage.ts) has one of these ids, and it is also the name of
   // the lesson's git repository until it is published and takes the hub's id
   // instead — so `localId` is what makes switching lessons switch documents and
   // histories together. The library itself is listed on its own page
@@ -1102,7 +1102,7 @@ export default function EditorPage() {
       // against the exact commit the two diverged from.
       //
       // The library record is created first because its id is the name of the
-      // repository the clone lands in (see core/browser/storage.js).
+      // repository the clone lands in (see core/browser/storage.ts).
       //
       // A lesson published before this feature has no repo to clone. The fork
       // still works and still gets history from here on; it just has no common
