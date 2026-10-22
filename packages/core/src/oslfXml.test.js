@@ -9,7 +9,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { validateXML } from "xmllint-wasm";
 
 import { normalizeLessonFile } from "./jsonImport.js";
-import { markupToContent } from "./lessonText.js";
+import { markupToContent } from "./lessonText.ts";
 import { OslfImportError, fromOslf, toOslf } from "./oslf.js";
 import {
   OSLF_XML_EXTENSION,

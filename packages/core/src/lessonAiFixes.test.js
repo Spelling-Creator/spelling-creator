@@ -14,7 +14,7 @@ import {
   markupToContent,
   textBlockMarkup,
   withTextBlockContent,
-} from "./lessonText.js";
+} from "./lessonText.ts";
 
 const text = (id, markup) =>
   withTextBlockContent({ id, type: "text" }, markupToContent(markup));

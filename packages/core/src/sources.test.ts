@@ -11,7 +11,7 @@ import {
   sourceEntryParts,
   sourceEntryText,
   sourceHasContent,
-} from "./sources.js";
+} from "./sources.ts";
 
 const full = {
   id: "s1",

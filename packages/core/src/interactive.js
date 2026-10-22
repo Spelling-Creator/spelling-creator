@@ -25,12 +25,12 @@
 // are shared with the Worker so the browser and server agree on what a valid
 // submission is.
 
-import { imageCaptionParts } from "./imageCredit.js";
-import { inlineTextPlain } from "./inlineText.js";
-import { questionAnswerPlain } from "./questions.js";
-import { inlineTextSpeech, speechText, textBlockSpeech } from "./speech.js";
-import { headingText } from "./heading.js";
-import { vaktText } from "./vakt.js";
+import { imageCaptionParts } from "./imageCredit.ts";
+import { inlineTextPlain } from "./inlineText.ts";
+import { questionAnswerPlain } from "./questions.ts";
+import { inlineTextSpeech, speechText, textBlockSpeech } from "./speech.ts";
+import { headingText } from "./heading.ts";
+import { vaktText } from "./vakt.ts";
 
 // Block types that make up a section's material, in the order the document has
 // them. Everything that isn't a question block and isn't unknown to us.
@@ -173,7 +173,7 @@ export function isInteractivePlayable(doc) {
  * question appears would give it away to the one person meant to work it out.
  *
  * @param {object} step  A step from buildInteractiveSteps.
- * @returns {Array<string | import("./speech.js").SpokenRun[]>}
+ * @returns {Array<string | import("./speech.ts").SpokenRun[]>}
  */
 export function stepSpeech(step) {
   if (!step) return [];

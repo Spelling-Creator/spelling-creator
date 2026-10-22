@@ -2,8 +2,8 @@
 // the words a lesson is teaching. Imported by the editor (SectionCard /
 // ContentBlock) and the docx exporter so the block shape stays in sync.
 
-import { ANSWER_GAP } from "./questions.js";
-import { textBlockPlain } from "./lessonText.js";
+import { ANSWER_GAP } from "./questions.ts";
+import { textBlockPlain } from "./lessonText.ts";
 
 // Accent colour for the spelling-words block (chip + docx label + left border).
 // Teal, distinct from every question-type colour in questions.js.

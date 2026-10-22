@@ -41,12 +41,12 @@
 // web app's renderer (LessonView) and its translation runner
 // (LessonTranslation), so the two agree on keys by construction.
 
-import { imageCaptionParts } from "./imageCredit.js";
-import { inlineTextPlain } from "./inlineText.js";
-import { textBlockFootnotes, textBlockLines } from "./lessonText.js";
-import { questionAnswerItems } from "./questions.js";
-import { headingText } from "./heading.js";
-import { vaktText } from "./vakt.js";
+import { imageCaptionParts } from "./imageCredit.ts";
+import { inlineTextPlain } from "./inlineText.ts";
+import { textBlockFootnotes, textBlockLines } from "./lessonText.ts";
+import { questionAnswerItems } from "./questions.ts";
+import { headingText } from "./heading.ts";
+import { vaktText } from "./vakt.ts";
 
 /**
  * Stable lookup keys for a lesson's translatable segments. Index-based, so a

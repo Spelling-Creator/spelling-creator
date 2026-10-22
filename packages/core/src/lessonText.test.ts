@@ -23,8 +23,8 @@ import {
   withTextBlockDocument,
   UNTITLED_SOURCE_TEXT,
   MISSING_SOURCE_TEXT,
-} from "./lessonText.js";
-import { sourcesById } from "./sources.js";
+} from "./lessonText.ts";
+import { sourcesById } from "./sources.ts";
 
 const text = (t, marks = []) =>
   marks.length

@@ -28,13 +28,13 @@ import {
   PageNumber,
   FootnoteReferenceRun,
 } from "docx";
-import { inlineTextPlain, inlineTextRuns } from "../inlineText.js";
-import { footnoteParts, textBlockParagraphs } from "../lessonText.js";
+import { inlineTextPlain, inlineTextRuns } from "../inlineText.ts";
+import { footnoteParts, textBlockParagraphs } from "../lessonText.ts";
 import { formulaToDocx } from "./formulaDocx.js";
 import { formulaKey, renderLessonFormulas } from "./formulas.js";
-import { lessonSources, sourceEntryParts, sourcesById } from "../sources.js";
-import { fitWithin, imageSizeScale } from "../image.js";
-import { imageCaptionParts } from "../imageCredit.js";
+import { lessonSources, sourceEntryParts, sourcesById } from "../sources.ts";
+import { fitWithin, imageSizeScale } from "../image.ts";
+import { imageCaptionParts } from "../imageCredit.ts";
 import { getImageBytes } from "./imageRef.js";
 import {
   CAPTION_STYLE_ID,
@@ -60,7 +60,7 @@ import {
   TITLE_LINE_STYLE_NAME,
   lessonCopyright,
   lessonTitleLines,
-} from "../lessonLayout.js";
+} from "../lessonLayout.ts";
 import {
   ANSWER_GAP,
   BESIDES_LABEL,
@@ -80,17 +80,17 @@ import {
   questionMeta,
   questionStyleId,
   questionStyleName,
-} from "../questions.js";
+} from "../questions.ts";
 import {
   HEADING_STYLE_ID,
   HEADING_STYLE_NAME,
   headingText,
-} from "../heading.js";
+} from "../heading.ts";
 import {
   SPELLING_COLOR,
   SPELLING_LABEL,
   SPELLING_WORD_SEPARATOR,
-} from "../spelling.js";
+} from "../spelling.ts";
 import {
   VAKT_COLOR,
   VAKT_LABEL,
@@ -100,7 +100,7 @@ import {
   vaktLinkText,
   vaktLinks,
   vaktText,
-} from "../vakt.js";
+} from "../vakt.ts";
 
 // Re-exported for callers that already reach for it here. New code that wants
 // only the constant should import ../lessonLayout.js directly — this module

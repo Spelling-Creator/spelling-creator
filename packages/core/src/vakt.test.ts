@@ -15,7 +15,7 @@ import {
   vaktLinkText,
   vaktLinks,
   vaktText,
-} from "./vakt.js";
+} from "./vakt.ts";
 import {
   buildInteractiveSteps,
   countInteractiveQuestions,

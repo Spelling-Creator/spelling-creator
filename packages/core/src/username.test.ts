@@ -8,7 +8,7 @@ import {
   normalizeUsername,
   usernameFromEmail,
   usernameToEmail,
-} from "./username.js";
+} from "./username.ts";
 
 describe("isUsername", () => {
   it("accepts the shapes people actually pick", () => {

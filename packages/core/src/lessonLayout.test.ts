@@ -4,7 +4,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { lessonCopyright, lessonTitleLines } from "./lessonLayout.js";
+import { lessonCopyright, lessonTitleLines } from "./lessonLayout.ts";
 
 describe("lessonTitleLines", () => {
   it("leads with the by-line, then the age range and release month", () => {

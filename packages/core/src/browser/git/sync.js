@@ -28,7 +28,7 @@
 //    whoever saved second would quietly erase the other's work.
 
 import * as git from "isomorphic-git";
-import { newId } from "../../id.js";
+import { newId } from "../../id.ts";
 import { preserveLocalFields } from "../../git/doc.js";
 import { DRAFT_REPO, copyRepo, deleteRepo, repoCtx } from "./fs.js";
 import { applyResolutions, mergeDocs } from "../../git/merge.js";

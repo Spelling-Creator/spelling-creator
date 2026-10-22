@@ -23,23 +23,23 @@
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
-import { IMAGE_ALIGNS, extFromMime } from "./image.js";
-import { withSeparateCredit } from "./imageCredit.js";
-import { inlineTextMarkup, markupToInlineText } from "./inlineText.js";
-import { isSafeLink } from "./richText.js";
+import { IMAGE_ALIGNS, extFromMime } from "./image.ts";
+import { withSeparateCredit } from "./imageCredit.ts";
+import { inlineTextMarkup, markupToInlineText } from "./inlineText.ts";
+import { isSafeLink } from "./richText.ts";
 import {
   markupToContent,
   normalizeTextContent,
   textBlockMarkup,
   withTextBlockContent,
-} from "./lessonText.js";
+} from "./lessonText.ts";
 import {
   SOURCE_FIELDS,
   isSourceId,
   normalizeSource,
   sourceHasContent,
-} from "./sources.js";
-import { newId } from "./id.js";
+} from "./sources.ts";
+import { newId } from "./id.ts";
 
 export { newId };
 

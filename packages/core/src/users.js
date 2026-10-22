@@ -14,7 +14,7 @@
 //   GET    {apiUrl()}/profiles/:id/followers   -> { users: PublicUser[] }
 //   GET    {apiUrl()}/profiles/:id/following   -> { users: PublicUser[] }
 //   GET    {apiUrl()}/following/activity       -> { activity: FeedItem[] }              (Bearer)
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 // Whether profiles can be fetched at all (needs a configured backend).
 

@@ -10,7 +10,7 @@
 //   POST {apiUrl()}/notifications/send-link  -> { notification }    (body { email, link, message? })
 //
 // Notification: { id, type, title, body, link, read, createdAt }
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 // Whether a backend is configured at all (mirrors lessonHubEnabled).
 

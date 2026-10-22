@@ -10,7 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-import { supabaseConfig } from "../config.js";
+import { supabaseConfig } from "../config.ts";
 
 // Built on first use rather than at import time. The host calls configureCore()
 // after this module has already been evaluated (ES imports are hoisted), so a

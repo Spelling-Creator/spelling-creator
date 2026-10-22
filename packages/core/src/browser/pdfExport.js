@@ -24,7 +24,7 @@ import {
   TITLE_LINE_STYLE_NAME,
   TITLE_STYLE_NAME,
   lessonCopyright,
-} from "../lessonLayout.js";
+} from "../lessonLayout.ts";
 import {
   BESIDES_LINE_CLASS,
   QUESTION_TAG_STYLE_CLASS,
@@ -35,9 +35,9 @@ import {
   questionStyleClass,
   questionStyleMap,
   questionTagStyleMap,
-} from "../questions.js";
-import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.js";
-import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.js";
+} from "../questions.ts";
+import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.ts";
+import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.ts";
 
 // Text destined for an HTML string we build ourselves. The PDF container is
 // filled with innerHTML, so anything interpolated into it has to arrive as text.

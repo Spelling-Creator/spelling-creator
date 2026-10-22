@@ -7,8 +7,8 @@
 // have it, otherwise to the public R2 URL the Worker serves (which exists once
 // the lesson has been saved/published).
 
-import { apiUrl } from "../config.js";
-import { extFromMime } from "../image.js";
+import { apiUrl } from "../config.ts";
+import { extFromMime } from "../image.ts";
 import { getImageBlob, putImageBlob } from "./imageStore.js";
 
 // Public Worker/R2 URL for an uploaded image. Reads the base URL through the

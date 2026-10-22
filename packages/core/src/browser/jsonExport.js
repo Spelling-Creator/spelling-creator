@@ -2,7 +2,7 @@
 // ../lessonFile.js, which the importer and the MCP server share; this is only
 // the part that needs a document to click an <a> for the user.
 
-import { buildLessonFile, lessonFileName } from "../lessonFile.js";
+import { buildLessonFile, lessonFileName } from "../lessonFile.ts";
 import { oslfFileName, toOslf } from "../oslf.js";
 import { imagePublicUrl } from "./imageRef.js";
 

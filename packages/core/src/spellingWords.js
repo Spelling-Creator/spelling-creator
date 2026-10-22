@@ -2,7 +2,7 @@
 // published lessons on the hub, served by the Worker's GET /spelling-words.json
 // (rebuilt at most once every couple of days; see apps/api/src/routes/
 // spelling-words.js). The homepage's floating-words animation pulls from this.
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 // A small built-in word list so the homepage animation still has something to
 // show when no backend is configured (or the fetch fails / returns nothing).

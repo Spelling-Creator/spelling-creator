@@ -24,7 +24,7 @@ import {
   MEDIA_TAGS,
   RICH_TEXT_TAGS,
   SAFE_LINK_PROTOCOLS,
-} from "../richText.js";
+} from "../richText.ts";
 
 // Only links carry attributes, and only these. No `src`, no `style`, no `on*`.
 const ALLOWED_ATTR = ["href", "target", "rel"];

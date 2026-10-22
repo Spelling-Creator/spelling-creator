@@ -21,8 +21,8 @@
 //          block's is, so it resolves, uploads and exports through the same path,
 //          and framed by the same optional `size` / `align` pair.
 
-import { isSafeLink } from "./richText.js";
-import { IMAGE_ALIGNS, IMAGE_SIZES } from "./image.js";
+import { isSafeLink } from "./richText.ts";
+import { IMAGE_ALIGNS, IMAGE_SIZES } from "./image.ts";
 
 // The accent colour: a bright, unambiguous red — the one colour the question
 // types and the teal spelling block deliberately leave free, so a regulation

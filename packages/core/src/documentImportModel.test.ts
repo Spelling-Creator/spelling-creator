@@ -8,7 +8,7 @@ import {
   sectionMessages,
   sectionPromptText,
   systemPrompt,
-} from "./documentImportModel.js";
+} from "./documentImportModel.ts";
 import { lessonFromSections } from "./documentImport.js";
 
 describe("the prompt", () => {

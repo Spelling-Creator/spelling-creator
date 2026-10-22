@@ -3,7 +3,7 @@
 // The Worker validates the Turnstile token server-side (verifying both that the
 // challenge passed and that it was solved on an allowed domain) before doing any
 // AI work, so every request must carry a fresh token.
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 /**
  * Ask the Worker for a block of text about `subject`.

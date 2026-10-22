@@ -18,16 +18,16 @@
 // the way LessonView keys them, lessonSegmentKey), so a reader finds the
 // words they can see.
 
-import { headingText } from "./heading.js";
-import { imageCaptionParts } from "./imageCredit.js";
-import { inlineTextPlain } from "./inlineText.js";
-import { textBlockLines } from "./lessonText.js";
+import { headingText } from "./heading.ts";
+import { imageCaptionParts } from "./imageCredit.ts";
+import { inlineTextPlain } from "./inlineText.ts";
+import { textBlockLines } from "./lessonText.ts";
 import {
   lessonSegmentKey,
   questionStepsWithText,
 } from "./lessonTranslation.js";
-import { questionAnswerItems } from "./questions.js";
-import { vaktLinks, vaktText } from "./vakt.js";
+import { questionAnswerItems } from "./questions.ts";
+import { vaktLinks, vaktText } from "./vakt.ts";
 
 /** How much of an entry a result shows around its first match. */
 const SNIPPET_BEFORE = 40;

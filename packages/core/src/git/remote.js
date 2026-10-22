@@ -13,7 +13,7 @@
 //
 // Because a lesson has more than one possible writer, PUT is a compare-and-swap:
 // see pushPack below.
-import { apiUrl, hasApi } from "../config.js";
+import { apiUrl, hasApi } from "../config.ts";
 import {
   DEFAULT_BRANCH,
   OID_RE,

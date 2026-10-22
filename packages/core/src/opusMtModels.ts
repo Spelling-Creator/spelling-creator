@@ -33,7 +33,7 @@
 // converted tokenizer's ids against the Python MarianTokenizer on a few
 // sentences, then spot-checking translations against the upstream model.
 
-import { languageForTag } from "./translationLanguages.js";
+import { languageForTag } from "./translationLanguages.ts";
 
 export const OPUS_MT_TO_ENGLISH = {
   ar: "Xenova/opus-mt-ar-en",

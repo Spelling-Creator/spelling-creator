@@ -25,12 +25,12 @@
 //
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
-import { imageCaptionParts } from "../imageCredit.js";
-import { inlineTextPlain } from "../inlineText.js";
-import { textBlockPlain } from "../lessonText.js";
-import { baseLanguageTag } from "../translationLanguages.js";
-import { headingText } from "../heading.js";
-import { VAKT_LABEL, vaktText } from "../vakt.js";
+import { imageCaptionParts } from "../imageCredit.ts";
+import { inlineTextPlain } from "../inlineText.ts";
+import { textBlockPlain } from "../lessonText.ts";
+import { baseLanguageTag } from "../translationLanguages.ts";
+import { headingText } from "../heading.ts";
+import { VAKT_LABEL, vaktText } from "../vakt.ts";
 import {
   holdsLargeModel,
   meteredConnection,

@@ -19,7 +19,7 @@ import {
   docFromY,
   encodeState,
   reconcile,
-} from "./ydoc.js";
+} from "./ydoc.ts";
 
 // A peer: a Y.Doc plus the updates it has emitted for broadcast.
 function peer() {

@@ -25,7 +25,7 @@
 //           review yet, and is only ever listed to the person who opened it.
 //   head    the commit the stored pack points at (see git/remote.js for how the
 //           changes themselves travel).
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 // A title is a one-line summary and a body is a paragraph or two of explanation
 // — this is a change request, not a document. Both are plain text: unlike a

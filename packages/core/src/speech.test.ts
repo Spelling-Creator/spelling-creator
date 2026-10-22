@@ -11,7 +11,7 @@ import {
   spokenWords,
   textBlockSpeech,
   withFormulaSpeech,
-} from "./speech.js";
+} from "./speech.ts";
 
 const block = (...paragraphs) => ({
   type: "text",

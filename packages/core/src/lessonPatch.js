@@ -11,7 +11,7 @@
 // New blocks reuse the canonical builder from lessonBuild.js, so a patched
 // block is validated exactly like one created from scratch.
 
-import { removeSourceCitations } from "./lessonText.js";
+import { removeSourceCitations } from "./lessonText.ts";
 import { buildBlock, buildSources, newId } from "./lessonBuild.js";
 
 const OPS = [

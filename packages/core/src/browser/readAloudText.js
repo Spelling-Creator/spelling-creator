@@ -18,8 +18,8 @@
 // this can be tested with the Node build of Spellophone. It takes an espeak
 // instance rather than making one.
 
-import { SAY_AS_CHARACTERS } from "../lessonText.js";
-import { spellOut } from "../speech.js";
+import { SAY_AS_CHARACTERS } from "../lessonText.ts";
+import { spellOut } from "../speech.ts";
 
 /**
  * Spell out what espeak-ng would otherwise read badly or not at all. A port of
@@ -194,7 +194,7 @@ export function kokoroIpa(ipa) {
  * pause is a comma, which Kokoro pauses at. (A long pause never reaches here:
  * chunkSpeech has already cut the chunk there.)
  * @param {object} espeak  A Spellophone instance.
- * @param {import("../speech.js").SpokenRun[]} runs
+ * @param {import("../speech.ts").SpokenRun[]} runs
  * @param {"a"|"b"} accent
  * @returns {string}
  */

@@ -8,8 +8,8 @@ import {
   isPlainInlineText,
   markupToInlineText,
   normalizeInlineText,
-} from "./inlineText.js";
-import { inlineTextSpeech } from "./speech.js";
+} from "./inlineText.ts";
+import { inlineTextSpeech } from "./speech.ts";
 
 const text = (t, marks = []) =>
   marks.length

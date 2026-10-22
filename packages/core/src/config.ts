@@ -17,7 +17,7 @@
 // build's before calling this (see apps/api/src/node/browserConfig.js). The reader functions resolve lazily, so import
 // order doesn't matter — only that configureCore runs before the first *call*.
 
-import { DEFAULT_USERNAME_DOMAIN } from "./username.js";
+import { DEFAULT_USERNAME_DOMAIN } from "./username.ts";
 
 const config = {
   apiUrl: "",

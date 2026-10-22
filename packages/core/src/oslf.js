@@ -26,24 +26,24 @@
 // from the 0.1 draft so the tests can hold toOslf's output to it. Nothing at
 // runtime reads it.
 
-import { headingText } from "./heading.js";
-import { imageCaptionParts } from "./imageCredit.js";
+import { headingText } from "./heading.ts";
+import { imageCaptionParts } from "./imageCredit.ts";
 import {
   inlineTextContent,
   inlineTextPlain,
   normalizeInlineText,
-} from "./inlineText.js";
-import { lessonFileBase } from "./lessonFile.js";
-import { normalizeTextContent, textBlockContent } from "./lessonText.js";
+} from "./inlineText.ts";
+import { lessonFileBase } from "./lessonFile.ts";
+import { normalizeTextContent, textBlockContent } from "./lessonText.ts";
 import {
   isThreeBoard,
   questionAnswerItems,
   questionBesides,
   questionMeta,
   resolveOpenType,
-} from "./questions.js";
-import { SOURCE_FIELDS } from "./sources.js";
-import { vaktLinks, vaktText } from "./vakt.js";
+} from "./questions.ts";
+import { SOURCE_FIELDS } from "./sources.ts";
+import { vaktLinks, vaktText } from "./vakt.ts";
 
 /** The OSLF version this module writes. */
 export const OSLF_VERSION = "0.1";

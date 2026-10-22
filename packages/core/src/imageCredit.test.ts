@@ -5,7 +5,7 @@ import {
   splitLegacyCredit,
   withImageCaptionParts,
   withSeparateCredit,
-} from "./imageCredit.js";
+} from "./imageCredit.ts";
 
 const COMMONS = "Image (by Jane Doe, CC BY-SA 4.0) via Wikimedia Commons";
 

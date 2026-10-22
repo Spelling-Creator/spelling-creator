@@ -185,7 +185,7 @@ export async function loadReadAloud({
 
   /**
    * Text to IPA, exposed separately so its cost can be measured on its own.
-   * @param {string | import("../speech.js").SpokenRun[]} text  Plain words, or
+   * @param {string | import("../speech.ts").SpokenRun[]} text  Plain words, or
    *   spoken text with its hints and pauses.
    * @param {object} [options]
    * @param {string} [options.voice]
@@ -232,8 +232,8 @@ export async function loadReadAloud({
   }
 
   /**
-   * Text to audio, for one chunk of speech (see chunkSpeech in core/speech.js).
-   * @param {string | import("../speech.js").SpokenRun[]} text
+   * Text to audio, for one chunk of speech (see chunkSpeech in core/speech.ts).
+   * @param {string | import("../speech.ts").SpokenRun[]} text
    * @param {object} [options]
    * @param {string} [options.voice]
    * @param {number} [options.speed]

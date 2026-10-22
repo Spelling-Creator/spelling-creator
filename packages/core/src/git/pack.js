@@ -19,7 +19,7 @@
 // a pack is pure JSON and stays small.
 
 import * as git from "isomorphic-git";
-import { newId } from "../id.js";
+import { newId } from "../id.ts";
 import {
   BRANCH,
   BRANCH_REF,

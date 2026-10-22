@@ -80,8 +80,8 @@ import {
   quantitiesIn,
   stemTest,
   withoutFigures,
-} from "./factText.js";
-import { textBlockPlain } from "./lessonText.js";
+} from "./factText.ts";
+import { textBlockPlain } from "./lessonText.ts";
 import {
   GVP_WFS,
   dateSpan,

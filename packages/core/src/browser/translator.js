@@ -27,12 +27,12 @@
 //
 // Specs: https://developer.mozilla.org/en-US/docs/Web/API/Translator_API
 
-import { isRichTextHtml } from "../richText.js";
+import { isRichTextHtml } from "../richText.ts";
 import {
   languageForTag,
   sameTranslationLanguage,
   sourceLanguageChoices,
-} from "../translationLanguages.js";
+} from "../translationLanguages.ts";
 
 export { sameTranslationLanguage, sourceLanguageChoices };
 

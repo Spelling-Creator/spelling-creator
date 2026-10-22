@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { OPUS_MT_TO_ENGLISH, opusMtModelFor } from "./opusMtModels.js";
-import { languageForTag } from "./translationLanguages.js";
+import { OPUS_MT_TO_ENGLISH, opusMtModelFor } from "./opusMtModels.ts";
+import { languageForTag } from "./translationLanguages.ts";
 
 describe("Opus-MT model table", () => {
   it("keys every model by a canonical table tag", () => {

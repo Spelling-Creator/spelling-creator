@@ -8,7 +8,7 @@ import {
   quantitiesIn,
   stemTest,
   withoutFigures,
-} from "./factText.js";
+} from "./factText.ts";
 
 describe("quantities in a sentence", () => {
   it("reads numbers with their units, as Wikipedia writes them", () => {

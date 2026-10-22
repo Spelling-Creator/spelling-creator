@@ -28,7 +28,7 @@ import {
   readQuestionTag,
   QUESTION_TYPES,
   resolveOpenType,
-} from "./questions.js";
+} from "./questions.ts";
 
 export class DocumentImportError extends Error {
   constructor(message) {

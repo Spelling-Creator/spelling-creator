@@ -23,7 +23,7 @@
 // a footnote whose text is exactly how the exporter cites one of them becomes
 // a citation of it again, and any other footnote is kept as a note.
 import mammoth from "mammoth";
-import { newId } from "../id.js";
+import { newId } from "../id.ts";
 import {
   BESIDES_LINE_CLASS,
   EXAMPLE_ANSWER_PREFIX,
@@ -34,10 +34,10 @@ import {
   questionStyleClass,
   questionStyleMap,
   questionTagStyleMap,
-} from "../questions.js";
-import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.js";
-import { SPELLING_LABEL } from "../spelling.js";
-import { isSafeLink } from "../richText.js";
+} from "../questions.ts";
+import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.ts";
+import { SPELLING_LABEL } from "../spelling.ts";
+import { isSafeLink } from "../richText.ts";
 import {
   CAPTION_CLASS,
   CAPTION_STYLE_NAME,
@@ -53,21 +53,21 @@ import {
   SOURCE_ENTRY_STYLE_NAME,
   SOURCES_HEADING_CLASS,
   SOURCES_HEADING_STYLE_NAME,
-} from "../lessonLayout.js";
+} from "../lessonLayout.ts";
 import {
   normalizeTextContent,
   textBlockHasContent,
   withTextBlockContent,
-} from "../lessonText.js";
-import { partsText, sourceCitationParts } from "../sources.js";
+} from "../lessonText.ts";
+import { partsText, sourceCitationParts } from "../sources.ts";
 import {
   VAKT_DEFAULT_IMAGE_ALIGN,
   VAKT_DEFAULT_IMAGE_SIZE,
   VAKT_LABEL,
   VAKT_LINK_JOINER,
   vaktHasContent,
-} from "../vakt.js";
-import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "../image.js";
+} from "../vakt.ts";
+import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "../image.ts";
 import { convertDocImages, resolveImageSrc } from "./imageRef.js";
 
 // Thrown when a document is readable but not structured as a lesson. EditorPage

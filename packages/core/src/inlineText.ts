@@ -37,7 +37,7 @@ import {
   textBlockParagraphs,
   textBlockPlain,
   textToContent,
-} from "./lessonText.js";
+} from "./lessonText.ts";
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);

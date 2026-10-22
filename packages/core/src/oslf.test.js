@@ -8,8 +8,8 @@ import { describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 
 import { normalizeLessonFile } from "./jsonImport.js";
-import { lessonFileName } from "./lessonFile.js";
-import { markupToContent } from "./lessonText.js";
+import { lessonFileName } from "./lessonFile.ts";
+import { markupToContent } from "./lessonText.ts";
 import {
   OSLF_VERSION,
   OslfExportError,

@@ -22,7 +22,7 @@
 // so every document exported under the old labels needs its old style name
 // mapped too or it imports as plain text.
 
-import { inlineTextPlain } from "./inlineText.js";
+import { inlineTextPlain } from "./inlineText.ts";
 
 export const QUESTION_TYPES = {
   number: {

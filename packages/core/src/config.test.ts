@@ -16,7 +16,7 @@ import {
   authMode,
   supabaseConfig,
   turnstileSiteKey,
-} from "./config.js";
+} from "./config.ts";
 import { imagePublicUrl } from "./browser/imageRef.js";
 
 beforeEach(() => {

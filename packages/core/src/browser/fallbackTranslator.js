@@ -30,8 +30,8 @@
 
 import { pipeline } from "@huggingface/transformers";
 import { createDownloadProgress } from "./downloadProgress.js";
-import { opusMtModelFor } from "../opusMtModels.js";
-import { languageForTag } from "../translationLanguages.js";
+import { opusMtModelFor } from "../opusMtModels.ts";
+import { languageForTag } from "../translationLanguages.ts";
 
 const NLLB_MODEL_ID = "Xenova/nllb-200-distilled-600M";
 const DETECTION_MODEL_ID =

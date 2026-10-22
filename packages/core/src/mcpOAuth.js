@@ -4,7 +4,7 @@
 //
 //   GET  {apiUrl()}/oauth/request?state=   -> { clientName, redirectUri, scope, clientState }  (public)
 //   POST {apiUrl()}/oauth/approve          { state, refreshToken } -> { redirectTo }            (auth: Bearer)
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 function endpoint(path) {
   return `${apiUrl()}/oauth${path}`;

@@ -20,7 +20,7 @@ import {
   AutoTokenizer,
   InterruptableStoppingCriteria,
 } from "@huggingface/transformers";
-import { parseModelReply, sectionMessages } from "../documentImportModel.js";
+import { parseModelReply, sectionMessages } from "../documentImportModel.ts";
 import { createDownloadProgress } from "./downloadProgress.js";
 
 // Pinned to a commit, so a later push to the repo can't change what readers

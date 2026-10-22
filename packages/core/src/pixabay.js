@@ -9,7 +9,7 @@
 //
 // As with the AI features, every request carries a fresh Turnstile token that
 // the Worker verifies server-side before doing any work.
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 /**
  * Search Pixabay for images matching `query`.

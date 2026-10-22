@@ -26,7 +26,7 @@
 //   GET    /mod/moderators                     -> { moderators }      (admin)
 //   POST   /mod/moderators                     { email }              (admin)
 //   DELETE /mod/moderators/:userId                                    (admin)
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 function endpoint(path = "") {
   return `${apiUrl()}/mod${path}`;

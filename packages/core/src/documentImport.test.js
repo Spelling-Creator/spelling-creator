@@ -13,7 +13,7 @@ import {
   sectionSummary,
   splitSections,
 } from "./documentImport.js";
-import { ANSWER_GAP } from "./questions.js";
+import { ANSWER_GAP } from "./questions.ts";
 
 const PASSAGE_1 =
   "Every pet cat curled up on a sofa today is descended from a single wild species: the AFRICAN WILDCAT. This sandy-coloured hunter still roams the deserts, grasslands, and plains of North Africa and the Near East, and it looks so much like a tabby that the two can be hard to tell apart at a glance.";

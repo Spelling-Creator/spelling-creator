@@ -2,8 +2,8 @@
 // saved to the cloud. Images live only in IndexedDB while a lesson is drafted
 // offline; this is what copies them to the cloud so other viewers (and the
 // server-side og-image/prerender) can load them by hash.
-import { hasApi } from "../config.js";
-import { MAX_IMAGE_BYTES } from "../image.js";
+import { hasApi } from "../config.ts";
+import { MAX_IMAGE_BYTES } from "../image.ts";
 import { getImageBlob } from "./imageStore.js";
 import { imagePublicUrl, storeImageBytes } from "./imageRef.js";
 

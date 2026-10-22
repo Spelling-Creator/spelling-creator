@@ -27,14 +27,14 @@ import {
   newFindings,
   validateLesson,
 } from "./lessonChecks.js";
-import { inlineTextMarkup } from "./inlineText.js";
-import { questionAnswerPlain } from "./questions.js";
+import { inlineTextMarkup } from "./inlineText.ts";
+import { questionAnswerPlain } from "./questions.ts";
 import {
   textBlockContent,
   textBlockFootnotes,
   textBlockMarkup,
   withTextBlockDocument,
-} from "./lessonText.js";
+} from "./lessonText.ts";
 
 /**
  * The finding codes a model may be asked to fix. Each is about one section,

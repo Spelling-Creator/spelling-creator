@@ -20,7 +20,7 @@ vi.mock("./imageStore.js", () => ({
 }));
 
 const { copyRemoteImages } = await import("./imagesClient.js");
-const { MAX_IMAGE_BYTES } = await import("../image.js");
+const { MAX_IMAGE_BYTES } = await import("../image.ts");
 
 const ORIGIN = "https://there.test";
 const image = (hash) => ({

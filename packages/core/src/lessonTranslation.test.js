@@ -3,7 +3,7 @@
 // module comment says why).
 
 import { describe, expect, it } from "vitest";
-import { markupToContent } from "./lessonText.js";
+import { markupToContent } from "./lessonText.ts";
 
 import {
   lessonLanguageSample,

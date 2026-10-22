@@ -10,32 +10,32 @@
 // format's XML form (oslfXml.js), which is read into the JSON form's object
 // first. The XML reader is only loaded when an XML file arrives.
 
-import { AGE_RANGES } from "./ageRanges.js";
-import { headingText } from "./heading.js";
-import { newId } from "./id.js";
+import { AGE_RANGES } from "./ageRanges.ts";
+import { headingText } from "./heading.ts";
+import { newId } from "./id.ts";
 import {
   QUESTION_TYPES,
   questionAnswerPlain,
   questionBesides,
-} from "./questions.js";
-import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.js";
-import { LESSON_FILE_FORMAT } from "./lessonFile.js";
-import { normalizeInlineText } from "./inlineText.js";
+} from "./questions.ts";
+import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.ts";
+import { LESSON_FILE_FORMAT } from "./lessonFile.ts";
+import { normalizeInlineText } from "./inlineText.ts";
 import { OslfImportError, fromOslf, isOslfFile } from "./oslf.js";
-import { isSafeLink } from "./richText.js";
+import { isSafeLink } from "./richText.ts";
 import {
   normalizeTextContent,
   removeSourceCitations,
   textBlockFootnotes,
   withTextBlockContent,
-} from "./lessonText.js";
-import { normalizeSources } from "./sources.js";
+} from "./lessonText.ts";
+import { normalizeSources } from "./sources.ts";
 import {
   vaktHasContent,
   vaktImageAlign,
   vaktImageSize,
   vaktText,
-} from "./vakt.js";
+} from "./vakt.ts";
 
 // Thrown when a file is readable but not a usable lesson. EditorPage surfaces
 // the message and refuses to load it — same contract as DocxImportError.

@@ -74,7 +74,7 @@ import {
   partsText,
   sourceCitationParts,
   sourceHasContent,
-} from "./sources.js";
+} from "./sources.ts";
 
 /** The marks a text run may carry, in the canonical order they are stored in. */
 export const TEXT_MARKS = ["bold", "italic", "underline"];

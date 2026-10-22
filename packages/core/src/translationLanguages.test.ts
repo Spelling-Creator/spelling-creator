@@ -5,7 +5,7 @@ import {
   languageForTag,
   sameTranslationLanguage,
   sourceLanguageChoices,
-} from "./translationLanguages.js";
+} from "./translationLanguages.ts";
 
 // The languages the fallback's XLM-RoBERTa detector classifies (its labels,
 // which are also its model card's list). Every one must resolve in the table,

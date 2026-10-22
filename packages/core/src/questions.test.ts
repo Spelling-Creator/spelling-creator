@@ -27,7 +27,7 @@ import {
   questionStyleClass,
   questionStyleMap,
   questionStyleName,
-} from "./questions.js";
+} from "./questions.ts";
 import { normalizeLessonFile } from "./jsonImport.js";
 
 let counter = 0;

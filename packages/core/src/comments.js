@@ -22,7 +22,7 @@
 // in CommentsSection). The Worker stores one rating per user per lesson and, when
 // a rating is included, returns the lesson's new average so the page can update
 // its displayed stars. See postComment's return shape.
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 function endpoint(lessonId) {
   return `${apiUrl()}/lessons/${encodeURIComponent(lessonId)}/comments`;

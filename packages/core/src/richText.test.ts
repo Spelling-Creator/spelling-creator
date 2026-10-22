@@ -15,7 +15,7 @@ import {
   richTextLength,
   richTextToLine,
   richTextToPlain,
-} from "./richText.js";
+} from "./richText.ts";
 
 describe("isSafeLink", () => {
   it("accepts the two schemes users may link with", () => {

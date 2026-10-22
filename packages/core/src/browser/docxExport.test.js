@@ -15,9 +15,9 @@
 import { describe, expect, it } from "vitest";
 
 import { buildDocument } from "./docxExport.js";
-import { VAKT_DEFAULT_IMAGE_SIZE } from "../vakt.js";
-import { DOCX_MAX_IMAGE_WIDTH } from "../lessonLayout.js";
-import { imageSizeScale } from "../image.js";
+import { VAKT_DEFAULT_IMAGE_SIZE } from "../vakt.ts";
+import { DOCX_MAX_IMAGE_WIDTH } from "../lessonLayout.ts";
+import { imageSizeScale } from "../image.ts";
 
 // A 1x1 PNG, small enough to sit in the source.
 const PNG =
@@ -198,7 +198,7 @@ describe("formatted text, footnotes and sources", () => {
   }
 
   it("writes marks, real footnotes in reading order, and the Sources list", async () => {
-    const { markupToContent } = await import("../lessonText.js");
+    const { markupToContent } = await import("../lessonText.ts");
     const out = await html({
       title: "t",
       sources: [{ id: "smith", title: "Cats of Egypt", author: "Jane Smith" }],
@@ -268,7 +268,7 @@ describe("headings", () => {
   it("prints a heading block in bold, in the heading style", async () => {
     const { Packer } = await import("docx");
     const { default: mammoth } = await import("mammoth");
-    const { headingStyleMap } = await import("../heading.js");
+    const { headingStyleMap } = await import("../heading.ts");
     const buffer = await Packer.toBuffer(
       await buildDocument(
         lesson([
@@ -294,7 +294,7 @@ describe("questions", () => {
     const { Packer } = await import("docx");
     const { default: mammoth } = await import("mammoth");
     const { questionStyleMap, questionTagStyleMap } =
-      await import("../questions.js");
+      await import("../questions.ts");
     const buffer = await Packer.toBuffer(await buildDocument(doc));
     const { value } = await mammoth.convertToHtml(
       { buffer },
@@ -328,11 +328,11 @@ describe("questions", () => {
   // paragraph of its own under the question, in its own style, so the importer
   // can attach it to the question rather than read a second one.
   it("prints the three-board mark in the tag and a Besides line underneath", async () => {
-    const { besidesStyleMap } = await import("../questions.js");
+    const { besidesStyleMap } = await import("../questions.ts");
     const { Packer } = await import("docx");
     const { default: mammoth } = await import("mammoth");
     const { questionStyleMap, questionTagStyleMap } =
-      await import("../questions.js");
+      await import("../questions.ts");
     const buffer = await Packer.toBuffer(
       await buildDocument(
         lesson([

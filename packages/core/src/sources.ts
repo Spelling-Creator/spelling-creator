@@ -22,7 +22,7 @@
 //                        tagged `role: "locator"`, so the Word export can mark
 //                        it with a style the importer reads back exactly.
 
-import { isSafeLink } from "./richText.js";
+import { isSafeLink } from "./richText.ts";
 
 /** The fields a source carries, in the order the editor shows them. */
 export const SOURCE_FIELDS = ["title", "author", "publisher", "year", "url"];

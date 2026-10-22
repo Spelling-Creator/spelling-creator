@@ -7,7 +7,7 @@ import { commitDoc, readDocAt } from "./repo.js";
 import { docManifest } from "./doc.js";
 import { describeOps, diffDocs } from "./ops.js";
 import { applyResolutions, mergeDocs } from "./merge.js";
-import { markupToContent, textBlockPlain } from "../lessonText.js";
+import { markupToContent, textBlockPlain } from "../lessonText.ts";
 
 const author = { name: "Test", email: "test@example.com" };
 

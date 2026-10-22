@@ -6,7 +6,7 @@
 // Worker endpoints (see handleProfile in apps/api/src/index.js):
 //   POST /profile/display-name   Bearer  { displayName }  -> { displayName }
 //   POST /profile/bio            Bearer  { bio }          -> { bio }
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 // Mirrors the Worker's bounds (DISPLAY_NAME_MIN / DISPLAY_NAME_MAX) so the form
 // can validate before sending; the Worker re-checks regardless.

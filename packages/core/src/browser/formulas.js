@@ -6,8 +6,8 @@
 // Nothing here loads anything until a lesson with a formula is drawn, exported
 // or read aloud, so a lesson without math costs nothing extra.
 
-import { inlineTextRuns } from "../inlineText.js";
-import { textBlockParagraphs } from "../lessonText.js";
+import { inlineTextRuns } from "../inlineText.ts";
+import { textBlockParagraphs } from "../lessonText.ts";
 
 /**
  * A key for a formula, for caching what was made from it. Two formulas with

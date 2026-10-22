@@ -33,13 +33,13 @@
 
 import { docBlocks } from "./doc.js";
 import { sameValue } from "./ops.js";
-import { hasPicture, withSeparateCredit } from "../imageCredit.js";
+import { hasPicture, withSeparateCredit } from "../imageCredit.ts";
 import {
   isPlainContent,
   textBlockContent,
   textBlockPlain,
   withTextBlockContent,
-} from "../lessonText.js";
+} from "../lessonText.ts";
 
 /** Fields that identify a block rather than describe it — never merged. */
 const IDENTITY_FIELDS = new Set(["id", "type"]);

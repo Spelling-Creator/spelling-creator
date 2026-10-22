@@ -21,7 +21,7 @@
 //                the lesson page (see CommentsSection for how ratings are left).
 //                `authorId` is the publisher's Supabase user id — the hub compares
 //                it with the signed-in user to decide whether to offer "Edit".
-import { apiUrl, hasApi } from "./config.js";
+import { apiUrl, hasApi } from "./config.ts";
 
 // sessionStorage key the hub uses to hand the editor the id of a lesson to open
 // for editing. The hub sets it then navigates to the editor, which consumes and

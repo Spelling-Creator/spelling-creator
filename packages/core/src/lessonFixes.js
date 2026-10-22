@@ -21,8 +21,8 @@ import {
   TEXT_MARKS,
   textBlockContent,
   withTextBlockDocument,
-} from "./lessonText.js";
-import { newId } from "./id.js";
+} from "./lessonText.ts";
+import { newId } from "./id.ts";
 
 const ORANGE_TIGHT = "multiple";
 const ORANGE_LOOSE = "multiple_open";

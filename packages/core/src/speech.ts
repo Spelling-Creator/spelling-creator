@@ -35,12 +35,12 @@
 // before speaking. A voice that gets a formula run anyway says its `text`, the
 // source, as it would any run it doesn't know.
 
-import { inlineTextRuns } from "./inlineText.js";
+import { inlineTextRuns } from "./inlineText.ts";
 import {
   SAY_AS_CHARACTERS,
   normalizeSpokenText as storedSpokenText,
   textBlockParagraphs,
-} from "./lessonText.js";
+} from "./lessonText.ts";
 
 /**
  * @typedef {string

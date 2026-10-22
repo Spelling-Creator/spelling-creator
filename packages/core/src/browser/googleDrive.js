@@ -12,7 +12,7 @@
 // Requires an OAuth 2.0 Web client ID (passed via configureCore) whose
 // "Authorised JavaScript origins" include the site's origin.
 
-import { googleClientId, hasGoogleDrive } from "../config.js";
+import { googleClientId, hasGoogleDrive } from "../config.ts";
 import { Packer } from "docx";
 import { buildDocument } from "./docxExport.js";
 import { renderLessonFormulas } from "./formulas.js";

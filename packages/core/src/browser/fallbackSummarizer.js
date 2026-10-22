@@ -28,7 +28,7 @@ import {
   InterruptableStoppingCriteria,
   TextStreamer,
 } from "@huggingface/transformers";
-import { languageDisplayName } from "../translationLanguages.js";
+import { languageDisplayName } from "../translationLanguages.ts";
 import { createDownloadProgress } from "./downloadProgress.js";
 
 // Pinned to a commit, so a later push to the repo can't change what readers
