@@ -7,25 +7,25 @@ import {
 } from "./modelCache.ts";
 
 // A CacheStorage that holds named buckets of Responses, enough of the real API
-// for what modelCache.js calls.
-function fakeCaches(buckets = {}) {
+// for what modelCache.ts calls.
+function fakeCaches(buckets: Record<string, [string, Response][]> = {}) {
   const store = new Map(
     Object.entries(buckets).map(([name, entries]) => [name, new Map(entries)]),
   );
   return {
-    async has(name) {
+    async has(name: string) {
       return store.has(name);
     },
-    async open(name) {
+    async open(name: string) {
       if (!store.has(name)) store.set(name, new Map());
-      const entries = store.get(name);
+      const entries = store.get(name)!;
       return {
         async matchAll() {
           return [...entries.values()];
         },
       };
     },
-    async delete(name) {
+    async delete(name: string) {
       return store.delete(name);
     },
     names() {
@@ -34,12 +34,15 @@ function fakeCaches(buckets = {}) {
   };
 }
 
-function sized(bytes) {
+function sized(bytes: number) {
   return new Response("x", { headers: { "content-length": String(bytes) } });
 }
 
+// The fake stands in for the browser's CacheStorage, which Node lacks.
+const runtime = globalThis as { caches?: unknown };
+
 afterEach(() => {
-  delete globalThis.caches;
+  delete runtime.caches;
 });
 
 describe("MODEL_CACHE_NAME", () => {
@@ -50,7 +53,7 @@ describe("MODEL_CACHE_NAME", () => {
 
 describe("modelCacheBytes", () => {
   it("adds up the Content-Length of every entry", async () => {
-    globalThis.caches = fakeCaches({
+    runtime.caches = fakeCaches({
       [MODEL_CACHE_NAME]: [
         ["https://huggingface.co/a/model.onnx", sized(760_000_000)],
         ["https://huggingface.co/a/tokenizer.json", sized(4_000_000)],
@@ -60,7 +63,7 @@ describe("modelCacheBytes", () => {
   });
 
   it("reads the body of an entry with no Content-Length", async () => {
-    globalThis.caches = fakeCaches({
+    runtime.caches = fakeCaches({
       [MODEL_CACHE_NAME]: [
         ["https://cdn.example/ort.wasm", new Response("12345")],
       ],
@@ -71,7 +74,7 @@ describe("modelCacheBytes", () => {
   // The ONNX runtime's .wasm, as jsDelivr sends it: brotli, with the
   // compressed size in Content-Length, while the cache holds it decoded.
   it("reads the body of an entry that arrived compressed", async () => {
-    globalThis.caches = fakeCaches({
+    runtime.caches = fakeCaches({
       [MODEL_CACHE_NAME]: [
         [
           "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.wasm",
@@ -87,7 +90,7 @@ describe("modelCacheBytes", () => {
 
   it("is 0 without creating the bucket when nothing was downloaded", async () => {
     const caches = fakeCaches({ "lesson-images": [] });
-    globalThis.caches = caches;
+    runtime.caches = caches;
     expect(await modelCacheBytes()).toBe(0);
     expect(caches.names()).toEqual(["lesson-images"]);
   });
@@ -97,7 +100,7 @@ describe("modelCacheBytes", () => {
   });
 
   it("is null when the browser refuses Cache Storage", async () => {
-    globalThis.caches = {
+    runtime.caches = {
       has: () => Promise.reject(new DOMException("blocked", "SecurityError")),
     };
     expect(await modelCacheBytes()).toBeNull();
@@ -111,7 +114,7 @@ describe("clearModelCache", () => {
       "lesson-images": [],
       "static-images": [],
     });
-    globalThis.caches = caches;
+    runtime.caches = caches;
     await clearModelCache();
     expect(caches.names()).toEqual(["lesson-images", "static-images"]);
     expect(await modelCacheBytes()).toBe(0);

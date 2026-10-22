@@ -1,6 +1,6 @@
 // The on-device model behind Import from text, in two layers (the same shape
-// as summarizer.js): this light module answers whether the device can run the
-// model and hands a run to the heavy chunk (documentModelEngine.js), which is
+// as summarizer.ts): this light module answers whether the device can run the
+// model and hands a run to the heavy chunk (documentModelEngine.ts), which is
 // reached ONLY through the dynamic import() below. Nothing may static-import
 // the engine: that keeps transformers.js out of every bundle a visitor loads,
 // and vite.config.js stubs the engine out of the Worker's SSR build.
@@ -13,26 +13,42 @@
 // checkpoint (see the docs page "Document import experiment"). Fails closed:
 // a device that cannot run it is never offered the button.
 
+import type { ParsedSection, PromptSection } from "../documentImportModel.ts";
 import {
   holdsLargeModel,
   meteredConnection,
   webGpuAdapter,
 } from "./deviceCheck.ts";
 
+export interface ReadSectionsHooks {
+  /**
+   * Checked before the download starts, between sections, and between
+   * generated tokens.
+   */
+  signal?: AbortSignal;
+  /** 0-1 fraction, first run only. */
+  onDownloadProgress?: (loaded: number) => void;
+  /**
+   * Before each section, with its number counting from 1: the model is loaded
+   * and this one is being read.
+   */
+  onSection?: (number: number, total: number) => void;
+}
+
 /**
  * Can this device run the model? Cheap and needs no chunk. The adapter is
- * asked for once a page (deviceCheck.js); the connection check stays live
+ * asked for once a page (deviceCheck.ts); the connection check stays live
  * because tethering can start mid-visit.
- * @returns {Promise<boolean>}
  */
-export async function documentModelPossible() {
+export async function documentModelPossible(): Promise<boolean> {
   if (meteredConnection()) return false;
   return holdsLargeModel(await webGpuAdapter());
 }
 
 // Only a successful load is memoised: a cached rejection would disable the
 // model for the rest of the session with no way back but a reload.
-let enginePromise = null;
+let enginePromise: Promise<typeof import("./documentModelEngine.ts")> | null =
+  null;
 
 function loadEngine() {
   if (!enginePromise) {
@@ -49,19 +65,11 @@ function loadEngine() {
  * what documentImport's splitSections returns ({heading, lines}); each
  * result is the shape parseSection returns, with the model's own question
  * type on each question, or null for a section the model could not read.
- *
- * @param {Array<{heading: string, lines: string[]}>} sections
- * @param {object} [hooks]
- * @param {AbortSignal} [hooks.signal]  Checked before the download starts,
- *   between sections, and between generated tokens.
- * @param {(loaded: number) => void} [hooks.onDownloadProgress]  0-1 fraction,
- *   first run only.
- * @param {(number: number, total: number) => void} [hooks.onSection]  Before
- *   each section, with its number counting from 1: the model is loaded and
- *   this one is being read.
- * @returns {Promise<Array<object|null>>}
  */
-export async function readSectionsWithModel(sections, hooks = {}) {
+export async function readSectionsWithModel(
+  sections: PromptSection[],
+  hooks: ReadSectionsHooks = {},
+): Promise<(ParsedSection | null)[]> {
   const engine = await loadEngine();
   return engine.readSections(sections, hooks);
 }

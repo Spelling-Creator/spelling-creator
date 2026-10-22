@@ -10,7 +10,7 @@
 //   3. The model turns the IPA, plus a voice's style vector, into 24 kHz audio.
 //
 // Steps 1 and 2, and the lesson's pronunciations, substitutions, spell-outs and
-// pauses, are in readAloudText.js. They follow kokoro.js
+// pauses, are in readAloudText.ts. They follow kokoro.js
 // (github.com/hexgrad/kokoro, Apache-2.0), the reference JavaScript port, so
 // what the model hears matches what it expects. That package itself is not
 // used: it pins transformers.js 3, which would put a second ONNX runtime in the
@@ -18,7 +18,7 @@
 //
 // This module is HEAVY: transformers.js and an ONNX runtime on top of a model
 // download of 92 to 326 MB, depending on the dtype. Nothing may static-import
-// this file: it is reached only through the dynamic import() in readAloud.js.
+// this file: it is reached only through the dynamic import() in readAloud.ts.
 // vite.config.js additionally stubs it out of the Worker's SSR build.
 //
 // Model: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX
@@ -28,22 +28,74 @@ import {
   AutoTokenizer,
   StyleTextToSpeech2Model,
   Tensor,
+  type PreTrainedModel,
+  type PreTrainedTokenizer,
 } from "@huggingface/transformers";
-import { createEspeak } from "@spelling-creator/spellophone/browser";
+import {
+  createEspeak,
+  type Espeak,
+} from "@spelling-creator/spellophone/browser";
 import espeakWasmUrl from "@spelling-creator/spellophone/wasm/espeak-ng.wasm?url";
 import espeakManifestUrl from "@spelling-creator/spellophone/espeak-ng-data/manifest.json?url";
 import espeakCoreUrl from "@spelling-creator/spellophone/espeak-ng-data/core.bin.gz?url";
 import espeakEnglishUrl from "@spelling-creator/spellophone/espeak-ng-data/en_dict.gz?url";
-import { createDownloadProgress } from "./downloadProgress.ts";
+import type { SpokenRun } from "../speech.ts";
+import {
+  createDownloadProgress,
+  type DownloadProgressListener,
+} from "./downloadProgress.ts";
 import { phonemize, phonemizeSpoken } from "./readAloudText.ts";
 import {
   DEFAULT_VOICE,
   MODEL_ID,
   MODEL_REVISION,
   WEBGPU_DTYPE,
+  type ReadAloudDtype,
 } from "./readAloudVoices.ts";
 
 export const SAMPLE_RATE = 24000;
+
+export type ReadAloudDevice = "webgpu" | "wasm";
+
+export interface LoadReadAloudOptions {
+  device?: ReadAloudDevice;
+  /** fp32 on WebGPU and q8 on WASM are what kokoro.js recommends. */
+  dtype?: ReadAloudDtype;
+  onDownloadProgress?: DownloadProgressListener;
+}
+
+export interface VoiceOptions {
+  voice?: string;
+  /** 1 is the voice's natural pace. */
+  speed?: number;
+}
+
+/** A chunk of speech as audio. */
+export interface ReadAloudAudio {
+  audio: Float32Array;
+  sampleRate: number;
+  tokens: number;
+}
+
+/** Plain words, or spoken text with its hints and pauses. */
+export type ReadAloudText = string | readonly SpokenRun[];
+
+export interface ReadAloudReader {
+  device: ReadAloudDevice;
+  dtype: ReadAloudDtype;
+  toPhonemes(
+    text: ReadAloudText,
+    options?: Pick<VoiceOptions, "voice">,
+  ): string;
+  fromPhonemes(
+    phonemes: string,
+    options?: VoiceOptions,
+  ): Promise<ReadAloudAudio>;
+  synthesize(
+    text: ReadAloudText,
+    options?: VoiceOptions,
+  ): Promise<ReadAloudAudio>;
+}
 
 // A voice file is a table of style vectors, one row of STYLE_DIM floats per
 // input length from 0 to 509 tokens; the row matching the line's length is
@@ -55,7 +107,7 @@ const MAX_STYLE_ROW = 509;
 // new URL(name, dataUrl); this maps those names onto the hashed assets Vite
 // emits for the imports above, so the data is self-hosted, cached with the rest
 // of the build, and never fetched from a CDN.
-const ESPEAK_FILES = {
+const ESPEAK_FILES: Partial<Record<string, string>> = {
   "manifest.json": espeakManifestUrl,
   "core.bin.gz": espeakCoreUrl,
   "en_dict.gz": espeakEnglishUrl,
@@ -65,8 +117,8 @@ const ESPEAK_DATA_URL = "https://espeak-ng-data.invalid/";
 // A server may send the .gz files with Content-Encoding: gzip (Vite's dev
 // server does), so the browser has unzipped them already. Spellophone spots
 // that and passes them on as they are, so nothing needs doing about it here.
-function fetchEspeakFile(url) {
-  const name = new URL(url).pathname.split("/").pop();
+function fetchEspeakFile(url: RequestInfo | URL): Promise<Response> {
+  const name = new URL(String(url)).pathname.split("/").pop() ?? "";
   const asset = ESPEAK_FILES[name];
   if (!asset) {
     return Promise.resolve(
@@ -76,7 +128,7 @@ function fetchEspeakFile(url) {
   return fetch(asset);
 }
 
-let espeakPromise = null;
+let espeakPromise: Promise<Espeak> | null = null;
 
 function loadEspeak() {
   if (!espeakPromise) {
@@ -85,7 +137,7 @@ function loadEspeak() {
       wasmUrl: espeakWasmUrl,
       fetch: fetchEspeakFile,
       languages: ["en"],
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       espeakPromise = null;
       throw err;
     });
@@ -93,9 +145,9 @@ function loadEspeak() {
   return espeakPromise;
 }
 
-const voiceCache = new Map();
+const voiceCache = new Map<string, Promise<Float32Array>>();
 
-function loadVoice(voice) {
+function loadVoice(voice: string) {
   let promise = voiceCache.get(voice);
   if (!promise) {
     promise = fetch(
@@ -106,7 +158,7 @@ function loadVoice(voice) {
         return res.arrayBuffer();
       })
       .then((buffer) => new Float32Array(buffer))
-      .catch((err) => {
+      .catch((err: unknown) => {
         voiceCache.delete(voice);
         throw err;
       });
@@ -119,9 +171,22 @@ const { reportProgress, withProgress } = createDownloadProgress();
 
 // One model per device and dtype per page. Only a successful load is memoised,
 // so a failed download can be retried without a reload.
-const models = new Map();
+interface LoadedModel {
+  tokenizer: PreTrainedTokenizer;
+  model: PreTrainedModel;
+}
+const models = new Map<string, Promise<LoadedModel>>();
 
-function loadModel(device, dtype) {
+// What StyleTextToSpeech2Model's forward pass returns, which transformers.js
+// leaves untyped: the audio, as float32 samples.
+interface ModelOutput {
+  waveform: Tensor;
+}
+
+function loadModel(
+  device: ReadAloudDevice,
+  dtype: ReadAloudDtype,
+): Promise<LoadedModel> {
   const key = `${device}/${dtype}`;
   let promise = models.get(key);
   if (!promise) {
@@ -152,7 +217,7 @@ function loadModel(device, dtype) {
         });
         return { tokenizer, model };
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         models.delete(key);
         throw err;
       });
@@ -162,22 +227,16 @@ function loadModel(device, dtype) {
 }
 
 // One generation at a time: the ONNX session is shared module state.
-let turn = Promise.resolve();
+let turn: Promise<unknown> = Promise.resolve();
 
 /**
  * Load the phonemizer and the model, and return a reader for them.
- *
- * @param {object} [options]
- * @param {"webgpu"|"wasm"} [options.device]
- * @param {"fp32"|"fp16"|"q8"|"q4f16"} [options.dtype]  fp32 on WebGPU
- *   and q8 on WASM are what kokoro.js recommends.
- * @param {(loaded: number) => void} [options.onDownloadProgress]
  */
 export async function loadReadAloud({
   device = "webgpu",
   dtype = device === "webgpu" ? WEBGPU_DTYPE : "q8",
   onDownloadProgress,
-} = {}) {
+}: LoadReadAloudOptions = {}): Promise<ReadAloudReader> {
   const [espeak, { tokenizer, model }] = await Promise.all([
     loadEspeak(),
     withProgress(onDownloadProgress, () => loadModel(device, dtype)),
@@ -185,12 +244,12 @@ export async function loadReadAloud({
 
   /**
    * Text to IPA, exposed separately so its cost can be measured on its own.
-   * @param {string | import("../speech.ts").SpokenRun[]} text  Plain words, or
-   *   spoken text with its hints and pauses.
-   * @param {object} [options]
-   * @param {string} [options.voice]
+   * @param text  Plain words, or spoken text with its hints and pauses.
    */
-  function toPhonemes(text, { voice = DEFAULT_VOICE } = {}) {
+  function toPhonemes(
+    text: ReadAloudText,
+    { voice = DEFAULT_VOICE }: Pick<VoiceOptions, "voice"> = {},
+  ) {
     const accent = voice[0] === "b" ? "b" : "a";
     return typeof text === "string"
       ? phonemize(espeak, text, accent)
@@ -199,21 +258,17 @@ export async function loadReadAloud({
 
   /**
    * IPA to audio.
-   * @param {string} phonemes
-   * @param {object} [options]
-   * @param {string} [options.voice]
-   * @param {number} [options.speed]  1 is the voice's natural pace.
-   * @returns {Promise<{audio: Float32Array, sampleRate: number, tokens: number}>}
    */
   async function fromPhonemes(
-    phonemes,
-    { voice = DEFAULT_VOICE, speed = 1 } = {},
-  ) {
+    phonemes: string,
+    { voice = DEFAULT_VOICE, speed = 1 }: VoiceOptions = {},
+  ): Promise<ReadAloudAudio> {
     const styles = await loadVoice(voice);
     const { input_ids } = tokenizer(phonemes, { truncation: true });
-    // The ids include a start and an end token, which don't count.
+    // The ids include a start and an end token, which don't count. A tensor
+    // always has a last dimension.
     const tokens = Math.min(
-      Math.max(input_ids.dims.at(-1) - 2, 0),
+      Math.max(input_ids.dims.at(-1)! - 2, 0),
       MAX_STYLE_ROW,
     );
     const offset = tokens * STYLE_DIM;
@@ -225,20 +280,22 @@ export async function loadReadAloud({
       ]),
       speed: new Tensor("float32", [speed], [1]),
     };
-    const run = turn.catch(() => {}).then(() => model(inputs));
+    const run = turn
+      .catch(() => {})
+      .then((): Promise<ModelOutput> => model(inputs));
     turn = run;
     const { waveform } = await run;
-    return { audio: waveform.data, sampleRate: SAMPLE_RATE, tokens };
+    return {
+      audio: waveform.data as Float32Array,
+      sampleRate: SAMPLE_RATE,
+      tokens,
+    };
   }
 
   /**
    * Text to audio, for one chunk of speech (see chunkSpeech in core/speech.ts).
-   * @param {string | import("../speech.ts").SpokenRun[]} text
-   * @param {object} [options]
-   * @param {string} [options.voice]
-   * @param {number} [options.speed]
    */
-  async function synthesize(text, options = {}) {
+  async function synthesize(text: ReadAloudText, options: VoiceOptions = {}) {
     return fromPhonemes(toPhonemes(text, options), options);
   }
 

@@ -2,11 +2,11 @@
 // the browser runs, so the phonemes checked here are the ones Kokoro is given.
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { createEspeak } from "@spelling-creator/spellophone/node";
+import { createEspeak, type Espeak } from "@spelling-creator/spellophone/node";
 
 import { kokoroIpa, phonemize, phonemizeSpoken } from "./readAloudText.ts";
 
-let espeak;
+let espeak: Espeak;
 beforeAll(async () => {
   espeak = await createEspeak({ languages: ["en"] });
 });

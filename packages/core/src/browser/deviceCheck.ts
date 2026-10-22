@@ -1,8 +1,38 @@
 // The device checks the in-page models share: the summariser's LFM fallback
-// (summarizer.js), the import model (documentModel.js) and the natural
-// read-aloud voice (readAloud.js). Each decides for itself what it needs from
+// (summarizer.ts), the import model (documentModel.ts) and the natural
+// read-aloud voice (readAloud.ts). Each decides for itself what it needs from
 // the adapter; what lives here is asking for it, once a page, and the
 // connection rule they all apply.
+
+// The DOM lib types neither WebGPU nor the Network Information API, so these
+// describe the little of each that the checks read.
+
+/** The part of a WebGPU adapter the checks read. */
+export interface WebGpuAdapter {
+  readonly features: ReadonlySet<string>;
+  readonly limits: {
+    readonly maxBufferSize: number;
+    readonly maxStorageBufferBindingSize: number;
+  };
+}
+
+interface Gpu {
+  requestAdapter(): Promise<WebGpuAdapter | null>;
+}
+
+interface NetworkInformation {
+  readonly saveData?: boolean;
+  readonly type?: string;
+}
+
+interface ModelNavigator {
+  readonly gpu?: Gpu;
+  readonly connection?: NetworkInformation;
+}
+
+function modelNavigator(): ModelNavigator | undefined {
+  return globalThis.navigator as ModelNavigator | undefined;
+}
 
 // Chromium's Network Information API, absent elsewhere; where it's missing we
 // assume the connection is fine rather than hiding a feature from every
@@ -11,23 +41,22 @@
 // should show at least the same manners rather than burning through someone's
 // cellular data. Read live on every check, because tethering can start
 // mid-visit.
-export function meteredConnection() {
-  const connection = globalThis.navigator?.connection;
+export function meteredConnection(): boolean {
+  const connection = modelNavigator()?.connection;
   if (!connection) return false;
   return Boolean(connection.saveData) || connection.type === "cellular";
 }
 
-let adapterPromise = null;
+let adapterPromise: Promise<WebGpuAdapter | null> | null = null;
 
 /**
  * This device's WebGPU adapter, or null without one. requestAdapter() is async
  * and its answer never changes within a page, so it is asked once and shared.
  * Only the adapter's features and limits are read here; the ONNX runtime asks
  * for its own when a model loads.
- * @returns {Promise<GPUAdapter|null>}
  */
-export function webGpuAdapter() {
-  const gpu = globalThis.navigator?.gpu;
+export function webGpuAdapter(): Promise<WebGpuAdapter | null> {
+  const gpu = modelNavigator()?.gpu;
   if (!gpu) return Promise.resolve(null);
   adapterPromise ??= gpu
     .requestAdapter()
@@ -55,12 +84,10 @@ const LARGE_MODEL_MIN_STORAGE_BINDING_BYTES = 1024 ** 3;
 /**
  * Whether an adapter can hold one of the large q4f16 models: f16 shaders, and
  * limits past the bar above.
- * @param {GPUAdapter|null} adapter
- * @returns {boolean}
  */
-export function holdsLargeModel(adapter) {
+export function holdsLargeModel(adapter: WebGpuAdapter | null): boolean {
+  if (!adapter?.features?.has("shader-f16")) return false;
   return (
-    Boolean(adapter?.features?.has("shader-f16")) &&
     adapter.limits.maxBufferSize >= LARGE_MODEL_MIN_BUFFER_BYTES &&
     adapter.limits.maxStorageBufferBindingSize >=
       LARGE_MODEL_MIN_STORAGE_BINDING_BYTES

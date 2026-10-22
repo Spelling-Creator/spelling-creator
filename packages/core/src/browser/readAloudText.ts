@@ -1,4 +1,4 @@
-// Text to the IPA Kokoro speaks, for readAloudEngine.js.
+// Text to the IPA Kokoro speaks, for readAloudEngine.ts.
 //
 // Kokoro speaks phonemes, not text, so a line goes through two steps before the
 // model:
@@ -18,17 +18,22 @@
 // this can be tested with the Node build of Spellophone. It takes an espeak
 // instance rather than making one.
 
+import type { Espeak } from "@spelling-creator/spellophone/browser";
 import { SAY_AS_CHARACTERS } from "../lessonText.ts";
-import { spellOut } from "../speech.ts";
+import { spellOut, type SpokenRun } from "../speech.ts";
+
+/** The part of a Spellophone instance that phonemizing uses. */
+export type Phonemizer = Pick<Espeak, "phonemes">;
+
+/** American or British, from the first letter of the voice id. */
+export type Accent = "a" | "b";
 
 /**
  * Spell out what espeak-ng would otherwise read badly or not at all. A port of
  * kokoro.js's normalize_text, minus the handling for CJK punctuation, which an
  * English voice never sees.
- * @param {string} text
- * @returns {string}
  */
-export function normalizeText(text) {
+export function normalizeText(text: string | null | undefined): string {
   return (
     String(text ?? "")
       // Quotes and brackets. Brackets become guillemets, which Kokoro's
@@ -70,7 +75,7 @@ export function normalizeText(text) {
   );
 }
 
-function splitNumber(match) {
+function splitNumber(match: string) {
   if (match.includes(".")) return match;
   if (match.includes(":")) {
     const [h, m] = match.split(":").map(Number);
@@ -90,7 +95,7 @@ function splitNumber(match) {
   return `${left} ${right}${suffix}`;
 }
 
-function flipMoney(match) {
+function flipMoney(match: string) {
   const bill = match[0] === "$" ? "dollar" : "pound";
   const amount = match.slice(1);
   if (Number.isNaN(Number(amount))) return `${amount} ${bill}s`;
@@ -110,7 +115,7 @@ function flipMoney(match) {
   return `${b} ${bill}${b === "1" ? "" : "s"} and ${d} ${coins}`;
 }
 
-function pointNumber(match) {
+function pointNumber(match: string) {
   const [a, b] = match.split(".");
   return `${a} point ${b.split("").join(" ")}`;
 }
@@ -129,17 +134,19 @@ const STRAY_Z = new RegExp(` z(?=[${PUNCTUATION_MARKS} ]|$)`, "g");
 
 /**
  * Text to the IPA string Kokoro takes.
- * @param {object} espeak  A Spellophone instance.
- * @param {string} text
- * @param {"a"|"b"} accent  American or British, from the voice id.
- * @returns {string}
+ * @param espeak  A Spellophone instance.
+ * @param accent  American or British, from the voice id.
  */
-export function phonemize(espeak, text, accent) {
+export function phonemize(
+  espeak: Phonemizer,
+  text: string,
+  accent: Accent,
+): string {
   const normalized = normalizeText(text);
   const voice = accent === "b" ? "en-gb" : "en-us";
   let ipa = "";
   let last = 0;
-  const speakWords = (words) => {
+  const speakWords = (words: string) => {
     if (!words) return;
     ipa += espeak.phonemes(words, { voice }).split("\n").join(" ");
   };
@@ -172,10 +179,8 @@ export function phonemize(espeak, text, accent) {
  * has. The same corrections kokoro.js makes to espeak-ng's output, plus the
  * ASCII people type for IPA they can't: a plain "g" (the vocabulary only has
  * the IPA "ɡ"), an apostrophe for the stress mark, and a colon for length.
- * @param {string} ipa
- * @returns {string}
  */
-export function kokoroIpa(ipa) {
+export function kokoroIpa(ipa: string): string {
   return ipa
     .replace(/ʲ/g, "j")
     .replace(/r/g, "ɹ")
@@ -193,14 +198,24 @@ export function kokoroIpa(ipa) {
  * a spelled-out word is turned into phonemes in place of its text; and a short
  * pause is a comma, which Kokoro pauses at. (A long pause never reaches here:
  * chunkSpeech has already cut the chunk there.)
- * @param {object} espeak  A Spellophone instance.
- * @param {import("../speech.ts").SpokenRun[]} runs
- * @param {"a"|"b"} accent
- * @returns {string}
+ * @param espeak  A Spellophone instance.
  */
-export function phonemizeSpoken(espeak, runs, accent) {
-  const parts = runs.map((run) => {
-    if (typeof run === "string") return phonemize(espeak, run, accent);
+export function phonemizeSpoken(
+  espeak: Phonemizer,
+  runs: readonly SpokenRun[],
+  accent: Accent,
+): string {
+  const parts = runs.map((spoken) => {
+    if (typeof spoken === "string") return phonemize(espeak, spoken, accent);
+    // Each kind of run holds at most one of these, so one view of them all
+    // reads whichever it has.
+    const run: {
+      text?: string;
+      pause?: unknown;
+      ipa?: string;
+      alias?: string;
+      sayAs?: string;
+    } = spoken;
     if (run.pause) return ",";
     if (run.ipa) return kokoroIpa(run.ipa);
     if (run.alias) return phonemize(espeak, run.alias, accent);

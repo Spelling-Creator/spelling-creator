@@ -2,12 +2,12 @@
 //
 // The first choice is the browser's built-in Translator API (with its companion
 // LanguageDetector API): Chromium-only, local, free, in the same family as the
-// Summarizer API that lesson summaries use (summarizer.js). Where the two
+// Summarizer API that lesson summaries use (summarizer.ts). Where the two
 // features differ is what happens when the API is missing: a summary is a
 // nicety, so the summariser fails closed and hides itself, but not being able
 // to read a comment at all is worth a heavier fallback. So when the browser
 // can't translate a pair, we fall back to running a translation model in the
-// page with transformers.js (fallbackTranslator.js): a small per-pair Opus-MT
+// page with transformers.js (fallbackTranslator.ts): a small per-pair Opus-MT
 // model for the into-English pairs opusMtModels.ts lists, NLLB-200 for every
 // other pair.
 //
@@ -36,6 +36,84 @@ import {
 
 export { sameTranslationLanguage, sourceLanguageChoices };
 
+// The DOM lib doesn't describe the browser's built-in AI APIs yet, so the
+// parts this module and summarizer.ts use are described here.
+
+/** What a built-in AI API says about whether it can run. */
+export type BuiltInAvailability =
+  | "unavailable"
+  | "downloadable"
+  | "downloading"
+  | "available";
+
+/** The monitor a built-in API's create() hands to its `monitor` option. */
+export interface CreateMonitor {
+  addEventListener(
+    type: "downloadprogress",
+    listener: (event: ProgressEvent) => void,
+  ): void;
+}
+
+interface LanguageDetector {
+  detect(input: string): Promise<{ detectedLanguage?: string }[]>;
+  destroy?(): void;
+}
+
+/** The browser's LanguageDetector global. */
+export interface LanguageDetectorApi {
+  availability(): Promise<BuiltInAvailability>;
+  create(options?: { signal?: AbortSignal }): Promise<LanguageDetector>;
+}
+
+interface BuiltInTranslator {
+  translate(input: string, options?: { signal?: AbortSignal }): Promise<string>;
+  destroy?(): void;
+}
+
+interface TranslatorApi {
+  availability(options: {
+    sourceLanguage: string;
+    targetLanguage: string;
+  }): Promise<BuiltInAvailability>;
+  create(options: {
+    sourceLanguage: string;
+    targetLanguage: string;
+    signal?: AbortSignal;
+    monitor?(monitor: CreateMonitor): void;
+  }): Promise<BuiltInTranslator>;
+}
+
+/** Which engine translated: the built-in API or one of the in-page models. */
+export type TranslationEngine = "browser" | "opus-mt" | "nllb";
+
+export interface TranslateOptions {
+  /**
+   * BCP-47, from detectLanguage() or picked by the reader
+   * (sourceLanguageChoices). Missing when detection couldn't tell.
+   */
+  sourceLanguage?: string | null;
+  /** BCP-47, the reader's language. */
+  targetLanguage: string;
+  signal?: AbortSignal;
+  /**
+   * 0-1 fraction, reported while whichever engine runs downloads a model. May
+   * restart from 0 when the browser pair turns out to need the fallback after
+   * all.
+   */
+  onDownloadProgress?: (loaded: number) => void;
+}
+
+export interface TranslationResult {
+  blocks: string[];
+  engine: TranslationEngine;
+}
+
+/** An error whose message was written for the reader (see readerError). */
+export interface ReaderError extends Error {
+  readerFacing: true;
+  code?: string;
+}
+
 /**
  * The `code` on errors that came from the source language: detection couldn't
  * name it, or named one translation doesn't cover. Detection is a guess, so a
@@ -46,19 +124,32 @@ export const SOURCE_LANGUAGE_ERROR = "source-language";
 
 // The APIs are exposed as globals; reach them through `globalThis` so importing
 // this module never throws on browsers that don't ship them.
+const aiGlobals = globalThis as typeof globalThis & {
+  Translator?: TranslatorApi;
+  LanguageDetector?: LanguageDetectorApi;
+};
+
 function translatorApi() {
-  return globalThis.Translator;
+  return aiGlobals.Translator;
 }
 
 function detectorApi() {
-  return globalThis.LanguageDetector;
+  return aiGlobals.LanguageDetector;
+}
+
+// The `name` of whatever was thrown, read as `err?.name` would.
+function errorName(err: unknown): unknown {
+  return typeof err === "object" && err !== null && "name" in err
+    ? err.name
+    : undefined;
 }
 
 // The fallback chunk, fetched once on first use. Only a successful load is
 // memoised: caching a rejected promise would turn one flaky network moment into
 // "translation is broken until you reload" (same reasoning as lib/exports/load.js
 // in the web app).
-let fallbackPromise = null;
+let fallbackPromise: Promise<typeof import("./fallbackTranslator.ts")> | null =
+  null;
 
 function loadFallback() {
   if (!fallbackPromise) {
@@ -83,12 +174,14 @@ function loadFallback() {
  * filter drops, so nothing is ever counted twice. Legacy plain-text comments
  * split on their own line breaks.
  *
- * @param {string} value  The stored body: rich-text HTML or a plain string.
- * @returns {string[]} Non-empty text blocks in reading order.
+ * @param value  The stored body: rich-text HTML or a plain string.
+ * @returns Non-empty text blocks in reading order.
  */
-export function textBlocksForTranslation(value) {
+export function textBlocksForTranslation(
+  value: string | null | undefined,
+): string[] {
   if (!value) return [];
-  const toLines = (text) =>
+  const toLines = (text: string) =>
     text
       .split("\n")
       .map((line) => line.trim())
@@ -119,17 +212,17 @@ export function textBlocksForTranslation(value) {
  * detector is a one-time model download of its own, which is why this takes
  * the same onDownloadProgress as translateBlocks, and why it is still only
  * called from the click that would need the fallback to translate anyway.
- *
- * @param {string} text
- * @param {object} [options]
- * @param {AbortSignal} [options.signal]
- * @param {(loaded: number) => void} [options.onDownloadProgress]
- * @returns {Promise<string|null>}
  */
 export async function detectLanguage(
-  text,
-  { signal, onDownloadProgress } = {},
-) {
+  text: string,
+  {
+    signal,
+    onDownloadProgress,
+  }: {
+    signal?: AbortSignal;
+    onDownloadProgress?: (loaded: number) => void;
+  } = {},
+): Promise<string | null> {
   const api = detectorApi();
   if (api) {
     try {
@@ -145,7 +238,7 @@ export async function detectLanguage(
         }
       }
     } catch (err) {
-      if (err?.name === "AbortError") throw err;
+      if (errorName(err) === "AbortError") throw err;
       // A detector that breaks is the same as no detector: try the fallback.
     }
   }
@@ -155,7 +248,10 @@ export async function detectLanguage(
 
 // Can the built-in Translator handle this pair? Fails closed: a missing API, an
 // unknown pair or a probe that throws all mean "use the fallback".
-async function browserPairAvailability(sourceLanguage, targetLanguage) {
+async function browserPairAvailability(
+  sourceLanguage: string,
+  targetLanguage: string,
+): Promise<BuiltInAvailability> {
   const api = translatorApi();
   if (!api) return "unavailable";
   try {
@@ -168,10 +264,14 @@ async function browserPairAvailability(sourceLanguage, targetLanguage) {
   }
 }
 
-async function translateWithBrowser(blocks, options) {
+async function translateWithBrowser(
+  blocks: string[],
+  options: TranslateOptions & { sourceLanguage: string },
+) {
   const { sourceLanguage, targetLanguage, signal, onDownloadProgress } =
     options;
-  const translator = await translatorApi().create({
+  // Only called once browserPairAvailability found the API.
+  const translator = await translatorApi()!.create({
     sourceLanguage,
     targetLanguage,
     signal,
@@ -182,7 +282,7 @@ async function translateWithBrowser(blocks, options) {
     },
   });
   try {
-    const out = [];
+    const out: string[] = [];
     for (const block of blocks) {
       out.push(await translator.translate(block, { signal }));
     }
@@ -192,37 +292,41 @@ async function translateWithBrowser(blocks, options) {
   }
 }
 
+// An error whose message was written for the reader, so translationErrorMessage
+// can pass it through instead of hiding it behind the generic line. `code`
+// marks the errors a reader can fix by picking the source language themselves.
+function readerError(message: string, code?: string): ReaderError {
+  const error: ReaderError = Object.assign(new Error(message), {
+    readerFacing: true as const,
+  });
+  if (code) error.code = code;
+  return error;
+}
+
+function isReaderError(error: unknown): error is ReaderError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "readerFacing" in error &&
+    Boolean(error.readerFacing)
+  );
+}
+
 /**
  * Translate text blocks into `targetLanguage`, on this device.
  *
  * Tries the browser's Translator API for the pair first; anything it can't do
  * falls through to an in-page model via transformers.js (Opus-MT or NLLB,
- * fallbackTranslator.js's pick). Call from a click
+ * fallbackTranslator.ts's pick). Call from a click
  * handler: the built-in API wants transient activation for a model download,
  * and the fallback's download is far too heavy to start uninvited.
  *
- * @param {string[]} blocks  From textBlocksForTranslation().
- * @param {object} options
- * @param {string} options.sourceLanguage  BCP-47, from detectLanguage() or
- *   picked by the reader (sourceLanguageChoices).
- * @param {string} options.targetLanguage  BCP-47, the reader's language.
- * @param {AbortSignal} [options.signal]
- * @param {(loaded: number) => void} [options.onDownloadProgress]  0–1 fraction,
- *   reported while whichever engine runs downloads a model. May restart from 0 when the
- *   browser pair turns out to need the fallback after all.
- * @returns {Promise<{blocks: string[], engine: "browser"|"opus-mt"|"nllb"}>}
+ * @param blocks  From textBlocksForTranslation().
  */
-// An error whose message was written for the reader, so translationErrorMessage
-// can pass it through instead of hiding it behind the generic line. `code`
-// marks the errors a reader can fix by picking the source language themselves.
-function readerError(message, code) {
-  const error = new Error(message);
-  error.readerFacing = true;
-  if (code) error.code = code;
-  return error;
-}
-
-export async function translateBlocks(blocks, options) {
+export async function translateBlocks(
+  blocks: string[],
+  options: TranslateOptions,
+): Promise<TranslationResult> {
   const { sourceLanguage, targetLanguage } = options;
   if (!sourceLanguage) {
     throw readerError(
@@ -238,11 +342,14 @@ export async function translateBlocks(blocks, options) {
   if (availability !== "unavailable") {
     try {
       return {
-        blocks: await translateWithBrowser(blocks, options),
+        blocks: await translateWithBrowser(blocks, {
+          ...options,
+          sourceLanguage,
+        }),
         engine: "browser",
       };
     } catch (err) {
-      if (err?.name === "AbortError") throw err;
+      if (errorName(err) === "AbortError") throw err;
       // The probe said yes but the run said no (a download that failed, a pair
       // the model turned down): the fallback gets its chance below.
     }
@@ -261,7 +368,7 @@ export async function translateBlocks(blocks, options) {
   }
 
   const fallback = await loadFallback();
-  return fallback.translateBlocks(blocks, options);
+  return fallback.translateBlocks(blocks, { ...options, sourceLanguage });
 }
 
 /**
@@ -269,9 +376,9 @@ export async function translateBlocks(blocks, options) {
  * thrown above carry their own reader-facing text; everything else falls back
  * to a generic line rather than leaking an internal message.
  */
-export function translationErrorMessage(error) {
-  if (error?.readerFacing) return error.message;
-  switch (error?.name) {
+export function translationErrorMessage(error: unknown): string {
+  if (isReaderError(error)) return error.message;
+  switch (errorName(error)) {
     case "NetworkError":
       return "The translation model download didn't finish. Check your connection and try again.";
     case "QuotaExceededError":

@@ -6,19 +6,19 @@ import { MODEL_ID, MODEL_REVISION } from "./readAloudVoices.ts";
 
 // A CacheStorage holding named buckets of URLs, enough of the real API for
 // what readAloudCached calls.
-function fakeCaches(buckets = {}) {
+function fakeCaches(buckets: Record<string, string[]> = {}) {
   const store = new Map(
     Object.entries(buckets).map(([name, urls]) => [name, new Set(urls)]),
   );
   return {
-    async has(name) {
+    async has(name: string) {
       return store.has(name);
     },
-    async open(name) {
+    async open(name: string) {
       if (!store.has(name)) store.set(name, new Set());
-      const urls = store.get(name);
+      const urls = store.get(name)!;
       return {
-        async match(url) {
+        async match(url: string) {
           return urls.has(url) ? new Response("weights") : undefined;
         },
       };
@@ -29,8 +29,11 @@ function fakeCaches(buckets = {}) {
   };
 }
 
+// The fake stands in for the browser's CacheStorage, which Node lacks.
+const runtime = globalThis as { caches?: unknown };
+
 afterEach(() => {
-  delete globalThis.caches;
+  delete runtime.caches;
 });
 
 describe("weightsUrl", () => {
@@ -49,12 +52,12 @@ describe("weightsUrl", () => {
 
 describe("readAloudCached", () => {
   it("finds the weights in the model cache", async () => {
-    globalThis.caches = fakeCaches({ [MODEL_CACHE_NAME]: [weightsUrl()] });
+    runtime.caches = fakeCaches({ [MODEL_CACHE_NAME]: [weightsUrl()] });
     expect(await readAloudCached()).toBe(true);
   });
 
   it("is false when only the small files are there", async () => {
-    globalThis.caches = fakeCaches({
+    runtime.caches = fakeCaches({
       [MODEL_CACHE_NAME]: [
         weightsUrl().replace("onnx/model.onnx", "config.json"),
       ],
@@ -64,7 +67,7 @@ describe("readAloudCached", () => {
 
   it("is false without creating the bucket when nothing was downloaded", async () => {
     const caches = fakeCaches({ "lesson-images": [] });
-    globalThis.caches = caches;
+    runtime.caches = caches;
     expect(await readAloudCached()).toBe(false);
     expect(caches.names()).toEqual(["lesson-images"]);
   });

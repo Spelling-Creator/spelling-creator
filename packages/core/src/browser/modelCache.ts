@@ -1,7 +1,7 @@
 // The on-device models this browser has downloaded, as the settings page sees
 // them: how much room they take, and a way to delete them.
 //
-// Every transformers.js engine (natural voices in readAloudEngine.js, the
+// Every transformers.js engine (natural voices in readAloudEngine.ts, the
 // summary, translation and document-import fallbacks) saves what it downloads
 // in one Cache Storage bucket, along with the ONNX runtime's own .wasm files.
 // Nothing else in the app writes there, so the whole bucket can go at once.
@@ -29,7 +29,7 @@ export const MODEL_CACHE_NAME = "transformers-cache";
 // while the cache holds the decoded bytes. Those are read for their real size
 // instead. They're tens of MB at most; the model weights, the big entries,
 // come from Hugging Face uncompressed, so their header can be trusted.
-async function storedBytes(response) {
+async function storedBytes(response: Response) {
   const encoding = response.headers.get("content-encoding");
   const length = Number(response.headers.get("content-length"));
   if ((!encoding || encoding === "identity") && length > 0) return length;
@@ -41,9 +41,8 @@ async function storedBytes(response) {
  * downloaded, and null when this browser won't let the page use Cache Storage
  * at all (an insecure origin, or some private windows), in which case nothing
  * can have been saved either.
- * @returns {Promise<number | null>}
  */
-export async function modelCacheBytes() {
+export async function modelCacheBytes(): Promise<number | null> {
   try {
     if (typeof caches === "undefined") return null;
     // has() first: open() would create an empty bucket just to measure it.
@@ -62,9 +61,8 @@ export async function modelCacheBytes() {
 /**
  * Delete every downloaded model. Each engine downloads its model again the
  * next time it's used.
- * @returns {Promise<void>}
  */
-export async function clearModelCache() {
+export async function clearModelCache(): Promise<void> {
   if (typeof caches === "undefined") return;
   await caches.delete(MODEL_CACHE_NAME);
 }

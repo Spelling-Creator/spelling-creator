@@ -4,7 +4,7 @@
 // This module is HEAVY: transformers.js pulls in an ONNX runtime on top of the
 // 643 MB model download. transformers.js caches the model in the browser's
 // Cache Storage, so later runs load from disk. Nothing may static-import this
-// file: it is reached only through the dynamic import() in documentModel.js,
+// file: it is reached only through the dynamic import() in documentModel.ts,
 // which keeps it in its own chunk that only a click ever fetches.
 // vite.config.js additionally stubs it out of the Worker's SSR build.
 //
@@ -19,8 +19,17 @@ import {
   AutoModelForCausalLM,
   AutoTokenizer,
   InterruptableStoppingCriteria,
+  type PreTrainedModel,
+  type PreTrainedTokenizer,
+  type Tensor,
 } from "@huggingface/transformers";
-import { parseModelReply, sectionMessages } from "../documentImportModel.ts";
+import {
+  type ParsedSection,
+  type PromptSection,
+  parseModelReply,
+  sectionMessages,
+} from "../documentImportModel.ts";
+import type { ReadSectionsHooks } from "./documentModel.ts";
 import { createDownloadProgress } from "./downloadProgress.ts";
 
 // Pinned to a commit, so a later push to the repo can't change what readers
@@ -37,7 +46,12 @@ const MAX_NEW_TOKENS = 2500;
 
 const { reportProgress, withProgress } = createDownloadProgress();
 
-let modelPromise = null;
+interface LoadedModel {
+  tokenizer: PreTrainedTokenizer;
+  model: PreTrainedModel;
+}
+
+let modelPromise: Promise<LoadedModel> | null = null;
 
 function loadModel() {
   if (!modelPromise) {
@@ -65,13 +79,17 @@ function loadModel() {
 
 // One generation at a time: the ONNX sessions are shared module state, and
 // two interleaved generate() calls would corrupt each other's caches.
-let generationTurn = Promise.resolve();
+let generationTurn: Promise<unknown> = Promise.resolve();
 
 function aborted() {
   return new DOMException("Import aborted.", "AbortError");
 }
 
-async function readOne({ tokenizer, model }, section, signal) {
+async function readOne(
+  { tokenizer, model }: LoadedModel,
+  section: PromptSection,
+  signal: AbortSignal | undefined,
+): Promise<ParsedSection | null> {
   const inputs = tokenizer.apply_chat_template(sectionMessages(section), {
     add_generation_prompt: true,
     return_dict: true,
@@ -93,8 +111,11 @@ async function readOne({ tokenizer, model }, section, signal) {
         }),
       ));
     if (signal?.aborted) throw aborted();
+    // Without return_dict_in_generate, generate() resolves to the sequences
+    // tensor itself.
+    const sequences = output as Tensor;
     const reply = tokenizer.batch_decode(
-      output.slice(null, [inputs.input_ids.dims[1], null]),
+      sequences.slice(null, [inputs.input_ids.dims[1], sequences.dims[1]]),
       { skip_special_tokens: true },
     )[0];
     return parseModelReply(reply);
@@ -103,8 +124,11 @@ async function readOne({ tokenizer, model }, section, signal) {
   }
 }
 
-/** See documentModel.js readSectionsWithModel. */
-export async function readSections(sections, hooks = {}) {
+/** See documentModel.ts readSectionsWithModel. */
+export async function readSections(
+  sections: PromptSection[],
+  hooks: ReadSectionsHooks = {},
+): Promise<(ParsedSection | null)[]> {
   const { signal, onDownloadProgress, onSection } = hooks;
   // Before loadModel(): a run aborted while the chunk was being fetched must
   // never start the download, because once started it runs to the end.
@@ -112,7 +136,7 @@ export async function readSections(sections, hooks = {}) {
   const loaded = await withProgress(onDownloadProgress, loadModel);
   if (signal?.aborted) throw aborted();
 
-  const results = [];
+  const results: (ParsedSection | null)[] = [];
   for (const section of sections) {
     if (signal?.aborted) throw aborted();
     // Before the section, so the caller can say which one is being read from

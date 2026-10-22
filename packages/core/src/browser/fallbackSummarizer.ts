@@ -3,7 +3,7 @@
 // transformers.js, on WebGPU.
 //
 // The weights are about 760 MB at q4f16, a quarter of the Gemma 4 E2B model
-// this replaced. That is still a big download, which is why summarizer.js only
+// this replaced. That is still a big download, which is why summarizer.ts only
 // reports the fallback as available on WebGPU hardware that can actually run
 // it, and why the UI warns about the download before the click.
 // lesson-summaries.md has the other models tried and how each did.
@@ -15,7 +15,7 @@
 // This module is HEAVY: transformers.js pulls in an ONNX runtime on top of the
 // model download above. transformers.js caches the model in the browser's
 // Cache Storage, so later runs load from disk. Nothing may static-import this
-// file: it is reached only through the dynamic import() in summarizer.js,
+// file: it is reached only through the dynamic import() in summarizer.ts,
 // which keeps it in its own chunk that only a click on Summarize ever fetches.
 // vite.config.js additionally stubs it out of the Worker's SSR build, where it
 // could never run anyway.
@@ -26,10 +26,20 @@ import {
   AutoModelForCausalLM,
   AutoTokenizer,
   InterruptableStoppingCriteria,
+  type Message,
+  type PreTrainedModel,
+  type PreTrainedTokenizer,
   TextStreamer,
 } from "@huggingface/transformers";
 import { languageDisplayName } from "../translationLanguages.ts";
 import { createDownloadProgress } from "./downloadProgress.ts";
+import type {
+  SummarizerHooks,
+  SummarizerSession,
+  SummaryLength,
+  SummaryOptions,
+  SummaryType,
+} from "./summarizer.ts";
 
 // Pinned to a commit, so a later push to the repo can't change what readers
 // download without someone here choosing to move the pin.
@@ -72,7 +82,7 @@ const SUMMARY_SHAPES = {
     medium: "one headline of at most 17 words",
     long: "one headline of at most 22 words",
   },
-};
+} satisfies Record<SummaryType, Record<SummaryLength, string>>;
 
 // The languages LFM2.5 is trained to write, from its model card. Asked for
 // anything else it writes badly: told to answer a Danish lesson in the
@@ -80,18 +90,18 @@ const SUMMARY_SHAPES = {
 const LFM_LANGUAGES = ["en", "ar", "zh", "fr", "de", "ja", "ko", "es"];
 
 // Which language the summary is written in, as a sentence for the prompt.
-// summarizer.js passes the lesson's language when the browser could detect it
+// summarizer.ts passes the lesson's language when the browser could detect it
 // (a bare tag like "es"). Without one (Firefox and Safari have no
 // LanguageDetector) the summary is in English. Letting the model judge doesn't
 // work: asked to write in the lesson's language only if it is one of the
 // languages above, it wrote English for Spanish and German lessons too, and
 // asked to name a lesson's language, it said English for all of them.
-function summaryLanguageInstruction(language) {
-  const tag = LFM_LANGUAGES.includes(language) ? language : "en";
+function summaryLanguageInstruction(language: string | null | undefined) {
+  const tag = language && LFM_LANGUAGES.includes(language) ? language : "en";
   return `Write the summary in ${languageDisplayName(tag, "en")}.`;
 }
 
-// The same framing the built-in engine gets as sharedContext (summarizer.js),
+// The same framing the built-in engine gets as sharedContext (summarizer.ts),
 // for the same reason: without it, a lesson full of question prompts and word
 // lists reads like a worksheet to fill in rather than a lesson to describe.
 // Small models need it spelled out more firmly than the built-in engine does.
@@ -99,9 +109,14 @@ function summaryLanguageInstruction(language) {
 // most was..."), so the system message forbids that. They also lose track of
 // an instruction that sits before three thousand tokens of lesson, so the
 // shape is repeated after it, where the model reads it last.
-function summaryMessages({ type, length }, languageInstruction, text) {
+function summaryMessages(
+  { type, length }: SummaryOptions,
+  languageInstruction: string,
+  text: string,
+): Message[] {
   const shape =
-    SUMMARY_SHAPES[type]?.[length] || SUMMARY_SHAPES["key-points"].short;
+    (type && length && SUMMARY_SHAPES[type]?.[length]) ||
+    SUMMARY_SHAPES["key-points"].short;
   return [
     {
       role: "system",
@@ -127,13 +142,18 @@ function summaryMessages({ type, length }, languageInstruction, text) {
 // The model is several files (the weights, tokenizer, configs); the shared
 // helper sums them into the single 0-1 fraction the UI shows, and keeps
 // progress visible to a second summary started during the first download
-// (downloadProgress.js).
+// (downloadProgress.ts).
 const { reportProgress, withProgress } = createDownloadProgress();
+
+interface LoadedModel {
+  tokenizer: PreTrainedTokenizer;
+  model: PreTrainedModel;
+}
 
 // One model per page, shared by every summary. Only a successful load is
 // memoised: a cached rejection would disable summaries for the rest of the
 // session, with no way back but a reload.
-let modelPromise = null;
+let modelPromise: Promise<LoadedModel> | null = null;
 
 function loadModel() {
   if (!modelPromise) {
@@ -144,7 +164,7 @@ function loadModel() {
           progress_callback: reportProgress,
         }),
         // q4f16 keeps the download smallest, and it needs the WebGPU f16
-        // support that summarizer.js probes for before offering this engine.
+        // support that summarizer.ts probes for before offering this engine.
         AutoModelForCausalLM.from_pretrained(MODEL_ID, {
           revision: MODEL_REVISION,
           dtype: "q4f16",
@@ -165,7 +185,7 @@ function loadModel() {
 // interleaved generate() calls would corrupt each other's KV cache. The UI
 // aborts the previous run before starting a new one, so waiting here is only
 // ever for an interrupted run to notice its stop signal.
-let generationTurn = Promise.resolve();
+let generationTurn: Promise<unknown> = Promise.resolve();
 
 // Bridge model.generate()'s callback-based streamer to the async iterable the
 // summary card consumes (the same shape the built-in API's
@@ -176,15 +196,19 @@ async function* generateStream({
   stopper,
   messages,
   signal,
-}) {
+}: LoadedModel & {
+  stopper: InterruptableStoppingCriteria;
+  messages: Message[];
+  signal: AbortSignal | undefined;
+}): AsyncGenerator<string> {
   const inputs = tokenizer.apply_chat_template(messages, {
     add_generation_prompt: true,
   });
 
-  const queue = [];
-  let wake = null;
+  const queue: string[] = [];
+  let wake: (() => void) | null = null;
   let finished = false;
-  let failure = null;
+  let failure: unknown = null;
   const settle = () => {
     wake?.();
     wake = null;
@@ -234,7 +258,7 @@ async function* generateStream({
 
   try {
     for (;;) {
-      while (queue.length) yield queue.shift();
+      while (queue.length) yield queue.shift()!;
       if (signal?.aborted) {
         throw new DOMException("Summary aborted.", "AbortError");
       }
@@ -242,7 +266,7 @@ async function* generateStream({
         if (failure) throw failure;
         return;
       }
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         wake = resolve;
       });
     }
@@ -255,7 +279,7 @@ async function* generateStream({
 
 /**
  * Create a summariser session backed by LFM2.5 running in the page. Same
- * shape as a built-in Summarizer session as far as summarizer.js and the
+ * shape as a built-in Summarizer session as far as summarizer.ts and the
  * summary card use one: summarizeStreaming(), inputQuota, measureInputUsage()
  * and destroy(), plus `engine` so the UI can say which model wrote the
  * summary. The first call downloads the model (about 760 MB, one time, cached
@@ -265,17 +289,18 @@ async function* generateStream({
  * cached for the page's lifetime, like the translation pipelines, because
  * reloading 760 MB of weights per summary would make Regenerate unusable.
  *
- * @param {{type?: string, length?: string, language?: string|null}} options
- *   language is the lesson's detected language as a bare tag, or null when
- *   the browser couldn't tell, which means English (see
+ * @param options  language is the lesson's detected language as a bare tag,
+ *   or null when the browser couldn't tell, which means English (see
  *   summaryLanguageInstruction).
- * @param {object} [hooks]
- * @param {AbortSignal} [hooks.signal]  Checked before the download starts,
- *   once the model is loaded, and between generated tokens; a download
- *   already in flight can't be interrupted.
- * @param {(loaded: number) => void} [hooks.onDownloadProgress]  0-1 fraction.
+ * @param hooks.signal  Checked before the download starts, once the model is
+ *   loaded, and between generated tokens; a download already in flight can't
+ *   be interrupted.
+ * @param hooks.onDownloadProgress  0-1 fraction.
  */
-export async function createFallbackSummarizer(options = {}, hooks = {}) {
+export async function createFallbackSummarizer(
+  options: SummaryOptions & { language?: string | null } = {},
+  hooks: Pick<SummarizerHooks, "signal" | "onDownloadProgress"> = {},
+): Promise<SummarizerSession> {
   const { signal, onDownloadProgress } = hooks;
   // Before loadModel(): a run aborted while the chunk was being fetched must
   // never start the 760 MB download, because once started it runs to the end.
@@ -298,12 +323,16 @@ export async function createFallbackSummarizer(options = {}, hooks = {}) {
     // In tokens, the unit inputQuota is in. Measures the lesson text alone;
     // the prompt around it is a fixed hundred-odd tokens that the quota's
     // headroom absorbs.
-    async measureInputUsage(text) {
+    async measureInputUsage(text: string) {
       const { input_ids } = tokenizer(text || "");
-      return input_ids.dims.at(-1);
+      // A tokenizer's ids are always [batch, tokens].
+      return input_ids.dims.at(-1)!;
     },
 
-    summarizeStreaming(text, { signal: runSignal } = {}) {
+    summarizeStreaming(
+      text: string,
+      { signal: runSignal }: { signal?: AbortSignal } = {},
+    ) {
       stopper.reset();
       return generateStream({
         tokenizer,

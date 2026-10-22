@@ -16,7 +16,7 @@
 // the quantised model downloads above. transformers.js caches the models in
 // the browser's Cache Storage, so later runs load from disk. Nothing may
 // static-import this file: it is reached only through the dynamic import() in
-// translator.js, which keeps it in its own chunk that only a click on
+// translator.ts, which keeps it in its own chunk that only a click on
 // Translate ever fetches. vite.config.js additionally stubs it out of the
 // Worker's SSR build, where it could never run anyway.
 //
@@ -28,10 +28,18 @@
 //     classifies 20 widely used languages, labelled with the same two-letter
 //     codes translationLanguages.ts keys on)
 
-import { pipeline } from "@huggingface/transformers";
+import { type AllTasks, pipeline } from "@huggingface/transformers";
 import { createDownloadProgress } from "./downloadProgress.ts";
 import { opusMtModelFor } from "../opusMtModels.ts";
 import { languageForTag } from "../translationLanguages.ts";
+import type {
+  ReaderError,
+  TranslateOptions,
+  TranslationEngine,
+} from "./translator.ts";
+
+/** The pipelines this module runs. */
+type Task = "text-classification" | "translation";
 
 const NLLB_MODEL_ID = "Xenova/nllb-200-distilled-600M";
 const DETECTION_MODEL_ID =
@@ -45,7 +53,7 @@ const MIN_DETECTION_SCORE = 0.5;
 // Several models download through here (the two translators and the
 // detector), each as several files; the shared helper sums them into the one
 // 0-1 fraction the UI shows, and keeps progress visible to a second comment
-// translated during the first download (downloadProgress.js).
+// translated during the first download (downloadProgress.ts).
 const { reportProgress, withProgress } = createDownloadProgress();
 
 // One pipeline per model per page, shared by every translation; different
@@ -53,10 +61,17 @@ const { reportProgress, withProgress } = createDownloadProgress();
 // the memo is keyed by model id. Only a successful load is memoised: a cached
 // rejection would disable translation for the rest of the session, with no
 // way back but a reload.
-const pipelinePromises = new Map();
+const pipelinePromises = new Map<string, Promise<AllTasks[Task]>>();
 
-function getPipeline(task, modelId) {
-  let promise = pipelinePromises.get(modelId);
+function getPipeline<T extends Task>(
+  task: T,
+  modelId: string,
+): Promise<AllTasks[T]> {
+  // A model id only ever loads under the one task its caller names, so the
+  // memo's entry for it is that task's pipeline.
+  let promise = pipelinePromises.get(modelId) as
+    | Promise<AllTasks[T]>
+    | undefined;
   if (!promise) {
     // q8 quarters the download against fp32 and quality holds up; it's the
     // same quantisation the model cards demo.
@@ -77,17 +92,19 @@ function getPipeline(task, modelId) {
  * it can't tell (low confidence, or a language outside the table). The first
  * call downloads the detection model; a one-time cost, like the translators'.
  *
- * @param {string} text
- * @param {object} [options]
- * @param {AbortSignal} [options.signal]  Checked after the model loads; a
- *   single classification can't be interrupted mid-way.
- * @param {(loaded: number) => void} [options.onDownloadProgress]
- * @returns {Promise<string|null>}
+ * @param options.signal  Checked after the model loads; a single
+ *   classification can't be interrupted mid-way.
  */
 export async function detectLanguage(
-  text,
-  { signal, onDownloadProgress } = {},
-) {
+  text: string,
+  {
+    signal,
+    onDownloadProgress,
+  }: {
+    signal?: AbortSignal;
+    onDownloadProgress?: (loaded: number) => void;
+  } = {},
+): Promise<string | null> {
   return withProgress(onDownloadProgress, async () => {
     const detector = await getPipeline(
       "text-classification",
@@ -105,27 +122,31 @@ export async function detectLanguage(
 /**
  * Translate text blocks with an in-page model: the pair's Opus-MT model when
  * opusMtModels.ts lists one (into English only), NLLB for everything else.
- * Same contract as translator.js's translateBlocks, minus the "browser"
+ * Same contract as translator.ts's translateBlocks, minus the "browser"
  * engine.
  *
- * @param {string[]} blocks
- * @param {object} options
- * @param {string} options.sourceLanguage  BCP-47; must be in the table.
- * @param {string} options.targetLanguage  BCP-47; must be in the table.
- * @param {AbortSignal} [options.signal]  Checked between blocks; a single
- *   block's generation can't be interrupted mid-way.
- * @param {(loaded: number) => void} [options.onDownloadProgress]
- * @returns {Promise<{blocks: string[], engine: "opus-mt"|"nllb"}>}
+ * @param options.sourceLanguage  BCP-47; must be in the table.
+ * @param options.targetLanguage  BCP-47; must be in the table.
+ * @param options.signal  Checked between blocks; a single block's generation
+ *   can't be interrupted mid-way.
  */
-export async function translateBlocks(blocks, options) {
+export async function translateBlocks(
+  blocks: string[],
+  options: TranslateOptions & { sourceLanguage: string },
+): Promise<{
+  blocks: string[];
+  engine: Exclude<TranslationEngine, "browser">;
+}> {
   const { sourceLanguage, targetLanguage, signal, onDownloadProgress } =
     options;
   const source = languageForTag(sourceLanguage);
   const target = languageForTag(targetLanguage);
   if (!source || !target) {
-    // translator.js checks this before loading the chunk; belt and braces.
-    const error = new Error("This language isn't supported for translation.");
-    error.readerFacing = true;
+    // translator.ts checks this before loading the chunk; belt and braces.
+    const error: ReaderError = Object.assign(
+      new Error("This language isn't supported for translation."),
+      { readerFacing: true as const },
+    );
     throw error;
   }
 
