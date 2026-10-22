@@ -367,7 +367,8 @@ pnpm run fmt && pnpm run lint
     reaching for a browser-only global there fails the lint rather than breaking
     at runtime inside the Worker. Its tests may also use Node globals, and the
     modules that legitimately need the DOM are grouped under `src/browser/`,
-    which is the only path opted back into `browser`.
+    which is the only path opted back into `browser`. Core's type check makes
+    the same split (see [Type checking](#type-checking)).
 
 `eslint/no-undef` is enabled explicitly: it's part of ESLint's `js/recommended`
 but not of oxlint's `correctness` category, and it's what makes those `globals`
@@ -386,13 +387,45 @@ resetting local state when a dialog opens or a route param changes is a
 deliberate pattern in this app. `react/prop-types` isn't implemented by oxlint, so
 there is nothing to disable there.
 
+## Type checking
+
+`packages/core` and `apps/cli` are TypeScript, and neither has a compile step in
+development. (Core is being ported a few modules at a time, so for now its `.js`
+and `.ts` files sit side by side, and `allowJs` lets one import the other.) Vite, wrangler and vitest compile their `.ts` files themselves, and
+Node runs them directly by stripping the types. None of those read the types, so
+the check is a separate command:
+
+```bash
+pnpm typecheck      # turbo run typecheck: core and the CLI
+```
+
+Both use TypeScript 7 with `erasableSyntaxOnly`, so the source holds to what Node
+can strip (no enums, namespaces or parameter properties), and relative imports
+name the `.ts` file.
+
+Core runs in three places, so `packages/core/tsconfig.json` points at three
+projects, which `tsc -b` checks together:
+
+- **`tsconfig.shared.json`**: everything outside `src/browser/`, with the
+  `webworker` lib and no DOM, because the Worker and the MCP server import it
+  too. A module there that uses `document` fails the check the way it fails the
+  lint.
+- **`tsconfig.browser.json`**: the `src/browser/` tier, with the DOM. Only Vite
+  loads it, so its imports resolve the way Vite's do.
+- **`tsconfig.test.json`**: the tests, with Node's types as well, since vitest
+  runs them on Node.
+
+An editor opens each file in the first of those projects that lists it, so a
+shared module is held to the no-DOM rule there too.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every pull request and on `main` after a
 merge (and by hand through `workflow_dispatch`): install (with
 `--frozen-lockfile`), `pnpm lint`, then one
-`turbo run test build build:ssr bundle`. That covers every test suite, the web,
-docs and CLI builds, and the Worker's `bundle`, which bundles it with
+`turbo run typecheck test build build:ssr bundle`. That covers the type checks,
+every test suite, the web, docs and CLI builds, and the Worker's `bundle`, which
+bundles it with
 `wrangler deploy --dry-run`. The bundle is the only step that runs wrangler's
 own module resolution, so it catches an import that bundles under Vite but not
 for workerd. CI checks out Git LFS files as pointers, since no test reads them.

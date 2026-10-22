@@ -1,0 +1,18 @@
+{
+  // Core runs in three places, so it is checked as three projects, the same
+  // split .oxlintrc.json makes. An editor opens each file in the first project
+  // below that lists it.
+  //
+  // - tsconfig.shared.json: everything outside browser/, with no DOM, because
+  //   the Worker and the MCP server import it as well as the browser.
+  // - tsconfig.browser.json: the browser/ tier, which has the DOM.
+  // - tsconfig.test.json: the tests, which run under vitest on Node.
+  //
+  // `pnpm typecheck` runs `tsc -b`, which checks all three.
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.shared.json" },
+    { "path": "./tsconfig.browser.json" },
+    { "path": "./tsconfig.test.json" }
+  ]
+}

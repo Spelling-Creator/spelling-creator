@@ -73,6 +73,9 @@ jobs:
       # - every workspace's `test`: core, web and stub-api (vitest), api (vitest
       #   under @cloudflare/vitest-pool-workers), mcp and cli (node --test).
       #   apps/docs has no test script and is skipped.
+      # - `typecheck` for the TypeScript workspaces, core and the CLI. Nothing
+      #   else checks their types: every runner that loads them strips the
+      #   types without reading them.
       # - the web app (client and SSR halves), the docs and the CLI `build`. No
       #   VITE_* secrets here: they are injected only for the real deploy, and a
       #   pull request from a fork could not read them anyway. The build still
@@ -86,7 +89,7 @@ jobs:
       #
       # --summarize records the run's task hashes for the prune step below.
       - name: Test and build
-        run: pnpm exec turbo run test build build:ssr bundle --summarize
+        run: pnpm exec turbo run typecheck test build build:ssr bundle --summarize
 
       # Turborepo never evicts from its cache, so this drops every entry the run
       # above did not use before the cache is saved. Without it each commit's
