@@ -53,29 +53,29 @@ staged `node_modules` as real files, with a trimmed `package.json` exporting
 just those subpaths, and removes the dependency from the staged manifest before
 npm sees it.
 
-That only works if those modules are dependency-free, since anything they
-import from npm would be missing from the bundle. `pack` doesn't assume that
-silently: it walks the imports out from each core subpath the server uses and
-**fails the build** if any of them reaches a real package, naming the package
-and the file, for example:
+The copies are compiled on the way in. Core is TypeScript, and Node only strips
+types from files outside `node_modules` (and the bundle may run on a Node too
+old to strip them at all), so each module goes through esbuild, one file at a
+time with nothing bundled, and comes out as plain JavaScript with its imports
+pointed at the `.js` files. The trimmed `package.json` points at those too.
+
+Core's own dependencies are not installed: most of them (`docx`, `mammoth`,
+Supabase, transformers.js) are for its browser modules and have no place in
+the bundle. The few packages the copied modules do import (`yjs` and
+`isomorphic-git`, for the live document and version history) have to be in
+`apps/mcp/package.json`'s dependencies instead, where npm installs them. `pack`
+walks the imports out from each core subpath the server uses, core's imports of
+itself by name included, and **fails the build** if a copied module reaches a
+package that isn't there, naming the package and the file:
 
 ```
-Vendoring @spelling-creator/core assumes the modules this server imports are
-dependency-free, but they now reach real packages:
-  yjs (from src/ydoc.js)
+The @spelling-creator/core modules this server imports reach packages it does not depend on:
+  isomorphic-git (from src/git/pack.js)
 ```
 
-If that fires, either keep the module dependency-free or add the package to
-`apps/mcp/package.json`'s dependencies so npm vendors it into the bundle.
-
-::: warning Currently failing
-The server now imports far more of core than when this was written
-(`ydoc`, the `git/*` modules, `lessonChecks`, `factCheck` and others), and those
-reach `yjs` and `isomorphic-git`. The guard reports any bare import it finds,
-even one that is already in `apps/mcp/package.json` (as `yjs` is), and its regex
-also picks up a few strings from comments, so `run pack` stops at this check
-until the script or the imports change.
-:::
+If that fires, add the package to `apps/mcp/package.json` at the version core
+asks for. The walk reads the compiled code, so a type-only import of a package
+and an import written inside a comment don't count.
 
 ## Publishing a release
 
