@@ -15,7 +15,7 @@
 // Its years are historical: -2420 is 2420 BC, as in a fact check's claims. An
 // eruption still going on carries the date GVP last updated it as its end.
 
-import { fetchJson } from "./wikidata.js";
+import { fetchJson } from "./wikidata.ts";
 
 export const GVP_WFS =
   "https://webservices.volcano.si.edu/geoserver/GVP-VOTW/wfs";

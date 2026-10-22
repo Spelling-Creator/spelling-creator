@@ -14,7 +14,7 @@
 // runs in Node and inside the Worker. The browser-only refinement (DOMParser for
 // HTML stripping) is injected by the web app via `strip`.
 
-import { topicImages } from "./wikidataMedia.js";
+import { topicImages } from "./wikidataMedia.ts";
 
 export const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 

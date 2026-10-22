@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { wikidataPickPages } from "./wikimedia.js";
+import { wikidataPickPages } from "./wikimedia.ts";
 
 const ITEM = "http://www.wikidata.org/entity/";
 const FILE = "http://commons.wikimedia.org/wiki/Special:FilePath/";

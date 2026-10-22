@@ -91,7 +91,7 @@ import {
   recordedSince,
   volcanoRecords,
   volcanoUrl,
-} from "./smithsonian.js";
+} from "./smithsonian.ts";
 import {
   eachLimited,
   exactMatches,
@@ -101,8 +101,8 @@ import {
   sparql,
   squashText,
   wikidataItemUrl,
-} from "./wikidata.js";
-import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.js";
+} from "./wikidata.ts";
+import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.ts";
 
 // The Worker places a quote in its passage with squashText, and the editor
 // asks whether it is still there with it. Both take it from here, so the two

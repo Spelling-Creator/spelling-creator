@@ -18,7 +18,7 @@ import {
   lastSegment,
   rankOf,
   sparql,
-} from "./wikidata.js";
+} from "./wikidata.ts";
 
 /**
  * The picture properties worth offering in a lesson, in the order they are

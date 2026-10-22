@@ -6,7 +6,7 @@ import {
   latestEruption,
   recordedSince,
   volcanoRecords,
-} from "./smithsonian.js";
+} from "./smithsonian.ts";
 
 describe("a volcano's record", () => {
   it("asks each layer once for every volcano, and sorts eruptions oldest first", async () => {

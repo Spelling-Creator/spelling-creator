@@ -182,4 +182,4 @@ export async function updateComment(lessonId, commentId, body, accessToken) {
  * @param {string} accessToken  Supabase session JWT.
  * @returns {Promise<void>}
  */
-export { deleteCommentAsMod as deleteComment } from "./moderation.js";
+export { deleteCommentAsMod as deleteComment } from "./moderation.ts";

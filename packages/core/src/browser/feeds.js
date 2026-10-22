@@ -12,8 +12,8 @@
 // lessons.js and users.js keep the URL builders (they are runtime-neutral, and
 // the Worker and MCP server may want them); only the reading is here.
 
-import { lessonsFeedUrl } from "../lessons.js";
-import { userFeedUrl } from "../users.js";
+import { lessonsFeedUrl } from "../lessons.ts";
+import { userFeedUrl } from "../users.ts";
 
 // Pull the trimmed text of the first descendant with the given local name
 // (namespace-agnostic, so the Atom default xmlns doesn't get in the way).

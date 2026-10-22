@@ -25,7 +25,7 @@ import {
   isUsableImage,
   rankPages,
   wikidataPickPages,
-} from "../wikimedia.js";
+} from "../wikimedia.ts";
 
 // Strip HTML to plain text using DOMParser, which (unlike assigning innerHTML)
 // never executes scripts or fetches sub-resources. Commons' extmetadata fields

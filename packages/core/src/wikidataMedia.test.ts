@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { commonsFileTitle, exactMatches } from "./wikidata.js";
+import { commonsFileTitle, exactMatches } from "./wikidata.ts";
 import {
   IMAGE_ROLES,
   mediaFromBindings,
   topicImages,
-} from "./wikidataMedia.js";
+} from "./wikidataMedia.ts";
 
 const FILE = "http://commons.wikimedia.org/wiki/Special:FilePath/";
 const RANK = "http://wikiba.se/ontology#";

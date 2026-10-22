@@ -51,7 +51,7 @@ import {
   createPullRequest,
   fetchPullPack,
   uploadPullPack,
-} from "../../pulls.js";
+} from "../../pulls.ts";
 import {
   BRANCH,
   ORIGIN_REF,

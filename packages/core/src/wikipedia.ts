@@ -18,7 +18,7 @@
 // Same terms as the Wikidata requests: anonymous and cross-origin, with a
 // descriptive User-Agent from a server (see ./wikidata.js).
 
-import { fetchJson } from "./wikidata.js";
+import { fetchJson } from "./wikidata.ts";
 
 /** The action API of one language's Wikipedia. */
 export const wikipediaApi = (language = "en") =>

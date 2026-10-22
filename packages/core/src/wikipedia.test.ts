@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.js";
+import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.ts";
 
 describe("an article's text", () => {
   it('asks for plain text, following redirects, and gives "" for no article', async () => {
