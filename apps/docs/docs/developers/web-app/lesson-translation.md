@@ -124,4 +124,4 @@ The engines and their browser requirements are comment translation's; see
 [that page's testing notes](./comment-translation.md#testing-it) for forcing
 the fallback path. The lesson-specific part, what gets segmented and what gets
 skipped, is pure string work tested in Node
-(`packages/core/src/lessonTranslation.test.js`).
+(`packages/core/src/lessonTranslation.test.ts`).

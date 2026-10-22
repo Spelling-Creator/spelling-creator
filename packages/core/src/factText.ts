@@ -2,16 +2,16 @@
 // check.
 //
 // When the structured sources can't settle a fact (none has a value, or one
-// has a value that can only confirm it), ./factCheck.js reads the subject's
+// has a value that can only confirm it), ./factCheck.ts reads the subject's
 // Wikipedia article (./wikipedia.ts articleText) and looks for a sentence that
 // says the same thing. This file is the reading: splitting the text into
 // paragraphs, sentences and clauses, and finding in each the quantities ("4-5
 // kg", "8,848.86 m", "about 13 years"), the dates ("24 October 79", "2560 BC")
 // and the names it mentions. Deciding whether one of them agrees with a claim
-// is left to ./factCheck.js, with the same rules as for a Wikidata value.
+// is left to ./factCheck.ts, with the same rules as for a Wikidata value.
 //
 // English only: the unit words and month names are English, as are the words
-// ./factCheck.js looks for (its TEXT_WORDS).
+// ./factCheck.ts looks for (its TEXT_WORDS).
 //
 // Units come back as the keys of factCheck's FACT_UNITS ("km2", "celsius"),
 // and a plain number with no unit as "".

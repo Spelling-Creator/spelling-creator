@@ -345,7 +345,7 @@ const sectionsSchema = z
       "words, and 15 questions on that section's own content (see blocks below).",
   );
 
-// One patch operation (for patch_lesson). Kept lenient — applyPatch (core's lessonPatch.js)
+// One patch operation (for patch_lesson). Kept lenient — applyPatch (core's lessonPatch.ts)
 // does the strict per-op validation and returns errors naming the operation.
 const operationSchema = z
   .object({

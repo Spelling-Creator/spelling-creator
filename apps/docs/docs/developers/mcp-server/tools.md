@@ -422,7 +422,7 @@ The tool's description tells the assistant to read the matched item's descriptio
 acting on a disagreement, and to tell the user rather than "correct" a fact it isn't sure
 about, since the sources can be out of date too. The rules for what counts as agreeing are on
 [Fact checking](../web-app/fact-checking.md), which this shares with the editor (the
-property list and matching live in `packages/core/src/factCheck.js`).
+property list and matching live in `packages/core/src/factCheck.ts`).
 
 ## Lesson shape the assistant fills
 

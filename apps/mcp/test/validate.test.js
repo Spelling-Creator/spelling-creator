@@ -172,7 +172,7 @@ const EXTENDED_OPENS = [
   "Would you want to see this in person? Explain your thinking.",
 ];
 
-// The default section order (see QUESTION_ORDER in lessonChecks.js): 3 green,
+// The default section order (see QUESTION_ORDER in lessonChecks.ts): 3 green,
 // 1 blue, 2 purple, 2 orange, then the 7 pink above. The tests below address
 // questions by index in this order.
 function sectionInput(spec) {

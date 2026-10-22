@@ -11,11 +11,11 @@
 // usual shape of a lesson, and someone who wrote a short one on purpose
 // shouldn't have to read past a list of reasons it's short.
 //
-// A finding a script can fix on its own (core's lessonFixes.js: stray bold, a
+// A finding a script can fix on its own (core's lessonFixes.ts: stray bold, a
 // VAKT activity mid-section) gets a button that does it there and then, without
 // closing the sheet. A line at the top of the sheet then says it is fixed and
 // offers Undo, until the lesson changes again. A finding that needs judgement
-// (core's lessonAiFixes.js: an answer that isn't in its passage) gets "Fix with
+// (core's lessonAiFixes.ts: an answer that isn't in its passage) gets "Fix with
 // AI" instead, which opens AiFixDialog over the sheet to show the fix before it
 // is made.
 //

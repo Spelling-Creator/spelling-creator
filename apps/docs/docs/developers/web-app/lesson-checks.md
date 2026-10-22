@@ -18,7 +18,7 @@ follow the
 and the split of the "semi-open" orange type into a tight and a loose end, with
 their order, is the app's own (see the comments in
 `packages/core/src/questions.ts` and at `ORANGE_TIGHT` in
-`lessonChecks.js`); the short answer rules come from letterboard spelling,
+`lessonChecks.ts`); the short answer rules come from letterboard spelling,
 where every letter is pointed to; the lesson shape (`SECTION_COUNT`,
 `SPELLING_WORDS_PER_SECTION`, `QUESTION_ORDER`) is the app's own default. Other
 Spelling practices do things differently, which is part of why most shape
@@ -89,7 +89,7 @@ Most findings need judgment instead: whether to change an answer or the
 passage it should be in, say. Those get **Fix with AI**, which shows the fix
 before making it. See [AI lesson fixes](./ai-lesson-fixes.md).
 
-The quick fixes live in `packages/core/src/lessonFixes.js`. Each takes the
+The quick fixes live in `packages/core/src/lessonFixes.ts`. Each takes the
 document and the finding and returns the fixed document, or null when there is
 nothing left to do. Only the section and blocks a fix touches are new objects,
 and text blocks are written with `withTextBlockDocument`, the way the editor
@@ -100,9 +100,9 @@ what the panel asks.
 
 | File                                                   | Does                                                                                                        |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/lessonChecks.js`                    | The checks. `validateLesson(doc)` returns `{ errors, warnings }`.                                           |
+| `packages/core/src/lessonChecks.ts`                    | The checks. `validateLesson(doc)` returns `{ errors, warnings }`.                                           |
 | `apps/web/src/lib/lessonChecks.js`                     | `useLessonChecks(doc)`, the per-section tallies, and `describeFinding`, which words a finding for a person. |
-| `packages/core/src/lessonFixes.js`                     | The quick fixes. `applyQuickFix(doc, finding)` returns the fixed document or null.                          |
+| `packages/core/src/lessonFixes.ts`                     | The quick fixes. `applyQuickFix(doc, finding)` returns the fixed document or null.                          |
 | `apps/web/src/locales/en/checks.json`                  | The editor's wording for every code, under `codes`, and the fix buttons, under `quickFix`.                  |
 | `apps/web/src/components/editor/LessonChecksSheet.jsx` | The panel.                                                                                                  |
 | `apps/web/src/components/editor/checkGroups.js`        | Grouping findings by section and naming the groups, shared with the panel's Facts section.                  |

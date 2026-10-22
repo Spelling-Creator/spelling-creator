@@ -2,7 +2,7 @@
 // what they had typed, kept on the device so closing the lesson — or the tab, or
 // the laptop lid — doesn't throw the work away.
 //
-// This is not the same thing as a saved run-through (lessonResponses.js), and
+// This is not the same thing as a saved run-through (lessonResponses.ts), and
 // the difference is worth being clear about:
 //
 //   a saved run-through   is finished, lives in the learner's account, needs an

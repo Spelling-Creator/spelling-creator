@@ -13,7 +13,7 @@ and previews it before anything changes.
 
 ## Which findings
 
-`AI_FIX_CODES` in `packages/core/src/lessonAiFixes.js` lists them. They are the
+`AI_FIX_CODES` in `packages/core/src/lessonAiFixes.ts` lists them. They are the
 findings about one section whose fix is a change to that section's text,
 questions or spelling words:
 
@@ -126,7 +126,7 @@ cached: asking again should give a different fix. A request is refused with a
 
 | File                                                   | Does                                                                                              |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `packages/core/src/lessonAiFixes.js`                   | `AI_FIX_CODES`, `fixContext`, `aiEditsToOperations`, `applyFixOperations`, `checkFix`. Shared.    |
+| `packages/core/src/lessonAiFixes.ts`                   | `AI_FIX_CODES`, `fixContext`, `aiEditsToOperations`, `applyFixOperations`, `checkFix`. Shared.    |
 | `apps/api/src/lib/lessonFix.js`                        | The prompt, `FIX_SCHEMA`, finding the finding again, and the two tries.                           |
 | `apps/api/src/routes/ai.js`                            | The `fix` mode: input checks, the AI check, rate limit.                                           |
 | `packages/core/src/aiSuggest.ts`                       | `suggestFix()`, the browser's call to the Worker.                                                 |

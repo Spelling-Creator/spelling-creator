@@ -4,7 +4,7 @@
 // GVP keeps the standard record of the world's volcanoes active in the last
 // 12,000 years or so, with every dated eruption: Vesuvius in 79 (from 24
 // October), Mount St. Helens from 1 October 2004 to 27 January 2008. Wikidata
-// names each volcano's GVP number (P1886), so ./factCheck.js finds the volcano
+// names each volcano's GVP number (P1886), so ./factCheck.ts finds the volcano
 // the usual way and asks GVP by number, with nothing left to match by name.
 //
 // GVP answers through a GeoServer web feature service: anonymous, no key, JSON

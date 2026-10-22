@@ -17,5 +17,5 @@ export async function sha256Hex(bytes) {
 }
 
 // The short extension the editor stores on the block. It lives in core because
-// the doc builder (core's lessonBuild.js) needs it too.
+// the doc builder (core's lessonBuild.ts) needs it too.
 export { extFromMime } from "@spelling-creator/core/image";

@@ -28,7 +28,7 @@ button, and a direct link to `/practice` redirects to the lesson.
 
 There is no "interactive lesson" document type and nothing to switch on when
 authoring. The walkthrough is **derived from the lesson document**
-(`buildInteractiveSteps` in `packages/core/src/interactive.js`), so every lesson
+(`buildInteractiveSteps` in `packages/core/src/interactive.ts`), so every lesson
 ever published works, including ones made before this feature existed and ones
 written by the [MCP server](../mcp-server/overview.md). Nothing is added to a
 lesson to make it playable, and a lesson stays exactly as printable as it was.
@@ -193,7 +193,7 @@ when there are none.
 - Skipped questions are stored as blank answers rather than dropped, so the set
   still says which questions were asked.
 - Limits (shared between browser and Worker in
-  `packages/core/src/interactive.js`): `MAX_RESPONSE_LENGTH` 5,000 characters per
+  `packages/core/src/interactive.ts`): `MAX_RESPONSE_LENGTH` 5,000 characters per
   answer and `MAX_RESPONSES` 500 answers per submission.
 - You may keep **20 saved run-throughs of any one lesson**
   (`MAX_STORED_RESPONSES`). Past that a `POST` is rejected with `409` and a
@@ -434,9 +434,9 @@ What the numbers decided:
 
 | File                                               | What it does                                                                                   |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `packages/core/src/interactive.js`                 | Turns a document into steps; speech text; the answers the reveal shows; limits and validation. |
+| `packages/core/src/interactive.ts`                 | Turns a document into steps; speech text; the answers the reveal shows; limits and validation. |
 | `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning.                        |
-| `packages/core/src/lessonResponses.js`             | Client for the three endpoints above.                                                          |
+| `packages/core/src/lessonResponses.ts`             | Client for the three endpoints above.                                                          |
 | `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                                        |
 | `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough, the reveal, speech controls, resume, summary and the letterboard. |
 | `apps/web/src/lib/practiceLink.js`                 | The letterboard session's host side (see [Letterboard sync](./letterboard-sync.md)).           |

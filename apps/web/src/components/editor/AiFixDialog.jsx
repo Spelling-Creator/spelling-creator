@@ -3,7 +3,7 @@
 // The Worker does the asking (apps/api/src/lib/lessonFix.js) and only answers
 // with a fix that passes the checks. The fix comes back as replace_block
 // operations, and is checked again here against the lesson as it is now
-// (checkFix in core's lessonAiFixes.js), since the author may have edited it
+// (checkFix in core's lessonAiFixes.ts), since the author may have edited it
 // while the fix was being made. Nothing changes until they press Apply.
 //
 // The preview shows each changed block as a word diff: a one-word change in a

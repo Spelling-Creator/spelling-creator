@@ -348,7 +348,7 @@ export default function LessonLayout() {
 
   // Whether interactive mode has anything to walk through. Every lesson the hub
   // holds is compatible with it — the walkthrough is derived from the document
-  // itself (see core/interactive.js) — so this is only false for the degenerate
+  // itself (see core/interactive.ts) — so this is only false for the degenerate
   // case of a lesson whose sections are all empty.
   const playable = isInteractivePlayable(lesson?.doc);
 

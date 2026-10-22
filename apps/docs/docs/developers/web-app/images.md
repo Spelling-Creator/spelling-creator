@@ -197,7 +197,7 @@ the stored block to something else, and split it first with
 `withSeparateCredit`:
 
 - **The MCP server's view of a lesson** (`presentDoc` in
-  `packages/core/src/lessonBuild.js`, behind `get_lesson` and the live
+  `packages/core/src/lessonBuild.ts`, behind `get_lesson` and the live
   session's reader). An assistant is told to keep the attribution out of the
   caption and pass `credit` through, so shown a combined caption it would drop
   the attribution.

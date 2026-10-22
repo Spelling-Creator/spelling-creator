@@ -216,7 +216,7 @@ export async function suggestLessonIdeas(
  * @param doc         The lesson as it is now.
  * @param findingKey  The finding's `key`.
  * @param token       Turnstile token from the widget's callback.
- * @returns `operations` are replace_block operations for ./lessonAiFixes.js
+ * @returns `operations` are replace_block operations for ./lessonAiFixes.ts
  *   applyFixOperations, which checks them.
  */
 export async function suggestFix(
@@ -284,11 +284,11 @@ export async function suggestFix(
 /**
  * Ask the Worker to check a lesson's numbers and dates against Wikidata.
  * @param passages  The lesson's text blocks, in order (see lessonPassages in
- *   ./factCheck.js).
+ *   ./factCheck.ts).
  * @param token  Turnstile token from the widget's callback.
  * @param context.documentName  Title of the lesson.
  * @returns One result per fact found, each carrying the `blockId` of the
- *   passage it is in (see ./factCheck.js for the rest).
+ *   passage it is in (see ./factCheck.ts for the rest).
  */
 export async function checkFacts(
   passages: { blockId: string; text: string }[],

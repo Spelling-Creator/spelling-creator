@@ -49,7 +49,7 @@ instance with no API URL, or one using Turnstile with no site key
 3. Each claim's quote must be in a passage (`placeClaims`). A quote found in a
    different passage than the model said is moved there; one found nowhere is
    dropped.
-4. `checkClaims` in `core/factCheck.js` searches Wikipedia to turn names into
+4. `checkClaims` in `core/factCheck.ts` searches Wikipedia to turn names into
    candidate Wikidata items.
 5. One SPARQL query reads every candidate's values.
 6. It picks the item, converts units and compares.
@@ -148,7 +148,7 @@ Every property can also be confirmed from Wikipedia (see
 
 Units cover metric and imperial length, area, volume, mass and speed, temperature in all
 three scales, durations from seconds to thousands of years, astronomical units,
-light-years and Earth masses. The table is `FACT_UNITS` in `core/factCheck.js`, each entry
+light-years and Earth masses. The table is `FACT_UNITS` in `core/factCheck.ts`, each entry
 keyed to its Wikidata item so a value can be read in whatever unit Wikidata stores it in.
 
 ### What counts as agreeing
@@ -420,7 +420,7 @@ is Turnstile, a Turnstile key.
 
 | File                                                  | Does                                                                                                                             |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparing, and asking each source. `checkClaims(claims, opts)`. |
+| `packages/core/src/factCheck.ts`                      | The checker: properties, units, item matching, the SPARQL query, comparing, and asking each source. `checkClaims(claims, opts)`. |
 | `packages/core/src/wikidata.ts`                       | The Wikidata requests: name search and SPARQL, shared with the [image search](./images.md).                                      |
 | `packages/core/src/wikipedia.ts`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article. `articleText`: an article as plain text.             |
 | `packages/core/src/smithsonian.ts`                    | The Global Volcanism Program: a volcano's record, and comparing eruption dates.                                                  |
@@ -435,7 +435,7 @@ is Turnstile, a Turnstile key.
 
 `apps/web/src/lib/factCheck.test.js` fails when core gains a property or unit that
 `checks.json` can't word, the same way the lesson checks' test guards their codes, and
-`packages/core/src/factCheck.test.js` fails when a property has no words for reading
+`packages/core/src/factCheck.test.ts` fails when a property has no words for reading
 Wikipedia.
 
 ## What it doesn't do

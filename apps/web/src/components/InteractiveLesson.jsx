@@ -20,7 +20,7 @@
 // the content.
 //
 // What the learner types is theirs. The finished run-through is sent once, at
-// the end, to their own account (see core/lessonResponses.js and the privacy
+// the end, to their own account (see core/lessonResponses.ts and the privacy
 // note in the Worker's routes/lessonResponses.js). The lesson's author never
 // sees it.
 //

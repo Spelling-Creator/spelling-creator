@@ -41,7 +41,7 @@ import { QUESTION_TYPES } from "@spelling-creator/core/questions";
 const RESPONSE_COLUMNS = "id,lesson_id,answers,completed_at";
 
 // Per-field caps applied when normalising a submission. The answer itself is
-// capped at MAX_RESPONSE_LENGTH (shared with the browser via core/interactive.js);
+// capped at MAX_RESPONSE_LENGTH (shared with the browser via core/interactive.ts);
 // the rest are snapshots of the lesson, which the client copies from the document
 // rather than typing, so these only need to be generous enough for any real lesson.
 const MAX_ID_LENGTH = 100;

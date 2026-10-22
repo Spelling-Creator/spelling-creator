@@ -2,7 +2,7 @@
 //
 // Two things use it, each with its own idea of what to ask:
 //
-//   ./factCheck.js       a lesson's numbers and dates, compared with Wikidata's.
+//   ./factCheck.ts       a lesson's numbers and dates, compared with Wikidata's.
 //   ./wikidataMedia.ts   the pictures an item has, which are files on Wikimedia
 //                        Commons.
 //
