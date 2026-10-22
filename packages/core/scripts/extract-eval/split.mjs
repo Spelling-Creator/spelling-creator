@@ -1,4 +1,4 @@
-// The section splitter lives in core (src/documentImport.js) because the
+// The section splitter lives in core (src/documentImport.ts) because the
 // import feature uses it. This keeps the experiment's entry point, with each
 // section's text laid out exactly as the import hands it to the model
 // (sectionPromptText), and passes on whether the rules found a lesson at all

@@ -576,7 +576,7 @@ that they have actually checked. See
 `"spelling-creator"`, is the app's own lesson file (`buildLessonFile`), which the editor
 imports without loss. `"oslf"` returns the lesson as an
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
-file instead (`toOslf` in `packages/core/src/oslf.js`, see
+file instead (`toOslf` in `packages/core/src/oslf.ts`, see
 [the export pipeline](../web-app/export-pipeline.md#the-open-spelling-lesson-format)),
 with a `filename` ending in `.oslf.json`, for tools that aren't this app. A stored picture
 becomes its public address on the hub (`<apiUrl>/images/<hash>`), the only place its bytes

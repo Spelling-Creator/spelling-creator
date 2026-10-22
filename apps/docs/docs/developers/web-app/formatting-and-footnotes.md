@@ -156,7 +156,7 @@ formula as its source), `inlineTextSpeech` in `core/speech` the spoken runs,
 and `inlineTextMarkup` and `markupToInlineText` the MCP server's markup. The
 checks, translation, search, the summaries, the AI helpers and the response
 snapshot interactive mode saves all take the plain words. In OSLF a prompt is
-written as rich text and read back as inline text (`oslf.js`), so a formula
+written as rich text and read back as inline text (`oslf.ts`), so a formula
 or a hint in a prompt survives the round trip; a note in one is read as
 nothing.
 

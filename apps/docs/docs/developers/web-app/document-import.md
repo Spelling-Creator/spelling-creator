@@ -31,7 +31,7 @@ After importing, the editor shows `messages.importedText`, and the
 
 ## What it reads
 
-The parser (`packages/core/src/documentImport.js`) is rules, not a model. It
+The parser (`packages/core/src/documentImport.ts`) is rules, not a model. It
 classifies each line, cuts the document into sections, and reads each section:
 
 - **A passage**: one or more prose paragraphs, each its own text block.
@@ -172,7 +172,7 @@ See the [experiment](../document-import-experiment.md) for the scores.
 
 | File                                                      | Does                                                                                                                                                                                                                                   |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `sectionNeedsModel`, `deriveQuestionType`, `previewLessonText`, `lessonFromSections`, `importLessonText`, `DocumentImportError`. Runtime-neutral. |
+| `packages/core/src/documentImport.ts`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `sectionNeedsModel`, `deriveQuestionType`, `previewLessonText`, `lessonFromSections`, `importLessonText`, `DocumentImportError`. Runtime-neutral. |
 | `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                                                                                                 |
 | `packages/core/src/documentImportModel.ts`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                                                                                   |
 | `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                                                                                    |

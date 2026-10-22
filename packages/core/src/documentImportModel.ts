@@ -1,7 +1,7 @@
 // The prompt and the reply handling for the on-device extraction model behind
 // Import from text: LFM2-1.2B-Extract fine-tuned on lesson documents
 // (huggingface.co/playforgecoding/LFM2-1.2B-Extract-lesson-ONNX). The parser
-// (documentImport.js) reads any regular document; the model is for one the
+// (documentImport.ts) reads any regular document; the model is for one the
 // parser cannot read, and it reads one section at a time.
 //
 // Everything the model was trained on is reproduced here exactly: the system

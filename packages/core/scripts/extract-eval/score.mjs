@@ -62,7 +62,7 @@ function setF1(a, b) {
 const list = (v) => (Array.isArray(v) ? v.map((x) => String(x ?? "")) : []);
 
 // The question type, worked out from what was extracted rather than asked of
-// the model. The rule is the import's own (core/documentImport.js); a small
+// the model. The rule is the import's own (core/documentImport.ts); a small
 // model guessing the type from a list of names did no better than chance.
 export function deriveType(q, passage) {
   return deriveQuestionType(

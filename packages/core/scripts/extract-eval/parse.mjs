@@ -1,4 +1,4 @@
-// The rule-based parser now lives in core (src/documentImport.js) because the
+// The rule-based parser now lives in core (src/documentImport.ts) because the
 // import feature uses it. This keeps the experiment's entry point: a section's
 // chunk in, the extraction shape out. The per-line model hook that once sat
 // here was measured (docs: "Document import experiment", second pass) and lost

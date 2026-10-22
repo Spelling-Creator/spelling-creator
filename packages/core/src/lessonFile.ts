@@ -2,7 +2,7 @@
 // document model (unlike the DOCX export, which flattens to prose).
 //
 // Three things produce or consume this shape: the editor's "Export JSON" button
-// (./browser/jsonExport.js), the "Import JSON" button (./jsonImport.js), and the
+// (./browser/jsonExport.js), the "Import JSON" button (./jsonImport.ts), and the
 // MCP server's `create_lesson_file` tool. Keeping the envelope here means they
 // agree by construction rather than by comment.
 

@@ -16,7 +16,7 @@ node scripts/extract-eval/make-dataset.mjs               # fine-tuning pairs
 Two strategies. `model` hands a whole section to the model and takes the JSON
 it writes back. `rules` (`hybrid` is accepted as its older name) parses the
 section with the import's own rule-based parser from
-`packages/core/src/documentImport.js`, through `parse.mjs`, and loads no model
+`packages/core/src/documentImport.ts`, through `parse.mjs`, and loads no model
 at all. `layouts.mjs` holds
 the typed-up document styles (`--styles all` runs every one plus the Word
 export), and `make-dataset.mjs` renders every published lesson in every layout

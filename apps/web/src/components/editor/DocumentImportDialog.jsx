@@ -28,7 +28,7 @@ import { loadExportEngine } from "../../lib/exports/load.js";
 /**
  * Import a lesson from text that was never a lesson file: pasted from
  * anywhere, or read from a .txt, .md or hand-written .docx. The text is parsed
- * as it is typed or dropped in (core/documentImport.js), and the dialog shows
+ * as it is typed or dropped in (core/documentImport.ts), and the dialog shows
  * what it found, section by section, before anything is imported. Import hands
  * the finished document to `onImport`, which opens it as a new lesson.
  *

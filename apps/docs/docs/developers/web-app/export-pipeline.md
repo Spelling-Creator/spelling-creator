@@ -274,7 +274,7 @@ and the callers say which happened.
 
 ## The Open Spelling Lesson Format
 
-`packages/core/src/oslf.js` maps the lesson document onto the
+`packages/core/src/oslf.ts` maps the lesson document onto the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
 (OSLF) and back: `toOslf(doc, { imageSrc })` and `fromOslf(file)`. The app's
 own lesson file stays what it is, a lossless dump of the editor's document;
@@ -316,16 +316,16 @@ reading one that something else wrote.
 ### The XML form
 
 OSLF also has an XML serialization (XML-FORMAT.md in the format's repository).
-`packages/core/src/oslfXml.js` converts between the two forms of the _file_,
+`packages/core/src/oslfXml.ts` converts between the two forms of the _file_,
 never the lesson: `toOslfXml(file)` writes what `toOslf` made, and
 `fromOslfXml(text)` gives what `fromOslf` reads. So the mapping from the app's
-lesson to the format stays in `oslf.js` alone, and an XML lesson goes through
+lesson to the format stays in `oslf.ts` alone, and an XML lesson goes through
 exactly the same import as a JSON one.
 
 - **Export OSLF (XML)** (`exportOslfXml` in `browser/jsonExport.js`) writes
   `<title>.oslf.xml`. **Import JSON or OSLF** accepts `.xml` too
-  (`importOslfXml` in `jsonImport.js`). The CLI reads and writes
-  `.oslf.xml`. Both directions load `oslfXml.js` with a dynamic `import()`, so
+  (`importOslfXml` in `jsonImport.ts`). The CLI reads and writes
+  `.oslf.xml`. Both directions load `oslfXml.ts` with a dynamic `import()`, so
   the XML parser isn't in the editor's bundle until someone uses it.
 - Rich text is written on one line inside its element, since reading collapses
   each run of whitespace to one space and trims an element's edges, as the
@@ -337,11 +337,11 @@ strength="medium"/>` (short) or `"strong"` (long). Reading accepts the marks
   fetches anything. A file with a DOCTYPE is refused anyway, as the format
   requires, since that is how XML reaches for local files and the network.
 - `oslf.xsd` beside the module is the format's XSD, copied like the JSON
-  schema. `oslfXml.test.js` holds the writer's output to it with `xmllint-wasm`
+  schema. `oslfXml.test.ts` holds the writer's output to it with `xmllint-wasm`
   (a dev dependency), and checks the format's example lesson
   (`oslf-examples/`, both forms) converts each way into the other exactly.
 - `oslf.schema.json` beside the module is the format's lesson schema, copied
-  from the 0.1 draft so `oslf.test.js` can hold `toOslf`'s output to it with
+  from the 0.1 draft so `oslf.test.ts` can hold `toOslf`'s output to it with
   `ajv` (a dev dependency only; nothing at runtime validates). Update the copy
   when the format moves.
 

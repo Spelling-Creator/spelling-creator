@@ -12,7 +12,7 @@
  * order is meaningful for sections, blocks, words and answers.
  *
  * This matters more than it looks. Blocks are built by spreading (`{ ...base,
- * answer }` in lib/questions.js, `{ ...block, id, type }` in lib/jsonImport.js),
+ * answer }` in ../questions.ts, `{ ...block, id, type }` in ../jsonImport.ts),
  * so the same logical block can end up with different key *insertion* orders.
  * Serialising with plain JSON.stringify would then hash to a different blob oid
  * for identical content, and every such block would look "changed" on each
