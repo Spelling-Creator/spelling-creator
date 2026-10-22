@@ -230,7 +230,7 @@ uses too). Anything else, such as an object served as
 and refused every time, so it is treated as a picture that could not be copied:
 it keeps its old reference, and the editor says how many could not be copied,
 and also whether the history failed to come along. See `copyRemoteImages` in
-`core/imagesClient`.
+`core/browser/imagesClient`.
 
 Storing a picture hashes it with `crypto.subtle`, which browsers only offer on a
 secure origin: https, or `localhost`. An instance served over plain http at a

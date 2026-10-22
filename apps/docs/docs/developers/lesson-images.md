@@ -25,7 +25,7 @@ Worker endpoints (`apps/api/src/routes/images.js`, registered in
 - `PUT /images/:hash`: authenticated (Supabase JWT); the body must have an
   `image/*` content type, be at most 8 MB, and hash to `:hash` before it is
   stored. Called on save/publish to upload locally drafted images
-  (`packages/core/src/imagesClient.js`). On the way in, the Worker re-compresses
+  (`packages/core/src/browser/imagesClient.js`). On the way in, the Worker re-compresses
   raster images to **WEBP** (`convertImageToWebp` in
   `apps/api/src/imageConvert.js`), falling back to the original bytes for
   formats it can't decode or when the WEBP isn't smaller. The key is still the

@@ -200,7 +200,6 @@ only through another module.
   aiSuggest             AI text / questions / lesson ideas via the Worker
   spellingWords         the aggregated published-lesson word list
   mcpOAuth              the MCP OAuth approval handshake
-  imagesClient          upload a lesson's images to the Worker (R2) on publish
   richText              rich-text policy: allow-list, link schemes, HTML to text
   translationLanguages  the languages comment translation covers: BCP-47 <-> FLORES-200
   opusMtModels          the per-pair Opus-MT models the translation fallback prefers (into English)
@@ -226,6 +225,7 @@ the MCP server cannot reach it by accident:
   imageStore            the IndexedDB stores themselves: the lesson library, its documents, image blobs, editor flags
   imageRef              binary image-ref model (a block references its bytes)
   imageFile             read a File to bytes, measure it, opportunistically re-encode to WEBP
+  imagesClient          upload a lesson's images to the Worker (R2) on publish, and copy a fork's from another instance
   storage               the lesson library: every lesson this device holds, which one is open, and the two migrations into it
   interactiveProgress   the unfinished interactive run-through this device is holding (localStorage): resume, expiry, pruning
   modelCache            the on-device models transformers.js has downloaded (Cache Storage): their size, and deleting them

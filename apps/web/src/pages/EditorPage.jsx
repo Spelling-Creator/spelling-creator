@@ -131,7 +131,7 @@ import { convertDocImages } from "@spelling-creator/core/browser/imageRef";
 import {
   copyRemoteImages,
   ensureImagesUploaded,
-} from "@spelling-creator/core/imagesClient";
+} from "@spelling-creator/core/browser/imagesClient";
 // exportJson is a Blob and an <a> — no heavy dependency, so it stays static.
 // (exportOslfXml loads its XML writer itself, on first use.)
 // The docx/PDF/import pipeline is not: it loads on demand through

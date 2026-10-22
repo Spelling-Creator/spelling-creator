@@ -7,7 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@spelling-creator/core/browser/imageRef", () => ({
+vi.mock("./imageRef.js", () => ({
   imagePublicUrl: (hash) => `https://here.test/images/${hash}`,
   storeImageBytes: vi.fn(async (blob, mime) => ({
     hash: `local-${blob.size}`,
@@ -15,12 +15,12 @@ vi.mock("@spelling-creator/core/browser/imageRef", () => ({
     ext: "png",
   })),
 }));
-vi.mock("@spelling-creator/core/browser/imageStore", () => ({
+vi.mock("./imageStore.js", () => ({
   getImageBlob: async () => null,
 }));
 
 const { copyRemoteImages } = await import("./imagesClient.js");
-const { MAX_IMAGE_BYTES } = await import("./image.js");
+const { MAX_IMAGE_BYTES } = await import("../image.js");
 
 const ORIGIN = "https://there.test";
 const image = (hash) => ({
