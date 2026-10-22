@@ -7,14 +7,14 @@
 // round trip below is exactly the one a second device makes.
 
 import { describe, expect, it } from "vitest";
-import { memRepo } from "./memfs.js";
-import { cloneFromPack, packRepo } from "./pack.js";
+import { memRepo } from "./memfs.ts";
+import { cloneFromPack, packRepo } from "./pack.ts";
 import {
   branchLabel,
   isBranchName,
   parseRefMap,
   toBranchName,
-} from "./refs.js";
+} from "./refs.ts";
 import {
   BRANCH,
   checkoutBranch,
@@ -27,7 +27,7 @@ import {
   history,
   listBranches,
   renameBranch,
-} from "./repo.js";
+} from "./repo.ts";
 
 const author = { name: "Test", email: "test@example.com" };
 

@@ -2,11 +2,11 @@
 // layer: stored in the manifest, diffed into ops, and merged.
 
 import { describe, expect, it } from "vitest";
-import { memRepo } from "./memfs.js";
-import { commitDoc, readDocAt } from "./repo.js";
-import { docManifest } from "./doc.js";
-import { describeOps, diffDocs } from "./ops.js";
-import { applyResolutions, mergeDocs } from "./merge.js";
+import { memRepo } from "./memfs.ts";
+import { commitDoc, readDocAt } from "./repo.ts";
+import { docManifest } from "./doc.ts";
+import { describeOps, diffDocs } from "./ops.ts";
+import { applyResolutions, mergeDocs } from "./merge.ts";
 import { markupToContent, textBlockPlain } from "../lessonText.ts";
 
 const author = { name: "Test", email: "test@example.com" };

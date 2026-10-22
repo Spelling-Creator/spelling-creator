@@ -50,7 +50,7 @@ import {
   saveCurrentLessonId,
 } from "./imageStore.js";
 import { convertDocImages } from "./imageRef.js";
-import { DRAFT_REPO } from "../git/doc.js";
+import { DRAFT_REPO } from "../git/doc.ts";
 import { newId } from "../id.ts";
 
 export { loadWizardSeen, saveWizardSeen };

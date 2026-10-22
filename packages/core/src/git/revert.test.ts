@@ -13,8 +13,8 @@
 // prepareRevert is bound to the browser's filesystem; the call it makes is this.
 
 import { describe, expect, it } from "vitest";
-import { mergeDocs } from "./merge.js";
-import { diffDocs } from "./ops.js";
+import { mergeDocs } from "./merge.ts";
+import { diffDocs } from "./ops.ts";
 
 function doc(one, two, three) {
   return {

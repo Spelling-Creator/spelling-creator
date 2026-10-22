@@ -11,17 +11,17 @@
 // but the three calls it makes are these, over the same objects.
 
 import { describe, expect, it } from "vitest";
-import { memRepo } from "./memfs.js";
+import { memRepo } from "./memfs.ts";
 import {
   cloneFromPack,
   contains,
   fetchRemotePack,
   mergeBase,
   packRepo,
-} from "./pack.js";
-import { mergeDocs } from "./merge.js";
-import { diffDocs } from "./ops.js";
-import { commitDoc, headOid, readDocAt } from "./repo.js";
+} from "./pack.ts";
+import { mergeDocs } from "./merge.ts";
+import { diffDocs } from "./ops.ts";
+import { commitDoc, headOid, readDocAt } from "./repo.ts";
 
 const author = { name: "Test", email: "test@example.com" };
 

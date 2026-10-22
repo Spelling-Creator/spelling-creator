@@ -29,23 +29,23 @@
 
 import * as git from "isomorphic-git";
 import { newId } from "../../id.ts";
-import { preserveLocalFields } from "../../git/doc.js";
+import { preserveLocalFields } from "../../git/doc.ts";
 import { DRAFT_REPO, copyRepo, deleteRepo, repoCtx } from "./fs.js";
-import { applyResolutions, mergeDocs } from "../../git/merge.js";
-import { diffDocs } from "../../git/ops.js";
+import { applyResolutions, mergeDocs } from "../../git/merge.ts";
+import { diffDocs } from "../../git/ops.ts";
 import {
   cloneFromPack,
   contains,
   fetchRemotePack,
   mergeBase,
   packRepo,
-} from "../../git/pack.js";
+} from "../../git/pack.ts";
 import {
   fetchPack,
   fetchRefs,
   fetchRemotePackFile,
   pushPack,
-} from "../../git/remote.js";
+} from "../../git/remote.ts";
 import {
   closePullRequest,
   createPullRequest,
@@ -65,7 +65,7 @@ import {
   headOid,
   pullRef,
   readDocAt,
-} from "../../git/repo.js";
+} from "../../git/repo.ts";
 
 const EMPTY_AUTO = { merged: [], tookTheirs: [], added: [], removed: [] };
 

@@ -31,8 +31,8 @@
 // a merged doc plus the conflicts. The caller (useLessonGit) fetches base/ours/
 // theirs out of git and commits the result with two parents.
 
-import { docBlocks } from "./doc.js";
-import { sameValue } from "./ops.js";
+import { docBlocks } from "./doc.ts";
+import { sameValue } from "./ops.ts";
 import { hasPicture, withSeparateCredit } from "../imageCredit.ts";
 import {
   isPlainContent,

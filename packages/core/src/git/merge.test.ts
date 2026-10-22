@@ -1,7 +1,7 @@
 // Structure through a three-way merge: which section each block ends up in.
 
 import { describe, expect, it } from "vitest";
-import { applyResolutions, mergeDocs } from "./merge.js";
+import { applyResolutions, mergeDocs } from "./merge.ts";
 
 const block = (id, text = id) => ({ id, type: "text", text });
 

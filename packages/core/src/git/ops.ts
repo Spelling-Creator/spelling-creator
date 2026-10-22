@@ -24,7 +24,7 @@
 
 // From doc.js, not layout.js: these are pure, so the diff (and the history UI
 // that renders it) never pulls the git engine into the main bundle.
-import { canonicalJson, docBlocks } from "./doc.js";
+import { canonicalJson, docBlocks } from "./doc.ts";
 
 /** Deep value equality via canonical JSON — key order can't cause a false diff. */
 export function sameValue(a, b) {

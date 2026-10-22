@@ -27,8 +27,8 @@ import {
   branchRef,
   ensureRepo,
   headOid,
-} from "./repo.js";
-import { isBranchName } from "./refs.js";
+} from "./repo.ts";
+import { isBranchName } from "./refs.ts";
 
 /**
  * Every object reachable from a commit: the commit itself, its ancestors, and

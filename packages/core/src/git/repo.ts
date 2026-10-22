@@ -16,9 +16,9 @@ import {
   readDocTree,
   readManifest,
   writeDocTree,
-} from "./layout.js";
-import { describeOps, diffDocs } from "./ops.js";
-import { DEFAULT_BRANCH, isBranchName } from "./refs.js";
+} from "./layout.ts";
+import { describeOps, diffDocs } from "./ops.ts";
+import { DEFAULT_BRANCH, isBranchName } from "./refs.ts";
 
 // The branch a lesson *is*. A lesson can hold several — see the block below —
 // but exactly one of them is what the hub publishes, what a reader sees, and

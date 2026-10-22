@@ -19,7 +19,7 @@ import {
   OID_RE,
   parseRefMap,
   serializeRefMap,
-} from "./refs.js";
+} from "./refs.ts";
 
 /** Whether the lesson hub (and so the shared history) is reachable at all. */
 

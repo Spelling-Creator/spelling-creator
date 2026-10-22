@@ -7,7 +7,7 @@
 
 import * as git from "isomorphic-git";
 import { describe, expect, it } from "vitest";
-import { memRepo } from "./memfs.js";
+import { memRepo } from "./memfs.ts";
 import {
   COMMIT_EMAIL_DOMAIN,
   authorFrom,
@@ -15,7 +15,7 @@ import {
   commitDoc,
   history,
   readCoAuthors,
-} from "./repo.js";
+} from "./repo.ts";
 
 const HOST = { uid: "11111111-1111-4111-8111-111111111111", name: "Alex" };
 const SAM = { uid: "22222222-2222-4222-8222-222222222222", name: "Sam" };

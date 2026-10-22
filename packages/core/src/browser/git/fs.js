@@ -17,7 +17,7 @@
 // up before they first published isn't thrown away.
 
 import LightningFS from "@isomorphic-git/lightning-fs";
-import { DRAFT_REPO } from "../../git/doc.js";
+import { DRAFT_REPO } from "../../git/doc.ts";
 
 const DB_NAME = "s2c-lesson-git";
 const ROOT = "/lessons";

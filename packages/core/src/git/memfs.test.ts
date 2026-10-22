@@ -5,9 +5,9 @@
 // sequence, with the packs travelling over HTTP in between.
 
 import { describe, expect, it } from "vitest";
-import { memFs, memRepo } from "./memfs.js";
-import { commitDoc, headOid, readDocAt } from "./repo.js";
-import { cloneFromPack, contains, mergeBase, packRepo } from "./pack.js";
+import { memFs, memRepo } from "./memfs.ts";
+import { commitDoc, headOid, readDocAt } from "./repo.ts";
+import { cloneFromPack, contains, mergeBase, packRepo } from "./pack.ts";
 
 const author = { name: "Test", email: "test@example.com" };
 

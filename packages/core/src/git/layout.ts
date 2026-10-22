@@ -26,7 +26,7 @@
 // the same code runs against LightningFS in the browser and node:fs in tests.
 
 import * as git from "isomorphic-git";
-import { canonicalJson, docBlocks, docManifest } from "./doc.js";
+import { canonicalJson, docBlocks, docManifest } from "./doc.ts";
 
 export const MANIFEST_PATH = "lesson.json";
 export const BLOCK_DIR = "blocks";
