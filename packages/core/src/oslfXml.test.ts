@@ -8,15 +8,15 @@ import { describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import { validateXML } from "xmllint-wasm";
 
-import { normalizeLessonFile } from "./jsonImport.js";
+import { normalizeLessonFile } from "./jsonImport.ts";
 import { markupToContent } from "./lessonText.ts";
-import { OslfImportError, fromOslf, toOslf } from "./oslf.js";
+import { OslfImportError, fromOslf, toOslf } from "./oslf.ts";
 import {
   OSLF_XML_EXTENSION,
   fromOslfXml,
   oslfXmlFileName,
   toOslfXml,
-} from "./oslfXml.js";
+} from "./oslfXml.ts";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const XSD = read("./oslf.xsd");

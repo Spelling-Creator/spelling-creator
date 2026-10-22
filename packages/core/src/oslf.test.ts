@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { normalizeLessonFile } from "./jsonImport.js";
+import { normalizeLessonFile } from "./jsonImport.ts";
 import { lessonFileName } from "./lessonFile.ts";
 import { markupToContent } from "./lessonText.ts";
 import {
@@ -17,7 +17,7 @@ import {
   isOslfFile,
   oslfFileName,
   toOslf,
-} from "./oslf.js";
+} from "./oslf.ts";
 
 const schema = JSON.parse(
   readFileSync(new URL("./oslf.schema.json", import.meta.url), "utf8"),

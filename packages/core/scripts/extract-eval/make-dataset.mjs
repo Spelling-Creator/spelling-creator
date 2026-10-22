@@ -21,7 +21,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { parseSection, sectionNeedsModel } from "../../src/documentImport.js";
+import { parseSection, sectionNeedsModel } from "../../src/documentImport.ts";
 import { systemPrompt } from "../../src/documentImportModel.ts";
 import { HARD_LAYOUTS, LAYOUTS, PROMPT_AS_WRITTEN } from "./layouts.mjs";
 import { DEFAULT_API, NOT_ARCHIVED, fetchLessons } from "./lessons.mjs";

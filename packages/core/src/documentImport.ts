@@ -21,7 +21,7 @@
 // from the document (nothing in a typed page says it); it is derived from the
 // answers and the wording, the same way a reader would tell them apart.
 
-import { normalizeLessonFile } from "./jsonImport.js";
+import { normalizeLessonFile } from "./jsonImport.ts";
 import {
   ANSWER_GAP,
   QUESTION_TAG_PREFIX,

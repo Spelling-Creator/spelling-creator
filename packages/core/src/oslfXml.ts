@@ -36,7 +36,7 @@
 
 import { DOMParser } from "@xmldom/xmldom";
 import { lessonFileBase } from "./lessonFile.ts";
-import { OslfImportError } from "./oslf.js";
+import { OslfImportError } from "./oslf.ts";
 
 /** The namespace every element of an OSLF lesson file is in. */
 export const OSLF_NAMESPACE = "urn:oslf:lesson";

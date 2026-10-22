@@ -3,7 +3,7 @@
 // the part that needs a document to click an <a> for the user.
 
 import { buildLessonFile, lessonFileName } from "../lessonFile.ts";
-import { oslfFileName, toOslf } from "../oslf.js";
+import { oslfFileName, toOslf } from "../oslf.ts";
 import { imagePublicUrl } from "./imageRef.js";
 
 function triggerDownload(blob, fileName) {
@@ -38,7 +38,7 @@ export function exportOslf(doc) {
 // someone asks for one.
 export async function exportOslfXml(doc) {
   const file = oslfOf(doc);
-  const { oslfXmlFileName, toOslfXml } = await import("../oslfXml.js");
+  const { oslfXmlFileName, toOslfXml } = await import("../oslfXml.ts");
   const blob = new Blob([toOslfXml(file)], { type: "application/xml" });
   triggerDownload(blob, oslfXmlFileName(doc.title));
 }

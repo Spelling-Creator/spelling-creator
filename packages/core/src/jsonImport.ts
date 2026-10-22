@@ -21,7 +21,7 @@ import {
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "./image.ts";
 import { LESSON_FILE_FORMAT } from "./lessonFile.ts";
 import { normalizeInlineText } from "./inlineText.ts";
-import { OslfImportError, fromOslf, isOslfFile } from "./oslf.js";
+import { OslfImportError, fromOslf, isOslfFile } from "./oslf.ts";
 import { isSafeLink } from "./richText.ts";
 import {
   normalizeTextContent,
@@ -88,7 +88,7 @@ export async function importJsonFile(file) {
  * @returns {Promise<object>}
  */
 export async function importOslfXml(text) {
-  const { fromOslfXml } = await import("./oslfXml.js");
+  const { fromOslfXml } = await import("./oslfXml.ts");
   let file;
   try {
     file = fromOslfXml(text);

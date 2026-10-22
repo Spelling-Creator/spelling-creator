@@ -22,7 +22,7 @@ import {
   stepSpeechText,
   type InteractiveDoc,
 } from "./interactive.ts";
-import { normalizeLessonFile } from "./jsonImport.js";
+import { normalizeLessonFile } from "./jsonImport.ts";
 
 let counter = 0;
 const newId = () => `id-${(counter += 1)}`;

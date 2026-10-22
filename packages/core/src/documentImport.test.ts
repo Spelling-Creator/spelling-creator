@@ -12,7 +12,7 @@ import {
   sectionNeedsModel,
   sectionSummary,
   splitSections,
-} from "./documentImport.js";
+} from "./documentImport.ts";
 import { ANSWER_GAP } from "./questions.ts";
 
 const PASSAGE_1 =

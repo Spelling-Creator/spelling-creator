@@ -1,9 +1,9 @@
 // How close an extraction came to the lesson it was rendered from, and whether
 // a lesson rebuilt from it passes the lesson checks.
 
-import { deriveQuestionType } from "../../src/documentImport.js";
+import { deriveQuestionType } from "../../src/documentImport.ts";
 import { inlineTextPlain } from "../../src/inlineText.ts";
-import { normalizeLessonFile } from "../../src/jsonImport.js";
+import { normalizeLessonFile } from "../../src/jsonImport.ts";
 import { validateLesson } from "../../src/lessonChecks.ts";
 import { textBlockPlain } from "../../src/lessonText.ts";
 import { questionAnswerItems } from "../../src/questions.ts";

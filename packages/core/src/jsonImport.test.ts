@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { normalizeLessonFile } from "./jsonImport.js";
+import { normalizeLessonFile } from "./jsonImport.ts";
 import { buildLessonFile } from "./lessonFile.ts";
 
 const sections = [

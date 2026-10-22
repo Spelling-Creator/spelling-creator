@@ -4,7 +4,7 @@
 // here was measured (docs: "Document import experiment", second pass) and lost
 // to the heuristics, so it is gone.
 
-import { parseSection as parseCore } from "../../src/documentImport.js";
+import { parseSection as parseCore } from "../../src/documentImport.ts";
 
 /**
  * @param {{heading: string, lines: string[]}} chunk

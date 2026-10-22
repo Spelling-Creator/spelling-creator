@@ -9,7 +9,7 @@ import {
   sectionPromptText,
   systemPrompt,
 } from "./documentImportModel.ts";
-import { lessonFromSections } from "./documentImport.js";
+import { lessonFromSections } from "./documentImport.ts";
 import type { LessonDoc } from "./types.ts";
 
 describe("the prompt", () => {
