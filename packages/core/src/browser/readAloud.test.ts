@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { env } from "@huggingface/transformers";
-import { MODEL_CACHE_NAME } from "./modelCache.js";
-import { readAloudCached, weightsUrl } from "./readAloud.js";
-import { MODEL_ID, MODEL_REVISION } from "./readAloudVoices.js";
+import { MODEL_CACHE_NAME } from "./modelCache.ts";
+import { readAloudCached, weightsUrl } from "./readAloud.ts";
+import { MODEL_ID, MODEL_REVISION } from "./readAloudVoices.ts";
 
 // A CacheStorage holding named buckets of URLs, enough of the real API for
 // what readAloudCached calls.

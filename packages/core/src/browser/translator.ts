@@ -62,7 +62,7 @@ let fallbackPromise = null;
 
 function loadFallback() {
   if (!fallbackPromise) {
-    fallbackPromise = import("./fallbackTranslator.js").catch((err) => {
+    fallbackPromise = import("./fallbackTranslator.ts").catch((err) => {
       fallbackPromise = null;
       throw err;
     });

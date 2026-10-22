@@ -29,7 +29,7 @@
 //     codes translationLanguages.ts keys on)
 
 import { pipeline } from "@huggingface/transformers";
-import { createDownloadProgress } from "./downloadProgress.js";
+import { createDownloadProgress } from "./downloadProgress.ts";
 import { opusMtModelFor } from "../opusMtModels.ts";
 import { languageForTag } from "../translationLanguages.ts";
 

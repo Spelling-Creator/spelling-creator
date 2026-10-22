@@ -4,7 +4,7 @@ import {
   MODEL_CACHE_NAME,
   clearModelCache,
   modelCacheBytes,
-} from "./modelCache.js";
+} from "./modelCache.ts";
 
 // A CacheStorage that holds named buckets of Responses, enough of the real API
 // for what modelCache.js calls.

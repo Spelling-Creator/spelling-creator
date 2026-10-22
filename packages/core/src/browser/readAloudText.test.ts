@@ -4,7 +4,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createEspeak } from "@spelling-creator/spellophone/node";
 
-import { kokoroIpa, phonemize, phonemizeSpoken } from "./readAloudText.js";
+import { kokoroIpa, phonemize, phonemizeSpoken } from "./readAloudText.ts";
 
 let espeak;
 beforeAll(async () => {

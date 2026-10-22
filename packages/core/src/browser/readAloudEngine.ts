@@ -34,14 +34,14 @@ import espeakWasmUrl from "@spelling-creator/spellophone/wasm/espeak-ng.wasm?url
 import espeakManifestUrl from "@spelling-creator/spellophone/espeak-ng-data/manifest.json?url";
 import espeakCoreUrl from "@spelling-creator/spellophone/espeak-ng-data/core.bin.gz?url";
 import espeakEnglishUrl from "@spelling-creator/spellophone/espeak-ng-data/en_dict.gz?url";
-import { createDownloadProgress } from "./downloadProgress.js";
-import { phonemize, phonemizeSpoken } from "./readAloudText.js";
+import { createDownloadProgress } from "./downloadProgress.ts";
+import { phonemize, phonemizeSpoken } from "./readAloudText.ts";
 import {
   DEFAULT_VOICE,
   MODEL_ID,
   MODEL_REVISION,
   WEBGPU_DTYPE,
-} from "./readAloudVoices.js";
+} from "./readAloudVoices.ts";
 
 export const SAMPLE_RATE = 24000;
 

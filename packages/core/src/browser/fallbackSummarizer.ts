@@ -29,7 +29,7 @@ import {
   TextStreamer,
 } from "@huggingface/transformers";
 import { languageDisplayName } from "../translationLanguages.ts";
-import { createDownloadProgress } from "./downloadProgress.js";
+import { createDownloadProgress } from "./downloadProgress.ts";
 
 // Pinned to a commit, so a later push to the repo can't change what readers
 // download without someone here choosing to move the pin.

@@ -35,7 +35,7 @@ import {
   holdsLargeModel,
   meteredConnection,
   webGpuAdapter,
-} from "./deviceCheck.js";
+} from "./deviceCheck.ts";
 
 /**
  * The summary shapes the spec defines, in the order the UI offers them.
@@ -94,7 +94,7 @@ let fallbackPromise = null;
 
 function loadFallback() {
   if (!fallbackPromise) {
-    fallbackPromise = import("./fallbackSummarizer.js").catch((err) => {
+    fallbackPromise = import("./fallbackSummarizer.ts").catch((err) => {
       fallbackPromise = null;
       throw err;
     });

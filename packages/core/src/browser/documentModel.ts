@@ -17,7 +17,7 @@ import {
   holdsLargeModel,
   meteredConnection,
   webGpuAdapter,
-} from "./deviceCheck.js";
+} from "./deviceCheck.ts";
 
 /**
  * Can this device run the model? Cheap and needs no chunk. The adapter is
@@ -36,7 +36,7 @@ let enginePromise = null;
 
 function loadEngine() {
   if (!enginePromise) {
-    enginePromise = import("./documentModelEngine.js").catch((err) => {
+    enginePromise = import("./documentModelEngine.ts").catch((err) => {
       enginePromise = null;
       throw err;
     });

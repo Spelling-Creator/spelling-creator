@@ -4,11 +4,11 @@
 // ever fetched by a dynamic import(), the same split as documentModel.js and
 // summarizer.js.
 
-import { meteredConnection, webGpuAdapter } from "./deviceCheck.js";
-import { MODEL_CACHE_NAME } from "./modelCache.js";
-import { MODEL_ID, MODEL_REVISION, WEBGPU_DTYPE } from "./readAloudVoices.js";
+import { meteredConnection, webGpuAdapter } from "./deviceCheck.ts";
+import { MODEL_CACHE_NAME } from "./modelCache.ts";
+import { MODEL_ID, MODEL_REVISION, WEBGPU_DTYPE } from "./readAloudVoices.ts";
 
-export { VOICES, DEFAULT_VOICE } from "./readAloudVoices.js";
+export { VOICES, DEFAULT_VOICE } from "./readAloudVoices.ts";
 
 // The download, at the fp32 weights the engine loads on WebGPU, rounded the
 // way the UI says it.
@@ -91,6 +91,6 @@ export async function readAloudCached() {
  * @param {Parameters<typeof import("./readAloudEngine.js").loadReadAloud>[0]} [options]
  */
 export async function loadReadAloud(options) {
-  const engine = await import("./readAloudEngine.js");
+  const engine = await import("./readAloudEngine.ts");
   return engine.loadReadAloud(options);
 }
