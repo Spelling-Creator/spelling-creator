@@ -18,6 +18,9 @@ import {
   lastSegment,
   rankOf,
   sparql,
+  type SparqlBinding,
+  type WikidataItem,
+  type WikidataOptions,
 } from "./wikidata.ts";
 
 /**
@@ -43,7 +46,39 @@ export const IMAGE_ROLES = [
   { role: "coat_of_arms", pid: "P94", label: "coat of arms" },
   { role: "logo", pid: "P154", label: "logo" },
   { role: "structure", pid: "P117", label: "structure diagram" },
-];
+] as const satisfies readonly { role: string; pid: string; label: string }[];
+
+/** What a picture Wikidata lists is: "image", "flag", "range_map". */
+export type ImageRole = (typeof IMAGE_ROLES)[number]["role"];
+
+/**
+ * A Commons file an item lists. `pid` is the property it is under, which the
+ * query binds along with the file.
+ */
+export interface ItemFile {
+  pid: string | undefined;
+  file: string;
+  preferred: boolean;
+}
+
+/** An item's sitelinks and files, as mediaFromBindings reads them. */
+export interface ItemMedia {
+  links: number;
+  files: ItemFile[];
+}
+
+/** A picture Wikidata lists for a topic, labelled with what it is. */
+export interface TopicImage {
+  file: string;
+  role: ImageRole;
+  label: string;
+}
+
+/** The item a topic means, and its pictures. */
+export interface TopicImages {
+  item: WikidataItem;
+  images: TopicImage[];
+}
 
 /**
  * The query for several items' Commons files under the given properties, with
@@ -53,7 +88,10 @@ export const IMAGE_ROLES = [
  * Files that are no longer current (an end date on the statement) are left
  * out.
  */
-export function mediaQuery(itemIds, pids) {
+export function mediaQuery(
+  itemIds: readonly string[],
+  pids: readonly string[],
+): string {
   const items = itemIds.map((id) => `wd:${id}`).join(" ");
   const props = pids.map((p) => `("${p}" p:${p} ps:${p})`).join(" ");
   return `SELECT ?item ?links ?pid ?file ?rank WHERE {
@@ -77,23 +115,29 @@ export function mediaQuery(itemIds, pids) {
  * `pids`, preferred statements first within each. Deprecated statements are
  * dropped, and a file listed under two properties comes back once, under the
  * first.
- * @returns {Map<string, { links: number, files: { pid: string, file: string,
- *   preferred: boolean }[] }>}
  */
-export function mediaFromBindings(bindings, pids) {
-  const items = new Map();
+export function mediaFromBindings(
+  bindings: readonly SparqlBinding[] | null | undefined,
+  pids: readonly string[],
+): Map<string, ItemMedia> {
+  const items = new Map<
+    string,
+    { links: number; byFile: Map<string, ItemFile> }
+  >();
   for (const row of bindings || []) {
     const id = lastSegment(row.item?.value);
-    if (!items.has(id)) {
-      items.set(id, {
+    let entry = items.get(id);
+    if (!entry) {
+      entry = {
         links: Number(row.links?.value) || 0,
         byFile: new Map(),
-      });
+      };
+      items.set(id, entry);
     }
     const file = commonsFileTitle(row.file?.value);
     const rank = rankOf(row.rank?.value);
     if (!file || rank === "deprecated") continue;
-    const { byFile } = items.get(id);
+    const { byFile } = entry;
     const seen = byFile.get(file);
     if (seen) {
       seen.preferred ||= rank === "preferred";
@@ -105,8 +149,8 @@ export function mediaFromBindings(bindings, pids) {
       preferred: rank === "preferred",
     });
   }
-  const order = new Map(pids.map((p, i) => [p, i]));
-  const out = new Map();
+  const order = new Map<string | undefined, number>(pids.map((p, i) => [p, i]));
+  const out = new Map<string, ItemMedia>();
   for (const [id, { links, byFile }] of items) {
     const files = [...byFile.values()].sort(
       (a, b) =>
@@ -127,14 +171,12 @@ export function mediaFromBindings(bindings, pids) {
  * rather than the wrong thing's files. Of those, the best known one with any
  * such files wins: the lion, not the family name; the planet Mercury, not the
  * car brand.
- *
- * @param {string} topic
- * @param {string[]} pids
- * @param {import("./wikidata.js").WikidataOptions} [opts]
- * @returns {Promise<{ item: { id: string, label: string, description: string },
- *   files: { pid: string, file: string, preferred: boolean }[] } | null>}
  */
-export async function topicMedia(topic, pids, opts = {}) {
+export async function topicMedia(
+  topic: string,
+  pids: readonly string[],
+  opts: WikidataOptions = {},
+): Promise<{ item: WikidataItem; files: ItemFile[] } | null> {
   const candidates = await exactMatches(topic, opts);
   if (!candidates.length) return null;
   const media = mediaFromBindings(
@@ -148,8 +190,10 @@ export async function topicMedia(topic, pids, opts = {}) {
     pids,
   );
   const best = candidates
-    .map((item) => ({ item, ...(media.get(item.id) || {}) }))
-    .filter(({ files }) => files?.length)
+    .map((item) => ({ item, ...media.get(item.id) }))
+    .filter((c): c is { item: WikidataItem } & ItemMedia =>
+      Boolean(c.files?.length),
+    )
     .sort((a, b) => b.links - a.links)[0];
   return best ? { item: best.item, files: best.files } : null;
 }
@@ -158,30 +202,33 @@ export async function topicMedia(topic, pids, opts = {}) {
  * The pictures Wikidata lists for a topic, labelled with what each one is: at
  * most two of any kind (Japan has five locator maps) and `max` in all.
  *
- * @param {string} topic
- * @param {import("./wikidata.js").WikidataOptions & { max?: number }} [opts]
- * @returns {Promise<{ item: { id: string, label: string, description: string },
- *   images: { file: string, role: string, label: string }[] } | null>}
- *   null when no item matches or it has no pictures.
+ * @returns null when no item matches or it has no pictures.
  */
-export async function topicImages(topic, opts = {}) {
+export async function topicImages(
+  topic: string,
+  opts: WikidataOptions & { max?: number } = {},
+): Promise<TopicImages | null> {
   const found = await topicMedia(
     topic,
     IMAGE_ROLES.map((r) => r.pid),
     opts,
   );
   if (!found) return null;
-  const roles = new Map(IMAGE_ROLES.map((r) => [r.pid, r]));
-  const perRole = new Map();
-  const images = [];
+  const roles = new Map<string | undefined, (typeof IMAGE_ROLES)[number]>(
+    IMAGE_ROLES.map((r) => [r.pid, r]),
+  );
+  const perRole = new Map<string | undefined, number>();
+  const images: TopicImage[] = [];
   for (const { pid, file } of found.files) {
     const count = perRole.get(pid) || 0;
     if (count >= 2) continue;
     perRole.set(pid, count + 1);
+    // The query binds a file only under one of the pids it was given.
+    const role = roles.get(pid)!;
     images.push({
       file,
-      role: roles.get(pid).role,
-      label: roles.get(pid).label,
+      role: role.role,
+      label: role.label,
     });
     if (images.length >= (opts.max || 8)) break;
   }

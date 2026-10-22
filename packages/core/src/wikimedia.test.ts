@@ -9,7 +9,7 @@ const FILE = "http://commons.wikimedia.org/wiki/Special:FilePath/";
 // first (leaving a redirect) and deleted the second; and Wikidata spells the
 // first with a small letter, which Commons normalises before it even looks.
 function stubWikimedia({ wikidataDown = false } = {}) {
-  const commons = [];
+  const commons: Record<string, string>[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) => {
@@ -28,7 +28,7 @@ function stubWikimedia({ wikidataDown = false } = {}) {
         });
       }
       if (u.hostname === "query.wikidata.org") {
-        const row = (file) => ({
+        const row = (file: string) => ({
           item: { value: `${ITEM}Q140` },
           links: { value: "274" },
           pid: { value: "P18" },

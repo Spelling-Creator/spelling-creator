@@ -1,5 +1,5 @@
 // Pull requests — talks to the same `apps/api` Worker as the rest of the hub
-// (see lessons.js / comments.js). The browser never touches the database
+// (see lessons.ts / comments.ts). The browser never touches the database
 // directly; it only calls these Worker endpoints.
 //
 // A pull request is how someone proposes changes to a lesson they don't own:
@@ -45,11 +45,43 @@ export const PULL_BODY_MAX = 4000;
 // repeat it indefinitely.
 export const MAX_PULL_REVISIONS = 20;
 
-function endpoint(lessonId, path = "") {
+/** A pull request (see rowToPull in apps/api/src/routes/pulls.js). */
+export interface PullRequest {
+  id: string;
+  lessonId: string;
+  sourceLessonId: string | null;
+  authorId: string;
+  author: string | null;
+  title: string;
+  body: string;
+  head: string;
+  base: string | null;
+  /** Which branch of the fork this is, when it isn't the fork's own lesson. */
+  headRef: string | null;
+  /** How many times the proposer has uploaded. */
+  revision: number;
+  /** What the proposal pointed at before its latest upload. */
+  previousHead: string | null;
+  updatedAt: string | null;
+  ready: boolean;
+  status: "open" | "merged" | "closed";
+  mergeCommit: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+interface PullsResponse {
+  pulls?: PullRequest[];
+  pull?: PullRequest;
+  canReview?: unknown;
+}
+
+function endpoint(lessonId: string, path = ""): string {
   return `${apiUrl()}/lessons/${encodeURIComponent(lessonId)}/pulls${path}`;
 }
 
-async function readError(res) {
+async function readError(res: Response): Promise<Error> {
   // The Worker returns a plain-text reason for 4xx/5xx; surface it directly.
   const detail = await res.text().catch(() => "");
   return new Error(detail || `Request failed (${res.status}).`);
@@ -66,11 +98,12 @@ async function readError(res) {
  * answer, because it depends on the lesson's trusted-collaborator list. Use it to
  * decide which buttons to draw; every action re-checks it regardless.
  *
- * @param {string} lessonId
- * @param {string} [accessToken] Supabase session JWT, if signed in.
- * @returns {Promise<{ pulls: Array<object>, canReview: boolean }>}
+ * @param accessToken Supabase session JWT, if signed in.
  */
-export async function fetchPullRequests(lessonId, accessToken) {
+export async function fetchPullRequests(
+  lessonId: string,
+  accessToken?: string,
+): Promise<{ pulls: PullRequest[]; canReview: boolean }> {
   if (!hasApi() || !lessonId) return { pulls: [], canReview: false };
 
   let res;
@@ -86,7 +119,7 @@ export async function fetchPullRequests(lessonId, accessToken) {
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: PullsResponse = await res.json().catch(() => ({}));
   return {
     pulls: Array.isArray(data.pulls) ? data.pulls : [],
     canReview: Boolean(data.canReview),
@@ -101,18 +134,17 @@ export async function fetchPullRequests(lessonId, accessToken) {
  * Until that lands the request is `ready: false` and nobody but its author sees
  * it — so a failed upload leaves nothing for a reviewer to trip over.
  *
- * @param {string} lessonId  The lesson being proposed to.
- * @param {object} pull
- * @param {string} pull.title   One-line summary of what this changes.
- * @param {string} [pull.body]  Longer explanation, plain text.
- * @param {string} pull.head    The commit the pack will point at.
- * @param {string} [pull.base]  The lesson's tip this was built on.
- * @param {string} [pull.sourceLessonId]  The fork it came from, if it's saved.
- * @param {string} accessToken  Supabase session JWT.
- * @returns {Promise<object>} The created pull request.
+ * @param lessonId  The lesson being proposed to.
+ * @param pull.title   One-line summary of what this changes.
+ * @param pull.body    Longer explanation, plain text.
+ * @param pull.head    The commit the pack will point at.
+ * @param pull.base    The lesson's tip this was built on.
+ * @param pull.sourceLessonId  The fork it came from, if it's saved.
+ * @param accessToken  Supabase session JWT.
+ * @returns The created pull request.
  */
 export async function createPullRequest(
-  lessonId,
+  lessonId: string,
   {
     title,
     body = "",
@@ -120,9 +152,16 @@ export async function createPullRequest(
     headRef = null,
     base = null,
     sourceLessonId = null,
+  }: {
+    title: string;
+    body?: string;
+    head: string;
+    headRef?: string | null;
+    base?: string | null;
+    sourceLessonId?: string | null;
   },
-  accessToken,
-) {
+  accessToken: string,
+): Promise<PullRequest> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId) throw new Error("Missing lesson id.");
   if (!accessToken) throw new Error("Please sign in before proposing changes.");
@@ -149,7 +188,7 @@ export async function createPullRequest(
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: PullsResponse = await res.json().catch(() => ({}));
   if (!data.pull) throw new Error("Could not open the proposal.");
   return data.pull;
 }
@@ -160,14 +199,14 @@ export async function createPullRequest(
  * `head` must be the commit the request was opened with; the Worker refuses
  * anything else, and refuses a second upload, so what a reviewer reads is what
  * they merge however long the proposer keeps working on their fork afterwards.
- * @returns {Promise<object>} The pull request, now ready.
+ * @returns The pull request, now ready.
  */
 export async function uploadPullPack(
-  lessonId,
-  pullId,
-  { packfile, head },
-  accessToken,
-) {
+  lessonId: string,
+  pullId: string,
+  { packfile, head }: { packfile: BodyInit; head: string },
+  accessToken: string,
+): Promise<PullRequest | null> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId || !pullId) throw new Error("Missing proposal id.");
   if (!accessToken) throw new Error("Please sign in before proposing changes.");
@@ -191,7 +230,7 @@ export async function uploadPullPack(
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: PullsResponse = await res.json().catch(() => ({}));
   return data.pull || null;
 }
 
@@ -202,10 +241,14 @@ export async function uploadPullPack(
  * As in git/remote.js fetchPack, the tip comes back in the response's own
  * X-Git-Head header rather than from a separate call, so bytes and ref can never
  * be paired from two different moments.
- * @returns {Promise<{ packfile: Uint8Array, head: string } | null>} null when the
- *          proposal's changes are no longer stored (it was merged or closed).
+ * @returns null when the proposal's changes are no longer stored (it was merged
+ *          or closed).
  */
-export async function fetchPullPack(lessonId, pullId, accessToken) {
+export async function fetchPullPack(
+  lessonId: string,
+  pullId: string,
+  accessToken?: string,
+): Promise<{ packfile: Uint8Array; head: string } | null> {
   if (!hasApi() || !lessonId || !pullId) return null;
 
   let res;
@@ -241,14 +284,14 @@ export async function fetchPullPack(lessonId, pullId, accessToken) {
  * document saved: the Worker checks that `mergeCommit` is the commit the
  * lesson's stored history actually points at, and refuses otherwise, so a
  * proposal can't be marked merged while its changes are quietly dropped.
- * @returns {Promise<object>} The resolved pull request.
+ * @returns The resolved pull request.
  */
 export async function mergePullRequest(
-  lessonId,
-  pullId,
-  mergeCommit,
-  accessToken,
-) {
+  lessonId: string,
+  pullId: string,
+  mergeCommit: string,
+  accessToken: string,
+): Promise<PullRequest | null> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId || !pullId) throw new Error("Missing proposal id.");
   if (!accessToken) throw new Error("Please sign in first.");
@@ -271,7 +314,7 @@ export async function mergePullRequest(
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: PullsResponse = await res.json().catch(() => ({}));
   return data.pull || null;
 }
 
@@ -279,9 +322,13 @@ export async function mergePullRequest(
  * Close a proposal without merging it — withdrawn by the person who opened it,
  * declined by the lesson's author or a trusted collaborator, or removed by a
  * moderator. The request stays visible; only its stored changes are dropped.
- * @returns {Promise<object>} The resolved pull request.
+ * @returns The resolved pull request.
  */
-export async function closePullRequest(lessonId, pullId, accessToken) {
+export async function closePullRequest(
+  lessonId: string,
+  pullId: string,
+  accessToken: string,
+): Promise<PullRequest | null> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId || !pullId) throw new Error("Missing proposal id.");
   if (!accessToken) throw new Error("Please sign in first.");
@@ -300,6 +347,6 @@ export async function closePullRequest(lessonId, pullId, accessToken) {
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: PullsResponse = await res.json().catch(() => ({}));
   return data.pull || null;
 }

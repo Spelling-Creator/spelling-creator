@@ -15,6 +15,32 @@
 //   GET    {apiUrl()}/profiles/:id/following   -> { users: PublicUser[] }
 //   GET    {apiUrl()}/following/activity       -> { activity: FeedItem[] }              (Bearer)
 import { apiUrl, hasApi } from "./config.ts";
+import type { LessonSummary } from "./lessons.ts";
+
+/** The public fields of a user (see fetchPublicUser in apps/api/src/lib/supabase.js). */
+export interface PublicUser {
+  id: string;
+  displayName: string;
+  bio: string;
+}
+
+/** A user's profile page, with their follow counts. */
+export interface UserProfile extends PublicUser {
+  followerCount: number;
+  followingCount: number;
+  /** Whether the caller follows them; false when not signed in. */
+  isFollowing: boolean;
+}
+
+/** One entry of an activity feed, shaped like a parsed Atom entry. */
+export interface FeedItem {
+  id: string;
+  title: string;
+  summary: string;
+  /** A path on this site, such as /hub/<lesson id>. */
+  link: string;
+  updated: string;
+}
 
 // Whether profiles can be fetched at all (needs a configured backend).
 
@@ -24,11 +50,13 @@ import { apiUrl, hasApi } from "./config.ts";
  * auth required. Passing the caller's session token additionally resolves
  * `user.isFollowing` (whether *you* follow this profile), so the page can show the
  * right Follow / Following state.
- * @param {string} id            The user's Supabase id.
- * @param {string} [accessToken] Optional Supabase session JWT (for isFollowing).
- * @returns {Promise<{ user: { id, displayName, bio, followerCount, followingCount, isFollowing }, lessons: Array }>}
+ * @param id            The user's Supabase id.
+ * @param accessToken   Optional Supabase session JWT (for isFollowing).
  */
-export async function fetchUserProfile(id, accessToken) {
+export async function fetchUserProfile(
+  id: string,
+  accessToken?: string,
+): Promise<{ user: UserProfile; lessons: LessonSummary[] }> {
   if (!hasApi()) throw new Error("Profiles are not configured.");
   if (!id) throw new Error("Missing user id.");
 
@@ -45,8 +73,14 @@ export async function fetchUserProfile(id, accessToken) {
     const detail = await res.text().catch(() => "");
     throw new Error(detail || `Request failed (${res.status}).`);
   }
-  const data = await res.json().catch(() => ({}));
-  const user = data.user || { id, displayName: "Anonymous", bio: "" };
+  const data: { user?: UserProfile; lessons?: LessonSummary[] } = await res
+    .json()
+    .catch(() => ({}));
+  const user: PublicUser | UserProfile = data.user || {
+    id,
+    displayName: "Anonymous",
+    bio: "",
+  };
   return {
     user: {
       followerCount: 0,
@@ -64,12 +98,15 @@ export async function fetchUserProfile(id, accessToken) {
  * the server's `{ following, followerCount }` so the UI can update the button and
  * count without a refetch; throws an Error carrying the Worker's plain-text reason
  * on failure (e.g. trying to follow yourself).
- * @param {string} id           The user to (un)follow.
- * @param {boolean} follow       true to follow, false to unfollow.
- * @param {string} accessToken   Supabase session JWT.
- * @returns {Promise<{ following: boolean, followerCount: number }>}
+ * @param id           The user to (un)follow.
+ * @param follow       true to follow, false to unfollow.
+ * @param accessToken  Supabase session JWT.
  */
-export async function setFollowing(id, follow, accessToken) {
+export async function setFollowing(
+  id: string,
+  follow: boolean,
+  accessToken: string,
+): Promise<{ following: boolean; followerCount: number }> {
   if (!hasApi()) throw new Error("Profiles are not configured.");
   if (!id) throw new Error("Missing user id.");
   if (!accessToken) throw new Error("Please sign in to follow people.");
@@ -87,7 +124,9 @@ export async function setFollowing(id, follow, accessToken) {
     const detail = await res.text().catch(() => "");
     throw new Error(detail || `Request failed (${res.status}).`);
   }
-  const data = await res.json().catch(() => ({}));
+  const data: { following?: unknown; followerCount?: unknown } = await res
+    .json()
+    .catch(() => ({}));
   return {
     following: Boolean(data.following),
     followerCount:
@@ -98,11 +137,13 @@ export async function setFollowing(id, follow, accessToken) {
 /**
  * List a user's followers, or the users they follow. Public — no auth. Each entry
  * is a public profile shape ({ id, displayName, bio }), newest-follow first.
- * @param {string} id          The user whose connections to list.
- * @param {"followers"|"following"} direction  Which list to fetch.
- * @returns {Promise<Array<{ id, displayName, bio }>>}
+ * @param id         The user whose connections to list.
+ * @param direction  Which list to fetch.
  */
-export async function fetchFollowList(id, direction) {
+export async function fetchFollowList(
+  id: string,
+  direction: "followers" | "following",
+): Promise<PublicUser[]> {
   if (!hasApi()) throw new Error("Profiles are not configured.");
   if (!id) throw new Error("Missing user id.");
   const dir = direction === "followers" ? "followers" : "following";
@@ -119,7 +160,7 @@ export async function fetchFollowList(id, direction) {
     const detail = await res.text().catch(() => "");
     throw new Error(detail || `Request failed (${res.status}).`);
   }
-  const data = await res.json().catch(() => ({}));
+  const data: { users?: PublicUser[] } = await res.json().catch(() => ({}));
   return Array.isArray(data.users) ? data.users : [];
 }
 
@@ -128,10 +169,11 @@ export async function fetchFollowList(id, direction) {
  * everyone they follow, merged newest-first. Each item is { id, title, summary,
  * link, updated } — the same shape as {@link fetchUserActivity}, so it renders in
  * the dashboard's <FeedList> unchanged. Returns [] when the user follows no one.
- * @param {string} accessToken  Supabase session JWT.
- * @returns {Promise<Array<{ id, title, summary, link, updated }>>}
+ * @param accessToken  Supabase session JWT.
  */
-export async function fetchFollowingActivity(accessToken) {
+export async function fetchFollowingActivity(
+  accessToken: string | null | undefined,
+): Promise<FeedItem[]> {
   if (!hasApi()) throw new Error("Profiles are not configured.");
   if (!accessToken) return [];
 
@@ -148,17 +190,16 @@ export async function fetchFollowingActivity(accessToken) {
     const detail = await res.text().catch(() => "");
     throw new Error(detail || `Request failed (${res.status}).`);
   }
-  const data = await res.json().catch(() => ({}));
+  const data: { activity?: FeedItem[] } = await res.json().catch(() => ({}));
   return Array.isArray(data.activity) ? data.activity : [];
 }
 
 /**
  * The absolute URL of a user's Atom activity feed, for the "RSS" subscribe link.
  * Returns "" when no backend is configured.
- * @param {string} id  The user's Supabase id.
- * @returns {string}
+ * @param id  The user's Supabase id.
  */
-export function userFeedUrl(id) {
+export function userFeedUrl(id: string): string {
   if (!hasApi() || !id) return "";
   return `${apiUrl()}/profiles/${encodeURIComponent(id)}/feed.xml`;
 }

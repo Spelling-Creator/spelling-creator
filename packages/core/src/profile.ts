@@ -21,11 +21,13 @@ export const BIO_MAX = 500;
 /**
  * Save the signed-in user's public display name. Resolves to the stored name on
  * success; throws an Error carrying the Worker's plain-text reason on failure.
- * @param {string} displayName The chosen name.
- * @param {string} accessToken Supabase session JWT.
- * @returns {Promise<string>}
+ * @param displayName The chosen name.
+ * @param accessToken Supabase session JWT.
  */
-export async function setDisplayName(displayName, accessToken) {
+export async function setDisplayName(
+  displayName: string,
+  accessToken: string,
+): Promise<string> {
   if (!hasApi()) throw new Error("Accounts are not configured.");
   if (!accessToken) throw new Error("Please sign in.");
   let res;
@@ -45,7 +47,7 @@ export async function setDisplayName(displayName, accessToken) {
     const detail = await res.text().catch(() => "");
     throw new Error(detail || `Request failed (${res.status}).`);
   }
-  const data = await res.json().catch(() => ({}));
+  const data: { displayName?: string } = await res.json().catch(() => ({}));
   return data.displayName || displayName;
 }
 
@@ -60,11 +62,14 @@ export async function setDisplayName(displayName, accessToken) {
  * Throws an Error carrying the Worker's plain-text reason on failure (e.g. profanity,
  * or over the length limit — which counts the words, not the markup).
  *
- * @param {string} bio          The bio as rich-text HTML ("" clears it).
- * @param {string} accessToken  Supabase session JWT.
- * @returns {Promise<string>}   The sanitized HTML actually stored.
+ * @param bio          The bio as rich-text HTML ("" clears it).
+ * @param accessToken  Supabase session JWT.
+ * @returns The sanitized HTML actually stored.
  */
-export async function setBio(bio, accessToken) {
+export async function setBio(
+  bio: string,
+  accessToken: string,
+): Promise<string> {
   if (!hasApi()) throw new Error("Accounts are not configured.");
   if (!accessToken) throw new Error("Please sign in.");
   let res;
@@ -84,6 +89,6 @@ export async function setBio(bio, accessToken) {
     const detail = await res.text().catch(() => "");
     throw new Error(detail || `Request failed (${res.status}).`);
   }
-  const data = await res.json().catch(() => ({}));
+  const data: { bio?: unknown } = await res.json().catch(() => ({}));
   return typeof data.bio === "string" ? data.bio : bio;
 }

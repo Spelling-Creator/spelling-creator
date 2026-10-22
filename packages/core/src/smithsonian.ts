@@ -15,13 +15,61 @@
 // Its years are historical: -2420 is 2420 BC, as in a fact check's claims. An
 // eruption still going on carries the date GVP last updated it as its end.
 
-import { fetchJson } from "./wikidata.ts";
+import { fetchJson, type WikidataOptions } from "./wikidata.ts";
 
 export const GVP_WFS =
   "https://webservices.volcano.si.edu/geoserver/GVP-VOTW/wfs";
 
+/** A date as GVP gives it. A month or day of 0 is one it doesn't know. */
+export interface EruptionDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
+export interface Eruption {
+  confirmed: boolean;
+  start: EruptionDate;
+  end: EruptionDate | null;
+  /** How many years either way the start may be out. */
+  uncertainty: number;
+}
+
+export interface VolcanoRecord {
+  number: string;
+  name: string;
+  elevation: number | null;
+  /** Oldest first. */
+  eruptions: Eruption[];
+}
+
+/** Something with eruptions to look through, such as a VolcanoRecord. */
+type WithEruptions = { eruptions?: readonly Eruption[] } | null | undefined;
+
+/** A span of day numbers, as dateSpan gives it. */
+type DaySpan = readonly [number, number];
+
+// The fields asked of each layer. Any of them may be missing or null.
+interface VolcanoFields {
+  Volcano_Number: number | string | null;
+  Volcano_Name: string | null;
+  Elevation: number | null;
+}
+
+export interface EruptionFields {
+  Volcano_Number: number | string | null;
+  Activity_Type: string | null;
+  StartDateYear: number | null;
+  StartDateYearUncertainty: number | null;
+  StartDateMonth: number | null;
+  StartDateDay: number | null;
+  EndDateYear: number | null;
+  EndDateMonth: number | null;
+  EndDateDay: number | null;
+}
+
 /** The page a person can open to see a volcano's record. */
-export const volcanoUrl = (number) =>
+export const volcanoUrl = (number: string | number): string =>
   `https://volcano.si.edu/volcano.cfm?vn=${number}`;
 
 const VOLCANO_FIELDS = ["Volcano_Number", "Volcano_Name", "Elevation"];
@@ -39,9 +87,14 @@ const ERUPTION_FIELDS = [
 
 // A GVP number is six digits. Anything else is left out rather than put in a
 // filter.
-const isVolcanoNumber = (n) => /^\d{6}$/.test(String(n));
+const isVolcanoNumber = (n: unknown) => /^\d{6}$/.test(String(n));
 
-async function features(layer, fields, numbers, opts) {
+async function features<T extends object>(
+  layer: string,
+  fields: readonly string[],
+  numbers: readonly string[],
+  opts: WikidataOptions,
+): Promise<Partial<T>[]> {
   const url = `${GVP_WFS}?${new URLSearchParams({
     service: "WFS",
     version: "2.0.0",
@@ -51,14 +104,21 @@ async function features(layer, fields, numbers, opts) {
     CQL_FILTER: `Volcano_Number IN (${numbers.join(",")})`,
     outputFormat: "application/json",
   })}`;
-  const data = await fetchJson(url, opts);
-  return (data?.features || []).map((f) => f.properties || {});
+  const data = await fetchJson<{
+    features?: { properties?: Partial<T> | null }[];
+  } | null>(url, opts);
+  return (data?.features || []).map((f): Partial<T> => f.properties || {});
 }
 
-const whole = (n) => (Number.isInteger(n) ? n : 0);
+const whole = (n: unknown) =>
+  typeof n === "number" && Number.isInteger(n) ? n : 0;
 
-function datePart(year, month, day) {
-  if (!Number.isInteger(year)) return null;
+function datePart(
+  year: unknown,
+  month: unknown,
+  day: unknown,
+): EruptionDate | null {
+  if (typeof year !== "number" || !Number.isInteger(year)) return null;
   return { year, month: whole(month), day: whole(day) };
 }
 
@@ -66,9 +126,10 @@ function datePart(year, month, day) {
  * One eruption from GVP's fields: its start, its end where known, how many
  * years either way its start may be out (a radiocarbon date), and whether GVP
  * counts it as confirmed or only possible.
- * @returns {{ confirmed: boolean, start: object, end: object | null, uncertainty: number } | null}
  */
-export function eruptionFromFields(p) {
+export function eruptionFromFields(
+  p: Partial<EruptionFields>,
+): Eruption | null {
   const start = datePart(p.StartDateYear, p.StartDateMonth, p.StartDateDay);
   if (!start) return null;
   return {
@@ -85,23 +146,24 @@ export function eruptionFromFields(p) {
  * Only volcanoes of the last 12,000 years are in the layers read; an older
  * one (GVP's Pleistocene list) isn't, and has no record here.
  *
- * @param {(string|number)[]} numbers  GVP numbers, as Wikidata's P1886 gives them.
- * @param {import("./wikidata.js").WikidataOptions} [opts]
- * @returns {Promise<Map<string, { number: string, name: string, elevation: number | null, eruptions: object[] }>>}
- *   Keyed by number. Eruptions are oldest first.
+ * @param numbers  GVP numbers, as Wikidata's P1886 gives them.
+ * @returns Keyed by number. Eruptions are oldest first.
  */
-export async function volcanoRecords(numbers, opts = {}) {
+export async function volcanoRecords(
+  numbers: readonly (string | number)[],
+  opts: WikidataOptions = {},
+): Promise<Map<string, VolcanoRecord>> {
   const wanted = [...new Set(numbers.map(String))].filter(isVolcanoNumber);
-  const out = new Map();
+  const out = new Map<string, VolcanoRecord>();
   if (!wanted.length) return out;
   const [volcanoes, eruptions] = await Promise.all([
-    features(
+    features<VolcanoFields>(
       "Smithsonian_VOTW_Holocene_Volcanoes",
       VOLCANO_FIELDS,
       wanted,
       opts,
     ),
-    features(
+    features<EruptionFields>(
       "Smithsonian_VOTW_Holocene_Eruptions",
       ERUPTION_FIELDS,
       wanted,
@@ -113,7 +175,10 @@ export async function volcanoRecords(numbers, opts = {}) {
     out.set(number, {
       number,
       name: v.Volcano_Name || "",
-      elevation: Number.isFinite(v.Elevation) ? v.Elevation : null,
+      elevation:
+        typeof v.Elevation === "number" && Number.isFinite(v.Elevation)
+          ? v.Elevation
+          : null,
       eruptions: [],
     });
   }
@@ -136,15 +201,19 @@ export async function volcanoRecords(numbers, opts = {}) {
 // the whole month, so dates are compared as spans of days. The day numbers
 // only need to sort right, so every month has 31 days.
 
-const dayNumber = (year, month, day) =>
+const dayNumber = (year: number, month: number, day: number) =>
   year * 372 + (month - 1) * 31 + (day - 1);
 
-/**
- * The first and last day a date could mean.
- * @param {{ year: number, month?: number, day?: number }} date
- * @returns {[number, number]}
- */
-export function dateSpan({ year, month, day }) {
+/** The first and last day a date could mean. */
+export function dateSpan({
+  year,
+  month,
+  day,
+}: {
+  year: number;
+  month?: number;
+  day?: number;
+}): [number, number] {
   if (!month) return [dayNumber(year, 1, 1), dayNumber(year, 12, 31)];
   if (!day) return [dayNumber(year, month, 1), dayNumber(year, month, 31)];
   const d = dayNumber(year, month, day);
@@ -155,7 +224,11 @@ export function dateSpan({ year, month, day }) {
  * Whether an eruption was going on at some point in a span, allowing its
  * start's own uncertainty and `years` more either way.
  */
-export function eruptionOverlaps(eruption, span, years = 0) {
+export function eruptionOverlaps(
+  eruption: Eruption,
+  span: DaySpan,
+  years = 0,
+): boolean {
   const [from] = dateSpan(eruption.start);
   const [, to] = dateSpan(eruption.end || eruption.start);
   const pad = (eruption.uncertainty + years) * 372;
@@ -167,10 +240,10 @@ export function eruptionOverlaps(eruption, span, years = 0) {
  * not always the one that started latest. One from 1983 to 2018 is more
  * recent than one from 2008 to 2009. Null for a volcano with none.
  */
-export function latestEruption(record) {
-  const lastDay = (e) =>
+export function latestEruption(record: WithEruptions): Eruption | null {
+  const lastDay = (e: Eruption) =>
     Math.max(dateSpan(e.start)[1], dateSpan(e.end || e.start)[1]);
-  let latest = null;
+  let latest: Eruption | null = null;
   for (const e of record?.eruptions || []) {
     if (!e.confirmed) continue;
     // Eruptions are oldest first, so a tie goes to the one that started later.
@@ -180,8 +253,11 @@ export function latestEruption(record) {
 }
 
 /** The eruption nearest a span, to show beside a date that matches none. */
-export function nearestEruption(record, span) {
-  let best = null;
+export function nearestEruption(
+  record: WithEruptions,
+  span: DaySpan,
+): Eruption | null {
+  let best: Eruption | null = null;
   let bestGap = Infinity;
   for (const e of record?.eruptions || []) {
     if (!e.confirmed) continue;
@@ -203,7 +279,7 @@ export function nearestEruption(record, span) {
  * may only be one nobody has dated yet. Null for a volcano with no eruption
  * dated that closely.
  */
-export function recordedSince(record) {
+export function recordedSince(record: WithEruptions): number | null {
   const first = (record?.eruptions || []).find((e) => e.start.month);
   return first ? first.start.year : null;
 }

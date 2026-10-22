@@ -14,7 +14,12 @@
 // runs in Node and inside the Worker. The browser-only refinement (DOMParser for
 // HTML stripping) is injected by the web app via `strip`.
 
-import { topicImages } from "./wikidataMedia.ts";
+import type { WikidataItem } from "./wikidata.ts";
+import {
+  type TopicImage,
+  type TopicImages,
+  topicImages,
+} from "./wikidataMedia.ts";
 
 export const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 
@@ -30,14 +35,79 @@ export const IMAGEINFO_PARAMS = {
   iiextmetadatalanguage: "en",
 };
 
+/** The parts of an imageinfo `extmetadata` blob the credit line reads. */
+export interface CommonsExtMetadata {
+  Artist?: { value?: string };
+  LicenseShortName?: { value?: string };
+  LicenseUrl?: { value?: string };
+}
+
+/** The parts of one imageinfo entry the apps read. */
+export interface CommonsImageInfo {
+  url?: string;
+  thumburl?: string;
+  width?: number;
+  height?: number;
+  thumbwidth?: number;
+  thumbheight?: number;
+  mime?: string;
+  descriptionurl?: string;
+  extmetadata?: CommonsExtMetadata;
+}
+
+/** An imageinfo entry that isUsableImage accepted. */
+export type UsableImageInfo = CommonsImageInfo & { thumburl: string };
+
+/** A page of a Commons query, as far as it is read. */
+export interface CommonsPage {
+  pageid?: number;
+  title: string;
+  /** A search result's rank. */
+  index?: number;
+  imageinfo?: CommonsImageInfo[];
+}
+
+/** A title Commons normalized, or followed a redirect for. */
+interface TitleChange {
+  from?: string;
+  to?: string;
+}
+
+/** The `query` object of a Commons action API answer. */
+export interface CommonsQueryResult {
+  pages?: Record<string, CommonsPage>;
+  normalized?: TitleChange[];
+  redirects?: TitleChange[];
+}
+
+export interface CommonsQueryOptions {
+  /**
+   * Sent by non-browser callers: Wikimedia's User-Agent policy throttles or
+   * 403s a generic or missing UA, which Node's fetch default ("node") trips,
+   * especially from datacenter egress. Browsers set their own and forbid
+   * overriding it.
+   */
+  userAgent?: string;
+  /** Cancels the request. */
+  signal?: AbortSignal;
+  /** Wording for a non-2xx response, so each caller keeps its own phrasing. */
+  httpErrorMessage?: (status: number) => string;
+}
+
+/** A picture Wikidata lists for a topic, as a Commons page ready to be a hit. */
+export interface WikidataPick {
+  page: CommonsPage;
+  info: UsableImageInfo;
+  image: TopicImage;
+  item: WikidataItem;
+}
+
 /**
  * Flatten Commons' HTML metadata (e.g. an `<a>`-wrapped Artist) to collapsed
  * plain text. Regex-only, so it is safe in every runtime; these fields are small
  * and link-only, never scripts. The web app passes a DOMParser-based version.
- * @param {unknown} html
- * @returns {string}
  */
-export function stripCommonsHtml(html) {
+export function stripCommonsHtml(html: unknown): string {
   if (!html) return "";
   return String(html)
     .replace(/<[^>]*>/g, "")
@@ -50,12 +120,9 @@ export function stripCommonsHtml(html) {
  * license short name + the source. Authors and licenses vary widely, so this
  * degrades gracefully when either is missing. It goes in an image block's
  * `credit`, never its caption (see ./imageCredit.ts).
- * @param {string} author
- * @param {string} license
- * @returns {string}
  */
-export function buildCredit(author, license) {
-  const parts = [];
+export function buildCredit(author: string, license: string): string {
+  const parts: string[] = [];
   if (author) parts.push(`by ${author}`);
   if (license) parts.push(license);
   const tail = parts.length ? ` (${parts.join(", ")})` : "";
@@ -65,11 +132,13 @@ export function buildCredit(author, license) {
 /**
  * Pull author/license out of an imageinfo `extmetadata` blob and build the
  * credit line from them.
- * @param {object} [meta]  imageinfo.extmetadata
- * @param {(html: unknown) => string} [strip]  HTML-to-text (override in browsers)
- * @returns {{author: string, license: string, credit: string}}
+ * @param meta  imageinfo.extmetadata
+ * @param strip  HTML-to-text (override in browsers)
  */
-export function extmetaCredit(meta = {}, strip = stripCommonsHtml) {
+export function extmetaCredit(
+  meta: CommonsExtMetadata = {},
+  strip: (html: unknown) => string = stripCommonsHtml,
+): { author: string; license: string; credit: string } {
   const author = strip(meta.Artist && meta.Artist.value);
   const license = strip(meta.LicenseShortName && meta.LicenseShortName.value);
   return { author, license, credit: buildCredit(author, license) };
@@ -78,10 +147,8 @@ export function extmetaCredit(meta = {}, strip = stripCommonsHtml) {
 /**
  * "File:Red_panda_(cropped).jpg" -> "Red_panda_(cropped)". Used as the human
  * label for a hit.
- * @param {string} [title]
- * @returns {string}
  */
-export function cleanFileTitle(title) {
+export function cleanFileTitle(title?: string | null): string {
   return (title || "").replace(/^File:/i, "").replace(/\.[a-z0-9]+$/i, "");
 }
 
@@ -89,10 +156,11 @@ export function cleanFileTitle(title) {
  * Whether an imageinfo entry is something we can actually embed. The File
  * namespace also holds audio, video and PDFs, and a page with no thumbnail can't
  * be previewed.
- * @param {object} [info]  imageinfo[0]
- * @returns {boolean}
+ * @param info  imageinfo[0]
  */
-export function isUsableImage(info) {
+export function isUsableImage(
+  info?: CommonsImageInfo | null,
+): info is UsableImageInfo {
   if (!info || !info.thumburl) return false;
   return (info.mime || "").startsWith("image/");
 }
@@ -100,10 +168,11 @@ export function isUsableImage(info) {
 /**
  * Restore search ranking. `generator=search` results come back keyed by pageid
  * and therefore unordered; `index` carries the rank.
- * @param {object[]} pages
- * @returns {object[]}  a sorted copy
+ * @returns a sorted copy
  */
-export function rankPages(pages) {
+export function rankPages<T extends { index?: number }>(
+  pages: readonly T[],
+): T[] {
   return [...pages].sort((a, b) => (a.index || 0) - (b.index || 0));
 }
 
@@ -116,18 +185,12 @@ export function rankPages(pages) {
  * call it cross-origin without a proxy and lets the server call it without a
  * key.
  *
- * @param {Record<string, string>} params  action-API parameters
- * @param {object} [opts]
- * @param {string} [opts.userAgent]  sent by non-browser callers — Wikimedia's
- *   User-Agent policy throttles or 403s a generic/missing UA, which Node's fetch
- *   default ("node") trips, especially from datacenter egress. Browsers set
- *   their own and forbid overriding it.
- * @param {AbortSignal} [opts.signal]  cancels the request.
- * @param {(status: number) => string} [opts.httpErrorMessage]  wording for a
- *   non-2xx response, so each caller keeps its own phrasing.
- * @returns {Promise<object>}
+ * @param params  action-API parameters
  */
-export async function commonsQueryResult(params, opts = {}) {
+export async function commonsQueryResult(
+  params: Record<string, string>,
+  opts: CommonsQueryOptions = {},
+): Promise<CommonsQueryResult> {
   const {
     userAgent,
     signal,
@@ -141,10 +204,10 @@ export async function commonsQueryResult(params, opts = {}) {
     ...params,
   }).toString()}`;
 
-  const headers = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: "application/json" };
   if (userAgent) headers["User-Agent"] = userAgent;
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(url, { headers, signal });
   } catch (e) {
@@ -152,16 +215,20 @@ export async function commonsQueryResult(params, opts = {}) {
   }
   if (!res.ok) throw new Error(httpErrorMessage(res.status));
 
-  const data = await res.json().catch(() => ({}));
+  const data: { query?: CommonsQueryResult } | null = await res
+    .json()
+    .catch(() => ({}));
   return (data && data.query) || {};
 }
 
 /**
  * Call the Commons action API and unwrap `query.pages` to an array. Same
  * options as commonsQueryResult.
- * @returns {Promise<object[]>}
  */
-export async function commonsQuery(params, opts = {}) {
+export async function commonsQuery(
+  params: Record<string, string>,
+  opts: CommonsQueryOptions = {},
+): Promise<CommonsPage[]> {
   const { pages } = await commonsQueryResult(params, opts);
   return pages ? Object.values(pages) : [];
 }
@@ -179,7 +246,7 @@ export const PICKS_BUDGET_MS = 4000;
  * The pictures Wikidata lists for a topic, as Commons pages ready to become
  * hits: `{ page, info, image, item }`, where `page` and `info` are what
  * imageinfo returned (asked for with IMAGEINFO_PARAMS) and `image` and `item`
- * are topicImages' (./wikidataMedia.js). Empty when the topic names no
+ * are topicImages' (./wikidataMedia.ts). Empty when the topic names no
  * particular thing, and when Wikidata or Commons doesn't answer inside the
  * budget: the picks are an extra, and the search they sit on top of must not
  * fail for them.
@@ -190,17 +257,17 @@ export const PICKS_BUDGET_MS = 4000;
  * page under its current name, so titles are mapped through those before they
  * are matched up.
  *
- * @param {string} topic
- * @param {object} [opts]
- * @param {string} [opts.userAgent]  see commonsQueryResult.
- * @param {number} [opts.budgetMs]  defaults to PICKS_BUDGET_MS.
- * @returns {Promise<{ page: object, info: object, image: object, item: object }[]>}
+ * @param opts.userAgent  see commonsQueryResult.
+ * @param opts.budgetMs  defaults to PICKS_BUDGET_MS.
  */
-export async function wikidataPickPages(topic, opts = {}) {
+export async function wikidataPickPages(
+  topic: string,
+  opts: { userAgent?: string; budgetMs?: number } = {},
+): Promise<WikidataPick[]> {
   const signal = AbortSignal.timeout(opts.budgetMs ?? PICKS_BUDGET_MS);
   const shared = { userAgent: opts.userAgent, signal };
 
-  let found;
+  let found: TopicImages | null;
   try {
     found = await topicImages(topic, shared);
   } catch {
@@ -208,7 +275,7 @@ export async function wikidataPickPages(topic, opts = {}) {
   }
   if (!found) return [];
 
-  let result;
+  let result: CommonsQueryResult;
   try {
     result = await commonsQueryResult(
       {
@@ -223,28 +290,28 @@ export async function wikidataPickPages(topic, opts = {}) {
     return [];
   }
 
-  const renamed = new Map(
+  const renamed = new Map<string | undefined, string | undefined>(
     [...(result.normalized || []), ...(result.redirects || [])].map(
       ({ from, to }) => [from, to],
     ),
   );
   // Normalised first, then redirected: a title can go through both.
-  const current = (title) => {
-    let out = title;
+  const current = (title: string) => {
+    let out: string | undefined = title;
     for (let step = 0; step < 2 && renamed.has(out); step += 1) {
       out = renamed.get(out);
     }
     return out;
   };
-  const byTitle = new Map(
+  const byTitle = new Map<string | undefined, CommonsPage>(
     Object.values(result.pages || {}).map((page) => [page.title, page]),
   );
 
-  const picks = [];
+  const picks: WikidataPick[] = [];
   for (const image of found.images) {
     const page = byTitle.get(current(image.file));
     const info = page && page.imageinfo && page.imageinfo[0];
-    if (!isUsableImage(info)) continue;
+    if (!page || !isUsableImage(info)) continue;
     picks.push({ page, info, image, item: found.item });
   }
   return picks;

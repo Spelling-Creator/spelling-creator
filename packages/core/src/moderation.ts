@@ -1,5 +1,5 @@
 // Moderation API — talks to the same `apps/api` Worker as the rest of
-// the hub (see lessons.js / comments.js). Every endpoint here is privileged: the
+// the hub (see lessons.ts / comments.ts). Every endpoint here is privileged: the
 // Worker re-derives the caller's role from the database on each request, so these
 // functions just send the Supabase JWT as a Bearer credential and surface the
 // Worker's plain-text reason on failure. The browser's view of "am I a mod/admin"
@@ -27,21 +27,69 @@
 //   POST   /mod/moderators                     { email }              (admin)
 //   DELETE /mod/moderators/:userId                                    (admin)
 import { apiUrl, hasApi } from "./config.ts";
+import type { LessonSummary } from "./lessons.ts";
 
-function endpoint(path = "") {
+/** A moderation tier. Everyone else has none. */
+export type ModRole = "admin" | "moderator";
+
+/** A moderator's request that an admin delete a lesson. */
+export interface DeleteRequest {
+  id: string;
+  lessonId: string;
+  reason: string;
+  status: "pending" | "approved" | "denied";
+  createdAt: string;
+  /** Null when the lesson is already gone. */
+  lessonTitle: string | null;
+  lessonAuthor: string | null;
+}
+
+/** A banned display name, as the Worker reads the row. */
+export interface NameBan {
+  name_lower: string;
+  /** The name as it was written, for showing back. */
+  display_name: string | null;
+  created_at: string;
+}
+
+/** A banned IP address, as the Worker reads the row. */
+export interface IpBan {
+  ip: string;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface Moderator {
+  userId: string;
+  /** Null when the account can no longer be found. */
+  email: string | null;
+  createdAt: string;
+}
+
+function endpoint(path = ""): string {
   return `${apiUrl()}/mod${path}`;
 }
 
-async function readError(res) {
+async function readError(res: Response): Promise<Error & { status: number }> {
   const detail = await res.text().catch(() => "");
-  const err = new Error(detail || `Request failed (${res.status}).`);
-  err.status = res.status;
-  return err;
+  return Object.assign(new Error(detail || `Request failed (${res.status}).`), {
+    status: res.status,
+  });
+}
+
+interface RequestOptions {
+  method?: string;
+  accessToken: string;
+  body?: object;
 }
 
 // Shared request helper: attaches the Bearer token, parses JSON, surfaces the
-// Worker's plain-text reason on a non-2xx.
-async function request(path, { method = "GET", accessToken, body } = {}) {
+// Worker's plain-text reason on a non-2xx. `T` is the body the endpoint answers
+// with; any of it may be missing, since a body that isn't JSON reads as {}.
+async function request<T extends object = Record<string, unknown>>(
+  path: string,
+  { method = "GET", accessToken, body }: RequestOptions,
+): Promise<Partial<T>> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!accessToken) throw new Error("Please sign in.");
   let res;
@@ -66,13 +114,16 @@ async function request(path, { method = "GET", accessToken, body } = {}) {
  * to decide which controls to render — every action is independently authorised
  * server-side. Returns null (not an error) when sign-in isn't configured or the
  * lookup fails, so a hiccup never blocks an ordinary user.
- * @param {string} accessToken Supabase session JWT.
- * @returns {Promise<"admin"|"moderator"|null>}
+ * @param accessToken Supabase session JWT.
  */
-export async function fetchMyRole(accessToken) {
+export async function fetchMyRole(
+  accessToken: string | null | undefined,
+): Promise<ModRole | null> {
   if (!hasApi() || !accessToken) return null;
   try {
-    const data = await request("/whoami", { accessToken });
+    const data = await request<{ role: ModRole | null }>("/whoami", {
+      accessToken,
+    });
     return data.role || null;
   } catch {
     return null;
@@ -81,7 +132,10 @@ export async function fetchMyRole(accessToken) {
 
 // --- Comments -------------------------------------------------------------
 
-export function deleteCommentAsMod(commentId, accessToken) {
+export function deleteCommentAsMod(
+  commentId: string,
+  accessToken: string,
+): Promise<unknown> {
   return request(`/comments/${encodeURIComponent(commentId)}`, {
     method: "DELETE",
     accessToken,
@@ -90,8 +144,12 @@ export function deleteCommentAsMod(commentId, accessToken) {
 
 // --- Lessons --------------------------------------------------------------
 
-export async function setShadowban(lessonId, shadowbanned, accessToken) {
-  const data = await request(
+export async function setShadowban(
+  lessonId: string,
+  shadowbanned: boolean,
+  accessToken: string,
+): Promise<Partial<LessonSummary>> {
+  const data = await request<{ lesson: LessonSummary }>(
     `/lessons/${encodeURIComponent(lessonId)}/shadowban`,
     {
       method: "POST",
@@ -102,7 +160,11 @@ export async function setShadowban(lessonId, shadowbanned, accessToken) {
   return data.lesson || {};
 }
 
-export function requestLessonDeletion(lessonId, reason, accessToken) {
+export function requestLessonDeletion(
+  lessonId: string,
+  reason: string,
+  accessToken: string,
+): Promise<unknown> {
   return request(`/lessons/${encodeURIComponent(lessonId)}/delete-request`, {
     method: "POST",
     accessToken,
@@ -110,12 +172,20 @@ export function requestLessonDeletion(lessonId, reason, accessToken) {
   });
 }
 
-export async function listShadowbannedLessons(accessToken) {
-  const data = await request("/lessons/shadowbanned", { accessToken });
+export async function listShadowbannedLessons(
+  accessToken: string,
+): Promise<LessonSummary[]> {
+  const data = await request<{ lessons: LessonSummary[] }>(
+    "/lessons/shadowbanned",
+    { accessToken },
+  );
   return Array.isArray(data.lessons) ? data.lessons : [];
 }
 
-export function deleteLessonAsAdmin(lessonId, accessToken) {
+export function deleteLessonAsAdmin(
+  lessonId: string,
+  accessToken: string,
+): Promise<unknown> {
   return request(`/lessons/${encodeURIComponent(lessonId)}`, {
     method: "DELETE",
     accessToken,
@@ -124,12 +194,21 @@ export function deleteLessonAsAdmin(lessonId, accessToken) {
 
 // --- Lesson-deletion requests (admin) ------------------------------------
 
-export async function listDeleteRequests(accessToken) {
-  const data = await request("/delete-requests", { accessToken });
+export async function listDeleteRequests(
+  accessToken: string,
+): Promise<DeleteRequest[]> {
+  const data = await request<{ requests: DeleteRequest[] }>(
+    "/delete-requests",
+    { accessToken },
+  );
   return Array.isArray(data.requests) ? data.requests : [];
 }
 
-export function resolveDeleteRequest(requestId, approve, accessToken) {
+export function resolveDeleteRequest(
+  requestId: string,
+  approve: boolean,
+  accessToken: string,
+): Promise<unknown> {
   return request(
     `/delete-requests/${encodeURIComponent(requestId)}/${approve ? "approve" : "deny"}`,
     {
@@ -141,26 +220,37 @@ export function resolveDeleteRequest(requestId, approve, accessToken) {
 
 // --- Bans -----------------------------------------------------------------
 
-export async function listBans(accessToken) {
-  const data = await request("/bans", { accessToken });
+export async function listBans(
+  accessToken: string,
+): Promise<{ names: NameBan[]; ips: IpBan[] }> {
+  const data = await request<{ names: NameBan[]; ips: IpBan[] }>("/bans", {
+    accessToken,
+  });
   return {
     names: Array.isArray(data.names) ? data.names : [],
     ips: Array.isArray(data.ips) ? data.ips : [],
   };
 }
 
-export function banName(name, accessToken) {
+export function banName(name: string, accessToken: string): Promise<unknown> {
   return request("/bans/name", { method: "POST", accessToken, body: { name } });
 }
 
-export function unbanName(nameLower, accessToken) {
+export function unbanName(
+  nameLower: string,
+  accessToken: string,
+): Promise<unknown> {
   return request(`/bans/name/${encodeURIComponent(nameLower)}`, {
     method: "DELETE",
     accessToken,
   });
 }
 
-export function banIp(ip, reason, accessToken) {
+export function banIp(
+  ip: string,
+  reason: string,
+  accessToken: string,
+): Promise<unknown> {
   return request("/bans/ip", {
     method: "POST",
     accessToken,
@@ -168,7 +258,7 @@ export function banIp(ip, reason, accessToken) {
   });
 }
 
-export function unbanIp(ip, accessToken) {
+export function unbanIp(ip: string, accessToken: string): Promise<unknown> {
   return request(`/bans/ip/${encodeURIComponent(ip)}`, {
     method: "DELETE",
     accessToken,
@@ -177,12 +267,19 @@ export function unbanIp(ip, accessToken) {
 
 // --- Moderators (admin) ---------------------------------------------------
 
-export async function listModerators(accessToken) {
-  const data = await request("/moderators", { accessToken });
+export async function listModerators(
+  accessToken: string,
+): Promise<Moderator[]> {
+  const data = await request<{ moderators: Moderator[] }>("/moderators", {
+    accessToken,
+  });
   return Array.isArray(data.moderators) ? data.moderators : [];
 }
 
-export function addModerator(email, accessToken) {
+export function addModerator(
+  email: string,
+  accessToken: string,
+): Promise<unknown> {
   return request("/moderators", {
     method: "POST",
     accessToken,
@@ -197,7 +294,11 @@ export function addModerator(email, accessToken) {
  * no mail server to send a reset link through. `identifier` is a username or an
  * email — whichever the admin knows the person by.
  */
-export function setUserPassword(identifier, password, accessToken) {
+export function setUserPassword(
+  identifier: string,
+  password: string,
+  accessToken: string,
+): Promise<unknown> {
   return request("/password", {
     method: "POST",
     accessToken,
@@ -205,7 +306,10 @@ export function setUserPassword(identifier, password, accessToken) {
   });
 }
 
-export function removeModerator(userId, accessToken) {
+export function removeModerator(
+  userId: string,
+  accessToken: string,
+): Promise<unknown> {
   return request(`/moderators/${encodeURIComponent(userId)}`, {
     method: "DELETE",
     accessToken,

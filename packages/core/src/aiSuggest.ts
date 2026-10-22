@@ -4,16 +4,29 @@
 // challenge passed and that it was solved on an allowed domain) before doing any
 // AI work, so every request must carry a fresh token.
 import { apiUrl, hasApi } from "./config.ts";
+import type { LessonDoc, QuestionType } from "./types.ts";
+
+/** A lesson topic the Worker suggests. */
+export interface LessonIdea {
+  /** Short enough to use as the lesson's title. */
+  title: string;
+  /** One sentence on what the lesson would cover. */
+  description: string;
+}
 
 /**
  * Ask the Worker for a block of text about `subject`.
- * @param {string} subject  Topic to write about.
- * @param {string} token    Turnstile token from the widget's callback.
- * @param {object} [context]  Extra context to help the model.
- * @param {string} [context.documentName]  Title of the overall lesson/document.
- * @returns {Promise<string>} The generated text.
+ * @param subject  Topic to write about.
+ * @param token    Turnstile token from the widget's callback.
+ * @param context  Extra context to help the model.
+ * @param context.documentName  Title of the overall lesson/document.
+ * @returns The generated text.
  */
-export async function suggestText(subject, token, context = {}) {
+export async function suggestText(
+  subject: string,
+  token: string,
+  context: { documentName?: string } = {},
+): Promise<string> {
   if (!hasApi()) {
     throw new Error("The API is not configured.");
   }
@@ -43,7 +56,7 @@ export async function suggestText(subject, token, context = {}) {
     throw new Error(detail || `Request failed (${res.status}).`);
   }
 
-  const data = await res.json().catch(() => ({}));
+  const data: { text?: string } = await res.json().catch(() => ({}));
   return data.text || "";
 }
 
@@ -55,13 +68,16 @@ export async function suggestText(subject, token, context = {}) {
  * a Bearer credential the Worker verifies) rather than a Turnstile token — it
  * mutates server state on behalf of an account, so it requires sign-in.
  *
- * @param {string} subject      The same subject the text was generated for.
- * @param {string} accessToken  Supabase session JWT (from the auth context).
- * @param {object} [context]    Extra context that shaped the text.
- * @param {string} [context.documentName]  Title of the overall lesson/document.
- * @returns {Promise<void>}
+ * @param subject      The same subject the text was generated for.
+ * @param accessToken  Supabase session JWT (from the auth context).
+ * @param context      Extra context that shaped the text.
+ * @param context.documentName  Title of the overall lesson/document.
  */
-export async function dislikeText(subject, accessToken, context = {}) {
+export async function dislikeText(
+  subject: string,
+  accessToken: string,
+  context: { documentName?: string } = {},
+): Promise<void> {
   if (!hasApi()) {
     throw new Error("The API is not configured.");
   }
@@ -94,16 +110,25 @@ export async function dislikeText(subject, accessToken, context = {}) {
 
 /**
  * Ask the Worker to suggest a quiz question about `subject`.
- * @param {string} subject  Topic for the question (the section title).
- * @param {string} token    Turnstile token from the widget's callback.
- * @param {object} [context]  Extra context to help the model.
- * @param {string} [context.questionType]  One of the question type keys (default "single").
- * @param {string} [context.documentName]  Title of the overall lesson/document.
- * @param {string} [context.sectionText]   Existing section text to ground the question in.
- * @param {string[]} [context.existingQuestions]  Prompts of questions already in the section, so the model can avoid repeats.
- * @returns {Promise<object>} The suggested question data (shape depends on type).
+ * @param subject  Topic for the question (the section title).
+ * @param token    Turnstile token from the widget's callback.
+ * @param context  Extra context to help the model.
+ * @param context.questionType  One of the question type keys (default "single").
+ * @param context.documentName  Title of the overall lesson/document.
+ * @param context.sectionText   Existing section text to ground the question in.
+ * @param context.existingQuestions  Prompts of questions already in the section, so the model can avoid repeats.
+ * @returns The suggested question data (shape depends on type).
  */
-export async function suggestQuestion(subject, token, context = {}) {
+export async function suggestQuestion(
+  subject: string,
+  token: string,
+  context: {
+    questionType?: QuestionType;
+    documentName?: string;
+    sectionText?: string;
+    existingQuestions?: string[];
+  } = {},
+): Promise<unknown> {
   if (!hasApi()) {
     throw new Error("The API is not configured.");
   }
@@ -139,17 +164,20 @@ export async function suggestQuestion(subject, token, context = {}) {
     throw new Error(detail || `Request failed (${res.status}).`);
   }
 
-  const data = await res.json().catch(() => ({}));
+  const data: { question?: unknown } = await res.json().catch(() => ({}));
   return data.question || {};
 }
 
 /**
  * Ask the Worker to suggest a batch of lesson topic ideas for an age range.
- * @param {string} ageRange  The age range the lesson is pitched at (may be empty).
- * @param {string} token     Turnstile token from the widget's callback.
- * @returns {Promise<Array<{title: string, description: string}>>} Suggested ideas.
+ * @param ageRange  The age range the lesson is pitched at (may be empty).
+ * @param token     Turnstile token from the widget's callback.
+ * @returns Suggested ideas.
  */
-export async function suggestLessonIdeas(ageRange, token) {
+export async function suggestLessonIdeas(
+  ageRange: string,
+  token: string,
+): Promise<LessonIdea[]> {
   if (!hasApi()) {
     throw new Error("The API is not configured.");
   }
@@ -177,7 +205,7 @@ export async function suggestLessonIdeas(ageRange, token) {
     throw new Error(detail || `Request failed (${res.status}).`);
   }
 
-  const data = await res.json().catch(() => ({}));
+  const data: { ideas?: LessonIdea[] } = await res.json().catch(() => ({}));
   return Array.isArray(data.ideas) ? data.ideas : [];
 }
 
@@ -185,13 +213,21 @@ export async function suggestLessonIdeas(ageRange, token) {
  * Ask the Worker for a fix to one lesson check finding. The Worker finds the
  * finding again by its key, asks a model, and only answers with a fix that
  * passes the checks (see apps/api/src/lib/lessonFix.js).
- * @param {object} doc         The lesson as it is now.
- * @param {string} findingKey  The finding's `key`.
- * @param {string} token       Turnstile token from the widget's callback.
- * @returns {Promise<{ operations: object[], explanation: string, newWarnings: number }>}
- *   replace_block operations for ./lessonAiFixes.js applyFixOperations.
+ * @param doc         The lesson as it is now.
+ * @param findingKey  The finding's `key`.
+ * @param token       Turnstile token from the widget's callback.
+ * @returns `operations` are replace_block operations for ./lessonAiFixes.js
+ *   applyFixOperations, which checks them.
  */
-export async function suggestFix(doc, findingKey, token) {
+export async function suggestFix(
+  doc: LessonDoc,
+  findingKey: string,
+  token: string,
+): Promise<{
+  operations: unknown[];
+  explanation: string;
+  newWarnings: number;
+}> {
   if (!hasApi()) {
     throw new Error("The API is not configured.");
   }
@@ -233,7 +269,11 @@ export async function suggestFix(doc, findingKey, token) {
     throw new Error(detail || `Request failed (${res.status}).`);
   }
 
-  const data = await res.json().catch(() => ({}));
+  const data: {
+    operations?: unknown;
+    explanation?: unknown;
+    newWarnings?: unknown;
+  } = await res.json().catch(() => ({}));
   return {
     operations: Array.isArray(data.operations) ? data.operations : [],
     explanation: typeof data.explanation === "string" ? data.explanation : "",
@@ -243,15 +283,18 @@ export async function suggestFix(doc, findingKey, token) {
 
 /**
  * Ask the Worker to check a lesson's numbers and dates against Wikidata.
- * @param {{ blockId: string, text: string }[]} passages  The lesson's text
- *   blocks, in order (see lessonPassages in ./factCheck.js).
- * @param {string} token  Turnstile token from the widget's callback.
- * @param {object} [context]
- * @param {string} [context.documentName]  Title of the lesson.
- * @returns {Promise<object[]>} One result per fact found, each carrying the
- *   `blockId` of the passage it is in (see ./factCheck.js for the rest).
+ * @param passages  The lesson's text blocks, in order (see lessonPassages in
+ *   ./factCheck.js).
+ * @param token  Turnstile token from the widget's callback.
+ * @param context.documentName  Title of the lesson.
+ * @returns One result per fact found, each carrying the `blockId` of the
+ *   passage it is in (see ./factCheck.js for the rest).
  */
-export async function checkFacts(passages, token, context = {}) {
+export async function checkFacts(
+  passages: { blockId: string; text: string }[],
+  token: string,
+  context: { documentName?: string } = {},
+): Promise<unknown[]> {
   if (!hasApi()) {
     throw new Error("The API is not configured.");
   }
@@ -282,6 +325,6 @@ export async function checkFacts(passages, token, context = {}) {
     throw new Error(detail || `Request failed (${res.status}).`);
   }
 
-  const data = await res.json().catch(() => ({}));
+  const data: { facts?: unknown } = await res.json().catch(() => ({}));
   return Array.isArray(data.facts) ? data.facts : [];
 }

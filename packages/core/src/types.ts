@@ -154,6 +154,12 @@ export interface LessonDoc {
   ageRange?: string;
   sources?: Source[];
   sections: Section[];
+  /**
+   * The email addresses a live session admits without asking. The hub keeps
+   * it with the stored lesson for its author only; a lesson file and a
+   * lesson's history leave it out.
+   */
+  trustedCollaborators?: string[];
 }
 
 /** The importable .json envelope (see lessonFile.ts). */

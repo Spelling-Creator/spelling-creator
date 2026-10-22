@@ -3,7 +3,7 @@
 // Two things use it, each with its own idea of what to ask:
 //
 //   ./factCheck.js       a lesson's numbers and dates, compared with Wikidata's.
-//   ./wikidataMedia.js   the pictures an item has, which are files on Wikimedia
+//   ./wikidataMedia.ts   the pictures an item has, which are files on Wikimedia
 //                        Commons.
 //
 // What they share is here: finding items by name (wbsearchentities, small and
@@ -23,35 +23,67 @@ export const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 export const WIKIDATA_SPARQL = "https://query.wikidata.org/sparql";
 
 /** The page a person can open to see an item. */
-export function wikidataItemUrl(id) {
+export function wikidataItemUrl(id: string): string {
   return `https://www.wikidata.org/wiki/${id}`;
 }
 
 /** The last part of an IRI: an item id, a property id, a rank's name. */
-export const lastSegment = (iri) => String(iri || "").replace(/^.*[/#]/, "");
+export const lastSegment = (iri?: string | null): string =>
+  String(iri || "").replace(/^.*[/#]/, "");
 
-/**
- * @typedef {object} WikidataOptions
- * @property {typeof fetch} [fetch]  Defaults to the global one.
- * @property {string} [userAgent]    Required outside a browser.
- * @property {string} [language]     For item names and descriptions; "en".
- * @property {AbortSignal} [signal]  Cancels every request of the lookup: a
- *   budget for the whole chain, for a caller that can't wait on each request's
- *   own timeout in turn.
- */
+export interface WikidataOptions {
+  /** Defaults to the global one. */
+  fetch?: typeof fetch;
+  /** Required outside a browser. */
+  userAgent?: string;
+  /** For item names and descriptions; "en". */
+  language?: string;
+  /**
+   * Cancels every request of the lookup: a budget for the whole chain, for a
+   * caller that can't wait on each request's own timeout in turn.
+   */
+  signal?: AbortSignal;
+}
+
+/** An item as a search finds it. */
+export interface WikidataItem {
+  id: string;
+  label: string;
+  description: string;
+}
+
+/** One value in a row of SPARQL results. */
+export interface SparqlValue {
+  value: string;
+}
+
+/** One row of SPARQL results: a value for each variable the row binds. */
+export type SparqlBinding = Partial<Record<string, SparqlValue>>;
+
+/** A statement's rank. */
+export type Rank = "preferred" | "normal" | "deprecated";
 
 /**
  * A JSON request to a Wikimedia API, on the terms above: the caller's fetch
  * and User-Agent, 15 s per request inside any budget the caller set. Shared
- * with ./wikipedia.js, and with ./smithsonian.js, whose service has no such
+ * with ./wikipedia.ts, and with ./smithsonian.ts, whose service has no such
  * policy but is asked on the same terms.
- * @param {string} url
- * @param {WikidataOptions} [opts]
- * @param {RequestInit} [init]
+ *
+ * `T` is what the caller expects back. Nothing checks it, so it names only the
+ * fields the caller reads, and leaves optional any that could be missing.
  */
-export async function fetchJson(url, opts = {}, init = {}) {
+export async function fetchJson<T = unknown>(
+  url: string,
+  opts: WikidataOptions = {},
+  init: Omit<RequestInit, "headers"> & {
+    headers?: Record<string, string>;
+  } = {},
+): Promise<T> {
   const fetchImpl = opts.fetch || globalThis.fetch;
-  const headers = { Accept: "application/json", ...(init.headers || {}) };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init.headers || {}),
+  };
   if (opts.userAgent) headers["User-Agent"] = opts.userAgent;
   const timeout = AbortSignal.timeout(15_000);
   const res = await fetchImpl(url, {
@@ -67,15 +99,29 @@ export async function fetchJson(url, opts = {}, init = {}) {
   return res.json();
 }
 
+// What wbsearchentities answers, as far as it is read.
+interface SearchResponse {
+  search?: {
+    id: string;
+    label?: string;
+    description?: string;
+    display?: {
+      label?: { value?: string };
+      description?: { value?: string };
+    };
+    match?: { text?: string };
+  }[];
+}
+
 /**
  * Items whose name matches, best match first. `match` is the label or alias
  * the search matched on, which says how good the match is: a search matches
  * prefixes, so "lion" also finds "Lionel Messi".
- * @param {string} name
- * @param {WikidataOptions & { limit?: number }} [opts]
- * @returns {Promise<{ id: string, label: string, description: string, match: string }[]>}
  */
-export async function searchItems(name, opts = {}) {
+export async function searchItems(
+  name: string,
+  opts: WikidataOptions & { limit?: number } = {},
+): Promise<(WikidataItem & { match: string })[]> {
   const language = opts.language || "en";
   const url = `${WIKIDATA_API}?${new URLSearchParams({
     action: "wbsearchentities",
@@ -88,7 +134,7 @@ export async function searchItems(name, opts = {}) {
     formatversion: "2",
     origin: "*",
   })}`;
-  const data = await fetchJson(url, opts);
+  const data = await fetchJson<SearchResponse>(url, opts);
   return (data.search || []).map((hit) => ({
     id: hit.id,
     label: hit.display?.label?.value || hit.label || hit.id,
@@ -101,7 +147,7 @@ export async function searchItems(name, opts = {}) {
  * Text as it is matched: one space between words, no case. A name against a
  * label here; a quote against its passage in the fact check.
  */
-export function squashText(text) {
+export function squashText(text?: string | null): string {
   return String(text || "")
     .replace(/\s+/g, " ")
     .trim()
@@ -116,10 +162,12 @@ export function squashText(text) {
  * The search's order is not a good guide to which one is meant. For "lion" it
  * puts a family name first and the animal second; for "Mercury", a car brand
  * ahead of the planet. Callers rank these by sitelinks, which the media query
- * in ./wikidataMedia.js reads along with everything else it asks for.
- * @returns {Promise<{ id: string, label: string, description: string }[]>}
+ * in ./wikidataMedia.ts reads along with everything else it asks for.
  */
-export async function exactMatches(name, opts = {}) {
+export async function exactMatches(
+  name: string,
+  opts: WikidataOptions & { limit?: number } = {},
+): Promise<WikidataItem[]> {
   const wanted = squashText(name);
   if (!wanted) return [];
   const hits = await searchItems(name, { ...opts, limit: opts.limit || 10 });
@@ -133,18 +181,20 @@ export async function exactMatches(name, opts = {}) {
  *
  * A GET where the URL fits, so a cache in front (the Worker's) can hold the
  * answer; the query service turns very long URLs away, so a POST past that.
- * @param {string} query
- * @param {WikidataOptions} [opts]
- * @returns {Promise<object[]>}  `results.bindings`
+ * @returns `results.bindings`
  */
-export async function sparql(query, opts = {}) {
+export async function sparql(
+  query: string,
+  opts: WikidataOptions = {},
+): Promise<SparqlBinding[]> {
   const params = new URLSearchParams({ query, format: "json" });
   const accept = { headers: { Accept: "application/sparql-results+json" } };
   const get = `${WIKIDATA_SPARQL}?${params}`;
+  type Results = { results?: { bindings?: SparqlBinding[] } } | null;
   const data =
     get.length < 7000
-      ? await fetchJson(get, opts, accept)
-      : await fetchJson(WIKIDATA_SPARQL, opts, {
+      ? await fetchJson<Results>(get, opts, accept)
+      : await fetchJson<Results>(WIKIDATA_SPARQL, opts, {
           ...accept,
           method: "POST",
           body: params,
@@ -152,14 +202,14 @@ export async function sparql(query, opts = {}) {
   return data?.results?.bindings || [];
 }
 
-const RANKS = {
+const RANKS: Partial<Record<string, Rank>> = {
   PreferredRank: "preferred",
   NormalRank: "normal",
   DeprecatedRank: "deprecated",
 };
 
 /** A statement's rank from its SPARQL IRI: "preferred", "normal" or "deprecated". */
-export function rankOf(iri) {
+export function rankOf(iri?: string | null): Rank {
   return RANKS[lastSegment(iri)] || "normal";
 }
 
@@ -167,9 +217,9 @@ export function rankOf(iri) {
  * A Commons file named by a SPARQL value, as the "File:" title the Commons API
  * takes. The query service gives files as Special:FilePath URLs, percent
  * encoded: .../Special:FilePath/Lion%20in%20masai%20mara.jpg.
- * @returns {string}  "File:Lion in masai mara.jpg", or "" for anything else.
+ * @returns "File:Lion in masai mara.jpg", or "" for anything else.
  */
-export function commonsFileTitle(value) {
+export function commonsFileTitle(value?: string | null): string {
   const match = /Special:FilePath\/(.+)$/.exec(String(value || ""));
   if (!match) return "";
   try {
@@ -181,10 +231,14 @@ export function commonsFileTitle(value) {
 
 // Run `work` over `items`, a few at a time: polite to Wikimedia, and quick
 // enough for a lesson's worth of names.
-export async function eachLimited(items, limit, work) {
+export async function eachLimited<T>(
+  items: Iterable<T>,
+  limit: number,
+  work: (item: T) => unknown,
+): Promise<void> {
   const queue = [...items];
   const run = async () => {
-    while (queue.length) await work(queue.shift());
+    while (queue.length) await work(queue.shift() as T);
   };
   await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, run));
 }

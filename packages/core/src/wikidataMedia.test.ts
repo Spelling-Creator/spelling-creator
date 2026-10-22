@@ -12,20 +12,31 @@ const RANK = "http://wikiba.se/ontology#";
 const ITEM = "http://www.wikidata.org/entity/";
 
 // One query-service row: an item's file under a property.
-const row = (item, pid, file, extra = {}) => ({
+const row = (
+  item: string,
+  pid: string | null,
+  file: string | null,
+  extra: { links?: number; rank?: string } = {},
+) => ({
   item: { value: ITEM + item },
   links: { value: String(extra.links ?? 10) },
   ...(pid
     ? {
         pid: { value: pid },
-        file: { value: FILE + encodeURIComponent(file) },
+        file: { value: FILE + encodeURIComponent(String(file)) },
         rank: { value: RANK + (extra.rank || "NormalRank") },
       }
     : {}),
 });
 
 // A stand-in for the two Wikidata endpoints.
-function fakeWikidata({ search = [], bindings = [] }) {
+function fakeWikidata({
+  search = [],
+  bindings = [],
+}: {
+  search?: unknown[];
+  bindings?: unknown[];
+}) {
   return vi.fn(async (url) => {
     const { hostname } = new URL(url);
     if (hostname === "www.wikidata.org") return Response.json({ search });
@@ -33,7 +44,7 @@ function fakeWikidata({ search = [], bindings = [] }) {
   });
 }
 
-const hit = (id, text, description = "") => ({
+const hit = (id: string, text: string, description = "") => ({
   id,
   label: text,
   description,
@@ -84,7 +95,7 @@ describe("reading an item's files", () => {
       ],
       pids,
     ).get("Q17");
-    expect(out.files.map((f) => f.file)).toEqual([
+    expect(out?.files.map((f) => f.file)).toEqual([
       "File:Best.jpg",
       "File:Second.jpg",
       "File:Flag of Japan.svg",
@@ -96,8 +107,8 @@ describe("reading an item's files", () => {
       [row("Q1", "P18", "Same.jpg"), row("Q1", "P2716", "Same.jpg")],
       pids,
     ).get("Q1");
-    expect(out.files).toHaveLength(1);
-    expect(out.files[0]).toMatchObject({ pid: "P18", file: "File:Same.jpg" });
+    expect(out?.files).toHaveLength(1);
+    expect(out?.files[0]).toMatchObject({ pid: "P18", file: "File:Same.jpg" });
   });
 
   it("still reports an item with no files, so its sitelinks count", () => {
@@ -122,12 +133,12 @@ describe("a topic's pictures", () => {
       ],
     });
     const found = await topicImages("lion", { fetch });
-    expect(found.item).toEqual({
+    expect(found?.item).toEqual({
       id: "Q140",
       label: "lion",
       description: "big cat",
     });
-    expect(found.images).toEqual([
+    expect(found?.images).toEqual([
       { file: "File:A.jpg", role: "image", label: "picture" },
       {
         file: "File:Range 1.svg",

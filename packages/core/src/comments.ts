@@ -1,5 +1,5 @@
 // Lesson-comment API — talks to the same `apps/api` Worker as the
-// rest of the hub (see lessons.js). The browser never touches the database
+// rest of the hub (see lessons.ts). The browser never touches the database
 // directly; it only calls these Worker endpoints.
 //
 // Worker endpoints this expects (see README "Lesson hub" for the full contract):
@@ -9,7 +9,7 @@
 //
 // Comment: { id, parentId, authorId, author, body, createdAt, editedAt }
 //   parentId is the comment this one replies to, or null for a top-level comment.
-//   body is rich-text HTML (see lib/richText.js); comments predating rich text are
+//   body is rich-text HTML (see richText.ts); comments predating rich text are
 //   plain strings, which RichText.jsx still renders as plain text.
 //   editedAt is when the author last edited it, or null if they never have.
 //
@@ -24,18 +24,42 @@
 // its displayed stars. See postComment's return shape.
 import { apiUrl, hasApi } from "./config.ts";
 
-function endpoint(lessonId) {
+/** A comment on a lesson (see rowToComment in apps/api/src/routes/comments.js). */
+export interface LessonComment {
+  id: string;
+  parentId: string | null;
+  authorId: string | null;
+  author: string | null;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+}
+
+/** A lesson's star rating, across everyone who rated it. */
+export interface RatingStats {
+  /** Null when nobody has rated it. */
+  average: number | null;
+  count: number;
+}
+
+interface CommentsResponse {
+  comments?: LessonComment[];
+  comment?: LessonComment;
+  rating?: RatingStats | null;
+}
+
+function endpoint(lessonId: string): string {
   return `${apiUrl()}/lessons/${encodeURIComponent(lessonId)}/comments`;
 }
 
-async function readError(res) {
+async function readError(res: Response): Promise<Error & { status: number }> {
   // The Worker returns a plain-text reason for 4xx/5xx; surface it directly.
   const detail = await res.text().catch(() => "");
-  const err = new Error(detail || `Request failed (${res.status}).`);
   // Expose the status so callers can distinguish cases — notably the 422 the
   // Worker returns when a comment is blocked for profanity (see postComment).
-  err.status = res.status;
-  return err;
+  return Object.assign(new Error(detail || `Request failed (${res.status}).`), {
+    status: res.status,
+  });
 }
 
 // The Worker rejects a profanity-containing comment with this status (nothing is
@@ -52,11 +76,12 @@ export const COMMENT_MAX = 2000;
  * a private draft's comments need the caller to be signed in as its author, a
  * trusted collaborator, or a moderator — `accessToken` is sent along whenever
  * one is available so those cases keep working.
- * @param {string} lessonId
- * @param {string} [accessToken] Supabase session JWT, if signed in.
- * @returns {Promise<Array<{id, author, body, createdAt}>>}
+ * @param accessToken Supabase session JWT, if signed in.
  */
-export async function fetchComments(lessonId, accessToken) {
+export async function fetchComments(
+  lessonId: string,
+  accessToken?: string,
+): Promise<LessonComment[]> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId) throw new Error("Missing lesson id.");
 
@@ -73,7 +98,7 @@ export async function fetchComments(lessonId, accessToken) {
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: CommentsResponse = await res.json().catch(() => ({}));
   return Array.isArray(data.comments) ? data.comments : [];
 }
 
@@ -86,20 +111,18 @@ export async function fetchComments(lessonId, accessToken) {
  * An optional 1–5 star `rating` rates the lesson alongside the comment; the
  * Worker stores one rating per user (re-rating updates it) and returns the
  * lesson's new average when a rating is included.
- * @param {string} lessonId
- * @param {string} body          The comment text.
- * @param {string} accessToken   Supabase session JWT.
- * @param {string} [parentId]    The comment being replied to; omit for a top-level comment.
- * @param {number} [rating]      A 1–5 star rating for the lesson; omit to comment without rating.
- * @returns {Promise<{comment: {id, parentId, author, body, createdAt}, rating: {average, count}|null}>}
+ * @param body          The comment text.
+ * @param accessToken   Supabase session JWT.
+ * @param parentId      The comment being replied to; omit for a top-level comment.
+ * @param rating        A 1–5 star rating for the lesson; omit to comment without rating.
  */
 export async function postComment(
-  lessonId,
-  body,
-  accessToken,
-  parentId,
-  rating,
-) {
+  lessonId: string,
+  body: string,
+  accessToken: string,
+  parentId?: string | null,
+  rating?: number | null,
+): Promise<{ comment: Partial<LessonComment>; rating: RatingStats | null }> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId) throw new Error("Missing lesson id.");
   if (!accessToken) throw new Error("Please sign in before commenting.");
@@ -107,7 +130,9 @@ export async function postComment(
   const text = (body || "").trim();
   if (!text) throw new Error("Write something before posting.");
 
-  const payload = { body: text };
+  const payload: { body: string; parentId?: string; rating?: number } = {
+    body: text,
+  };
   if (parentId) payload.parentId = parentId;
   if (rating != null) payload.rating = rating;
 
@@ -126,7 +151,7 @@ export async function postComment(
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: CommentsResponse = await res.json().catch(() => ({}));
   return { comment: data.comment || {}, rating: data.rating || null };
 }
 
@@ -140,13 +165,16 @@ export async function postComment(
  * Moderators deliberately have no edit power: they can delete a comment, but not
  * rewrite one under its author's name.
  *
- * @param {string} lessonId
- * @param {string} commentId   The comment to edit; must be yours.
- * @param {string} body        The new body, as rich-text HTML.
- * @param {string} accessToken Supabase session JWT.
- * @returns {Promise<{id, parentId, authorId, author, body, createdAt, editedAt}>}
+ * @param commentId   The comment to edit; must be yours.
+ * @param body        The new body, as rich-text HTML.
+ * @param accessToken Supabase session JWT.
  */
-export async function updateComment(lessonId, commentId, body, accessToken) {
+export async function updateComment(
+  lessonId: string,
+  commentId: string,
+  body: string,
+  accessToken: string,
+): Promise<Partial<LessonComment>> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId || !commentId) throw new Error("Missing comment id.");
   if (!accessToken) throw new Error("Please sign in before editing.");
@@ -169,7 +197,7 @@ export async function updateComment(lessonId, commentId, body, accessToken) {
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: CommentsResponse = await res.json().catch(() => ({}));
   return data.comment || {};
 }
 
@@ -178,8 +206,6 @@ export async function updateComment(lessonId, commentId, body, accessToken) {
  * caller's role (re-derived from the database) before removing the row, and its
  * replies cascade with it. A plain author can't reach this — it's a moderation
  * action, distinct from the (not-yet-implemented) author self-delete.
- * @param {string} commentId
- * @param {string} accessToken  Supabase session JWT.
- * @returns {Promise<void>}
+ * @param accessToken  Supabase session JWT.
  */
 export { deleteCommentAsMod as deleteComment } from "./moderation.ts";

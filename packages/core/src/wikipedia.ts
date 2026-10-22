@@ -16,16 +16,25 @@
 // article as plain prose for ./factText.ts to search.
 //
 // Same terms as the Wikidata requests: anonymous and cross-origin, with a
-// descriptive User-Agent from a server (see ./wikidata.js).
+// descriptive User-Agent from a server (see ./wikidata.ts).
 
-import { fetchJson } from "./wikidata.ts";
+import {
+  fetchJson,
+  type WikidataItem,
+  type WikidataOptions,
+} from "./wikidata.ts";
+
+/** An article a search found, and the Wikidata item it names. */
+export interface ArticleItem extends WikidataItem {
+  title: string;
+}
 
 /** The action API of one language's Wikipedia. */
-export const wikipediaApi = (language = "en") =>
+export const wikipediaApi = (language = "en"): string =>
   `https://${language}.wikipedia.org/w/api.php`;
 
 /** The page a person can open to read an article. */
-export const wikipediaArticleUrl = (title, language = "en") =>
+export const wikipediaArticleUrl = (title: string, language = "en"): string =>
   `https://${language}.wikipedia.org/wiki/${encodeURIComponent(
     String(title).replace(/ /g, "_"),
   )}`;
@@ -35,11 +44,13 @@ export const wikipediaArticleUrl = (title, language = "en") =>
  * own ("== Lifespan =="), and no infobox, tables or references. A long
  * article is 50 to 100 KB of this, where its HTML runs to a megabyte.
  *
- * @param {string} title  The article's title, as articleItems gives it.
- * @param {import("./wikidata.js").WikidataOptions} [opts]
- * @returns {Promise<string>}  "" for an article that doesn't exist.
+ * @param title  The article's title, as articleItems gives it.
+ * @returns "" for an article that doesn't exist.
  */
-export async function articleText(title, opts = {}) {
+export async function articleText(
+  title: string,
+  opts: WikidataOptions = {},
+): Promise<string> {
   const url = `${wikipediaApi(opts.language)}?${new URLSearchParams({
     action: "query",
     prop: "extracts",
@@ -50,23 +61,33 @@ export async function articleText(title, opts = {}) {
     formatversion: "2",
     origin: "*",
   })}`;
-  const data = await fetchJson(url, opts);
+  const data = await fetchJson<{
+    query?: { pages?: { extract?: string }[] };
+  } | null>(url, opts);
   return data?.query?.pages?.[0]?.extract || "";
+}
+
+// One page of an article search, as far as it is read.
+interface SearchPage {
+  title: string;
+  index?: number;
+  pageprops?: { wikibase_item?: string };
 }
 
 /**
  * The items of the articles a search finds, best first. An article without
  * an item (a list, a disambiguation page without one) is left out.
  *
- * @param {string} query  A name, with what kind of thing it is where known:
+ * @param query  A name, with what kind of thing it is where known:
  *   "Mercury planet".
- * @param {import("./wikidata.js").WikidataOptions & { limit?: number }} [opts]
- * @returns {Promise<{ id: string, title: string, label: string, description: string }[]>}
- *   `title` is the article's; `label` is it without its disambiguator and
- *   `description` the disambiguator ("Mercury" and "planet" for "Mercury
+ * @returns `title` is the article's; `label` is it without its disambiguator
+ *   and `description` the disambiguator ("Mercury" and "planet" for "Mercury
  *   (planet)"), standing in until the statements query brings Wikidata's own.
  */
-export async function articleItems(query, opts = {}) {
+export async function articleItems(
+  query: string,
+  opts: WikidataOptions & { limit?: number } = {},
+): Promise<ArticleItem[]> {
   const q = String(query || "").trim();
   if (!q) return [];
   const url = `${wikipediaApi(opts.language)}?${new URLSearchParams({
@@ -81,9 +102,15 @@ export async function articleItems(query, opts = {}) {
     formatversion: "2",
     origin: "*",
   })}`;
-  const data = await fetchJson(url, opts);
+  const data = await fetchJson<{ query?: { pages?: SearchPage[] } } | null>(
+    url,
+    opts,
+  );
   return (data?.query?.pages || [])
-    .filter((page) => page.pageprops?.wikibase_item)
+    .filter(
+      (page): page is SearchPage & { pageprops: { wikibase_item: string } } =>
+        Boolean(page.pageprops?.wikibase_item),
+    )
     .sort((a, b) => (a.index || 0) - (b.index || 0))
     .map((page) => {
       const parts = /^(.*?)\s*\(([^()]*)\)$/.exec(page.title) || [];

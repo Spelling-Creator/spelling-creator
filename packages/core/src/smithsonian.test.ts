@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   dateSpan,
+  type Eruption,
+  type EruptionDate,
   eruptionOverlaps,
   latestEruption,
   recordedSince,
@@ -17,7 +19,7 @@ describe("a volcano's record", () => {
         "Volcano_Number IN (211020,321050)",
       );
       expect(u.searchParams.get("outputFormat")).toBe("application/json");
-      const features = u.searchParams.get("typeNames").endsWith("Eruptions")
+      const features = u.searchParams.get("typeNames")?.endsWith("Eruptions")
         ? [
             {
               Volcano_Number: 211020,
@@ -86,7 +88,11 @@ describe("a volcano's record", () => {
 });
 
 describe("eruption dates", () => {
-  const eruption = (start, end = null, uncertainty = 0) => ({
+  const eruption = (
+    start: EruptionDate,
+    end: EruptionDate | null = null,
+    uncertainty = 0,
+  ): Eruption => ({
     confirmed: true,
     start,
     end,
@@ -122,7 +128,7 @@ describe("eruption dates", () => {
         { ...eruption({ year: 1944, month: 3, day: 18 }), confirmed: false },
       ],
     };
-    expect(latestEruption(record).start.year).toBe(79);
+    expect(latestEruption(record)?.start.year).toBe(79);
     expect(recordedSince(record)).toBe(79);
     expect(recordedSince({ eruptions: [] })).toBeNull();
   });
