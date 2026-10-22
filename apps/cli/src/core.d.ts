@@ -1,11 +1,11 @@
 // Type declarations for the core modules the CLI uses.
 //
-// @spelling-creator/core is JavaScript with JSDoc and publishes no .d.ts, so
-// importing it from TypeScript would make every export `any`. These ambient
+// Most of @spelling-creator/core is still JavaScript, so importing one of its
+// modules from TypeScript would make every export `any`. These ambient
 // declarations give the handful of modules the CLI calls their real signatures,
-// in terms of the document types in types.ts. They cover only what the CLI
-// uses; add to them as it grows, and check them against the JSDoc in
-// packages/core/src when a signature there changes.
+// in terms of core's document types (@spelling-creator/core/types). They cover
+// only what the CLI uses. A module's block goes once core has ported that
+// module to TypeScript and its own types take over.
 
 declare module "@spelling-creator/core/lessonChecks" {
   /** One thing the checks found. See the typedef in core's lessonChecks.js. */
@@ -25,7 +25,9 @@ declare module "@spelling-creator/core/lessonChecks" {
     message: string;
   }
 
-  export function validateLesson(doc: import("./types.ts").LessonDoc): {
+  export function validateLesson(
+    doc: import("@spelling-creator/core/types").LessonDoc,
+  ): {
     errors: Finding[];
     warnings: Finding[];
   };
@@ -33,7 +35,7 @@ declare module "@spelling-creator/core/lessonChecks" {
 
 declare module "@spelling-creator/core/lessonFixes" {
   import type { Finding } from "@spelling-creator/core/lessonChecks";
-  import type { LessonDoc } from "./types.ts";
+  import type { LessonDoc } from "@spelling-creator/core/types";
 
   export function hasQuickFix(finding: { code: string }): boolean;
   /** The doc with the fix made, or null when there is nothing left to do. */
@@ -44,7 +46,7 @@ declare module "@spelling-creator/core/lessonFixes" {
 }
 
 declare module "@spelling-creator/core/documentImport" {
-  import type { LessonDoc } from "./types.ts";
+  import type { LessonDoc } from "@spelling-creator/core/types";
 
   export class DocumentImportError extends Error {}
 
@@ -77,7 +79,7 @@ declare module "@spelling-creator/core/documentImport" {
 }
 
 declare module "@spelling-creator/core/jsonImport" {
-  import type { LessonDoc } from "./types.ts";
+  import type { LessonDoc } from "@spelling-creator/core/types";
 
   export class JsonImportError extends Error {}
   /** Accepts the lesson-file envelope or a bare doc, and normalizes it. */
@@ -85,13 +87,13 @@ declare module "@spelling-creator/core/jsonImport" {
 }
 
 declare module "@spelling-creator/core/lessonFile" {
-  import type { LessonDoc, LessonFile } from "./types.ts";
+  import type { LessonDoc, LessonFile } from "@spelling-creator/core/types";
 
   export function buildLessonFile(doc: LessonDoc): LessonFile;
 }
 
 declare module "@spelling-creator/core/oslf" {
-  import type { LessonDoc } from "./types.ts";
+  import type { LessonDoc } from "@spelling-creator/core/types";
 
   export const OSLF_VERSION: string;
   export const OSLF_EXTENSION: string;

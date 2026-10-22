@@ -164,8 +164,7 @@ apps/cli/
   src/commands/*.ts     one module per command
   src/lesson.ts         readLesson / writeLesson: file in, lesson out, and back
   src/report.ts         FileReport, the prose and JSON output, the exit code
-  src/types.ts          the lesson document's shape, for TypeScript
-  src/core.d.ts         ambient types for the core modules the CLI calls
+  src/core.d.ts         ambient types for the core modules the CLI calls that are still JavaScript
   rolldown.config.ts    the build: src/cli.ts and core's modules into dist/cli.js
   test/                 node --test, with the built bin spawned for the commands
 ```
@@ -187,8 +186,9 @@ What ships is a bundle. `pnpm build` runs [rolldown](https://rolldown.rs)
 with `rolldown.config.ts`, which turns `src/cli.ts` and everything it reaches
 into one ESM file, `dist/cli.js`, that the package's `bin` points at.
 `@spelling-creator/core` is a workspace package that isn't published to npm,
-so the core modules the CLI uses are bundled in; they import nothing from npm
-themselves, so the bundle adds no dependencies. The CLI's own dependencies
+so the core modules the CLI uses are bundled in, along with what they import
+from npm (`@xmldom/xmldom`, for OSLF's XML form), and the bundle adds no
+dependencies. The CLI's own dependencies
 (yargs, mammoth) and Node's builtins stay external. The tests spawn the bundle,
 so what is tested is what is published. `turbo.json` makes the CLI's `test`
 task depend on its `build`, so the root `pnpm test` (or
@@ -200,13 +200,12 @@ Rolldown rather than Vite or tsdown because the job is small and plain: Vite
 brings a dev server and an app's conventions, and tsdown adds declaration
 output and a library's packaging, neither of which a command line tool uses.
 
-`@spelling-creator/core` is JavaScript with JSDoc and publishes no
-declarations, so the CLI carries its own in `src/core.d.ts`: ambient `declare
-module` blocks for the few core subpaths it imports, with signatures written
-against the document types in `src/types.ts`. That is a stopgap. When a second
-TypeScript package needs core, the better move is for core to emit
-declarations from its JSDoc (`tsc --allowJs --declaration --emitDeclarationOnly`)
-and for both to use those.
+The lesson document's types come from core (`@spelling-creator/core/types`).
+Core is being ported to TypeScript a few modules at a time, and until the
+modules the CLI calls are ported, the CLI gives them signatures itself in
+`src/core.d.ts`: ambient `declare module` blocks written against those
+document types. Each block goes once its module is TypeScript and its own
+types take over.
 
 ## Releasing
 

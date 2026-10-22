@@ -24,6 +24,7 @@ import {
   type Finding,
 } from "@spelling-creator/core/lessonChecks";
 import { applyQuickFix, hasQuickFix } from "@spelling-creator/core/lessonFixes";
+import type { LessonDoc } from "@spelling-creator/core/types";
 
 import {
   defaultOutputPath,
@@ -40,7 +41,6 @@ import {
   printReports,
   type FileReport,
 } from "../report.ts";
-import type { LessonDoc } from "../types.ts";
 
 interface FixArgs {
   file: string;

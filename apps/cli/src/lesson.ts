@@ -51,8 +51,7 @@ import {
   fromOslfXml,
   toOslfXml,
 } from "@spelling-creator/core/oslfXml";
-
-import type { LessonDoc } from "./types.ts";
+import type { LessonDoc } from "@spelling-creator/core/types";
 
 /** Whether a path names an Open Spelling Lesson Format file, as JSON or XML. */
 export function isOslfPath(path: string): boolean {

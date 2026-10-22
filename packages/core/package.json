@@ -83,6 +83,7 @@
     "./spelling": "./src/spelling.js",
     "./spellingWords": "./src/spellingWords.js",
     "./translationLanguages": "./src/translationLanguages.js",
+    "./types": "./src/types.ts",
     "./username": "./src/username.js",
     "./users": "./src/users.js",
     "./oslf": "./src/oslf.js",
