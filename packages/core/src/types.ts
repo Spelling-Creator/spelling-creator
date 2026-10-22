@@ -111,10 +111,13 @@ export interface VaktBlock extends Picture {
 export interface ImageBlock extends Picture {
   id: string;
   type: "image";
-  /** A key of IMAGE_SIZES in image.ts. */
-  size: string;
-  /** One of IMAGE_ALIGNS in image.ts. */
-  align: string;
+  /**
+   * A key of IMAGE_SIZES in image.ts. A block built for the MCP server may
+   * leave it out; jsonImport fills in the default.
+   */
+  size?: string;
+  /** One of IMAGE_ALIGNS in image.ts, defaulted the same way. */
+  align?: string;
 }
 
 /** A short heading inside a section, such as one over a run of W.Y.R. questions. */

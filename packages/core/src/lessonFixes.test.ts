@@ -4,36 +4,55 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { validateLesson } from "./lessonChecks.ts";
+import { validateLesson, type Finding } from "./lessonChecks.ts";
 import { QUICK_FIX_CODES, applyQuickFix, hasQuickFix } from "./lessonFixes.ts";
 import {
   markupToContent,
   textBlockMarkup,
   withTextBlockContent,
 } from "./lessonText.ts";
+import type {
+  Block,
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  Section,
+  TextBlock,
+  VaktBlock,
+} from "./types.ts";
 
-const text = (id, markup) =>
-  withTextBlockContent({ id, type: "text" }, markupToContent(markup));
-const question = (id, questionType, fields) => ({
+const text = (id: string, markup: string): TextBlock =>
+  withTextBlockContent({ id, type: "text" as const }, markupToContent(markup));
+const question = (
+  id: string,
+  questionType: QuestionType,
+  fields: Omit<QuestionBlock, "id" | "type" | "questionType">,
+): QuestionBlock => ({
   id,
   type: "question",
   questionType,
   ...fields,
 });
-const section = (id, blocks) => ({ id, name: id, blocks });
+const section = (id: string, blocks: Block[]): Section => ({
+  id,
+  name: id,
+  blocks,
+});
 
-const findingsOf = (doc) => {
+const findingsOf = (doc: LessonDoc): Finding[] => {
   const { errors, warnings } = validateLesson(doc);
   return [...errors, ...warnings];
 };
-const find = (doc, code) => findingsOf(doc).find((f) => f.code === code);
+const find = (doc: LessonDoc, code: string) =>
+  findingsOf(doc).find((f) => f.code === code);
 
 // Run a code's fix and check the finding went away.
-function fixes(doc, code) {
-  const finding = find(doc, code);
+function fixes(doc: LessonDoc, code: string): LessonDoc {
+  // Each `!` is checked by the expect right after it.
+  const finding = find(doc, code)!;
   expect(finding, `${code} should be found`).toBeTruthy();
   expect(hasQuickFix(finding)).toBe(true);
-  const fixed = applyQuickFix(doc, finding);
+  const fixed = applyQuickFix(doc, finding)!;
   expect(fixed).not.toBeNull();
   expect(findingsOf(fixed).some((f) => f.key === finding.key)).toBe(false);
   // Running it again finds nothing to do.
@@ -141,7 +160,12 @@ describe("formatting fixes", () => {
 
 describe("placement fixes", () => {
   it("moves a VAKT activity to the end of its section", () => {
-    const vakt = { id: "v1", type: "vakt", text: "Jumping jacks.", links: [] };
+    const vakt: VaktBlock = {
+      id: "v1",
+      type: "vakt",
+      text: "Jumping jacks.",
+      links: [],
+    };
     const doc = {
       title: "T",
       sections: [
@@ -210,7 +234,7 @@ describe("answer fixes", () => {
       ],
     };
     const fixed = fixes(doc, "E_ORANGE_PARTIAL_LIST");
-    const answers = fixed.sections[0].blocks[1].answers;
+    const { answers } = fixed.sections[0].blocks[1] as Required<QuestionBlock>;
     expect(answers.map((a) => a.text)).toEqual(["boulder", "cobble", "silt"]);
     expect(answers[2].id).toEqual(expect.any(String));
   });
@@ -232,7 +256,7 @@ describe("answer fixes", () => {
       ],
     };
     const fixed = fixes(doc, "E_ORANGE_PARTIAL_LIST");
-    const answers = fixed.sections[0].blocks[1].answers;
+    const { answers } = fixed.sections[0].blocks[1] as Required<QuestionBlock>;
     expect(answers.map((a) => a.text)).toEqual(["boulder", "cobble", "silt"]);
   });
 });
@@ -241,7 +265,11 @@ describe("hasQuickFix", () => {
   it("is false for codes a script can't fix", () => {
     expect(hasQuickFix({ code: "E_GROUNDING_SINGLE" })).toBe(false);
     expect(
-      applyQuickFix({ sections: [] }, { code: "E_GROUNDING_SINGLE" }),
+      applyQuickFix(
+        { title: "T", sections: [] },
+        // A finding needs no more than its code to be turned down.
+        { code: "E_GROUNDING_SINGLE" } as unknown as Finding,
+      ),
     ).toBe(null);
   });
 

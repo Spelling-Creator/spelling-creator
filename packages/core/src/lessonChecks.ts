@@ -36,6 +36,14 @@ import {
   textBlockPlain,
 } from "@spelling-creator/core/lessonText";
 import { isOpenType, resolveOpenType } from "@spelling-creator/core/questions";
+import type { FormattedSpan } from "./lessonText.ts";
+import type {
+  Block,
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  Section,
+} from "./types.ts";
 
 /** The default lesson shape (see standards.md). Deviations are warnings. */
 export const SECTION_COUNT = 6;
@@ -49,7 +57,7 @@ export const SPELLING_MAX_LETTERS = 9;
 // opens, 1 paraphrase and 2 broad opens. Any number of W.Y.R. questions may
 // sit between the tight opens and the paraphrase (WYR_SLOT); they are
 // optional, so the fifteen count none.
-const QUESTION_ORDER = [
+const QUESTION_ORDER: QuestionType[] = [
   "single",
   "single",
   "single",
@@ -97,7 +105,7 @@ const ORANGE_MAX_ANSWERS = 4;
 // letterboard.
 const ORANGE_TIGHT = "multiple";
 const ORANGE_LOOSE = "multiple_open";
-const ORANGE_TYPES = new Set([ORANGE_TIGHT, ORANGE_LOOSE]);
+const ORANGE_TYPES = new Set<QuestionType>([ORANGE_TIGHT, ORANGE_LOOSE]);
 
 // A private stand-in for a decimal point, so the punctuation strip can run
 // without special-casing "." and without keeping sentence-ending full stops.
@@ -141,37 +149,89 @@ const WYR_OR_IDIOMS =
 const WYR_SEPARATOR = /\bor\b/gi;
 
 /** How many "or"s in a W.Y.R. prompt join one option to the next. */
-function wyrSeparators(prompt) {
+function wyrSeparators(prompt: string) {
   return (prompt.replace(WYR_OR_IDIOMS, " ").match(WYR_SEPARATOR) || []).length;
 }
 
+/** An error's stable machine code, e.g. "E_GROUNDING_SINGLE". */
+export type ErrorCode = `E_${string}`;
+/** A warning's stable machine code, e.g. "W_SECTION_COUNT". */
+export type WarningCode = `W_${string}`;
+export type FindingCode = ErrorCode | WarningCode;
+
+interface FindingFields {
+  /** Identity of the defect, stable across section renumbering. */
+  key: string;
+  /** 1-based section number, or null for lesson-wide findings. */
+  section: number | null;
+  /** That section's id, when it has one. */
+  sectionId: string | null;
+  /**
+   * The block to go to for this finding (a question or a spelling block), or
+   * null when it is about the section.
+   */
+  blockId: string | null;
+  /**
+   * Within that block, the one spelling word or answer the finding is about,
+   * when there is one.
+   */
+  itemId: string | null;
+  /**
+   * The finding's facts as data (the answer, the word, which question), for a
+   * UI to word itself. See checks.json in apps/web for which code carries what.
+   */
+  params: Record<string, unknown>;
+  /** Self-correcting prose for a model: what is wrong, where, and the fix. */
+  message: string;
+}
+
+export interface ErrorFinding extends FindingFields {
+  level: "error";
+  code: ErrorCode;
+}
+
+export interface WarningFinding extends FindingFields {
+  level: "warning";
+  code: WarningCode;
+}
+
+/** One thing the checks found. An error's code starts E_, a warning's W_. */
+export type Finding = ErrorFinding | WarningFinding;
+
+/** What validateLesson returns: the findings, split by level. */
+export interface LessonCheckResult {
+  errors: ErrorFinding[];
+  warnings: WarningFinding[];
+}
+
 /**
- * @typedef {object} Finding
- * @property {"error"|"warning"} level
- * @property {string} code            Stable machine code, e.g. "E_GROUNDING_SINGLE".
- * @property {string} key             Identity of the defect, stable across section renumbering.
- * @property {number|null} section    1-based section number, or null for lesson-wide findings.
- * @property {string|null} sectionId  That section's id, when it has one.
- * @property {string|null} blockId    The block to go to for this finding (a question or a
- *                                    spelling block), or null when it is about the section.
- * @property {string|null} itemId     Within that block, the one spelling word or answer the
- *                                    finding is about, when there is one.
- * @property {Record<string, unknown>} params
- *                                    The finding's facts as data (the answer, the word, which
- *                                    question), for a UI to word itself. See checks.json in
- *                                    apps/web for which code carries what.
- * @property {string} message         Self-correcting prose for a model: what is wrong, where, and the fix.
+ * What validateLesson reads of a lesson: its sections, and the sources its
+ * footnotes cite. A whole LessonDoc will do.
  */
+export type CheckableLesson = Partial<Pick<LessonDoc, "sections" | "sources">>;
+
+// Where a finding points, and its facts, as the checks below hand them over.
+interface FindingDetail {
+  blockId?: string | null;
+  itemId?: string | null;
+  params?: Record<string, unknown>;
+}
+
+type Report<Code extends FindingCode> = (
+  code: Code,
+  key: string,
+  section: number | null,
+  message: string,
+  detail?: FindingDetail,
+) => void;
 
 /**
  * Normalise text for comparison: uppercase, drop punctuation, collapse
  * whitespace. Two details matter and both caused false failures before they were
  * handled — thousands separators (the passage says "3,776" while the answer field
  * holds "3776") and decimal points (which must survive the punctuation strip).
- * @param {unknown} value
- * @returns {string}
  */
-export function normalizeText(value) {
+export function normalizeText(value: unknown): string {
   return (
     String(value ?? "")
       // "3,776" and "3776" are the same number written two ways.
@@ -191,27 +251,27 @@ export function normalizeText(value) {
 
 // Whole-word containment. `" CAT "` does not match inside `" CATALOGUE "`, which
 // plain substring matching would wrongly accept. Both arguments are normalised.
-function containsPhrase(haystack, needle) {
+function containsPhrase(haystack: string, needle: string) {
   if (!needle) return false;
   return ` ${haystack} `.includes(` ${needle} `);
 }
 
-function wordsOf(normalized) {
+function wordsOf(normalized: string) {
   return normalized ? normalized.split(" ") : [];
 }
 
-function isSingleWord(normalized) {
+function isSingleWord(normalized: string) {
   return wordsOf(normalized).length === 1;
 }
 
-function sectionLabel(section, index) {
+function sectionLabel(section: Section, index: number) {
   const name = typeof section?.name === "string" ? section.name.trim() : "";
   return name ? `Section ${index + 1} "${name}"` : `Section ${index + 1}`;
 }
 
 // The prose a grounding check compares against: the section's own text blocks,
 // as plain words (formatting and footnote markers set aside) and normalised once.
-function sectionPassage(blocks) {
+function sectionPassage(blocks: Block[]) {
   return normalizeText(
     blocks
       .filter((b) => b?.type === "text")
@@ -227,7 +287,18 @@ function sectionPassage(blocks) {
 // `tokens` are uppercased for comparing; `raw` holds the same tokens as the
 // passage wrote them, for quoting one back. Uppercasing is the last step so the
 // two line up one for one (the punctuation strip keeps letters of either case).
-function listTokens(sentence) {
+interface ListSentence {
+  tokens: string[];
+  raw: string[];
+}
+
+// One option's occurrence in a sentence's tokens.
+interface ListHit {
+  token: string;
+  at: number;
+}
+
+function listTokens(sentence: string): ListSentence {
   const raw = sentence
     .replace(/(\d),(?=\d{3}(?!\d))/g, "$1") // "3,776" is a number, not a list
     .replace(/(\d)\.(\d)/g, `$1${DECIMAL_MARK}$2`)
@@ -243,7 +314,7 @@ function listTokens(sentence) {
 // ("rock, gas, and ash"), so the split is what stops two items that merely share
 // a paragraph from reading as a series. Sentence enders only count when followed
 // by a space, which leaves "12.5" whole.
-function passageSentences(blocks) {
+function passageSentences(blocks: Block[]) {
   return blocks
     .filter((b) => b?.type === "text")
     .map(textBlockPlain)
@@ -258,7 +329,7 @@ function passageSentences(blocks) {
 // other. Nothing between them is what "the Pacific Ocean" looks like; a clause
 // between them is what "a scale called the VEI, the Volcanic Explosivity Index"
 // looks like. Neither is a list.
-function listSeparated(tokens, from, to) {
+function listSeparated(tokens: string[], from: number, to: number) {
   const gap = tokens.slice(from + 1, to);
   if (!gap.some((t) => LIST_SEPARATORS.has(t))) return false;
   return (
@@ -270,13 +341,13 @@ function listSeparated(tokens, from, to) {
 // the option occurrences in text order and breaks the walk wherever two of them
 // aren't list-separated, so a run has to be a real list to survive — and returns
 // the first run that covers every option, or null if none does.
-function findListRun(tokens, options) {
+function findListRun(tokens: string[], options: string[]): ListHit[] | null {
   const wanted = new Set(options);
-  const hits = [];
+  const hits: ListHit[] = [];
   tokens.forEach((token, at) => {
     if (wanted.has(token)) hits.push({ token, at });
   });
-  let run = [];
+  let run: ListHit[] = [];
   const runCoversAll = () =>
     new Set(run.map((h) => h.token)).size === wanted.size;
   for (const [i, hit] of hits.entries()) {
@@ -314,7 +385,7 @@ const SUBJECT_PRONOUNS = new Set([
 // The ending a word wears, if it looks inflected: "flows" and "rabbits" end in
 // S, "settled" in ED, "spreading" in ING. "moss", "cactus" and "axis" don't
 // count, and short words like "bed" or "wing" are left alone.
-function inflectionOf(token) {
+function inflectionOf(token: string) {
   if (token.length >= 5 && token.endsWith("ING")) return "ING";
   if (token.length >= 5 && token.endsWith("ED")) return "ED";
   if (/[^SUI]S$/.test(token)) return "S";
@@ -345,7 +416,10 @@ function inflectionOf(token) {
 //
 // The item comes back as the passage wrote it ("silt", not "SILT"): it is quoted
 // to whoever has to fix the list, and ALL CAPS in a lesson means vocabulary.
-function nextListItemAfter({ tokens, raw }, run) {
+function nextListItemAfter(
+  { tokens, raw }: ListSentence,
+  run: ListHit[],
+): string | null {
   const at = run[run.length - 1].at;
   const open = runIsOpen(tokens, run);
   const tail = tokens.slice(at + 1, at + 4 + MAX_LIST_GAP_WORDS);
@@ -355,7 +429,7 @@ function nextListItemAfter({ tokens, raw }, run) {
   // Whatever sits between the run and the conjunction has to be list items
   // too, or the conjunction belongs to a clause: "…cobble, all of it moving and
   // settling" has no item called "settling".
-  const between = [];
+  const between: string[] = [];
   for (const token of tail.slice(1, conjunction)) {
     if (LIST_SEPARATORS.has(token)) between.length = 0;
     else between.push(token);
@@ -385,7 +459,7 @@ function nextListItemAfter({ tokens, raw }, run) {
 }
 
 // Is a run of list hits joined by commas alone, with no "and"/"or" closing it?
-function runIsOpen(tokens, run) {
+function runIsOpen(tokens: string[], run: ListHit[]) {
   return !tokens
     .slice(run[0].at + 1, run[run.length - 1].at)
     .some((t) => CONJUNCTIONS.has(t));
@@ -394,7 +468,7 @@ function runIsOpen(tokens, run) {
 // The ALL-CAPS learning vocabulary a passage teaches. Two letters minimum so
 // sentence-initial capitals are ignored; acronyms are picked up too, which is
 // why reusing one as a spelling word is only a warning.
-function capsVocabulary(blocks) {
+function capsVocabulary(blocks: Block[]) {
   const plain = blocks
     .filter((b) => b?.type === "text")
     .map(textBlockPlain)
@@ -406,7 +480,13 @@ function capsVocabulary(blocks) {
 // A section's spelling words, each with where it sits: its block and its own
 // id, so a finding about one word points at that word's field even when the
 // same word is listed twice.
-function spellingWordsOf(blocks) {
+interface SpellingEntry {
+  word: string;
+  blockId: string;
+  itemId: string | null;
+}
+
+function spellingWordsOf(blocks: Block[]): SpellingEntry[] {
   return blocks
     .filter((b) => b?.type === "spelling")
     .flatMap((b) =>
@@ -421,14 +501,14 @@ function spellingWordsOf(blocks) {
 
 // The id of the orange answer whose text is `answer`, so a finding about one
 // answer can point at its field.
-function answerIdOf(block, answer) {
+function answerIdOf(block: QuestionBlock, answer: string) {
   const found = (Array.isArray(block?.answers) ? block.answers : []).find(
     (a) => typeof a !== "string" && (a?.text || "").trim() === answer,
   );
   return found?.id;
 }
 
-function answersOf(block) {
+function answersOf(block: QuestionBlock): string[] {
   if (ORANGE_TYPES.has(block?.questionType)) {
     return (Array.isArray(block.answers) ? block.answers : [])
       .map((a) => (typeof a === "string" ? a : a?.text) || "")
@@ -440,15 +520,15 @@ function answersOf(block) {
   return [String(answer).trim()].filter(Boolean);
 }
 
-function hasSteps(block) {
+function hasSteps(block: QuestionBlock) {
   return Array.isArray(block?.steps) && block.steps.length > 0;
 }
 
-function letterCount(word) {
+function letterCount(word: string) {
   return (word.match(/\p{L}/gu) || []).length;
 }
 
-function numericKey(value) {
+function numericKey(value: string) {
   const n = Number(String(value).replace(/,/g, ""));
   return Number.isFinite(n) ? String(n) : normalizeText(value);
 }
@@ -457,8 +537,34 @@ function numericKey(value) {
 // section order — so moving a section would otherwise rewrite the key and make an
 // untouched defect look newly introduced. Sorting makes the pair itself the
 // identity, whichever end it was found from.
-function pairKey(a, b) {
+function pairKey(a: string, b: string) {
   return [String(a), String(b)].sort().join("|");
+}
+
+// What validateLesson works out once per section.
+interface SectionContext {
+  index: number;
+  number: number;
+  id: string;
+  label: string;
+  blocks: Block[];
+  passage: string;
+  sentences: ListSentence[];
+  caps: Set<string>;
+  spelling: SpellingEntry[];
+  questions: QuestionBlock[];
+}
+
+// A text answer, tagged with the question that owns it.
+interface AnswerEntry {
+  text: string;
+  norm: string;
+  questionId: string;
+  questionType: QuestionType;
+  section: number;
+  where: string;
+  blockId: string;
+  number: number;
 }
 
 /**
@@ -467,33 +573,42 @@ function pairKey(a, b) {
  * Operates on the canonical doc (the shape buildDoc/applyPatch produce and the
  * hub stores), so it covers every write path — create, update and patch alike —
  * without each tool restating the rules.
- *
- * @param {{ title?: string, sections?: any[] }} doc
- * @returns {{ errors: Finding[], warnings: Finding[] }}
  */
-export function validateLesson(doc) {
+export function validateLesson(doc: CheckableLesson): LessonCheckResult {
   const sections = Array.isArray(doc?.sections) ? doc.sections : [];
-  const findings = [];
-  const report = (level, code, key, section, message, detail = {}) =>
+  const findings: Finding[] = [];
+  const located = (
+    key: string,
+    section: number | null,
+    message: string,
+    detail: FindingDetail = {},
+  ) => ({
+    key,
+    section,
+    sectionId: section ? sections[section - 1]?.id || null : null,
+    blockId: detail.blockId || null,
+    itemId: detail.itemId || null,
+    params: detail.params || {},
+    message,
+  });
+  const error: Report<ErrorCode> = (code, key, section, message, detail) => {
     findings.push({
-      level,
+      level: "error",
       code,
-      key: `${code}:${key}`,
-      section,
-      sectionId: section ? sections[section - 1]?.id || null : null,
-      blockId: detail.blockId || null,
-      itemId: detail.itemId || null,
-      params: detail.params || {},
-      message,
+      ...located(`${code}:${key}`, section, message, detail),
     });
-  const error = (code, key, section, message, detail) =>
-    report("error", code, key, section, message, detail);
-  const warn = (code, key, section, message, detail) =>
-    report("warning", code, key, section, message, detail);
+  };
+  const warn: Report<WarningCode> = (code, key, section, message, detail) => {
+    findings.push({
+      level: "warning",
+      code,
+      ...located(`${code}:${key}`, section, message, detail),
+    });
+  };
 
   // Per-section context, computed once: the passage every grounding check reads,
   // the caps vocabulary, the spelling words, and the questions in order.
-  const context = sections.map((section, i) => {
+  const context = sections.map((section, i): SectionContext => {
     const blocks = Array.isArray(section?.blocks) ? section.blocks : [];
     return {
       index: i,
@@ -513,7 +628,7 @@ export function validateLesson(doc) {
 
   // Every text answer in the lesson, tagged with the question that owns it — the
   // input to the lesson-wide collision checks further down.
-  const allAnswers = [];
+  const allAnswers: AnswerEntry[] = [];
 
   for (const ctx of context) {
     ctx.questions.forEach((block, qi) => {
@@ -525,7 +640,10 @@ export function validateLesson(doc) {
       const where = `${ctx.label}, question ${qi + 1}`;
       // Every finding below is about this question, and the editor numbers its
       // questions per section the same way (SectionCard's questionNumbers).
-      const about = (params = {}, itemId = null) => ({
+      const about = (
+        params: Record<string, unknown> = {},
+        itemId: string | null = null,
+      ): FindingDetail => ({
         blockId: block?.id,
         itemId,
         params: { question: qi + 1, ...params },
@@ -874,7 +992,12 @@ export function validateLesson(doc) {
     // prompts clumsy for no gain. A loose orange question's suggestions are not
     // retrieval either: nobody is being asked to remember them, so naming one
     // elsewhere gives nothing away.
-    const recall = [];
+    const recall: Array<{
+      answer: string;
+      norm: string;
+      owner: string;
+      number: number;
+    }> = [];
     ctx.questions.forEach((block, qi) => {
       const type = block?.questionType;
       if (type !== "single" && type !== ORANGE_TIGHT) return;
@@ -894,7 +1017,7 @@ export function validateLesson(doc) {
       // A prompt carrying its own orange answers is E_ORANGE_ANSWER_IN_PROMPT's
       // business, so the owning question is skipped here rather than reported
       // twice under two codes.
-      const leaked = [];
+      const leaked: typeof recall = [];
       for (const entry of recall) {
         if (entry.owner === questionId) continue;
         if (!containsPhrase(promptNorm, entry.norm)) continue;
@@ -912,7 +1035,7 @@ export function validateLesson(doc) {
         .map((entry) => entry.norm)
         .sort()
         .join("|")}`;
-      const detail = {
+      const detail: FindingDetail = {
         blockId: block?.id,
         params: {
           question: qi + 1,
@@ -996,7 +1119,7 @@ export function validateLesson(doc) {
       // paraphrase, an opinion as a broad open; see resolveOpenType), so a
       // lesson saved before the split is held to the order it was written
       // to. The type itself stays what the lesson stored.
-      const slot = (block) =>
+      const slot = (block: QuestionBlock) =>
         ORANGE_TYPES.has(block.questionType)
           ? ORANGE_TIGHT
           : resolveOpenType(block);
@@ -1005,8 +1128,8 @@ export function validateLesson(doc) {
       // is left out of the comparison. One anywhere else counts against the
       // shape like any other question. `slotAt` maps each compared slot back
       // to its question's place in the section.
-      const slots = [];
-      const slotAt = [];
+      const slots: Array<string | undefined> = [];
+      const slotAt: number[] = [];
       ctx.questions.forEach((q, i) => {
         if (q.questionType === "wyr" && slots.length === WYR_SLOT) return;
         slots.push(slot(q));
@@ -1145,7 +1268,10 @@ export function validateLesson(doc) {
   // Spelling words: unique across the lesson, and never hiding inside an answer
   // (PRISON inside "the prisoner's dilemma"), which is why this one is a raw
   // substring test rather than a whole-word one.
-  const seenSpelling = new Map();
+  const seenSpelling = new Map<
+    string,
+    SpellingEntry & { ctx: SectionContext }
+  >();
   for (const ctx of context) {
     for (const { word, blockId, itemId } of ctx.spelling) {
       const norm = normalizeText(word);
@@ -1207,7 +1333,7 @@ export function validateLesson(doc) {
   const reusable = allAnswers.filter(
     (a) => a.questionType === "single" || a.questionType === ORANGE_TIGHT,
   );
-  const byAnswer = new Map();
+  const byAnswer = new Map<string, AnswerEntry>();
   for (const answer of reusable) {
     if (!answer.norm) continue;
     const seen = byAnswer.get(answer.norm);
@@ -1263,7 +1389,10 @@ export function validateLesson(doc) {
 
   // Numeric answers are distinct across the lesson, so no two purple questions
   // ever resolve to the same figure.
-  const seenNumbers = new Map();
+  const seenNumbers = new Map<
+    string,
+    { ctx: SectionContext; questionId: string; number: number }
+  >();
   for (const ctx of context) {
     ctx.questions.forEach((block, qi) => {
       if (block.questionType !== "number") return;
@@ -1375,10 +1504,9 @@ export const FORMAT_MAX_ITALIC_WORDS = 10;
 
 /**
  * Whether a formatted span is ALL-CAPS vocabulary (W_FORMAT_CAPS). Exported so
- * the quick fix in lessonFixes.js picks out the same spans.
- * @param {string} text
+ * the quick fix in lessonFixes.ts picks out the same spans.
  */
-export function isCapsSpan(text) {
+export function isCapsSpan(text: string): boolean {
   return /^[\p{Lu}\s'’-]+$/u.test(text) && /\p{Lu}{2}/u.test(text);
 }
 
@@ -1386,10 +1514,15 @@ export function isCapsSpan(text) {
 // and in its questions' prompts and steps, which take the same formatting
 // (see inlineText.ts), tagged with the block it sits in, and the length of the
 // prose around them.
-function formattedSpans(blocks) {
-  const spans = [];
+type LocatedSpan = FormattedSpan & { blockId: string };
+
+function formattedSpans(blocks: Block[]) {
+  const spans: LocatedSpan[] = [];
   let total = 0;
-  const add = (block, found) => {
+  const add = (
+    block: Block,
+    found: { spans: FormattedSpan[]; totalChars: number },
+  ) => {
     spans.push(...found.spans.map((span) => ({ ...span, blockId: block.id })));
     total += found.totalChars;
   };
@@ -1411,7 +1544,10 @@ function formattedSpans(blocks) {
 
 // What a formatting finding hands the editor: the block of its first span, and
 // the formatted words themselves.
-function spanDetail(spans, params = {}) {
+function spanDetail(
+  spans: LocatedSpan[],
+  params: Record<string, unknown> = {},
+): FindingDetail {
   return {
     blockId: spans[0]?.blockId,
     params: { spans: spans.map((s) => s.text), ...params },
@@ -1419,20 +1555,24 @@ function spanDetail(spans, params = {}) {
 }
 
 // A finding's identity: the spans it is about, as words and marks.
-function spanKey(spans) {
+function spanKey(spans: FormattedSpan[]) {
   return spans
     .map((s) => `${s.marks.join("+")}:${normalizeText(s.text)}`)
     .sort()
     .join("|");
 }
 
-function checkFormatting(context, error, warn) {
+function checkFormatting(
+  context: SectionContext[],
+  error: Report<ErrorCode>,
+  warn: Report<WarningCode>,
+) {
   for (const ctx of context) {
     const { spans, total } = formattedSpans(ctx.blocks);
     if (!spans.length) continue;
     const key = spanKey(spans);
     const formatted = spans.reduce((sum, s) => sum + s.text.length, 0);
-    const quoted = (s) => `"${s.text}"`;
+    const quoted = (s: FormattedSpan) => `"${s.text}"`;
 
     if (
       spans.length > FORMAT_MAX_SPANS ||
@@ -1527,7 +1667,11 @@ function checkFormatting(context, error, warn) {
 
 // A footnote citing a source the lesson doesn't list would print as "Source no
 // longer listed", which is never what was meant.
-function checkCitations(doc, context, error) {
+function checkCitations(
+  doc: CheckableLesson,
+  context: SectionContext[],
+  error: Report<ErrorCode>,
+) {
   const known = new Set(
     (Array.isArray(doc?.sources) ? doc.sources : []).map((s) => s?.id),
   );
@@ -1549,7 +1693,7 @@ function checkCitations(doc, context, error) {
 }
 
 /** Whether a finding is one of the formatting checks above. */
-export function isFormattingFinding(finding) {
+export function isFormattingFinding(finding: Pick<Finding, "code">): boolean {
   return /^[EW]_FORMAT_/.test(finding.code);
 }
 
@@ -1560,11 +1704,11 @@ export function isFormattingFinding(finding) {
  * existed) isn't blocked by defects the patch didn't introduce. Keyed on the
  * defect's identity rather than its message, so inserting a section doesn't
  * make every later finding look new.
- * @param {Finding[]} before
- * @param {Finding[]} after
- * @returns {Finding[]}
  */
-export function newFindings(before, after) {
+export function newFindings<F extends Finding>(
+  before: readonly Finding[],
+  after: readonly F[],
+): F[] {
   const existing = new Set(before.map((f) => f.key));
   return after.filter((f) => !existing.has(f.key));
 }

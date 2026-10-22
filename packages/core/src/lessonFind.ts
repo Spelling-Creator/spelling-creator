@@ -23,6 +23,7 @@ import { imageCaptionParts } from "./imageCredit.ts";
 import { inlineTextPlain } from "./inlineText.ts";
 import { textBlockLines } from "./lessonText.ts";
 import {
+  type LessonBody,
   lessonSegmentKey,
   questionStepsWithText,
 } from "./lessonTranslation.ts";
@@ -33,9 +34,53 @@ import { vaktLinks, vaktText } from "./vakt.ts";
 const SNIPPET_BEFORE = 40;
 const SNIPPET_LENGTH = 150;
 
+/** What a find entry is: a section's name, or the kind of block its words are from. */
+export type FindEntryKind =
+  | "section"
+  | "heading"
+  | "text"
+  | "spelling"
+  | "question"
+  | "image"
+  | "vakt";
+
+/** Text with case and accents folded away, mapped back to the original (see fold). */
+export interface FoldedText {
+  text: string;
+  map: number[];
+}
+
+/** A searchable place in a lesson (see lessonFindEntries). */
+export interface FindEntry {
+  kind: FindEntryKind;
+  sectionId: string;
+  sectionIndex: number;
+  sectionName: string;
+  blockId: string | null;
+  number: number | null;
+  text: string;
+  folded: FoldedText;
+}
+
+/** [start, end) in a text's UTF-16 code units. */
+export type FindRange = [number, number];
+
+/** The part of an entry a result shows (see snippet). */
+export interface FindSnippet {
+  parts: Array<{ text: string; hit: boolean }>;
+  clippedStart: boolean;
+  clippedEnd: boolean;
+}
+
+/** An entry that matched a query, with where it matched and what to show. */
+export interface FindResult extends FindEntry {
+  ranges: FindRange[];
+  snippet: FindSnippet;
+}
+
 // Words one line apart read as one text to a search, and a snippet is one
 // line, so every field is folded to single spaces before it is indexed.
-function words(value) {
+function words(value: unknown): string {
   return String(value ?? "")
     .replace(/\s+/g, " ")
     .trim();
@@ -47,9 +92,9 @@ function words(value) {
 // length (an accented letter loses its mark, an astral character is two
 // units either way, a precomposed Hangul syllable decomposes into its jamo),
 // so matches found in the folded text are mapped back through it.
-function fold(text) {
+function fold(text: string): FoldedText {
   let folded = "";
-  const map = [];
+  const map: number[] = [];
   let at = 0;
   for (const char of text) {
     const chars = char.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -71,23 +116,27 @@ function fold(text) {
  * With a `translation` (a Map from lessonSegmentKey keys to translated
  * strings, as LessonView takes), every segment it covers is indexed in
  * translation and the rest as written, which is exactly what the page shows.
- * @param {object} doc  The lesson body: { sections: [{ id, name, blocks }] }.
- * @param {Map<string, string>|null} [translation]
- * @returns {Array<{ kind: "section"|"heading"|"text"|"spelling"|"question"|"image"|"vakt",
- *   sectionId: string, sectionIndex: number, sectionName: string,
- *   blockId: string|null, number: number|null, text: string,
- *   folded: { text: string, map: number[] } }>}
+ * @param doc  The lesson body: { sections: [{ id, name, blocks }] }.
  */
-export function lessonFindEntries(doc, translation = null) {
-  const translated = (key, original) => translation?.get(key) ?? original;
-  const entries = [];
+export function lessonFindEntries(
+  doc: LessonBody | null | undefined,
+  translation: ReadonlyMap<string, string> | null = null,
+): FindEntry[] {
+  const translated = (key: string, original: string) =>
+    translation?.get(key) ?? original;
+  const entries: FindEntry[] = [];
   (doc?.sections || []).forEach((section, si) => {
     const base = {
       sectionId: section?.id ?? "",
       sectionIndex: si,
       sectionName: words(section?.name),
     };
-    const push = (kind, blockId, number, text) => {
+    const push = (
+      kind: FindEntryKind,
+      blockId: string | null,
+      number: number | null,
+      text: unknown,
+    ) => {
       const joined = words(text);
       if (!joined) return;
       entries.push({
@@ -127,7 +176,7 @@ export function lessonFindEntries(doc, translation = null) {
           break;
         case "spelling":
           // Spelling words are the material being spelled and never
-          // translate (see lessonTranslation.js).
+          // translate (see lessonTranslation.ts).
           push(
             "spelling",
             block.id,
@@ -194,22 +243,25 @@ export function lessonFindEntries(doc, translation = null) {
 /**
  * The words of a query, as typed. Whitespace separates terms; there is no
  * other syntax, so a quote or an asterisk is just a character to find.
- * @param {string} query
- * @returns {string[]}
  */
-export function findTerms(query) {
+export function findTerms(query: string): string[] {
   return words(query).split(" ").filter(Boolean);
 }
 
 // The terms as they are matched: folded, with any that fold to nothing (a
 // lone accent) left out.
-function foldTerms(terms) {
+function foldTerms(terms: readonly string[]): string[] {
   return terms.map((term) => fold(term).text).filter(Boolean);
 }
 
 // [start, end) in the original text for a match covering folded indexes
 // [from, to).
-function originalRange({ map }, textLength, from, to) {
+function originalRange(
+  { map }: FoldedText,
+  textLength: number,
+  from: number,
+  to: number,
+): FindRange {
   const start = map[from];
   let next = to;
   // A match may end inside a character that folded to several code units
@@ -223,9 +275,13 @@ function originalRange({ map }, textLength, from, to) {
 // Where every folded term occurs in a folded text, as [start, end) ranges in
 // the original text's code units, sorted and merged, or null when any term is
 // missing or there are no terms.
-function rangesIn(folded, textLength, needles) {
+function rangesIn(
+  folded: FoldedText,
+  textLength: number,
+  needles: readonly string[],
+): FindRange[] | null {
   if (!needles.length) return null;
-  const ranges = [];
+  const ranges: FindRange[] = [];
   for (const needle of needles) {
     let from = folded.text.indexOf(needle);
     if (from === -1) return null;
@@ -237,7 +293,7 @@ function rangesIn(folded, textLength, needles) {
     }
   }
   ranges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const merged = [];
+  const merged: FindRange[] = [];
   for (const range of ranges) {
     const last = merged[merged.length - 1];
     if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
@@ -251,11 +307,12 @@ function rangesIn(folded, textLength, needles) {
  * code units, sorted and merged, or null when any term is missing. Terms are
  * matched by their folded form (see fold), anywhere in a word. A query of
  * nothing but accents folds to nothing, and nothing is not a match.
- * @param {string} text
- * @param {string[]} terms  From findTerms(); their folding is done here.
- * @returns {Array<[number, number]>|null}
+ * @param terms  From findTerms(); their folding is done here.
  */
-export function findRanges(text, terms) {
+export function findRanges(
+  text: string,
+  terms: readonly string[],
+): FindRange[] | null {
   return rangesIn(fold(text), text.length, foldTerms(terms));
 }
 
@@ -263,7 +320,7 @@ export function findRanges(text, terms) {
 // started and ended at a word where it can be, as runs with the matches
 // marked. `clippedStart` and `clippedEnd` say whether words were left out
 // on either side, for an ellipsis.
-function snippet(text, ranges) {
+function snippet(text: string, ranges: readonly FindRange[]): FindSnippet {
   const [firstStart, firstEnd] = ranges[0];
   let from = Math.max(0, firstStart - SNIPPET_BEFORE);
   if (from > 0) {
@@ -276,7 +333,7 @@ function snippet(text, ranges) {
     if (space >= firstEnd) to = space;
     else to = Math.max(to, firstEnd);
   }
-  const parts = [];
+  const parts: FindSnippet["parts"] = [];
   let at = from;
   for (const [start, end] of ranges) {
     if (end <= from) continue;
@@ -297,16 +354,17 @@ function snippet(text, ranges) {
  * matches when every term of the query occurs somewhere in it. Each result
  * is the entry plus where it matched (`ranges`) and what to show for it
  * (`snippet`). An empty query matches nothing.
- * @param {object} doc
- * @param {string} query
- * @param {Array} [entries]  From lessonFindEntries(doc), when the caller keeps
- *   them between keystrokes.
- * @returns {Array<object>}
+ * @param entries  From lessonFindEntries(doc), when the caller keeps them
+ *   between keystrokes.
  */
-export function findInLesson(doc, query, entries = lessonFindEntries(doc)) {
+export function findInLesson(
+  doc: LessonBody | null | undefined,
+  query: string,
+  entries: readonly FindEntry[] = lessonFindEntries(doc),
+): FindResult[] {
   const needles = foldTerms(findTerms(query));
   if (!needles.length) return [];
-  const results = [];
+  const results: FindResult[] = [];
   for (const entry of entries) {
     const ranges = rangesIn(entry.folded, entry.text.length, needles);
     if (!ranges) continue;

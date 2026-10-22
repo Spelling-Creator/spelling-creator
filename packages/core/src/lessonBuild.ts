@@ -23,7 +23,7 @@
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
-import { IMAGE_ALIGNS, extFromMime } from "./image.ts";
+import { IMAGE_ALIGNS, type ImageAlign, extFromMime } from "./image.ts";
 import { withSeparateCredit } from "./imageCredit.ts";
 import { inlineTextMarkup, markupToInlineText } from "./inlineText.ts";
 import { isSafeLink } from "./richText.ts";
@@ -35,11 +35,23 @@ import {
 } from "./lessonText.ts";
 import {
   SOURCE_FIELDS,
+  type SourceField,
   isSourceId,
   normalizeSource,
   sourceHasContent,
 } from "./sources.ts";
 import { newId } from "./id.ts";
+import type {
+  Block,
+  ImageBlock,
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  Section,
+  Source,
+  StepItem,
+  VaktBlock,
+} from "./types.ts";
 
 export { newId };
 
@@ -56,12 +68,79 @@ export const QUESTION_TYPES = [
   "open",
   "wyr",
   "background",
-];
+] as const satisfies readonly QuestionType[];
+
+function isQuestionType(value: unknown): value is QuestionType {
+  return (QUESTION_TYPES as readonly unknown[]).includes(value);
+}
+
+function isImageAlign(value: unknown): value is ImageAlign {
+  return (IMAGE_ALIGNS as readonly unknown[]).includes(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+/**
+ * One block as the MCP server's tools take it (blockSchema in
+ * apps/mcp/src/tools.js). Every field but `type` is optional, and which ones a
+ * block needs depends on its type: buildBlock checks that, and throws saying
+ * what is missing.
+ */
+export interface BlockInput {
+  type: string;
+  /** Ignored: every built block gets a fresh id. */
+  id?: string;
+  /** Markup for a text block; the activity of a VAKT block; a heading's text. */
+  text?: string;
+  /** A text block's stored document, passed through when it comes back unchanged. */
+  content?: unknown;
+  links?: Array<{ url?: string; label?: string }>;
+  words?: string[];
+  questionType?: string;
+  prompt?: string;
+  answer?: string | number;
+  answers?: string[];
+  threeBoard?: boolean;
+  besides?: string;
+  steps?: string[];
+  image?: { hash?: string; mime?: string; ext?: string };
+  width?: number;
+  height?: number;
+  caption?: string;
+  credit?: string;
+  align?: string;
+  size?: string;
+}
+
+/** A section as the tools take it. */
+export interface SectionInput {
+  name?: string;
+  blocks?: BlockInput[];
+}
+
+/** A source as the tools take it. The id is the assistant's own short key. */
+export interface SourceInput {
+  id: string;
+  title?: string;
+  author?: string;
+  publisher?: string;
+  year?: string;
+  url?: string;
+}
+
+/** A whole lesson as create_lesson and update_lesson take it. */
+export interface LessonInput {
+  title?: string;
+  sources?: SourceInput[];
+  sections: SectionInput[];
+}
 
 // Map one input block to its stored form. Throws a descriptive Error on bad
 // input so the assistant gets actionable feedback it can correct. Exported so
-// the patch logic (lessonPatch.js) can build single blocks the same way.
-export function buildBlock(block, where) {
+// the patch logic (lessonPatch.ts) can build single blocks the same way.
+export function buildBlock(block: BlockInput, where: string): Block {
   if (!block || typeof block !== "object") {
     throw new Error(`${where}: each block must be an object.`);
   }
@@ -71,13 +150,16 @@ export function buildBlock(block, where) {
       // other way comes back unchanged; `text` is the markup an assistant writes.
       const stored = normalizeTextContent(block.content);
       if (stored && typeof block.text !== "string") {
-        return withTextBlockContent({ id: newId(), type: "text" }, stored);
+        return withTextBlockContent(
+          { id: newId(), type: "text" as const },
+          stored,
+        );
       }
       if (typeof block.text !== "string") {
         throw new Error(`${where}: a text block needs a "text" string.`);
       }
       return withTextBlockContent(
-        { id: newId(), type: "text" },
+        { id: newId(), type: "text" as const },
         markupToContent(block.text),
       );
     }
@@ -125,7 +207,7 @@ export function buildBlock(block, where) {
 // simpler than the stored shape: the text is the activity alone (the "VAKT:"
 // label is added by whatever renders it, so writing one here would double it up)
 // and links are `{ url, label? }` objects that get ids here.
-function buildVaktBlock(block, where) {
+function buildVaktBlock(block: BlockInput, where: string): VaktBlock {
   // Strip the label BEFORE deciding whether there is an activity here, or a
   // block whose whole text is "VAKT:" passes the check and then normalises away
   // to nothing — an empty red card in the finished lesson.
@@ -163,7 +245,7 @@ function buildVaktBlock(block, where) {
     );
   }
 
-  const out = { id: newId(), type: "vakt", text, links };
+  const out: VaktBlock = { id: newId(), type: "vakt", text, links };
 
   // The picture, in exactly an image block's shape and produced the same way —
   // by add_image, never by hand. Its framing comes through too: a VAKT picture
@@ -183,9 +265,9 @@ function buildVaktBlock(block, where) {
   return out;
 }
 
-function buildQuestionBlock(block, where) {
+function buildQuestionBlock(block: BlockInput, where: string): QuestionBlock {
   const { questionType, prompt } = block;
-  if (!QUESTION_TYPES.includes(questionType)) {
+  if (!isQuestionType(questionType)) {
     throw new Error(
       `${where}: question block needs "questionType" of ${QUESTION_TYPES.join(", ")}.`,
     );
@@ -195,7 +277,7 @@ function buildQuestionBlock(block, where) {
   }
   // The prompt is markup, like a text block's words (a formula, a read-aloud
   // hint), stored in the smaller of inline text's two shapes.
-  const base = {
+  const base: QuestionBlock = {
     id: newId(),
     type: "question",
     questionType,
@@ -241,7 +323,7 @@ function buildQuestionBlock(block, where) {
           `${where}: a ${questionType} question needs a non-empty "answers" array of strings.`,
         );
       }
-      const out = { ...base, answers };
+      const out: QuestionBlock = { ...base, answers };
       if (questionType !== "multiple") return out;
       // The three-board mark and the Besides line belong to the tight type
       // alone: a Besides line names one accepted answer and asks for another,
@@ -300,7 +382,7 @@ function buildQuestionBlock(block, where) {
 // here we only validate and normalise the resulting ref — the model never
 // hand-writes one. Existing image blocks (from get_lesson) round-trip through
 // this unchanged.
-function buildImageBlock(block, where) {
+function buildImageBlock(block: BlockInput, where: string): ImageBlock {
   const ref = block.image;
   if (
     !ref ||
@@ -315,7 +397,7 @@ function buildImageBlock(block, where) {
   }
   const mime =
     typeof ref.mime === "string" && ref.mime ? ref.mime : "image/jpeg";
-  const out = {
+  const out: ImageBlock = {
     id: newId(),
     type: "image",
     image: {
@@ -329,7 +411,7 @@ function buildImageBlock(block, where) {
   if (typeof block.caption === "string") out.caption = block.caption;
   // The license credit, apart from the caption (see ./imageCredit.ts).
   if (typeof block.credit === "string") out.credit = block.credit;
-  if (IMAGE_ALIGNS.includes(block.align)) out.align = block.align;
+  if (isImageAlign(block.align)) out.align = block.align;
   if (typeof block.size === "string" && block.size) out.size = block.size;
   return out;
 }
@@ -344,26 +426,27 @@ function buildImageBlock(block, where) {
  * person save a source half filled in (an empty row, a link with no scheme),
  * and an assistant handing back the list it read must not be refused over rows
  * it never touched. A new or changed source gets every check.
- * @param {unknown} input
- * @param {{ existing?: unknown }} [options]
- * @returns {object[]}
  */
-export function buildSources(input, { existing } = {}) {
+export function buildSources(
+  input: unknown,
+  { existing }: { existing?: readonly Source[] } = {},
+): Source[] {
   if (input == null) return [];
   if (!Array.isArray(input)) {
     throw new Error(
       '"sources" must be an array of { id, title, author, publisher, year, url }.',
     );
   }
+  const list: unknown[] = input;
   const stored = new Map(
     (Array.isArray(existing) ? existing : [])
       .filter((s) => s && typeof s === "object" && isSourceId(s.id))
       .map((s) => [s.id, s]),
   );
-  const seen = new Set();
-  return input.map((raw, i) => {
+  const seen = new Set<string>();
+  return list.map((raw, i) => {
     const where = `Source ${i + 1}`;
-    if (!raw || typeof raw !== "object") {
+    if (!isRecord(raw)) {
       throw new Error(`${where} must be an object.`);
     }
     if (!isSourceId(raw.id)) {
@@ -383,13 +466,16 @@ export function buildSources(input, { existing } = {}) {
       );
     }
     const source = normalizeSource(raw);
-    if (!sourceHasContent(source)) {
+    if (!source || !sourceHasContent(source)) {
       throw new Error(
         `${where} needs at least a "title", an "author" or a "url".`,
       );
     }
     for (const field of Object.keys(raw)) {
-      if (field !== "id" && !SOURCE_FIELDS.includes(field)) {
+      if (
+        field !== "id" &&
+        !(SOURCE_FIELDS as readonly string[]).includes(field)
+      ) {
         throw new Error(
           `${where}: unknown field "${field}". A source has ${["id", ...SOURCE_FIELDS].join(", ")}.`,
         );
@@ -400,15 +486,28 @@ export function buildSources(input, { existing } = {}) {
 }
 
 // Whether an input source says exactly what a stored one does.
-function sameSource(raw, stored) {
-  const field = (source, key) =>
-    typeof source[key] === "string" ? source[key].trim() : "";
+function sameSource(raw: Record<string, unknown>, stored: Source): boolean {
+  const field = (
+    source: { [K in SourceField]?: unknown },
+    key: SourceField,
+  ): string => {
+    const value = source[key];
+    return typeof value === "string" ? value.trim() : "";
+  };
   return (
     Object.keys(raw).every(
-      (key) => key === "id" || SOURCE_FIELDS.includes(key),
+      (key) =>
+        key === "id" || (SOURCE_FIELDS as readonly string[]).includes(key),
     ) && SOURCE_FIELDS.every((key) => field(raw, key) === field(stored, key))
   );
 }
+
+// A question as presentDoc shows it: its prompt as markup, and its steps too
+// once presentQuestion has rewritten them.
+type PresentedQuestion = Omit<QuestionBlock, "prompt" | "steps"> & {
+  prompt: string;
+  steps?: StepItem[] | string[];
+};
 
 /**
  * A stored lesson as the tools present it to an assistant: the same document,
@@ -422,14 +521,15 @@ function sameSource(raw, stored) {
  * tools tell the assistant to keep the attribution out of the caption and pass
  * `credit` through, which, shown the combined caption, it would do by dropping
  * the attribution for good.
- * @param {any} doc
+ *
+ * Anything that isn't a lesson comes back as it was.
  */
-export function presentDoc(doc) {
-  if (!doc || typeof doc !== "object" || !Array.isArray(doc.sections))
-    return doc;
+export function presentDoc(doc: unknown): unknown {
+  if (!isRecord(doc) || !Array.isArray(doc.sections)) return doc;
+  const sections: Array<Partial<Section> | null | undefined> = doc.sections;
   return {
     ...doc,
-    sections: doc.sections.map((section) => ({
+    sections: sections.map((section) => ({
       ...section,
       blocks: (Array.isArray(section?.blocks) ? section.blocks : []).map(
         (block) =>
@@ -445,8 +545,11 @@ export function presentDoc(doc) {
 
 // A question with its prompt and steps as markup, the steps as the strings
 // the input takes (buildQuestionBlock gives them ids again).
-function presentQuestion(block) {
-  const out = { ...block, prompt: inlineTextMarkup(block.prompt) };
+function presentQuestion(block: QuestionBlock): PresentedQuestion {
+  const out: PresentedQuestion = {
+    ...block,
+    prompt: inlineTextMarkup(block.prompt),
+  };
   if (Array.isArray(block.steps)) {
     out.steps = block.steps
       .map((step) => inlineTextMarkup(step?.text ?? step))
@@ -461,11 +564,11 @@ function presentQuestion(block) {
  * `existingSources` is the stored list of the lesson being replaced. With it,
  * leaving `sources` out keeps that list exactly as it is, and sources passed
  * back unchanged are accepted as stored (see buildSources).
- * @param {{ title?: string, sources?: any[], sections: Array<{ name?: string, blocks?: any[] }> }} input
- * @param {{ existingSources?: any[] }} [options]
- * @returns {{ title: string, sources?: any[], sections: any[] }}
  */
-export function buildDoc(input, { existingSources } = {}) {
+export function buildDoc(
+  input: LessonInput,
+  { existingSources }: { existingSources?: Source[] } = {},
+): LessonDoc {
   if (!input || typeof input !== "object") {
     throw new Error("Lesson must be an object with a title and sections.");
   }
@@ -504,7 +607,7 @@ export function buildDoc(input, { existingSources } = {}) {
   };
 }
 
-// Checking a built doc against the authoring standard lives in ./lessonChecks.js.
+// Checking a built doc against the authoring standard lives in ./lessonChecks.ts.
 // buildDoc's job is only to reject input it cannot turn into a valid document at
 // all (a text block with no text, an unknown block type), which it does by
 // throwing. Everything that is well-formed but off-standard is decided there, so

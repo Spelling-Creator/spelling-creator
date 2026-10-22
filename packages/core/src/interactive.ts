@@ -21,16 +21,117 @@
 // the editor's `Q7`-style numbering.
 //
 // The learner's typed answers are stored privately in their account (see
-// lessonResponses.js and the Worker's /lessons/:id/responses). The limits below
+// lessonResponses.ts and the Worker's /lessons/:id/responses). The limits below
 // are shared with the Worker so the browser and server agree on what a valid
 // submission is.
 
 import { imageCaptionParts } from "./imageCredit.ts";
 import { inlineTextPlain } from "./inlineText.ts";
-import { questionAnswerPlain } from "./questions.ts";
-import { inlineTextSpeech, speechText, textBlockSpeech } from "./speech.ts";
+import { type QuestionFields, questionAnswerPlain } from "./questions.ts";
+import {
+  type SpokenRun,
+  inlineTextSpeech,
+  speechText,
+  textBlockSpeech,
+} from "./speech.ts";
 import { headingText } from "./heading.ts";
 import { vaktText } from "./vakt.ts";
+import type { Block, InlineText, QuestionType } from "./types.ts";
+
+// Each block type with every field optional but its type.
+type PartialBlock<B extends Block> = B extends Block
+  ? Partial<B> & Pick<B, "type">
+  : never;
+
+/** A block of a lesson as interactive mode reads it: any field but its type may be missing. */
+export type InteractiveBlock = PartialBlock<Block>;
+
+/** A block that is part of a section's material rather than something asked. */
+export type InteractiveContentBlock = Exclude<
+  InteractiveBlock,
+  { type: "question" }
+>;
+
+/** A question block as interactive mode reads it. */
+export type InteractiveQuestionBlock = Extract<
+  InteractiveBlock,
+  { type: "question" }
+>;
+
+export interface InteractiveSection {
+  id?: string;
+  name?: string;
+  blocks?: Array<InteractiveBlock | null | undefined> | null;
+}
+
+/**
+ * A lesson document as interactive mode reads it. Every lesson ever published
+ * has to play, including older ones and hand-written JSON, so a section or a
+ * block may be missing its id and a list may be missing altogether.
+ */
+export interface InteractiveDoc {
+  title?: string;
+  sections?: Array<InteractiveSection | null | undefined> | null;
+}
+
+interface StepBase {
+  key: string;
+  sectionId: string;
+  sectionIndex: number;
+  sectionName: string;
+}
+
+/** A section's material, shown together on one screen. */
+export interface ContentStep extends StepBase {
+  kind: "content";
+  blocks: InteractiveContentBlock[];
+}
+
+/** One question, with a field for the learner's answer. */
+export interface QuestionStep extends StepBase {
+  kind: "question";
+  block: InteractiveQuestionBlock;
+  questionNumber: number;
+}
+
+/** A step of the walkthrough, as buildInteractiveSteps makes it. */
+export type InteractiveStep = ContentStep | QuestionStep;
+
+/** The parts of a step that say what it reads aloud. */
+export type SpokenStep =
+  | Pick<ContentStep, "kind" | "sectionName" | "blocks">
+  | Pick<QuestionStep, "kind" | "sectionName" | "block">;
+
+/**
+ * The fields of a block that the answer readers look at. Any block will do
+ * (only a question has an answer to reveal), and so will a question mid-edit
+ * or hand-written, with any field missing.
+ */
+export interface AnswerFields extends QuestionFields {
+  type?: string;
+  steps?: ReadonlyArray<{ text?: InlineText } | null | undefined>;
+}
+
+/** The author's answer to a question, as interactive mode reveals it. */
+export interface QuestionAnswer {
+  answer: string;
+  answers: string[];
+  steps: InlineText[];
+  suggested: boolean;
+}
+
+/**
+ * One question's entry in a saved run-through: the learner's answer, with a
+ * snapshot of the question it answered.
+ */
+export interface LessonResponseAnswer {
+  blockId: string;
+  sectionId: string;
+  sectionName: string;
+  questionType: QuestionType;
+  prompt: string;
+  answer: string;
+}
 
 // Block types that make up a section's material, in the order the document has
 // them. Everything that isn't a question block and isn't unknown to us.
@@ -39,13 +140,9 @@ import { vaktText } from "./vakt.ts";
 // break is something whoever is running the lesson does with the speller, not
 // something the speller answers, so it belongs with the section's material and
 // must not be counted by the progress bar.
-const CONTENT_BLOCK_TYPES = new Set([
-  "text",
-  "image",
-  "spelling",
-  "vakt",
-  "heading",
-]);
+const CONTENT_BLOCK_TYPES: ReadonlySet<string> = new Set<
+  InteractiveContentBlock["type"]
+>(["text", "image", "spelling", "vakt", "heading"]);
 
 /** The longest single typed answer we accept. Long enough for an essay-style
  * open-ended response, short enough that a submission can't be a payload. */
@@ -62,26 +159,23 @@ export const MAX_STORED_RESPONSES = 20;
 /**
  * Whether a block asks the learner something (and so gets its own step with an
  * answer field).
- * @param {object} block
- * @returns {boolean}
  */
-export function isQuestionBlock(block) {
-  return Boolean(block) && block.type === "question";
+export function isQuestionBlock<B extends { type?: unknown }>(
+  block: B | null | undefined,
+): block is B & { type: "question" } {
+  return !!block && block.type === "question";
 }
 
 /**
  * Build the ordered walkthrough for a lesson document.
  *
- * @param {object} doc  The lesson document ({ title, sections: [{ name, blocks }] }).
- * @returns {Array<
- *   { key: string, kind: "content", sectionId: string, sectionIndex: number,
- *     sectionName: string, blocks: object[] } |
- *   { key: string, kind: "question", sectionId: string, sectionIndex: number,
- *     sectionName: string, block: object, questionNumber: number }
- * >} The steps, in the order they are presented.
+ * @param doc  The lesson document ({ title, sections: [{ name, blocks }] }).
+ * @returns The steps, in the order they are presented.
  */
-export function buildInteractiveSteps(doc) {
-  const steps = [];
+export function buildInteractiveSteps(
+  doc: InteractiveDoc | null | undefined,
+): InteractiveStep[] {
+  const steps: InteractiveStep[] = [];
   const sections = Array.isArray(doc?.sections) ? doc.sections : [];
 
   sections.forEach((section, sectionIndex) => {
@@ -93,7 +187,8 @@ export function buildInteractiveSteps(doc) {
     const sectionName = (section?.name || "").trim();
 
     const content = blocks.filter(
-      (block) => block && CONTENT_BLOCK_TYPES.has(block.type),
+      (block): block is InteractiveContentBlock =>
+        !!block && CONTENT_BLOCK_TYPES.has(block.type),
     );
     if (content.length > 0) {
       steps.push({
@@ -129,10 +224,10 @@ export function buildInteractiveSteps(doc) {
  * How many questions a lesson asks in total — what the walkthrough's progress
  * counter counts, and what tells the lesson page whether to offer interactive
  * mode as a practice run or just a read-through.
- * @param {object} doc
- * @returns {number}
  */
-export function countInteractiveQuestions(doc) {
+export function countInteractiveQuestions(
+  doc: InteractiveDoc | null | undefined,
+): number {
   return (Array.isArray(doc?.sections) ? doc.sections : []).reduce(
     (total, section) =>
       total +
@@ -148,10 +243,10 @@ export function countInteractiveQuestions(doc) {
  * interactive mode would lead anywhere. False only for a genuinely empty document
  * (no sections, or sections with no blocks in them), which the hub can hold: a
  * lesson needs one section to publish, not one block.
- * @param {object} doc
- * @returns {boolean}
  */
-export function isInteractivePlayable(doc) {
+export function isInteractivePlayable(
+  doc: InteractiveDoc | null | undefined,
+): boolean {
   return (Array.isArray(doc?.sections) ? doc.sections : []).some(
     (section) =>
       (Array.isArray(section?.blocks) ? section.blocks : []).length > 0,
@@ -172,12 +267,13 @@ export function isInteractivePlayable(doc) {
  * as often as a presenter's, and saying the answer out loud the moment a
  * question appears would give it away to the one person meant to work it out.
  *
- * @param {object} step  A step from buildInteractiveSteps.
- * @returns {Array<string | import("./speech.ts").SpokenRun[]>}
+ * @param step  A step from buildInteractiveSteps.
  */
-export function stepSpeech(step) {
+export function stepSpeech(
+  step: SpokenStep | null | undefined,
+): Array<string | SpokenRun[]> {
   if (!step) return [];
-  const lines = [];
+  const lines: Array<string | SpokenRun[]> = [];
   if (step.sectionName) lines.push(step.sectionName);
 
   if (step.kind === "question") {
@@ -215,10 +311,9 @@ export function stepSpeech(step) {
 /**
  * What one step says, as it would read on a screen: plain text, one utterance
  * per line, with each hint's words as written.
- * @param {object} step  A step from buildInteractiveSteps.
- * @returns {string}
+ * @param step  A step from buildInteractiveSteps.
  */
-export function stepSpeechText(step) {
+export function stepSpeechText(step: SpokenStep | null | undefined): string {
   return speechText(stepSpeech(step));
 }
 
@@ -248,20 +343,28 @@ export function stepSpeechText(step) {
  * draws them with their formulas, and a step is shown as its plain words
  * everywhere else.
  *
- * @param {object} block  A question block.
- * @returns {{ answer: string, answers: string[], steps: Array<string | object>, suggested: boolean } | null}
+ * @param block  A question block.
  */
-export function questionAnswer(block) {
+export function questionAnswer(
+  block: AnswerFields | InteractiveBlock | null | undefined,
+): QuestionAnswer | null {
   if (!isQuestionBlock(block)) return null;
 
-  const trimmed = (value) => String(value ?? "").trim();
-  const texts = (list) =>
-    (Array.isArray(list) ? list : [])
+  const trimmed = (value: unknown) => String(value ?? "").trim();
+  type Entries<T> = ReadonlyArray<{ text?: T } | null | undefined>;
+  // Array.isArray narrows a readonly array to any[], so the list is typed here.
+  const entries = <T>(list: Entries<T> | undefined): Entries<T> =>
+    Array.isArray(list) ? list : [];
+  const texts = (list: Entries<string> | undefined) =>
+    entries(list)
       .map((entry) => trimmed(entry?.text))
       .filter(Boolean);
-  const steps = (list) =>
-    (Array.isArray(list) ? list : [])
-      .filter((entry) => inlineTextPlain(entry?.text).trim())
+  const steps = (list: Entries<InlineText> | undefined): InlineText[] =>
+    entries(list)
+      .filter(
+        (entry): entry is { text: InlineText } =>
+          !!inlineTextPlain(entry?.text).trim(),
+      )
       .map((entry) => entry.text);
 
   switch (block.questionType) {
@@ -316,10 +419,11 @@ export function questionAnswer(block) {
  * A number question's working is deliberately not in here. It is how you get to
  * the answer, not an answer, and it is shown as working.
  *
- * @param {object} block  A question block.
- * @returns {string[]}
+ * @param block  A question block.
  */
-export function revealedAnswers(block) {
+export function revealedAnswers(
+  block: AnswerFields | InteractiveBlock | null | undefined,
+): string[] {
   const revealed = questionAnswer(block);
   if (!revealed) return [];
   if (revealed.answers.length > 0) return revealed.answers;
@@ -330,10 +434,11 @@ export function revealedAnswers(block) {
  * Whether a walkthrough has any author's answer to reveal at all — i.e. whether
  * offering the reveal would lead anywhere. False for a lesson with no questions,
  * and for one whose questions are all open-ended or left unanswered.
- * @param {Array<object>} steps  Steps from buildInteractiveSteps.
- * @returns {boolean}
+ * @param steps  Steps from buildInteractiveSteps.
  */
-export function hasRevealableAnswers(steps) {
+export function hasRevealableAnswers(
+  steps: Array<InteractiveStep | null | undefined> | null | undefined,
+): boolean {
   return (Array.isArray(steps) ? steps : []).some(
     (step) => step?.kind === "question" && questionAnswer(step.block) !== null,
   );
@@ -343,10 +448,10 @@ export function hasRevealableAnswers(steps) {
  * The answer-field key for a question step. Answers are held (and stored) keyed
  * by block id so re-ordering a lesson between run-throughs doesn't shuffle which
  * answer belongs to which question.
- * @param {object} step
- * @returns {string}
  */
-export function answerKey(step) {
+export function answerKey(
+  step: { key?: string; block?: { id?: string } | null } | null | undefined,
+): string {
   return step?.block?.id || step?.key || "";
 }
 
@@ -359,13 +464,15 @@ export function answerKey(step) {
  * outright. Blank answers are kept — "I skipped question 3" is itself a fact
  * about the run-through, and dropping them would silently renumber the rest.
  *
- * @param {Array<object>} steps    Steps from buildInteractiveSteps.
- * @param {Record<string, string>} answers  Typed answers, keyed by answerKey(step).
- * @returns {Array<{blockId, sectionId, sectionName, questionType, prompt, answer}>}
+ * @param steps    Steps from buildInteractiveSteps.
+ * @param answers  Typed answers, keyed by answerKey(step).
  */
-export function collectResponses(steps, answers) {
+export function collectResponses(
+  steps: readonly InteractiveStep[] | null | undefined,
+  answers: Readonly<Record<string, string>> | null | undefined,
+): LessonResponseAnswer[] {
   return (steps || [])
-    .filter((step) => step.kind === "question")
+    .filter((step): step is QuestionStep => step.kind === "question")
     .map((step) => ({
       blockId: answerKey(step),
       sectionId: step.sectionId,
@@ -380,19 +487,18 @@ export function collectResponses(steps, answers) {
  * Validate a submission the way the Worker does, so the browser can refuse an
  * impossible save before making the round trip and the two agree on the reason.
  * Returns null when the payload is fine, or a short human-readable problem.
- * @param {Array<object>} responses
- * @returns {string|null}
  */
-export function validateResponses(responses) {
+export function validateResponses(responses: unknown): string | null {
   if (!Array.isArray(responses)) return "Answers must be a list.";
   if (responses.length > MAX_RESPONSES) {
     return `A lesson run-through can hold at most ${MAX_RESPONSES} answers.`;
   }
-  for (const response of responses) {
+  const list: readonly unknown[] = responses;
+  for (const response of list) {
     if (!response || typeof response !== "object") {
       return "Each answer must be an object.";
     }
-    if (typeof response.answer !== "string") {
+    if (!("answer" in response) || typeof response.answer !== "string") {
       return "Each answer must be text.";
     }
     if (response.answer.length > MAX_RESPONSE_LENGTH) {

@@ -2,7 +2,7 @@
 //
 // A green answer that isn't in its passage can be fixed by changing the answer
 // or by changing the passage, and only someone who understands both can say
-// which. The quick fixes in lessonFixes.js can't do that, so for these codes
+// which. The quick fixes in lessonFixes.ts can't do that, so for these codes
 // the Worker asks a model (apps/api/src/lib/lessonFix.js) and the editor shows
 // the result before anything changes.
 //
@@ -21,8 +21,17 @@
 // the first try fails. The editor runs it again on the lesson as it is when the
 // fix comes back, since the author may have changed it in the meantime.
 
-import { applyPatch } from "./lessonPatch.ts";
 import {
+  type PatchOperation,
+  type PatchOperationInput,
+  applyPatch,
+} from "./lessonPatch.ts";
+import type { BlockInput } from "./lessonBuild.ts";
+import {
+  type ErrorFinding,
+  type Finding,
+  type LessonCheckResult,
+  type WarningFinding,
   isFormattingFinding,
   newFindings,
   validateLesson,
@@ -35,6 +44,16 @@ import {
   textBlockMarkup,
   withTextBlockDocument,
 } from "./lessonText.ts";
+import type { Block, LessonDoc, Section } from "./types.ts";
+
+/** The operation a fix is made of: every fix only replaces blocks. */
+export type ReplaceBlockOperation = Extract<
+  PatchOperation,
+  { op: "replace_block" }
+>;
+
+// A replace_block operation as it arrives from a model, not checked yet.
+type FixOperation = Extract<PatchOperationInput, { op: "replace_block" }>;
 
 /**
  * The finding codes a model may be asked to fix. Each is about one section,
@@ -66,39 +85,52 @@ export const AI_FIX_CODES = Object.freeze([
   "W_SPELLING_IN_CAPS",
 ]);
 
-const AI_FIXABLE = new Set(AI_FIX_CODES);
+const AI_FIXABLE: ReadonlySet<string> = new Set(AI_FIX_CODES);
 
-/**
- * Whether a model may be asked to fix a finding.
- * @param {{ code: string, sectionId?: string|null }} finding
- */
-export function hasAiFix(finding) {
+/** Whether a model may be asked to fix a finding. */
+export function hasAiFix(finding: {
+  code: string;
+  sectionId?: string | null;
+}): boolean {
   return AI_FIXABLE.has(finding?.code) && Boolean(finding?.sectionId);
 }
 
 // The blocks a fix may change. Images and VAKT activities are left alone.
-const EDITABLE = new Set(["text", "question", "spelling"]);
+const EDITABLE: ReadonlySet<string> = new Set(["text", "question", "spelling"]);
 
-const texts = (items) =>
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+// The text of each item in a list of strings or `{ text }` items, trimmed,
+// with the empty ones left out.
+const texts = (items: unknown): string[] =>
   (Array.isArray(items) ? items : [])
-    .map((item) => (typeof item === "string" ? item : item?.text) || "")
-    .map((text) => text.trim())
+    .map((item: unknown) => {
+      const text =
+        typeof item === "string" ? item : isRecord(item) ? item.text : "";
+      return typeof text === "string" ? text.trim() : "";
+    })
     .filter(Boolean);
+
+/** What blockForModel makes: buildBlock's input shape, any answer a string. */
+export interface ModelBlock extends BlockInput {
+  answer?: string;
+}
 
 /**
  * A block as the model sees it: the input shape create_lesson takes, every
  * list as plain strings, text as markup (so footnotes and formatting survive
  * the round trip).
- * @param {object} block
  */
-export function blockForModel(block) {
+export function blockForModel(block: Block): ModelBlock {
   switch (block?.type) {
     case "text":
       return { id: block.id, type: "text", text: textBlockMarkup(block) };
     case "spelling":
       return { id: block.id, type: "spelling", words: texts(block.words) };
     case "question": {
-      const out = {
+      const out: ModelBlock = {
         id: block.id,
         type: "question",
         questionType: block.questionType,
@@ -118,27 +150,39 @@ export function blockForModel(block) {
   }
 }
 
-function findSection(doc, sectionId) {
+function findSection(
+  doc: LessonDoc | null | undefined,
+  sectionId: string | null | undefined,
+): Section | null {
   return (doc?.sections || []).find((s) => s.id === sectionId) || null;
+}
+
+/** What fixContext gives a model to fix a finding with. */
+export interface FixContext {
+  sectionNumber: number;
+  sectionName: string;
+  blocks: Array<ModelBlock & { editable: boolean }>;
+  usedElsewhere: string[];
 }
 
 /**
  * What a model needs to fix a finding: the finding's section, and the
  * spelling words and answers other sections already use (a fix may not reuse
  * one). Null when the section is gone.
- * @param {object} doc
- * @param {import("./lessonChecks.js").Finding} finding
  */
-export function fixContext(doc, finding) {
+export function fixContext(
+  doc: LessonDoc,
+  finding: Pick<Finding, "sectionId"> | null | undefined,
+): FixContext | null {
   const section = findSection(doc, finding?.sectionId);
   if (!section) return null;
-  const usedElsewhere = new Set();
+  const usedElsewhere = new Set<string>();
   for (const other of doc.sections) {
     if (other === section) continue;
     for (const block of other.blocks || []) {
       // A loose orange question's answers, and a tight open's examples, are
       // suggestions, which the checks deliberately keep out of every
-      // lesson-wide pool (see lessonChecks.js). Forbidding them here would
+      // lesson-wide pool (see lessonChecks.ts). Forbidding them here would
       // steer the model away from words the checks would accept, sometimes
       // the only word that passes.
       const words =
@@ -167,12 +211,38 @@ export function fixContext(doc, finding) {
 
 // The types that hold a list in `answers`, and the subset whose list is
 // suggestions rather than a key.
-const LIST_ANSWER = new Set(["multiple", "multiple_open", "tight_open"]);
-const SUGGESTION_TYPES = new Set(["multiple_open", "tight_open"]);
-const SINGLE_ANSWER = new Set(["single", "background", "number"]);
+const LIST_ANSWER: ReadonlySet<unknown> = new Set([
+  "multiple",
+  "multiple_open",
+  "tight_open",
+]);
+const SUGGESTION_TYPES: ReadonlySet<unknown> = new Set([
+  "multiple_open",
+  "tight_open",
+]);
+const SINGLE_ANSWER: ReadonlySet<unknown> = new Set([
+  "single",
+  "background",
+  "number",
+]);
 
-function nonEmpty(value) {
+function nonEmpty(value: unknown): string {
   return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+/**
+ * One block a model's fix changes, named by its id. Every other field is
+ * optional, and an empty one means "keep it".
+ */
+export interface AiEdit {
+  blockId: string;
+  text?: string;
+  words?: string[];
+  questionType?: string;
+  prompt?: string;
+  answer?: string;
+  answers?: string[];
+  steps?: string[];
 }
 
 /**
@@ -182,23 +252,24 @@ function nonEmpty(value) {
  *
  * Throws an Error saying what is wrong when an edit names a block outside the
  * finding's section, or one a fix may not touch, or when nothing changes.
- * @param {object} doc
- * @param {import("./lessonChecks.js").Finding} finding
- * @param {Array<{ blockId: string, text?: string, words?: string[],
- *   questionType?: string, prompt?: string, answer?: string,
- *   answers?: string[], steps?: string[] }>} edits
- * @returns {Array<{ op: "replace_block", blockId: string, block: object }>}
+ * @param edits The model's reply, unchecked: AiEdit is what it should be.
  */
-export function aiEditsToOperations(doc, finding, edits) {
+export function aiEditsToOperations(
+  doc: LessonDoc,
+  finding: Pick<Finding, "sectionId"> | null | undefined,
+  edits: unknown,
+): ReplaceBlockOperation[] {
   const section = findSection(doc, finding?.sectionId);
   if (!section) throw new Error("That section is no longer in the lesson.");
-  const seen = new Set();
-  const operations = [];
-  for (const [i, edit] of (Array.isArray(edits) ? edits : []).entries()) {
-    const block = (section.blocks || []).find((b) => b.id === edit?.blockId);
+  const seen = new Set<string>();
+  const operations: ReplaceBlockOperation[] = [];
+  const list: unknown[] = Array.isArray(edits) ? edits : [];
+  for (const [i, raw] of list.entries()) {
+    const edit: { [K in keyof AiEdit]?: unknown } = isRecord(raw) ? raw : {};
+    const block = (section.blocks || []).find((b) => b.id === edit.blockId);
     if (!block) {
       throw new Error(
-        `Edit ${i + 1} names block "${edit?.blockId}", which isn't in this section.`,
+        `Edit ${i + 1} names block "${edit.blockId}", which isn't in this section.`,
       );
     }
     if (!EDITABLE.has(block.type)) {
@@ -213,16 +284,18 @@ export function aiEditsToOperations(doc, finding, edits) {
 
     const current = blockForModel(block);
     delete current.id;
-    const next = { ...current };
+    const next: ModelBlock = { ...current };
     if (block.type === "text") {
-      if (nonEmpty(edit.text)) next.text = edit.text.trim();
+      const text = nonEmpty(edit.text);
+      if (text) next.text = text;
     } else if (block.type === "spelling") {
       const words = texts(edit.words);
       if (words.length) next.words = words;
     } else {
       const type = nonEmpty(edit.questionType);
       if (type) next.questionType = type;
-      if (nonEmpty(edit.prompt)) next.prompt = edit.prompt.trim();
+      const prompt = nonEmpty(edit.prompt);
+      if (prompt) next.prompt = prompt;
       const answer = nonEmpty(edit.answer == null ? "" : String(edit.answer));
       if (answer) next.answer = answer;
       const answers = texts(edit.answers);
@@ -255,10 +328,14 @@ export function aiEditsToOperations(doc, finding, edits) {
 // A rebuilt list keeps the ids of the items whose text didn't change, so the
 // editor's fields (and anyone else's cursor in them) stay put. A step's text
 // can be a document (see inlineText.ts), so the two are compared as JSON.
-function keepItemIds(before, after) {
+function keepItemIds<T extends { id: string; text: unknown }>(
+  before: ReadonlyArray<{ id: string; text: unknown }> | undefined,
+  after: T[],
+): T[] {
   if (!Array.isArray(before) || !Array.isArray(after)) return after;
   const unused = [...before];
-  const same = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+  const same = (a: unknown, b: unknown) =>
+    JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
   return after.map((item) => {
     const at = unused.findIndex((old) => same(old?.text, item.text));
     if (at === -1) return item;
@@ -267,15 +344,40 @@ function keepItemIds(before, after) {
   });
 }
 
-function settle(before, after) {
+// The lists of a block whose items carry ids, on whichever block has them.
+type ItemLists = { type: string } & {
+  [K in "answers" | "steps" | "words"]?: Array<{ id: string; text: unknown }>;
+};
+
+function settle(before: Block | undefined, after: Block): Block {
   if (after.type === "text") {
     return withTextBlockDocument(after, textBlockContent(after));
   }
   const out = { ...after };
-  for (const field of ["answers", "steps", "words"]) {
-    if (out[field]) out[field] = keepItemIds(before?.[field], out[field]);
+  const lists: ItemLists = out;
+  const was: ItemLists | undefined = before;
+  for (const field of ["answers", "steps", "words"] as const) {
+    if (lists[field]) lists[field] = keepItemIds(was?.[field], lists[field]);
   }
   return out;
+}
+
+function isReplaceBlock(op: unknown): op is FixOperation {
+  return isRecord(op) && op.op === "replace_block";
+}
+
+// A fix's operations, checked to be replace_block operations alone. Their
+// fields are left to applyPatch, which checks them as it makes them.
+function fixOperations(operations: unknown): FixOperation[] {
+  if (!Array.isArray(operations)) throw new Error("A fix needs operations.");
+  const list: unknown[] = operations;
+  return list.map((op) => {
+    if (!isReplaceBlock(op)) {
+      const name = isRecord(op) ? op.op : undefined;
+      throw new Error(`A fix can only replace blocks, not "${name}".`);
+    }
+    return op;
+  });
 }
 
 /**
@@ -285,19 +387,16 @@ function settle(before, after) {
  *
  * Throws, naming the operation, when one can't be made. A fix only ever
  * replaces blocks, so any other kind of operation is refused.
- * @param {object} doc
- * @param {any[]} operations
+ * @param operations Unchecked, as a model (or aiEditsToOperations) gives them.
  */
-export function applyFixOperations(doc, operations) {
-  if (!Array.isArray(operations)) throw new Error("A fix needs operations.");
-  for (const op of operations) {
-    if (op?.op !== "replace_block") {
-      throw new Error(`A fix can only replace blocks, not "${op?.op}".`);
-    }
-  }
-  const patched = applyPatch(doc, operations);
-  const changed = new Set(operations.map((op) => op.blockId));
-  const original = new Map();
+export function applyFixOperations(
+  doc: LessonDoc,
+  operations: unknown,
+): LessonDoc {
+  const ops = fixOperations(operations);
+  const patched = applyPatch(doc, ops);
+  const changed = new Set(ops.map((op) => op.blockId));
+  const original = new Map<string, Block>();
   for (const section of doc.sections) {
     for (const block of section.blocks || []) original.set(block.id, block);
   }
@@ -309,11 +408,23 @@ export function applyFixOperations(doc, operations) {
       blocks: section.blocks.map((block) =>
         changed.has(block.id)
           ? settle(original.get(block.id), block)
-          : original.get(block.id),
+          : // Only replaced blocks are new: every other one is a copy of one
+            // of doc's own.
+            original.get(block.id)!,
       ),
     };
   });
   return { ...doc, sections };
+}
+
+/** What checkFix decides about a fix. */
+export interface FixCheck {
+  ok: boolean;
+  /** The lesson with the fix made, or null when it couldn't be made. */
+  doc: LessonDoc | null;
+  newErrors: ErrorFinding[];
+  newWarnings: WarningFinding[];
+  problems: string[];
 }
 
 /**
@@ -323,24 +434,29 @@ export function applyFixOperations(doc, operations) {
  * and no text block lost a footnote. New suggestions (warnings) don't stop a
  * fix; they come back in `newWarnings` for the editor to mention. `problems` is
  * what went wrong in prose a model can act on, for the Worker's second try.
- * @param {object} doc
- * @param {any[]} operations
- * @param {import("./lessonChecks.js").Finding} finding
- * @param {{ before?: { errors: any[], warnings: any[] } }} [options]
- *   `before` is validateLesson(doc) where the caller already ran it, so one
- *   request doesn't validate the same unchanged lesson again per attempt.
+ * @param operations Unchecked, as for applyFixOperations.
+ * @param options `before` is validateLesson(doc) where the caller already ran
+ *   it, so one request doesn't validate the same unchanged lesson again per
+ *   attempt.
  */
-export function checkFix(doc, operations, finding, { before } = {}) {
-  let fixed;
+export function checkFix(
+  doc: LessonDoc,
+  operations: unknown,
+  finding: Pick<Finding, "key" | "message">,
+  { before }: { before?: LessonCheckResult } = {},
+): FixCheck {
+  let ops: FixOperation[];
+  let fixed: LessonDoc;
   try {
-    fixed = applyFixOperations(doc, operations);
+    ops = fixOperations(operations);
+    fixed = applyFixOperations(doc, ops);
   } catch (err) {
     return {
       ok: false,
       doc: null,
       newErrors: [],
       newWarnings: [],
-      problems: [err.message],
+      problems: [err instanceof Error ? err.message : String(err)],
     };
   }
   const prior = before ?? validateLesson(doc);
@@ -351,7 +467,7 @@ export function checkFix(doc, operations, finding, { before } = {}) {
   // pre-existing when its code already fired in the same section. Formatting
   // only: for any other code, a changed key means the fix changed the very
   // thing the check is about (a new answer, say), and it must answer for it.
-  const rekeyed = (f, priors) =>
+  const rekeyed = (f: Finding, priors: readonly Finding[]) =>
     isFormattingFinding(f) &&
     priors.some((p) => p.code === f.code && p.sectionId === f.sectionId);
   const newErrors = newFindings(prior.errors, after.errors).filter(
@@ -364,18 +480,23 @@ export function checkFix(doc, operations, finding, { before } = {}) {
     (f) => f.key === finding.key,
   );
 
-  const blocksOf = (lesson) =>
-    new Map(
-      lesson.sections.flatMap((s) => (s.blocks || []).map((b) => [b.id, b])),
+  const blocksOf = (lesson: LessonDoc) =>
+    new Map<string | undefined, Block>(
+      lesson.sections.flatMap((s) =>
+        (s.blocks || []).map((b): [string, Block] => [b.id, b]),
+      ),
     );
   const was = blocksOf(doc);
   const now = blocksOf(fixed);
-  const lostFootnote = operations.some(
-    (op) =>
-      was.get(op.blockId)?.type === "text" &&
-      textBlockFootnotes(was.get(op.blockId)).length >
-        textBlockFootnotes(now.get(op.blockId)).length,
-  );
+  const lostFootnote = ops.some((op) => {
+    const block = was.get(op.blockId);
+    return (
+      block?.type === "text" &&
+      textBlockFootnotes(block).length >
+        // A replaced block keeps its id (see applyPatch).
+        textBlockFootnotes(now.get(op.blockId)!).length
+    );
+  });
 
   const problems = [
     ...(resolved ? [] : [`The problem is still there: ${finding.message}`]),

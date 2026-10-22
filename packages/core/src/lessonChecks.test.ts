@@ -4,16 +4,26 @@
 // apps/mcp/test/validate.test.js; this covers the fields that suite never reads.
 
 import { describe, expect, it } from "vitest";
-import { validateLesson } from "./lessonChecks.ts";
+import { validateLesson, type Finding } from "./lessonChecks.ts";
+import type {
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  RichNode,
+} from "./types.ts";
 
-const question = (id, questionType, fields) => ({
+const question = (
+  id: string,
+  questionType: QuestionType,
+  fields: Omit<QuestionBlock, "id" | "type" | "questionType">,
+): QuestionBlock => ({
   id,
   type: "question",
   questionType,
   ...fields,
 });
 
-function lesson() {
+function lesson(): LessonDoc {
   return {
     title: "Rivers",
     sources: [],
@@ -54,7 +64,8 @@ function lesson() {
   };
 }
 
-const find = (findings, code) => findings.find((f) => f.code === code);
+const find = (findings: Finding[], code: string) =>
+  findings.find((f) => f.code === code);
 
 describe("validateLesson finding locations", () => {
   const { errors, warnings } = validateLesson(lesson());
@@ -146,7 +157,7 @@ describe("validateLesson finding locations", () => {
 
   it("counts formatting in a question's prompt and steps with the section's", () => {
     const doc = lesson();
-    const bold = (text) => ({
+    const bold = (text: string): RichNode => ({
       type: "doc",
       content: [
         {

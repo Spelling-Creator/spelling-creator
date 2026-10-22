@@ -73,6 +73,8 @@
 // server callers must pass a User-Agent (see there).
 
 import {
+  type ArticleParagraph,
+  type TextQuantity,
   clausesOf,
   datesIn,
   mentions,
@@ -83,6 +85,8 @@ import {
 } from "./factText.ts";
 import { textBlockPlain } from "./lessonText.ts";
 import {
+  type Eruption,
+  type VolcanoRecord,
   GVP_WFS,
   dateSpan,
   eruptionOverlaps,
@@ -92,7 +96,13 @@ import {
   volcanoRecords,
   volcanoUrl,
 } from "./smithsonian.ts";
+import type { Section } from "./types.ts";
 import {
+  type Rank,
+  type SparqlBinding,
+  type SparqlValue,
+  type WikidataItem,
+  type WikidataOptions,
   eachLimited,
   exactMatches,
   lastSegment,
@@ -110,14 +120,21 @@ import { articleItems, articleText, wikipediaArticleUrl } from "./wikipedia.ts";
 // Smithsonian's, to keep them out of its cache.
 export { GVP_WFS, squashText };
 
+/** A text block's words, with where it is in the lesson. */
+export interface LessonPassage {
+  sectionId: string;
+  blockId: string;
+  text: string;
+}
+
 /**
  * A lesson's passages in reading order: every text block with words in it, as
  * plain text, with where it is.
- * @param {{ sections?: any[] }} doc
- * @returns {{ sectionId: string, blockId: string, text: string }[]}
  */
-export function lessonPassages(doc) {
-  const out = [];
+export function lessonPassages(
+  doc: { sections?: readonly Section[] } | null | undefined,
+): LessonPassage[] {
+  const out: LessonPassage[] = [];
   for (const section of doc?.sections || []) {
     for (const block of section?.blocks || []) {
       if (block?.type !== "text") continue;
@@ -133,7 +150,10 @@ export function lessonPassages(doc) {
  * author fixing a number is the point of it, so a finding whose words have
  * since changed is finished with rather than wrong.
  */
-export function quoteStillThere(fact, text) {
+export function quoteStillThere(
+  fact: { quote?: string | null },
+  text: string,
+): boolean {
   return (
     Boolean(fact.quote) && squashText(text).includes(squashText(fact.quote))
   );
@@ -144,6 +164,35 @@ export function quoteStillThere(fact, text) {
 // away from the same date in the Gregorian one, and a passage rarely says
 // which it means.
 const JULIAN = "Q1985786";
+
+/** What a quantity measures, which says which units it can be in. */
+export type FactDimension =
+  | "length"
+  | "area"
+  | "volume"
+  | "count"
+  | "mass"
+  | "speed"
+  | "temperature"
+  | "time";
+
+interface FactPropertyFields {
+  pids: readonly string[];
+  smithsonian?: "elevation" | "last" | "eruption";
+  pooled?: boolean;
+  varies?: boolean;
+  animal?: boolean;
+  emptyAtZero?: boolean;
+  placesAbove?: boolean;
+  hint: string;
+}
+
+/** One entry of FACT_PROPERTIES: a figure, a date, or a named thing. */
+export type FactPropertySpec = FactPropertyFields &
+  (
+    | { kind: "quantity"; dimension: FactDimension }
+    | { kind: "time" | "item"; dimension?: undefined }
+  );
 
 /**
  * What a claim can be about. The keys are what a claim's `property` holds, and
@@ -177,7 +226,7 @@ const JULIAN = "Q1985786";
  *
  * `hint` is the plain description a model is given when choosing.
  */
-export const FACT_PROPERTIES = {
+const PROPERTY_SPECS = {
   height: {
     kind: "quantity",
     dimension: "length",
@@ -429,9 +478,23 @@ export const FACT_PROPERTIES = {
     pids: ["P403"],
     hint: "the river, lake or sea a river flows into",
   },
-};
+} satisfies Record<string, FactPropertySpec>;
 
-export const FACT_PROPERTY_KEYS = Object.keys(FACT_PROPERTIES);
+/** What a claim's `property` holds: a key of FACT_PROPERTIES. */
+export type FactProperty = keyof typeof PROPERTY_SPECS;
+
+/** What a claim can be about (see PROPERTY_SPECS above). */
+export const FACT_PROPERTIES: Readonly<Record<FactProperty, FactPropertySpec>> =
+  PROPERTY_SPECS;
+
+export const FACT_PROPERTY_KEYS = Object.keys(PROPERTY_SPECS) as FactProperty[];
+
+// FACT_PROPERTIES as looked up by whatever a model wrote for a property.
+const PROPERTY_BY_KEY: Partial<Record<string, FactPropertySpec>> =
+  FACT_PROPERTIES;
+
+const isFactProperty = (value: unknown): value is FactProperty =>
+  typeof value === "string" && Boolean(PROPERTY_BY_KEY[value]);
 
 // Read along with the values, for what they say about the item: a scientific
 // name, or being one of KIND_CLASSES, makes it a kind of living thing (see the
@@ -452,6 +515,25 @@ const KIND_CLASSES = new Set([
   "Q39367", // dog breed
   "Q1160573", // horse breed
 ]);
+
+interface FactUnitFields {
+  /** The unit's Wikidata item. */
+  qid: string;
+  /** Other items Wikidata uses for the same unit. */
+  aliases?: readonly string[];
+  dimension: FactDimension;
+}
+
+/** One entry of FACT_UNITS: a scale factor to the base unit, or a conversion. */
+export type FactUnitDef = FactUnitFields &
+  (
+    | { factor: number; toBase?: undefined; fromBase?: undefined }
+    | {
+        factor?: undefined;
+        toBase: (n: number) => number;
+        fromBase: (n: number) => number;
+      }
+  );
 
 // Each dimension's base unit is the one with factor 1. Temperatures aren't a
 // scale factor apart, so they carry their own conversion to and from kelvin.
@@ -531,35 +613,56 @@ const UNIT_DEFS = {
     factor: 31557600,
   },
   kiloyear: { qid: "Q3013059", dimension: "time", factor: 31557600000 },
-};
+} satisfies Record<string, FactUnitDef>;
 
-export const FACT_UNITS = UNIT_DEFS;
-export const FACT_UNIT_KEYS = Object.keys(UNIT_DEFS);
+/** A key of FACT_UNITS, the units a claim can be in; "" for a plain count. */
+export type FactUnit = keyof typeof UNIT_DEFS;
+
+export const FACT_UNITS: Readonly<Record<FactUnit, FactUnitDef>> = UNIT_DEFS;
+export const FACT_UNIT_KEYS = Object.keys(UNIT_DEFS) as FactUnit[];
+
+// The units as looked up by whatever a claim or an article says, which may be
+// no unit this knows.
+const UNITS: Partial<Record<string, FactUnitDef>> = FACT_UNITS;
 
 const UNIT_BY_QID = new Map(
-  Object.entries(UNIT_DEFS).flatMap(([key, def]) =>
-    [def.qid, ...(def.aliases || [])].map((qid) => [qid, key]),
+  Object.entries(FACT_UNITS).flatMap(([key, def]) =>
+    [def.qid, ...(def.aliases || [])].map((qid) => [qid, key] as const),
   ),
 );
 
 /**
  * Convert between two of the units above.
- * @returns {number | null}  null when either unit is unknown or they measure
- *   different things.
+ * @returns null when either unit is unknown or they measure different things.
  */
-export function convertUnit(value, from, to) {
-  const a = UNIT_DEFS[from];
-  const b = UNIT_DEFS[to];
+export function convertUnit(
+  value: number,
+  from: string,
+  to: string,
+): number | null {
+  const a = UNITS[from];
+  const b = UNITS[to];
   if (!a || !b || a.dimension !== b.dimension) return null;
   const base = a.toBase ? a.toBase(value) : value * a.factor;
   return b.fromBase ? b.fromBase(base) : base / b.factor;
 }
 
-export const FACT_QUALIFIERS = ["exact", "about", "more_than", "less_than"];
+export const FACT_QUALIFIERS = [
+  "exact",
+  "about",
+  "more_than",
+  "less_than",
+] as const;
+
+/** How a passage hedges a figure: "about 9,000", "more than 8,000". */
+export type FactQualifier = (typeof FACT_QUALIFIERS)[number];
+
+const isQualifier = (value: unknown): value is FactQualifier =>
+  FACT_QUALIFIERS.some((q) => q === value);
 
 // How far a value may stray from Wikidata's, as a share of it, before the
 // passage's own rounding is taken into account. Hedged figures get more room.
-const RELATIVE_SLACK = {
+const RELATIVE_SLACK: Record<FactQualifier, number> = {
   exact: 0.02,
   about: 0.1,
   more_than: 0.02,
@@ -570,10 +673,8 @@ const RELATIVE_SLACK = {
  * Half a unit in the last place the number was written to: 8,849 allows 0.5,
  * 9,000 allows 500, 4.5 billion allows 50 million. A passage that says "9,000
  * meters" has told you how precise it means to be.
- * @param {number} n
- * @returns {number}
  */
-export function roundingSlack(n) {
+export function roundingSlack(n: number): number {
   const a = Math.abs(n);
   if (!Number.isFinite(a) || a === 0) return 0;
   const [mantissa, exponent] = a.toExponential().split("e");
@@ -581,13 +682,54 @@ export function roundingSlack(n) {
   return 0.5 * 10 ** (Number(exponent) - decimals);
 }
 
-function cleanString(value, max) {
+function cleanString(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
-function wholeNumber(value, min, max) {
+function wholeNumber(value: unknown, min: number, max: number) {
   const n = Number(value);
   return Number.isInteger(n) && n >= min && n <= max ? n : 0;
+}
+
+/** Why claimProblem turns a claim away. */
+export type ClaimProblem =
+  | "property"
+  | "subject"
+  | "stated"
+  | "value"
+  | "unit-missing"
+  | "unit-wrong";
+
+/**
+ * A claim as normalizeClaim leaves it: one stated fact about one named thing
+ * (see the top of this file).
+ */
+export interface FactClaim {
+  subject: string;
+  /** What sort of thing the subject is ("mountain"), or "". */
+  kind: string;
+  property: FactProperty;
+  /** The name a named fact gives (a capital, a discoverer); "" otherwise. */
+  stated: string;
+  /** The figure, or the year of a date; 0 for a named fact. */
+  value: number;
+  /** A key of FACT_UNITS for a measured quantity; "" otherwise. */
+  unit: string;
+  /** A date's month and day where the passage gives them; 0 otherwise. */
+  month: number;
+  day: number;
+  qualifier: FactQualifier;
+  /** The passage's own words for the fact. */
+  quote: string;
+}
+
+// A claim as a model wrote it: any field may be missing, or hold anything.
+type RawClaim = Partial<Record<string, unknown>>;
+
+/** A claim prepareClaims left out: its place in the input, and why. */
+export interface DroppedClaim {
+  index: number;
+  reason: ClaimProblem | "over-limit";
 }
 
 /**
@@ -602,13 +744,12 @@ function wholeNumber(value, min, max) {
  *                 without)
  *   unit-wrong    a unit this doesn't know, or one that measures the wrong
  *                 thing for the property (a height in kilograms)
- *
- * @returns {string | null}
  */
-export function claimProblem(raw) {
-  if (!raw || typeof raw !== "object") return "value";
+export function claimProblem(input: unknown): ClaimProblem | null {
+  if (!input || typeof input !== "object") return "value";
+  const raw: RawClaim = input;
+  if (!isFactProperty(raw.property)) return "property";
   const spec = FACT_PROPERTIES[raw.property];
-  if (!spec) return "property";
   if (!cleanString(raw.subject, 200)) return "subject";
   if (spec.kind === "item") {
     return cleanString(raw.stated, 200) ? null : "stated";
@@ -617,7 +758,7 @@ export function claimProblem(raw) {
   if (spec.kind === "quantity" && spec.dimension !== "count") {
     const unit = cleanString(raw.unit, 20);
     if (!unit) return "unit-missing";
-    if (UNIT_DEFS[unit]?.dimension !== spec.dimension) return "unit-wrong";
+    if (UNITS[unit]?.dimension !== spec.dimension) return "unit-wrong";
   }
   return null;
 }
@@ -628,27 +769,26 @@ export function claimProblem(raw) {
  *
  * Anything a caller attaches beyond the fields below (the Worker's `passage`
  * index, say) is carried through to the result untouched.
- *
- * @returns {object | null}
  */
-export function normalizeClaim(raw) {
-  if (claimProblem(raw)) return null;
-  const spec = FACT_PROPERTIES[raw.property];
+export function normalizeClaim(input: unknown): FactClaim | null {
+  if (claimProblem(input)) return null;
+  // claimProblem has seen that it is an object, with a property it knows.
+  const raw = input as RawClaim;
+  const property = raw.property as FactProperty;
+  const spec = FACT_PROPERTIES[property];
   const named = spec.kind === "item";
   const measured = spec.kind === "quantity" && spec.dimension !== "count";
   return {
     ...raw,
     subject: cleanString(raw.subject, 200),
     kind: cleanString(raw.kind, 60),
-    property: raw.property,
+    property,
     stated: named ? cleanString(raw.stated, 200) : "",
     value: named ? 0 : Number(raw.value),
     unit: measured ? cleanString(raw.unit, 20) : "",
     month: spec.kind === "time" ? wholeNumber(raw.month, 1, 12) : 0,
     day: spec.kind === "time" ? wholeNumber(raw.day, 1, 31) : 0,
-    qualifier: FACT_QUALIFIERS.includes(raw.qualifier)
-      ? raw.qualifier
-      : "exact",
+    qualifier: isQualifier(raw.qualifier) ? raw.qualifier : "exact",
     quote: cleanString(raw.quote, 300),
   };
 }
@@ -659,25 +799,77 @@ export function normalizeClaim(raw) {
  * this themselves and hand the claims to checkPreparedClaims; the rest call
  * checkClaims, which does both.
  *
- * @param {object[]} rawClaims
- * @param {{ maxClaims?: number }} [opts]  Claims past this are dropped as
- *   "over-limit".
- * @returns {{ claims: object[], dropped: { index: number, reason: string }[] }}
+ * @param opts.maxClaims  Claims past this are dropped as "over-limit".
  */
-export function prepareClaims(rawClaims, { maxClaims = 40 } = {}) {
-  const claims = [];
-  const dropped = [];
+export function prepareClaims(
+  rawClaims: readonly unknown[] | null | undefined,
+  { maxClaims = 40 }: { maxClaims?: number } = {},
+): { claims: FactClaim[]; dropped: DroppedClaim[] } {
+  const claims: FactClaim[] = [];
+  const dropped: DroppedClaim[] = [];
   (rawClaims || []).forEach((raw, index) => {
     const reason = claimProblem(raw);
     if (reason) dropped.push({ index, reason });
     else if (claims.length >= maxClaims) {
       dropped.push({ index, reason: "over-limit" });
-    } else claims.push(normalizeClaim(raw));
+    } else claims.push(normalizeClaim(raw)!);
   });
   return { claims, dropped };
 }
 
 // --- Reading what Wikidata says -------------------------------------------
+
+/** A date in historical years: -2560 is 2560 BC. */
+export interface SparqlTime {
+  year: number;
+  month: number;
+  day: number;
+}
+
+interface StatementFields {
+  /** The item the statement is on. */
+  item: string;
+  pid: string;
+  rank: Rank;
+  /** When a dated figure was taken: its latest "point in time" qualifier. */
+  pointInTime?: SparqlTime | null;
+  ended: boolean;
+}
+
+/** A statement whose value is a figure, in Wikidata's unit (an item id). */
+export interface QuantityStatement extends StatementFields {
+  amount: number;
+  unit: string;
+  lower?: number;
+  upper?: number;
+}
+
+/** A statement whose value is a date, known to `precision` (9 the year). */
+export interface TimeStatement extends StatementFields, SparqlTime {
+  precision: number;
+  /** The calendar model's item id. */
+  calendar: string;
+}
+
+/** A statement whose value is another item. */
+export interface ItemStatement extends StatementFields {
+  value: string;
+  valueLabel: string;
+}
+
+/** A statement whose value is a string: a scientific name, a GVP number. */
+export interface TextStatement extends StatementFields {
+  text: string;
+}
+
+export type WikidataStatement =
+  | QuantityStatement
+  | TimeStatement
+  | ItemStatement
+  | TextStatement;
+
+/** One item's statements, by property. */
+export type StatementsByPid = Map<string, WikidataStatement[]>;
 
 /**
  * A SPARQL dateTime as a historical date.
@@ -688,7 +880,10 @@ export function prepareClaims(rawClaims, { maxClaims = 40 } = {}) {
  * them. Checked against the Great Pyramid (-2559, precision 9) and Paris
  * (-0300, precision 7), both of which the item JSON gives as -2560 and -0300.
  */
-export function parseSparqlTime(value, precision) {
+export function parseSparqlTime(
+  value: string | null | undefined,
+  precision: number,
+): SparqlTime | null {
   const match = /^([+-]?)(\d+)-(\d\d)-(\d\d)T/.exec(value || "");
   if (!match) return null;
   let year = Number(match[2]) * (match[1] === "-" ? -1 : 1);
@@ -703,10 +898,14 @@ export function parseSparqlTime(value, precision) {
  * scientific name, a GVP number), the "point in time" qualifier that dates a
  * population figure, and the "end time" qualifier that retires a former
  * capital or prime minister.
- * @param {string} [language]  For the labels; English stands in for a
- *   language an item has no label in.
+ * @param language  For the labels; English stands in for a language an item
+ *   has no label in.
  */
-export function statementsQuery(itemIds, pids, language = "en") {
+export function statementsQuery(
+  itemIds: readonly string[],
+  pids: readonly string[],
+  language = "en",
+): string {
   const items = itemIds.map((id) => `wd:${id}`).join(" ");
   const props = pids.map((p) => `("${p}" p:${p} psv:${p} ps:${p})`).join(" ");
   // "mul" is Wikidata's label for every language at once, where a name that
@@ -737,7 +936,8 @@ export function statementsQuery(itemIds, pids, language = "en") {
 }`;
 }
 
-const number = (binding) => (binding ? Number(binding.value) : undefined);
+const number = (binding?: SparqlValue) =>
+  binding ? Number(binding.value) : undefined;
 
 /**
  * SPARQL result rows as statements, grouped by item and then property:
@@ -748,8 +948,10 @@ const number = (binding) => (binding ? Number(binding.value) : undefined);
  * item carries it as `value` (its id) and `valueLabel`, and one that is a
  * string as `text`; one with an end date is marked `ended`.
  */
-export function statementsFromBindings(bindings) {
-  const byStatement = new Map();
+export function statementsFromBindings(
+  bindings: readonly SparqlBinding[] | null | undefined,
+): Map<string, StatementsByPid> {
+  const byStatement = new Map<string, WikidataStatement>();
   for (const row of bindings || []) {
     const id = row.st?.value;
     if (!id) continue;
@@ -765,45 +967,59 @@ export function statementsFromBindings(bindings) {
       continue;
     }
     const precision = number(row.precision);
-    const statement = {
+    const fields: StatementFields = {
       item: lastSegment(row.item?.value),
-      pid: row.pid?.value,
+      // Bound with the statement, by the query's VALUES.
+      pid: row.pid?.value || "",
       rank: rankOf(row.rank?.value),
       pointInTime,
       ended: Boolean(row.ended),
     };
+    const valueIri = row.value?.value || "";
+    let statement: WikidataStatement;
     if (row.amount) {
-      statement.amount = number(row.amount);
-      statement.unit = lastSegment(row.unit?.value) || "Q199";
-      statement.lower = number(row.lower);
-      statement.upper = number(row.upper);
+      statement = {
+        ...fields,
+        amount: Number(row.amount.value),
+        unit: lastSegment(row.unit?.value) || "Q199",
+        lower: number(row.lower),
+        upper: number(row.upper),
+      };
     } else if (row.time) {
+      // The query binds a date's precision along with it.
+      if (precision === undefined) continue;
       const time = parseSparqlTime(row.time.value, precision);
       if (!time) continue;
-      Object.assign(statement, time, {
+      statement = {
+        ...fields,
+        ...time,
         precision,
         calendar: lastSegment(row.calendar?.value),
-      });
-    } else if (/\/entity\/Q\d+$/.test(row.value?.value || "")) {
+      };
+    } else if (/\/entity\/Q\d+$/.test(valueIri)) {
       // An item. "Unknown value" comes back as a blank node instead, and is
       // left out like "no value": a planet whose discoverer is unknown does
       // not have a discoverer to compare with.
-      statement.value = lastSegment(row.value.value);
-      statement.valueLabel = row.valueLabel?.value || statement.value;
+      const value = lastSegment(valueIri);
+      statement = {
+        ...fields,
+        value,
+        valueLabel: row.valueLabel?.value || value,
+      };
     } else if (row.text) {
-      statement.text = row.text.value;
+      statement = { ...fields, text: row.text.value };
     } else {
       continue;
     }
     byStatement.set(id, statement);
   }
 
-  const out = new Map();
+  const out = new Map<string, StatementsByPid>();
   for (const s of byStatement.values()) {
     if (!out.has(s.item)) out.set(s.item, new Map());
-    const byPid = out.get(s.item);
+    const byPid = out.get(s.item)!;
     if (!byPid.has(s.pid)) byPid.set(s.pid, []);
-    byPid.get(s.pid).push(s);
+    byPid.get(s.pid)!.push(s);
   }
   return out;
 }
@@ -813,10 +1029,11 @@ export function statementsFromBindings(bindings) {
  * shows as the thing it was checked against. An item with none of the
  * asked-for statements sends no rows and so isn't here; the caller falls back
  * to what the search said about it.
- * @returns {Map<string, { label: string, description: string }>}
  */
-export function itemsFromBindings(bindings) {
-  const out = new Map();
+export function itemsFromBindings(
+  bindings: readonly SparqlBinding[] | null | undefined,
+): Map<string, { label: string; description: string }> {
+  const out = new Map<string, { label: string; description: string }>();
   for (const row of bindings || []) {
     const id = lastSegment(row.item?.value);
     if (!id || out.has(id)) continue;
@@ -843,10 +1060,12 @@ export function itemsFromBindings(bindings) {
  * (p:/ps:) upward times out on the query service; a place reached only through
  * a lower-ranked link is missed, which leaves a claim disagreeing, never
  * agreeing wrongly.
- * @param {string[]} itemIds
- * @param {string} [language]  For the places' labels.
+ * @param language  For the places' labels.
  */
-export function placesAboveQuery(itemIds, language = "en") {
+export function placesAboveQuery(
+  itemIds: readonly string[],
+  language = "en",
+): string {
   const items = itemIds.map((id) => `wd:${id}`).join(" ");
   const languages = [...new Set([language, "en", "mul"])].join(",");
   // The patterns run in the order written. Left to its optimizer, the query
@@ -862,13 +1081,23 @@ export function placesAboveQuery(itemIds, language = "en") {
 }`;
 }
 
+/** One "located in" (P131) statement of a place, as placesAbove follows it. */
+export interface PlaceLink {
+  value: string;
+  valueLabel: string;
+  rank: Rank;
+  ended: boolean;
+}
+
 /**
  * placesAboveQuery's rows, as each place's P131 statements:
  * `Map<itemId, { value, valueLabel, rank, ended }[]>`.
  */
-export function placeLinksFromBindings(bindings) {
-  const out = new Map();
-  const seen = new Set();
+export function placeLinksFromBindings(
+  bindings: readonly SparqlBinding[] | null | undefined,
+): Map<string, PlaceLink[]> {
+  const out = new Map<string, PlaceLink[]>();
+  const seen = new Set<string>();
   for (const row of bindings || []) {
     const from = lastSegment(row.from?.value);
     const place = lastSegment(row.place?.value);
@@ -876,7 +1105,7 @@ export function placeLinksFromBindings(bindings) {
     if (!from || !id || !/^Q\d+$/.test(place || "") || seen.has(id)) continue;
     seen.add(id);
     if (!out.has(from)) out.set(from, []);
-    out.get(from).push({
+    out.get(from)!.push({
       value: place,
       valueLabel: row.placeLabel?.value || place,
       rank: rankOf(row.rank?.value),
@@ -889,12 +1118,13 @@ export function placeLinksFromBindings(bindings) {
 /**
  * Every place above an item, nearest first, through current statements only
  * (see currentStatements).
- * @param {string} itemId
- * @param {Map<string, object[]>} links  From placeLinksFromBindings.
- * @returns {{ value: string, valueLabel: string }[]}
+ * @param links  From placeLinksFromBindings.
  */
-export function placesAbove(itemId, links) {
-  const out = [];
+export function placesAbove(
+  itemId: string,
+  links: ReadonlyMap<string, readonly PlaceLink[]>,
+): PlaceLink[] {
+  const out: PlaceLink[] = [];
   const seen = new Set([itemId]);
   let frontier = [itemId];
   while (frontier.length) {
@@ -923,14 +1153,21 @@ const FORMAL_PLACE =
  * with" rule is for people ("Fleming"): among places it lets "Mexico" match
  * New Mexico and "Wales" New South Wales.
  */
-export function placeAgrees(claim, place, statedIds = []) {
+export function placeAgrees(
+  claim: Pick<FactClaim, "stated">,
+  place: Pick<PlaceLink, "value" | "valueLabel">,
+  statedIds: readonly string[] = [],
+): boolean {
   if (statedIds.includes(place.value)) return true;
   const wanted = squashText(claim.stated);
   const have = squashText(place.valueLabel);
   return have === wanted || have.replace(FORMAL_PLACE, "") === wanted;
 }
 
-function timeKey(t) {
+// A date's month and day may be unknown, or left out.
+type PartialDate = { year: number; month?: number; day?: number };
+
+function timeKey(t: PartialDate | null | undefined) {
   return t ? t.year * 10000 + (t.month || 0) * 100 + (t.day || 0) : -Infinity;
 }
 
@@ -945,7 +1182,13 @@ function timeKey(t) {
  * started in 1887 and opened in 1889; the Nile runs through seven countries),
  * and a passage using any of them is not wrong.
  */
-export function currentStatements(statements) {
+export function currentStatements<
+  T extends {
+    rank: string;
+    ended?: boolean;
+    pointInTime?: PartialDate | null;
+  },
+>(statements: readonly T[] | null | undefined): T[] {
   const live = (statements || []).filter(
     (s) => s.rank !== "deprecated" && !s.ended,
   );
@@ -956,39 +1199,56 @@ export function currentStatements(statements) {
 }
 
 // The one value to show a reader when there are several.
-function headline(statements) {
+function headline<T extends { rank: string }>(
+  statements: readonly T[],
+): T | undefined {
   return statements.find((s) => s.rank === "preferred") || statements[0];
 }
 
 // An item's current text value for a property: its scientific name, its GVP
 // number. "" when it has none.
-function textOf(byPid, pid) {
-  return headline(currentStatements(byPid?.get(pid)))?.text || "";
+function textOf(byPid: StatementsByPid | undefined, pid: string) {
+  const shown = headline(currentStatements(byPid?.get(pid)));
+  return (shown && "text" in shown && shown.text) || "";
 }
 
 /**
  * Whether an item is a kind of living thing: it has a scientific name, or is
  * a taxon, a breed, or an animal known by its common name.
  */
-export function isKind(byPid) {
+export function isKind(byPid: StatementsByPid | undefined): boolean {
   if (textOf(byPid, TAXON_NAME)) return true;
-  return currentStatements(byPid?.get(INSTANCE_OF)).some((s) =>
-    KIND_CLASSES.has(s.value),
+  return currentStatements(byPid?.get(INSTANCE_OF)).some(
+    (s) => "value" in s && KIND_CLASSES.has(s.value),
   );
 }
 
 // --- Comparing -------------------------------------------------------------
 
-/**
- * A Wikidata quantity in the claim's own unit, so the two read side by side.
- * @returns {{ value: number, lower?: number, upper?: number } | null}
- */
-function inClaimUnit(statement, unit) {
+/** A figure to compare a claim with, and the bounds its source gives it. */
+export interface ComparedQuantity {
+  value: number;
+  lower?: number | null;
+  upper?: number | null;
+}
+
+/** A date to compare a claim with, known to `precision` (9 the year). */
+export interface ComparedDate extends PartialDate {
+  precision: number;
+  calendar?: string;
+}
+
+/** A Wikidata quantity in the claim's own unit, so the two read side by side. */
+function inClaimUnit(
+  statement: QuantityStatement,
+  unit: string,
+): ComparedQuantity | null {
   const from = UNIT_BY_QID.get(statement.unit);
   if (from == null) return null;
   const value = convertUnit(statement.amount, from, unit);
   if (value == null) return null;
-  const bound = (b) => (b == null ? undefined : convertUnit(b, from, unit));
+  const bound = (b?: number) =>
+    b == null ? undefined : convertUnit(b, from, unit);
   return {
     value,
     lower: bound(statement.lower),
@@ -996,7 +1256,10 @@ function inClaimUnit(statement, unit) {
   };
 }
 
-export function quantityAgrees(claim, wd) {
+export function quantityAgrees(
+  claim: Pick<FactClaim, "value" | "qualifier">,
+  wd: ComparedQuantity,
+): boolean {
   const relative = RELATIVE_SLACK[claim.qualifier] * Math.abs(wd.value);
   // "More than 10,000" is a bound, not a figure rounded to the nearest 10,000,
   // so it gets no rounding room: Everest's 8,849 meters is not more than it.
@@ -1012,11 +1275,10 @@ export function quantityAgrees(claim, wd) {
   return claim.value >= lo && claim.value <= hi;
 }
 
-/**
- * How many years either way a claim's date allows, from how it was written.
- * @returns {number}
- */
-export function yearRoom(claim) {
+/** How many years either way a claim's date allows, from how it was written. */
+export function yearRoom(
+  claim: Pick<FactClaim, "value" | "qualifier">,
+): number {
   let slack = 0;
   // "4.5 billion years ago" is rounded the way any big number is. A year like
   // 1960 is not: it means 1960, not "the 1960s".
@@ -1029,7 +1291,11 @@ export function yearRoom(claim) {
   return slack;
 }
 
-export function timeAgrees(claim, s) {
+export function timeAgrees(
+  claim: Pick<FactClaim, "value" | "qualifier"> &
+    Partial<Pick<FactClaim, "month" | "day">>,
+  s: ComparedDate,
+): boolean {
   // A date known only to the century can't disagree with a year inside it.
   const slack = Math.max(
     s.precision >= 9 ? 0 : 10 ** (9 - s.precision),
@@ -1047,40 +1313,127 @@ export function timeAgrees(claim, s) {
  * item id, where the name could be looked up, and otherwise by the label, so
  * a name Wikidata's search didn't know is still compared as words.
  */
-export function itemAgrees(claim, statements, statedIds = []) {
+export function itemAgrees(
+  claim: Pick<FactClaim, "stated">,
+  statements: readonly Pick<ItemStatement, "value" | "valueLabel">[],
+  statedIds: readonly string[] = [],
+): boolean {
   const ids = new Set(statedIds);
   const wanted = squashText(claim.stated);
   // The label, or its end: a passage says "Fleming" for Alexander Fleming.
-  const named = (label) => {
+  const named = (label: string) => {
     const have = squashText(label);
     return have === wanted || have.endsWith(` ${wanted}`);
   };
   return statements.some((s) => ids.has(s.value) || named(s.valueLabel));
 }
 
+/** How a claim stands against its sources. */
+export type FactStatus = "agrees" | "disagrees" | "unknown";
+
+/** Why a claim is unknown (see the top of this file). */
+export type FactReason =
+  | "no-item"
+  | "no-value"
+  | "unit"
+  | "lookup-failed"
+  | "varies"
+  | "before-record";
+
+export type FactSource = "wikidata" | "smithsonian" | "wikipedia";
+
+/** A figure as a source gives it, in the claim's unit. */
+export interface FoundQuantity {
+  pid?: string;
+  value: number;
+  unit: string;
+  /** The year a dated figure (a census) was taken. */
+  asOf?: number;
+}
+
+/**
+ * A date as a source gives it, as precisely as it is known: 11 to the day,
+ * 10 to the month, 9 to the year, less for a decade or coarser.
+ */
+export interface FoundDate extends SparqlTime {
+  pid?: string;
+  precision: number;
+  /** When an eruption that went on ended. */
+  until?: FoundDate;
+}
+
+/** The things a source names for a named fact. */
+export interface FoundItems {
+  pid: string;
+  items: { id: string; label: string }[];
+}
+
+/** The words of an article that state a claim. */
+export interface FoundText {
+  text: string;
+}
+
+export type FactFound = FoundQuantity | FoundDate | FoundItems | FoundText;
+
+/** What the sources say about a claim. */
+export interface FactVerdict {
+  status: FactStatus;
+  /** Set when the status is "unknown". */
+  reason?: FactReason;
+  /** Which source `found` is from. */
+  source?: FactSource;
+  /** The page a person can open to see it. */
+  sourceUrl?: string;
+  found?: FactFound;
+}
+
+/** The Wikidata item a claim was checked against. */
+export interface FactEntity {
+  id: string;
+  label: string;
+  description: string;
+  url: string;
+}
+
+/**
+ * A checked claim: the claim with its verdict, and the item it was checked
+ * against where one was found. `incomplete` marks one a source couldn't be
+ * asked about, so that asking again might settle it.
+ */
+export type CheckedFact = FactClaim &
+  FactVerdict & { entity?: FactEntity; incomplete?: boolean };
+
 /**
  * Judge one claim against one item's statements on Wikidata.
- * @param {object} claim  A normalized claim.
- * @param {Map<string, object[]>} byPid  That item's statements, by property.
- * @param {string[]} [statedIds]  For a named fact, the items its `stated`
- *   name may mean (see itemAgrees).
- * @returns {object}  `status`, and either `reason` (unknown) or `source:
- *   "wikidata"` and `found`, what Wikidata says: `{ pid, value, unit, asOf? }`
- *   for a quantity, `{ pid, year, month, day, precision }` for a date, and
+ * @param claim  A normalized claim.
+ * @param byPid  That item's statements, by property.
+ * @param statedIds  For a named fact, the items its `stated` name may mean
+ *   (see itemAgrees).
+ * @returns `status`, and either `reason` (unknown) or `source: "wikidata"`
+ *   and `found`, what Wikidata says: `{ pid, value, unit, asOf? }` for a
+ *   quantity, `{ pid, year, month, day, precision }` for a date, and
  *   `{ pid, items }` for a named fact.
  */
-export function judgeClaim(claim, byPid, statedIds = []) {
+export function judgeClaim(
+  claim: FactClaim,
+  byPid: StatementsByPid | undefined,
+  statedIds: readonly string[] = [],
+): FactVerdict {
   const verdict = judgeStatements(claim, byPid, statedIds);
   return verdict.found ? { ...verdict, source: "wikidata" } : verdict;
 }
 
-function judgeStatements(claim, byPid, statedIds) {
+function judgeStatements(
+  claim: FactClaim,
+  byPid: StatementsByPid | undefined,
+  statedIds: readonly string[],
+): FactVerdict {
   const spec = FACT_PROPERTIES[claim.property];
-  let pid;
-  let statements = [];
+  let pid: string | undefined;
+  let statements: WikidataStatement[] = [];
   for (const candidate of spec.pids) {
     const current = currentStatements(byPid?.get(candidate)).filter(
-      (s) => !(spec.emptyAtZero && s.amount === 0),
+      (s) => !(spec.emptyAtZero && "amount" in s && s.amount === 0),
     );
     if (!current.length) continue;
     pid ??= candidate;
@@ -1089,24 +1442,29 @@ function judgeStatements(claim, byPid, statedIds) {
   }
   if (!pid) return { status: "unknown", reason: "no-value" };
 
-  const shown = headline(statements);
-
+  // Wikidata gives each property one type of value, so a named fact's
+  // statements all name items, a date's are all dates, and a quantity's are
+  // all figures.
   if (spec.kind === "item") {
+    const named = statements as ItemStatement[];
     // The current values, each once: a pooled property can name one person
     // twice (the author of a film who also directed it).
     const items = [
       ...new Map(
-        statements.map((s) => [s.value, { id: s.value, label: s.valueLabel }]),
+        named.map((s) => [s.value, { id: s.value, label: s.valueLabel }]),
       ).values(),
     ];
     return {
-      status: itemAgrees(claim, statements, statedIds) ? "agrees" : "disagrees",
+      status: itemAgrees(claim, named, statedIds) ? "agrees" : "disagrees",
       found: { pid, items },
     };
   }
 
   if (spec.kind === "time") {
-    const agrees = statements.some((s) => timeAgrees(claim, s));
+    const dates = statements as TimeStatement[];
+    // Never empty, since a pid was found.
+    const shown = headline(dates)!;
+    const agrees = dates.some((s) => timeAgrees(claim, s));
     return {
       status: agrees ? "agrees" : "disagrees",
       found: {
@@ -1119,9 +1477,12 @@ function judgeStatements(claim, byPid, statedIds) {
     };
   }
 
-  const comparable = statements
-    .map((s) => ({ s, wd: inClaimUnit(s, claim.unit) }))
-    .filter(({ wd }) => wd);
+  const figures = statements as QuantityStatement[];
+  const shown = headline(figures);
+  const comparable = figures.flatMap((s) => {
+    const wd = inClaimUnit(s, claim.unit);
+    return wd ? [{ s, wd }] : [];
+  });
   if (!comparable.length) return { status: "unknown", reason: "unit" };
   const agrees = comparable.some(({ wd }) => quantityAgrees(claim, wd));
   const display = comparable.find(({ s }) => s === shown) || comparable[0];
@@ -1134,7 +1495,7 @@ function judgeStatements(claim, byPid, statedIds) {
       pid,
       value: display.wd.value,
       unit: claim.unit,
-      ...(asOf > 0 ? { asOf } : {}),
+      ...(asOf !== undefined && asOf > 0 ? { asOf } : {}),
     },
   };
 }
@@ -1142,7 +1503,7 @@ function judgeStatements(claim, byPid, statedIds) {
 // --- The Smithsonian -------------------------------------------------------
 
 // A date as a finding shows it, as precisely as it is known.
-const shownDate = ({ year, month, day }) => ({
+const shownDate = ({ year, month, day }: SparqlTime): FoundDate => ({
   year,
   month,
   day: month ? day : 0,
@@ -1151,7 +1512,7 @@ const shownDate = ({ year, month, day }) => ({
 
 // An eruption as a finding shows it: when it started, and when it ended if
 // that was another day.
-function shownEruption(e) {
+function shownEruption(e: Eruption): FoundDate {
   const from = shownDate(e.start);
   if (!e.end) return from;
   const until = shownDate(e.end);
@@ -1165,7 +1526,9 @@ function shownEruption(e) {
 // Before the Gregorian calendar, a month and day may be in the Julian one, and
 // the date of a famous eruption is often argued over (Vesuvius in 79: August
 // or October?). So a claim's month and day are only held to from 1583.
-const claimDate = (claim) =>
+const claimDate = (
+  claim: Pick<FactClaim, "value" | "month" | "day">,
+): PartialDate =>
   claim.value >= 1583
     ? { year: claim.value, month: claim.month, day: claim.day }
     : { year: claim.value };
@@ -1183,13 +1546,19 @@ const claimDate = (claim) =>
  *              from the rocks, and has gaps. Earlier, it is unknown with reason
  *              "before-record".
  *
- * @param {object} claim  A normalized claim.
- * @param {object} [record]  From volcanoRecords.
- * @returns {object}  As judgeClaim's, with `source: "smithsonian"` and
- *   `sourceUrl`. `found` is `{ value, unit }` for the height, and a date,
- *   with `until` for an eruption that went on, for an eruption.
+ * @param claim  A normalized claim.
+ * @param record  From volcanoRecords.
+ * @returns As judgeClaim's, with `source: "smithsonian"` and `sourceUrl`.
+ *   `found` is `{ value, unit }` for the height, and a date, with `until` for
+ *   an eruption that went on, for an eruption.
  */
-export function judgeVolcano(claim, record) {
+export function judgeVolcano(
+  claim: FactClaim,
+  record?:
+    | (Pick<VolcanoRecord, "number" | "eruptions"> &
+        Partial<Pick<VolcanoRecord, "elevation">>)
+    | null,
+): FactVerdict {
   const spec = FACT_PROPERTIES[claim.property];
   if (!record || !spec.smithsonian) {
     return { status: "unknown", reason: "no-value" };
@@ -1197,7 +1566,7 @@ export function judgeVolcano(claim, record) {
   const source = {
     source: "smithsonian",
     sourceUrl: volcanoUrl(record.number),
-  };
+  } satisfies Pick<FactVerdict, "source" | "sourceUrl">;
 
   if (spec.smithsonian === "elevation") {
     if (record.elevation == null) {
@@ -1252,7 +1621,7 @@ export function judgeVolcano(claim, record) {
 // in can be said a dozen ways. Those are read from the article's opening
 // paragraphs only, which are about the subject, where a country named
 // anywhere else could be a neighbor.
-const TEXT_WORDS = {
+const TEXT_WORDS: Record<FactProperty, readonly string[]> = {
   height: ["tall", "height", "high", "stand", "rise", "rising"],
   elevation: ["elevation", "above sea level", "high", "height", "summit"],
   length: ["long", "length"],
@@ -1362,20 +1731,25 @@ export const FACT_TEXT_WORDS = TEXT_WORDS;
 // Each property's words as a test, and a test for the words of the other
 // properties measured the same way (a width's, for a height): built once, and
 // run on every sentence of every article.
-const wordTests = new Map();
-function wordTestsFor(property) {
-  if (wordTests.has(property)) return wordTests.get(property);
+interface WordTests {
+  own: readonly string[];
+  about: (text: string) => boolean;
+  rival: (text: string) => boolean;
+}
+const wordTests = new Map<FactProperty, WordTests>();
+function wordTestsFor(property: FactProperty): WordTests {
+  const built = wordTests.get(property);
+  if (built) return built;
   const spec = FACT_PROPERTIES[property];
   const own = TEXT_WORDS[property] || [];
   const rivals =
     spec.kind === "quantity"
-      ? Object.keys(FACT_PROPERTIES)
-          .filter(
-            (key) =>
-              key !== property &&
-              FACT_PROPERTIES[key].kind === "quantity" &&
-              FACT_PROPERTIES[key].dimension === spec.dimension,
-          )
+      ? FACT_PROPERTY_KEYS.filter(
+          (key) =>
+            key !== property &&
+            FACT_PROPERTIES[key].kind === "quantity" &&
+            FACT_PROPERTIES[key].dimension === spec.dimension,
+        )
           .flatMap((key) => TEXT_WORDS[key] || [])
           .filter((word) => !own.includes(word))
       : [];
@@ -1397,7 +1771,11 @@ function wordTestsFor(property) {
 // "it is 100 m high and its crater is 200 m wide" the 200 m is no height. A
 // clause with no such words ("females weigh 56 kg and males 96 kg") goes with
 // the sentence it is in.
-function sentenceStates(claim, spec, sentence) {
+function sentenceStates(
+  claim: FactClaim,
+  spec: FactPropertySpec,
+  sentence: string,
+) {
   if (spec.kind === "item") return mentions(sentence, claim.stated);
   if (spec.kind === "time") {
     const wanted = claimDate(claim);
@@ -1413,9 +1791,9 @@ function sentenceStates(claim, spec, sentence) {
     );
   }
   const { about, rival } = wordTestsFor(claim.property);
-  const states = (q) => {
-    if (UNIT_DEFS[q.unit]?.dimension !== spec.dimension) return false;
-    const to = (n) =>
+  const states = (q: TextQuantity) => {
+    if (UNITS[q.unit]?.dimension !== spec.dimension) return false;
+    const to = (n?: number) =>
       n == null ? undefined : convertUnit(n, q.unit, claim.unit);
     const value = to(q.value);
     return (
@@ -1431,7 +1809,7 @@ function sentenceStates(claim, spec, sentence) {
 }
 
 // What a finding quotes from an article: the sentence, cut at a word if long.
-function excerpt(text, max = 300) {
+function excerpt(text: string, max = 300) {
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
   return `${cut.slice(0, cut.lastIndexOf(" ")) || cut}...`;
@@ -1447,18 +1825,20 @@ function excerpt(text, max = 300) {
  * and finding a sentence that says otherwise doesn't either: an article
  * mentions a lot of figures, about a lot of things.
  *
- * @param {object} claim  A normalized claim.
- * @param {string} text  The article, from articleText.
- * @returns {string | null}  The words that confirm it, for the finding to
- *   quote, or null.
+ * @param claim  A normalized claim.
+ * @param text  The article, from articleText.
+ * @returns The words that confirm it, for the finding to quote, or null.
  */
-export function confirmFromText(claim, text) {
+export function confirmFromText(claim: FactClaim, text: string): string | null {
   return confirmFromParagraphs(claim, paragraphsOf(text));
 }
 
 // confirmFromText for an article already split with paragraphsOf, so one
 // read for several claims is split once.
-function confirmFromParagraphs(claim, paragraphs) {
+function confirmFromParagraphs(
+  claim: FactClaim,
+  paragraphs: readonly ArticleParagraph[],
+) {
   const spec = FACT_PROPERTIES[claim.property];
   const { own: words, about } = wordTestsFor(claim.property);
   for (const { lead, sentences } of paragraphs) {
@@ -1476,7 +1856,11 @@ function confirmFromParagraphs(claim, paragraphs) {
 
 // --- Looking claims up -----------------------------------------------------
 
-async function fetchStatements(itemIds, pids, opts) {
+async function fetchStatements(
+  itemIds: readonly string[],
+  pids: readonly string[],
+  opts: WikidataOptions,
+) {
   const rows = await sparql(
     statementsQuery(itemIds, pids, opts.language),
     opts,
@@ -1487,23 +1871,27 @@ async function fetchStatements(itemIds, pids, opts) {
   };
 }
 
-const words = (text) =>
+const words = (text?: string) =>
   String(text || "")
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .filter((w) => w.length > 2);
 
 // Every word, however short: for comparing names, where "C" and "F" differ.
-const allWords = (text) =>
+const allWords = (text?: string) =>
   String(text || "")
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
 
-const hasWord = (text, wanted) => {
+const hasWord = (text: string | undefined, wanted: readonly string[]) => {
   const present = new Set(words(text));
   return wanted.some((w) => present.has(w));
 };
+
+// An item a name could mean: an article's, with its title, or one from
+// Wikidata's own search.
+type Candidate = WikidataItem & { title?: string };
 
 /**
  * Which of a name's candidate items a claim is about.
@@ -1524,11 +1912,15 @@ const hasWord = (text, wanted) => {
  * candidate that has the property and whose description says it is the kind
  * wins, then one that is the kind, then one that has the property.
  */
-function chooseItem(claim, candidates, statements) {
+function chooseItem(
+  claim: FactClaim,
+  candidates: readonly Candidate[],
+  statements: ReadonlyMap<string, StatementsByPid>,
+): Candidate {
   const spec = FACT_PROPERTIES[claim.property];
   // Having the property, for this, includes having a Smithsonian record
   // that may hold it.
-  const has = (c) =>
+  const has = (c: Candidate) =>
     spec.pids.some(
       (p) => currentStatements(statements.get(c.id)?.get(p)).length,
     ) || Boolean(spec.smithsonian && textOf(statements.get(c.id), GVP_NUMBER));
@@ -1546,9 +1938,10 @@ function chooseItem(claim, candidates, statements) {
     const subject = new Set(words(claim.subject));
     const subjectAll = new Set(allWords(claim.subject));
     const kindAll = new Set(allWords(claim.kind));
-    const nameAndKind = (c) => {
+    // Every candidate is an article here: they all come from one search.
+    const nameAndKind = (c: Candidate) => {
       const title = words(c.title);
-      const name = allWords(c.title.replace(/\s*\([^)]*\)\s*$/, ""));
+      const name = allWords((c.title ?? "").replace(/\s*\([^)]*\)\s*$/, ""));
       return (
         name.some((w) => subjectAll.has(w)) &&
         name.every((w) => subjectAll.has(w) || kindAll.has(w)) &&
@@ -1562,7 +1955,7 @@ function chooseItem(claim, candidates, statements) {
     return candidates.find(has) || first;
   }
 
-  const fits = (c) => hasWord(c.description, kind);
+  const fits = (c: Candidate) => hasWord(c.description, kind);
   return (
     candidates.find((c) => has(c) && fits(c)) ||
     candidates.find(fits) ||
@@ -1588,16 +1981,19 @@ function chooseItem(claim, candidates, statements) {
  * or when Wikipedia doesn't answer: a prefix match in an order that means
  * little ("Hamlet" puts a kind of village and a film ahead of the play),
  * which is why it isn't the first choice.
- * @param {string} name
- * @param {string} [kind]
  */
-async function findCandidates(name, kind, settings) {
-  const search = (query) => articleItems(query, settings).catch(() => []);
+async function findCandidates(
+  name: string,
+  kind: string,
+  settings: WikidataOptions,
+): Promise<Candidate[]> {
+  const search = (query: string) =>
+    articleItems(query, settings).catch(() => []);
   const [plain, kinded] = await Promise.all([
     search(name),
     kind ? search(`${name} ${kind}`) : [],
   ]);
-  const seen = new Set();
+  const seen = new Set<string>();
   const articles = [...plain, ...kinded].filter(
     (a) => !seen.has(a.id) && seen.add(a.id),
   );
@@ -1613,7 +2009,7 @@ async function findCandidates(name, kind, settings) {
  * that didn't might have agreed. And a check that may have missed something
  * isn't cached as complete.
  */
-function strongest(verdicts) {
+function strongest(verdicts: readonly FactVerdict[]): FactVerdict {
   return (
     verdicts.find((v) => v.status === "agrees") ||
     verdicts.find((v) => v.reason === "lookup-failed") ||
@@ -1624,23 +2020,33 @@ function strongest(verdicts) {
 }
 
 // Unknown verdicts an article may still settle.
-const ARTICLE_REASONS = new Set(["no-value", "varies", "before-record"]);
+const ARTICLE_REASONS = new Set<FactReason | undefined>([
+  "no-value",
+  "varies",
+  "before-record",
+]);
+
+export interface FactCheckOptions extends Pick<
+  WikidataOptions,
+  "fetch" | "userAgent" | "language"
+> {
+  maxClaims?: number;
+}
 
 /**
  * Check claims against Wikidata, the Smithsonian and Wikipedia.
  *
- * @param {object[]} rawClaims  Claims as described at the top of this file.
- *   Ones prepareClaims drops are left out, not reported; a caller that wants
- *   to say why runs prepareClaims itself and calls checkPreparedClaims.
- * @param {object} [opts]
- * @param {string} [opts.userAgent]  Required outside a browser (see the top).
- * @param {typeof fetch} [opts.fetch]  Defaults to the global one.
- * @param {string} [opts.language]  For item names and descriptions, and which
- *   Wikipedia to read. Articles are only read for English.
- * @param {number} [opts.maxClaims]  Claims beyond this are dropped.
- * @returns {Promise<object[]>}  One result per kept claim, in order: the claim
- *   plus `status`, `entity` (the Wikidata item) where one was found, and
- *   either `reason` (unknown) or what was found:
+ * @param rawClaims  Claims as described at the top of this file. Ones
+ *   prepareClaims drops are left out, not reported; a caller that wants to
+ *   say why runs prepareClaims itself and calls checkPreparedClaims.
+ * @param opts.userAgent  Required outside a browser (see the top).
+ * @param opts.fetch  Defaults to the global one.
+ * @param opts.language  For item names and descriptions, and which Wikipedia
+ *   to read. Articles are only read for English.
+ * @param opts.maxClaims  Claims beyond this are dropped.
+ * @returns One result per kept claim, in order: the claim plus `status`,
+ *   `entity` (the Wikidata item) where one was found, and either `reason`
+ *   (unknown) or what was found:
  *
  *     source     "wikidata", "smithsonian" or "wikipedia"
  *     sourceUrl  the page a person can open to see it
@@ -1653,15 +2059,36 @@ const ARTICLE_REASONS = new Set(["no-value", "varies", "before-record"]);
  *   might confirm it, so a caller that caches results shouldn't cache it, as
  *   for a "lookup-failed".
  */
-export async function checkClaims(rawClaims, opts = {}) {
+export async function checkClaims(
+  rawClaims: readonly unknown[] | null | undefined,
+  opts: FactCheckOptions = {},
+): Promise<CheckedFact[]> {
   return checkPreparedClaims(prepareClaims(rawClaims, opts).claims, opts);
 }
+
+// A claim with the item it is about and Wikidata's verdict on it, or with the
+// result it already has.
+type Picked =
+  | { done: CheckedFact; item?: undefined; volcano?: undefined }
+  | {
+      done?: undefined;
+      claim: FactClaim;
+      item: Candidate;
+      entity: FactEntity;
+      byPid: StatementsByPid | undefined;
+      /** Its GVP number, for a claim the Smithsonian may settle; "" otherwise. */
+      volcano: string;
+      first: FactVerdict;
+    };
 
 /**
  * Check claims prepareClaims has already passed. Same options and result as
  * checkClaims.
  */
-export async function checkPreparedClaims(claims, opts = {}) {
+export async function checkPreparedClaims(
+  claims: readonly FactClaim[] | null | undefined,
+  opts: FactCheckOptions = {},
+): Promise<CheckedFact[]> {
   const settings = {
     fetch: opts.fetch || globalThis.fetch,
     userAgent: opts.userAgent,
@@ -1671,13 +2098,14 @@ export async function checkPreparedClaims(claims, opts = {}) {
 
   // One search per distinct name and kind: "Georgia" the country and
   // "Georgia" the state are two searches, and must not share an answer.
-  const searchKey = (c) =>
+  const searchKey = (c: FactClaim) =>
     [c.subject, c.kind].filter(Boolean).join(" ").toLowerCase();
   const names = [...new Set(claims.map(searchKey))];
-  const candidatesByName = new Map();
-  const failedNames = new Set();
+  const candidatesByName = new Map<string, Candidate[]>();
+  const failedNames = new Set<string>();
   const findSubjects = eachLimited(names, 4, async (name) => {
-    const { subject, kind } = claims.find((c) => searchKey(c) === name);
+    // Every name is some claim's.
+    const { subject, kind } = claims.find((c) => searchKey(c) === name)!;
     try {
       candidatesByName.set(name, await findCandidates(subject, kind, settings));
     } catch {
@@ -1696,9 +2124,9 @@ export async function checkPreparedClaims(claims, opts = {}) {
       claims.filter((c) => c.stated).map((c) => c.stated.toLowerCase()),
     ),
   ];
-  const statedIdsByName = new Map();
+  const statedIdsByName = new Map<string, string[]>();
   const findStated = eachLimited(statedNames, 4, async (name) => {
-    const stated = claims.find((c) => c.stated.toLowerCase() === name).stated;
+    const stated = claims.find((c) => c.stated.toLowerCase() === name)!.stated;
     try {
       const [article] = await articleItems(stated, {
         ...settings,
@@ -1731,8 +2159,8 @@ export async function checkPreparedClaims(claims, opts = {}) {
       ...(volcanic ? [GVP_NUMBER] : []),
     ]),
   ];
-  let statements = new Map();
-  let items = new Map();
+  let statements = new Map<string, StatementsByPid>();
+  let items = new Map<string, { label: string; description: string }>();
   let valuesFailed = false;
   if (itemIds.length) {
     try {
@@ -1742,9 +2170,12 @@ export async function checkPreparedClaims(claims, opts = {}) {
     }
   }
 
+  const statedIdsOf = (claim: FactClaim) =>
+    statedIdsByName.get(claim.stated?.toLowerCase());
+
   // Which item each claim is about. `done` is a result already, for a claim
   // that got no further.
-  const picked = claims.map((claim) => {
+  const picked = claims.map((claim): Picked => {
     const name = searchKey(claim);
     if (failedNames.has(name)) {
       return { done: { ...claim, status: "unknown", reason: "lookup-failed" } };
@@ -1756,11 +2187,11 @@ export async function checkPreparedClaims(claims, opts = {}) {
     const item = chooseItem(claim, candidates, statements);
     // Wikidata's own label and description where the query brought them,
     // and the search's (an article title, or a label) otherwise.
-    const known = items.get(item.id) || {};
+    const known = items.get(item.id);
     const entity = {
       id: item.id,
-      label: known.label || item.label,
-      description: known.description || item.description || "",
+      label: known?.label || item.label,
+      description: known?.description || item.description || "",
       url: wikidataItemUrl(item.id),
     };
     if (valuesFailed) {
@@ -1772,12 +2203,17 @@ export async function checkPreparedClaims(claims, opts = {}) {
     const volcano = FACT_PROPERTIES[claim.property].smithsonian
       ? textOf(byPid, GVP_NUMBER)
       : "";
-    return { claim, item, entity, byPid, volcano };
+    // Wikidata's verdict on the claim, once: the places lookup and judge
+    // both read it.
+    const first = judgeClaim(claim, byPid, statedIdsOf(claim));
+    return { claim, item, entity, byPid, volcano, first };
   });
 
   // The Smithsonian's records of the volcanoes those are, all at once.
-  const numbers = picked.map((p) => p.volcano).filter(Boolean);
-  let volcanoes = new Map();
+  const numbers = picked
+    .map((p) => p.volcano)
+    .filter((n): n is string => Boolean(n));
+  let volcanoes = new Map<string, VolcanoRecord>();
   let volcanoesFailed = false;
   const askSmithsonian = async () => {
     if (!numbers.length) return;
@@ -1791,26 +2227,18 @@ export async function checkPreparedClaims(claims, opts = {}) {
   // The places above the items of place claims Wikidata's own values don't
   // bear out, all at once: "Disneyland is in California" when Wikidata says
   // Anaheim. A failed lookup leaves the claim disagreeing, as it would have.
-  const statedIdsOf = (claim) =>
-    statedIdsByName.get(claim.stated?.toLowerCase());
-  // Wikidata's verdict on each claim, once: the places lookup and judge both
-  // read it.
-  for (const p of picked) {
-    if (!p.done) p.first = judgeClaim(p.claim, p.byPid, statedIdsOf(p.claim));
-  }
   const placeItems = [
     ...new Set(
-      picked
-        .filter(
-          (p) =>
-            !p.done &&
-            FACT_PROPERTIES[p.claim.property].placesAbove &&
-            p.first.status === "disagrees",
-        )
-        .map((p) => p.item.id),
+      picked.flatMap((p) =>
+        !p.done &&
+        FACT_PROPERTIES[p.claim.property].placesAbove &&
+        p.first.status === "disagrees"
+          ? [p.item.id]
+          : [],
+      ),
     ),
   ];
-  let placeLinks = new Map();
+  let placeLinks = new Map<string, PlaceLink[]>();
   const askPlacesAbove = async () => {
     if (!placeItems.length) return;
     try {
@@ -1822,7 +2250,7 @@ export async function checkPreparedClaims(claims, opts = {}) {
     }
   };
 
-  const judge = (p) => {
+  const judge = (p: Picked): CheckedFact => {
     if (p.done) return p.done;
     const { claim, entity, byPid, volcano } = p;
     const verdicts = [p.first];
@@ -1863,15 +2291,15 @@ export async function checkPreparedClaims(claims, opts = {}) {
 
   // Wikipedia, for what none of that could settle: each article once, split
   // into sentences once.
-  const articleOf = (result, i) =>
+  const articleOf = (result: CheckedFact | null, i: number) =>
     settings.language === "en" &&
     result?.status === "unknown" &&
     ARTICLE_REASONS.has(result.reason)
       ? picked[i].item?.title || ""
       : "";
-  const paragraphs = new Map();
-  const unread = new Set();
-  const readArticles = (results) => {
+  const paragraphs = new Map<string, ArticleParagraph[]>();
+  const unread = new Set<string>();
+  const readArticles = (results: readonly (CheckedFact | null)[]) => {
     const titles = [...new Set(results.map(articleOf).filter(Boolean))].filter(
       (title) => !paragraphs.has(title) && !unread.has(title),
     );
@@ -1891,14 +2319,12 @@ export async function checkPreparedClaims(claims, opts = {}) {
   // only the claims that aren't about volcanoes are judged before it answers.
   const smithsonian = askSmithsonian();
   await askPlacesAbove();
-  const judged = picked.map((p) => (p.volcano ? null : judge(p)));
-  await Promise.all([smithsonian, readArticles(judged)]);
-  picked.forEach((p, i) => {
-    if (p.volcano) judged[i] = judge(p);
-  });
+  const early = picked.map((p) => (p.volcano ? null : judge(p)));
+  await Promise.all([smithsonian, readArticles(early)]);
+  const judged = picked.map((p, i) => early[i] || judge(p));
   await readArticles(judged);
 
-  return judged.map((result, i) => {
+  return judged.map((result, i): CheckedFact => {
     const title = articleOf(result, i);
     if (!title) return result;
     if (unread.has(title)) {
@@ -1909,7 +2335,8 @@ export async function checkPreparedClaims(claims, opts = {}) {
         ? { ...result, reason: "lookup-failed" }
         : { ...result, incomplete: true };
     }
-    const words = confirmFromParagraphs(result, paragraphs.get(title));
+    // Read by readArticles, since it isn't unread.
+    const words = confirmFromParagraphs(result, paragraphs.get(title)!);
     if (!words) return result;
     // What another source said gives way to the article's words.
     const {

@@ -6,12 +6,14 @@ import { describe, expect, it } from "vitest";
 import { markupToContent } from "./lessonText.ts";
 
 import {
+  type LessonBody,
   lessonLanguageSample,
   lessonSegmentKey,
   lessonTranslationBatches,
   questionStepsWithText,
   sameTranslationSource,
 } from "./lessonTranslation.ts";
+import type { QuestionBlock } from "./types.ts";
 
 const doc = {
   title: "Volcanoes",
@@ -69,7 +71,7 @@ const doc = {
     },
     { id: "c", blocks: [{ id: "t2", type: "text", text: "  \n " }] },
   ],
-};
+} satisfies LessonBody;
 
 describe("lessonTranslationBatches", () => {
   it("batches the title alone, then one batch per section with text", () => {
@@ -155,7 +157,7 @@ describe("lessonTranslationBatches", () => {
 
 describe("questionStepsWithText", () => {
   it("keeps only steps with text, in order, matching the renderer's filter", () => {
-    const block = doc.sections[0].blocks[3];
+    const block = doc.sections[0].blocks[3] as QuestionBlock;
     expect(questionStepsWithText(block).map((s) => s.id)).toEqual(["s1", "s3"]);
     expect(questionStepsWithText({})).toEqual([]);
   });
@@ -248,7 +250,7 @@ describe("formatted text blocks", () => {
           ],
         },
       ],
-    };
+    } satisfies LessonBody;
     expect(lessonTranslationBatches(doc)).toEqual([
       [
         { key: lessonSegmentKey.textLine(0, 0, 0), text: "Cats came to Egypt" },

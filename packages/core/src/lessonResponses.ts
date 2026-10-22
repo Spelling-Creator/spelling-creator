@@ -8,7 +8,7 @@
 //   DELETE {apiUrl()}/lessons/:id/responses/:rid -> { ok: true }                     (auth: Bearer; the caller's own only)
 //
 // LessonResponse: { id, lessonId, answers, completedAt }
-//   `answers` is the array collectResponses() builds (see interactive.js): one
+//   `answers` is the array collectResponses() builds (see interactive.ts): one
 //   entry per question, each carrying a snapshot of the prompt it answered.
 //
 // **These are private.** Every endpoint requires a signed-in session and the
@@ -21,28 +21,42 @@
 // For the same reason answers are never moderated: nobody but their author ever
 // reads them, so there is nothing to moderate them for.
 import { apiUrl, hasApi } from "./config.ts";
-import { validateResponses } from "./interactive.ts";
+import { type LessonResponseAnswer, validateResponses } from "./interactive.ts";
 
-function endpoint(lessonId) {
+/** A saved run-through of a lesson, as the Worker returns it. */
+export interface LessonResponse {
+  id: string;
+  lessonId: string;
+  answers: LessonResponseAnswer[];
+  completedAt: string;
+}
+
+interface ResponsesResponse {
+  responses?: LessonResponse[];
+  response?: LessonResponse;
+}
+
+function endpoint(lessonId: string): string {
   return `${apiUrl()}/lessons/${encodeURIComponent(lessonId)}/responses`;
 }
 
-async function readError(res) {
+async function readError(res: Response): Promise<Error & { status: number }> {
   // The Worker returns a plain-text reason for 4xx/5xx; surface it directly.
   const detail = await res.text().catch(() => "");
-  const err = new Error(detail || `Request failed (${res.status}).`);
-  err.status = res.status;
-  return err;
+  return Object.assign(new Error(detail || `Request failed (${res.status}).`), {
+    status: res.status,
+  });
 }
 
 /**
  * List your own saved run-throughs of a lesson, newest first. Requires a
  * signed-in session; the Worker only ever returns the verified caller's rows.
- * @param {string} lessonId
- * @param {string} accessToken  Supabase session JWT.
- * @returns {Promise<Array<{id, lessonId, answers, completedAt}>>}
+ * @param accessToken  Supabase session JWT.
  */
-export async function fetchMyLessonResponses(lessonId, accessToken) {
+export async function fetchMyLessonResponses(
+  lessonId: string,
+  accessToken: string,
+): Promise<LessonResponse[]> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId) throw new Error("Missing lesson id.");
   if (!accessToken) throw new Error("Please sign in to see your answers.");
@@ -58,19 +72,21 @@ export async function fetchMyLessonResponses(lessonId, accessToken) {
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: ResponsesResponse = await res.json().catch(() => ({}));
   return Array.isArray(data.responses) ? data.responses : [];
 }
 
 /**
  * Save a completed run-through to the signed-in user's account. Called once, at
  * the end of interactive mode — answers are never sent while they're being typed.
- * @param {string} lessonId
- * @param {Array<object>} answers  From collectResponses() in interactive.js.
- * @param {string} accessToken     Supabase session JWT.
- * @returns {Promise<{id, lessonId, answers, completedAt}>}
+ * @param answers      From collectResponses() in interactive.ts.
+ * @param accessToken  Supabase session JWT.
  */
-export async function saveLessonResponses(lessonId, answers, accessToken) {
+export async function saveLessonResponses(
+  lessonId: string,
+  answers: LessonResponseAnswer[],
+  accessToken: string,
+): Promise<Partial<LessonResponse>> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId) throw new Error("Missing lesson id.");
   if (!accessToken) throw new Error("Please sign in to save your answers.");
@@ -95,19 +111,20 @@ export async function saveLessonResponses(lessonId, answers, accessToken) {
   }
   if (!res.ok) throw await readError(res);
 
-  const data = await res.json().catch(() => ({}));
+  const data: ResponsesResponse = await res.json().catch(() => ({}));
   return data.response || {};
 }
 
 /**
  * Permanently delete one of your saved run-throughs. The Worker filters on the
  * verified user's id as well as the row id, so this can only ever reach your own.
- * @param {string} lessonId
- * @param {string} responseId
- * @param {string} accessToken  Supabase session JWT.
- * @returns {Promise<void>}
+ * @param accessToken  Supabase session JWT.
  */
-export async function deleteLessonResponse(lessonId, responseId, accessToken) {
+export async function deleteLessonResponse(
+  lessonId: string,
+  responseId: string,
+  accessToken: string,
+): Promise<void> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId || !responseId) throw new Error("Missing answer id.");
   if (!accessToken) throw new Error("Please sign in to delete your answers.");

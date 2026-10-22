@@ -20,6 +20,7 @@ import {
   buildInteractiveSteps,
   countInteractiveQuestions,
   stepSpeechText,
+  type InteractiveDoc,
 } from "./interactive.ts";
 import { normalizeLessonFile } from "./jsonImport.js";
 
@@ -157,7 +158,7 @@ describe("a VAKT block in the walkthrough", () => {
         ],
       },
     ],
-  };
+  } satisfies InteractiveDoc;
 
   it("appears with the section's material, not as a step of its own", () => {
     const steps = buildInteractiveSteps(doc);

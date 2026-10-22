@@ -6,6 +6,7 @@ import {
   findTerms,
   lessonFindEntries,
 } from "./lessonFind.ts";
+import type { LessonBody } from "./lessonTranslation.ts";
 
 const doc = {
   title: "Volcanoes",
@@ -95,7 +96,7 @@ const doc = {
       blocks: [{ id: "t3", type: "text", text: "Pompeii was buried in ash." }],
     },
   ],
-};
+} satisfies LessonBody;
 
 describe("lessonFindEntries", () => {
   it("lists every place words can be, in reading order", () => {
@@ -116,20 +117,20 @@ describe("lessonFindEntries", () => {
 
   it("reads formatted text, formulas and inline prompts as their words", () => {
     const byId = new Map(lessonFindEntries(doc).map((e) => [e.blockId, e]));
-    expect(byId.get("t1").text).toBe(
+    expect(byId.get("t1")?.text).toBe(
       "A VOLCANO is an opening in the Earth's crust. Hot rock, gas and ash escape through it.",
     );
-    expect(byId.get("t2").text).toBe("Mount Etna rises 3357 m above Sicily.");
-    expect(byId.get("q2").text).toBe(
+    expect(byId.get("t2")?.text).toBe("Mount Etna rises 3357 m above Sicily.");
+    expect(byId.get("q2")?.text).toBe(
       "How tall is Etna? 3357 Read the height from the passage",
     );
-    expect(byId.get("sp").text).toBe("crater magma");
-    expect(byId.get("v").text).toBe("Feel a pumice stone Pumice video");
+    expect(byId.get("sp")?.text).toBe("crater magma");
+    expect(byId.get("v")?.text).toBe("Feel a pumice stone Pumice video");
   });
 
   it("indexes a picture's caption but not its credit", () => {
     const image = lessonFindEntries(doc).find((e) => e.kind === "image");
-    expect(image.text).toBe("Etna at night");
+    expect(image?.text).toBe("Etna at night");
   });
 
   it("skips a section with no name and blocks with nothing in them", () => {
@@ -255,7 +256,7 @@ describe("findInLesson", () => {
           blocks: [{ id: "t", type: "text", text: "🌋 Ash fell on Pompeii." }],
         },
       ],
-    };
+    } satisfies LessonBody;
     expect(findInLesson(emoji, "ash")[0].snippet.parts).toEqual([
       { text: "🌋 ", hit: false },
       { text: "Ash", hit: true },
@@ -276,16 +277,16 @@ describe("findInLesson", () => {
     const byId = new Map(
       lessonFindEntries(doc, translation).map((e) => [e.blockId, e]),
     );
-    expect(byId.get("t1").text).toBe(
+    expect(byId.get("t1")?.text).toBe(
       "Un VOLCÁN es una abertura. Salen roca, gas y ceniza.",
     );
-    expect(byId.get("q1").text).toBe("¿Qué sale por un volcán? Ceniza");
-    expect(byId.get("img").text).toBe("El Etna de noche");
-    expect(byId.get("v").text).toBe("Toca una piedra pómez Pumice video");
-    expect(byId.get("h1").text).toBe("Montañas de fuego");
+    expect(byId.get("q1")?.text).toBe("¿Qué sale por un volcán? Ceniza");
+    expect(byId.get("img")?.text).toBe("El Etna de noche");
+    expect(byId.get("v")?.text).toBe("Toca una piedra pómez Pumice video");
+    expect(byId.get("h1")?.text).toBe("Montañas de fuego");
     // Segments the translation doesn't cover read as written.
-    expect(byId.get("t3").text).toBe("Pompeii was buried in ash.");
-    expect(byId.get("sp").text).toBe("crater magma");
+    expect(byId.get("t3")?.text).toBe("Pompeii was buried in ash.");
+    expect(byId.get("sp")?.text).toBe("crater magma");
     expect(
       findInLesson(doc, "ceniza", lessonFindEntries(doc, translation)).map(
         (r) => r.blockId,
@@ -308,7 +309,7 @@ describe("findInLesson", () => {
           ],
         },
       ],
-    };
+    } satisfies LessonBody;
     const [result] = findInLesson(long, "needle");
     const { parts, clippedStart, clippedEnd } = result.snippet;
     expect(clippedStart).toBe(true);
@@ -317,6 +318,6 @@ describe("findInLesson", () => {
     expect(shown.startsWith("word ")).toBe(true);
     expect(shown.endsWith(" word")).toBe(true);
     expect(shown.length).toBeLessThanOrEqual(150);
-    expect(parts.find((p) => p.hit).text).toBe("needle");
+    expect(parts.find((p) => p.hit)?.text).toBe("needle");
   });
 });

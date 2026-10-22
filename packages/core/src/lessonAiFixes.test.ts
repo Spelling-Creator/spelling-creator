@@ -15,20 +15,35 @@ import {
   textBlockMarkup,
   withTextBlockContent,
 } from "./lessonText.ts";
+import type {
+  ImageBlock,
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  Source,
+  SpellingBlock,
+  TextBlock,
+} from "./types.ts";
 
-const text = (id, markup) =>
-  withTextBlockContent({ id, type: "text" }, markupToContent(markup));
-const question = (id, questionType, fields) => ({
+const text = (id: string, markup: string) =>
+  withTextBlockContent({ id, type: "text" as const }, markupToContent(markup));
+const question = (
+  id: string,
+  questionType: QuestionType,
+  fields: Omit<QuestionBlock, "id" | "type" | "questionType">,
+): QuestionBlock => ({
   id,
   type: "question",
   questionType,
   ...fields,
 });
 
-function lesson() {
+function lesson(): LessonDoc {
   return {
     title: "Rivers",
-    sources: [{ id: "smith", title: "Rivers of the World" }],
+    // Stored lessons can carry a source with only some fields, and an image
+    // without the size and align the renderers default.
+    sources: [{ id: "smith", title: "Rivers of the World" } as Source],
     sections: [
       {
         id: "s1",
@@ -42,7 +57,7 @@ function lesson() {
             id: "img",
             type: "image",
             image: { hash: "abc", mime: "image/png", ext: "png" },
-          },
+          } as ImageBlock,
           {
             id: "sp1",
             type: "spelling",
@@ -89,10 +104,11 @@ function lesson() {
   };
 }
 
-const grounding = (doc) =>
+// Every lesson these tests check has this finding.
+const grounding = (doc: LessonDoc) =>
   validateLesson(doc).errors.find(
     (f) => f.code === "E_GROUNDING_SINGLE" && f.blockId === "q1",
-  );
+  )!;
 
 describe("hasAiFix", () => {
   it("covers judgement calls about one section, and nothing a script fixes", () => {
@@ -109,7 +125,7 @@ describe("hasAiFix", () => {
 
 describe("fixContext", () => {
   it("shows the section as markup and lists words used elsewhere", () => {
-    const context = fixContext(lesson(), grounding(lesson()));
+    const context = fixContext(lesson(), grounding(lesson()))!;
     expect(context.sectionNumber).toBe(1);
     expect(context.blocks[0]).toEqual({
       id: "t1",
@@ -197,7 +213,7 @@ describe("applyFixOperations", () => {
     ]);
     expect(fixed.sections[1]).toBe(doc.sections[1]);
     expect(fixed.sections[0].blocks[0]).toBe(doc.sections[0].blocks[0]);
-    const words = fixed.sections[0].blocks[2].words;
+    const { words } = fixed.sections[0].blocks[2] as SpellingBlock;
     expect(words[0]).toEqual({ id: "w1", text: "stream" });
     expect(words[1].text).toBe("canyon");
     expect(words[1].id).not.toBe("w2");
@@ -211,8 +227,9 @@ describe("applyFixOperations", () => {
         block: { type: "text", text: "Plain now." },
       },
     ]);
-    expect(fixed.sections[0].blocks[0].content?.type).toBe("doc");
-    expect(fixed.sections[0].blocks[0].text).toBeUndefined();
+    const block = fixed.sections[0].blocks[0] as TextBlock;
+    expect(block.content?.type).toBe("doc");
+    expect(block.text).toBeUndefined();
   });
 
   it("refuses anything but replacing blocks", () => {
@@ -232,7 +249,8 @@ describe("checkFix", () => {
     const result = checkFix(doc, ops, finding);
     expect(result.problems).toEqual([]);
     expect(result.ok).toBe(true);
-    expect(result.doc.sections[0].blocks[3].answer).toBe("sediment");
+    const fixed = result.doc!.sections[0].blocks[3] as QuestionBlock;
+    expect(fixed.answer).toBe("sediment");
   });
 
   it("fails a fix that leaves the finding in place", () => {
@@ -285,7 +303,7 @@ describe("checkFix", () => {
     ]);
     const result = checkFix(doc, ops, finding);
     expect(result.ok).toBe(true);
-    expect(textBlockMarkup(result.doc.sections[0].blocks[0])).toContain(
+    expect(textBlockMarkup(result.doc!.sections[0].blocks[0])).toContain(
       "^[@smith, p. 4]",
     );
   });
@@ -294,7 +312,7 @@ describe("checkFix", () => {
     // The section already breaks the formatting rules: a bold span past the
     // word limit, which is also most of the passage. Both findings' keys are
     // the formatted words themselves.
-    const doc = {
+    const doc: LessonDoc = {
       title: "T",
       sections: [
         {

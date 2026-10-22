@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  type FactClaim,
+  type FactQualifier,
+  type FoundItems,
+  type StatementsByPid,
+  type WikidataStatement,
   FACT_PROPERTY_KEYS,
   FACT_TEXT_WORDS,
   checkClaims,
@@ -20,6 +25,7 @@ import {
   statementsQuery,
   timeAgrees,
 } from "./factCheck.ts";
+import type { SparqlBinding } from "./wikidata.ts";
 
 describe("rounding", () => {
   it("allows half a unit in the last place the number was written to", () => {
@@ -90,7 +96,7 @@ describe("normalizing a claim", () => {
         property: "population",
         value: 2e6,
         unit: "km",
-      }).unit,
+      })?.unit,
     ).toBe("");
     expect(
       normalizeClaim({
@@ -107,7 +113,7 @@ describe("normalizing a claim", () => {
 
 describe("preparing claims", () => {
   it("says why a claim can't be checked", () => {
-    const problem = (claim) => claimProblem(claim);
+    const problem = (claim: unknown) => claimProblem(claim);
     expect(problem({ subject: "X", property: "colour", value: 1 })).toBe(
       "property",
     );
@@ -163,7 +169,7 @@ describe("preparing claims", () => {
 
 describe("reading the query service", () => {
   it("undoes the year-zero shift for dates known to the year", () => {
-    expect(parseSparqlTime("-2559-01-01T00:00:00Z", 9).year).toBe(-2560);
+    expect(parseSparqlTime("-2559-01-01T00:00:00Z", 9)?.year).toBe(-2560);
     expect(parseSparqlTime("1889-03-31T00:00:00Z", 11)).toEqual({
       year: 1889,
       month: 3,
@@ -172,8 +178,8 @@ describe("reading the query service", () => {
   });
 
   it("leaves coarser dates alone, as the service does", () => {
-    expect(parseSparqlTime("-0300-01-01T00:00:00Z", 7).year).toBe(-300);
-    expect(parseSparqlTime("-4540000000-01-01T00:00:00Z", 2).year).toBe(
+    expect(parseSparqlTime("-0300-01-01T00:00:00Z", 7)?.year).toBe(-300);
+    expect(parseSparqlTime("-4540000000-01-01T00:00:00Z", 2)?.year).toBe(
       -4540000000,
     );
   });
@@ -184,7 +190,7 @@ describe("reading the query service", () => {
   });
 
   it("keeps a statement once, dated by its latest point in time", () => {
-    const row = (pit) => ({
+    const row = (pit: string) => ({
       item: { value: "http://www.wikidata.org/entity/Q90" },
       pid: { value: "P1082" },
       st: { value: "s1" },
@@ -197,9 +203,9 @@ describe("reading the query service", () => {
       row("2019-01-01T00:00:00Z"),
       row("2020-01-01T00:00:00Z"),
     ]);
-    const statements = out.get("Q90").get("P1082");
+    const statements = out.get("Q90")?.get("P1082");
     expect(statements).toHaveLength(1);
-    expect(statements[0]).toMatchObject({
+    expect(statements?.[0]).toMatchObject({
       amount: 2145906,
       unit: "Q199",
       rank: "normal",
@@ -226,7 +232,10 @@ describe("which statements count", () => {
 });
 
 describe("comparing", () => {
-  const claim = (value, qualifier = "exact") => ({ value, qualifier });
+  const claim = (value: number, qualifier: FactQualifier = "exact") => ({
+    value,
+    qualifier,
+  });
 
   it("lets a quantity round the way it was written", () => {
     expect(quantityAgrees(claim(9000), { value: 8848.86 })).toBe(true);
@@ -292,6 +301,19 @@ describe("comparing", () => {
   });
 });
 
+interface Fixtures {
+  articles?: Record<string, { id?: string; title: string }[]>;
+  texts?: Record<string, string>;
+  search?: Record<string, object[]>;
+  bindings?: SparqlBinding[];
+  places?: SparqlBinding[];
+  volcanoes?: object[];
+  eruptions?: object[];
+  fail?: Partial<
+    Record<"smithsonian" | "text" | "wikipedia" | "search" | "sparql", boolean>
+  >;
+}
+
 // A stand-in for the Wikimedia endpoints and the Smithsonian's, answering
 // from fixtures.
 function fakeWikidata({
@@ -303,12 +325,12 @@ function fakeWikidata({
   volcanoes = [],
   eruptions = [],
   fail = {},
-}) {
-  return vi.fn(async (url) => {
+}: Fixtures) {
+  return vi.fn(async (url, _init?: RequestInit) => {
     const u = new URL(url);
     if (u.hostname === "webservices.volcano.si.edu") {
       if (fail.smithsonian) return new Response("", { status: 503 });
-      const rows = u.searchParams.get("typeNames").endsWith("Eruptions")
+      const rows = u.searchParams.get("typeNames")?.endsWith("Eruptions")
         ? eruptions
         : volcanoes;
       return Response.json({
@@ -320,7 +342,7 @@ function fakeWikidata({
       if (fail.text || fail.wikipedia) {
         return new Response("", { status: 429 });
       }
-      const title = u.searchParams.get("titles");
+      const title = u.searchParams.get("titles") || "";
       return Response.json({
         query: { pages: [{ title, extract: texts[title] || "" }] },
       });
@@ -332,7 +354,7 @@ function fakeWikidata({
       if (fail.search || fail.wikipedia) {
         return new Response("", { status: 503 });
       }
-      const pages = (articles[u.searchParams.get("gsrsearch")] || []).map(
+      const pages = (articles[u.searchParams.get("gsrsearch") || ""] || []).map(
         ({ id, title }, i) => ({
           pageid: i + 1,
           index: i + 1,
@@ -344,7 +366,7 @@ function fakeWikidata({
     }
     if (u.hostname === "www.wikidata.org") {
       if (fail.search) return new Response("", { status: 503 });
-      const hits = search[u.searchParams.get("search")] || [];
+      const hits = search[u.searchParams.get("search") || ""] || [];
       return Response.json({ search: hits });
     }
     if (fail.sparql) return new Response("", { status: 503 });
@@ -356,7 +378,12 @@ function fakeWikidata({
   });
 }
 
-const statement = (item, pid, value, extra = {}) => ({
+const statement = (
+  item: string,
+  pid: string,
+  value: number,
+  extra: SparqlBinding = {},
+) => ({
   item: { value: `http://www.wikidata.org/entity/${item}` },
   pid: { value: pid },
   st: { value: `${item}-${pid}-${value}` },
@@ -367,7 +394,7 @@ const statement = (item, pid, value, extra = {}) => ({
 });
 
 // A statement whose value is a string: a scientific name, a GVP number.
-const textStatement = (item, pid, text) => ({
+const textStatement = (item: string, pid: string, text: string) => ({
   item: { value: `http://www.wikidata.org/entity/${item}` },
   pid: { value: pid },
   st: { value: `${item}-${pid}-${text}` },
@@ -376,7 +403,13 @@ const textStatement = (item, pid, text) => ({
 });
 
 // A statement that points at another item, as the query service gives it.
-const itemStatement = (item, pid, value, label, extra = {}) => ({
+const itemStatement = (
+  item: string,
+  pid: string,
+  value: string,
+  label: string,
+  extra: SparqlBinding = {},
+) => ({
   item: { value: `http://www.wikidata.org/entity/${item}` },
   pid: { value: pid },
   st: { value: `${item}-${pid}-${value}` },
@@ -388,7 +421,12 @@ const itemStatement = (item, pid, value, label, extra = {}) => ({
 
 // A row of placesAboveQuery: a "located in" (P131) statement putting `from`
 // in `place`.
-const placeRow = (from, place, label, extra = {}) => ({
+const placeRow = (
+  from: string,
+  place: string,
+  label: string,
+  extra: SparqlBinding = {},
+) => ({
   from: { value: `http://www.wikidata.org/entity/${from}` },
   st: { value: `${from}-P131-${place}` },
   rank: { value: "http://wikiba.se/ontology#NormalRank" },
@@ -426,7 +464,7 @@ describe("checking where a place is", () => {
         placeRow("Q5925", "Q99", "California"),
       ],
     });
-    const claim = (stated) => ({
+    const claim = (stated: string) => ({
       subject: "Disneyland",
       property: "region",
       stated,
@@ -578,7 +616,7 @@ describe("checking a named fact", () => {
         }),
       ],
     });
-    const claim = (stated) => ({
+    const claim = (stated: string) => ({
       subject: "Australia",
       property: "capital",
       stated,
@@ -603,7 +641,9 @@ describe("checking a named fact", () => {
     expect(former.status).toBe("disagrees");
     expect(wrong.status).toBe("disagrees");
     // Melbourne isn't offered as what Wikidata says, either.
-    expect(wrong.found.items.map((i) => i.label)).toEqual(["Canberra"]);
+    expect((wrong.found as FoundItems).items.map((i) => i.label)).toEqual([
+      "Canberra",
+    ]);
   });
 
   it("finds the subject through Wikipedia, searched with its kind", async () => {
@@ -820,12 +860,9 @@ describe("checking a named fact", () => {
         "P61",
         [{ value: "Q37064", valueLabel: "Alexander Fleming", rank: "normal" }],
       ],
-    ]);
-    const claim = (stated) => ({
-      property: "discoverer",
-      stated,
-      qualifier: "exact",
-    });
+    ]) as StatementsByPid;
+    const claim = (stated: string) =>
+      ({ property: "discoverer", stated, qualifier: "exact" }) as FactClaim;
     expect(judgeClaim(claim("Fleming"), byPid).status).toBe("agrees");
     expect(judgeClaim(claim("Alexander Fleming"), byPid).status).toBe("agrees");
     expect(judgeClaim(claim("Alex"), byPid).status).toBe("disagrees");
@@ -935,25 +972,25 @@ describe("checking a named fact", () => {
       [{ subject: "Hamlet", kind: "play", property: "creator", stated: "X" }],
       { fetch },
     );
-    expect(result.entity.label).toBe("Hamlet");
+    expect(result.entity?.label).toBe("Hamlet");
   });
 
   it("reads pooled properties together", () => {
     const byPid = new Map([
       ["P6", [{ value: "Q1", valueLabel: "The PM", rank: "normal" }]],
       ["P35", [{ value: "Q2", valueLabel: "The King", rank: "normal" }]],
-    ]);
+    ]) as StatementsByPid;
     const king = {
       property: "leader",
       stated: "The King",
       qualifier: "exact",
-    };
+    } as FactClaim;
     expect(judgeClaim(king, byPid)).toMatchObject({
       status: "agrees",
       source: "wikidata",
       found: { pid: "P6" },
     });
-    expect(judgeClaim(king, byPid).found.items).toHaveLength(2);
+    expect((judgeClaim(king, byPid).found as FoundItems).items).toHaveLength(2);
   });
 });
 
@@ -998,7 +1035,9 @@ describe("checking claims", () => {
     // Wikipedia for the one name (nothing, so Wikidata's search next), then
     // one query for the values.
     expect(fetch).toHaveBeenCalledTimes(3);
-    expect(fetch.mock.calls[0][1].headers["User-Agent"]).toBe("test");
+    expect(fetch.mock.calls[0][1]?.headers).toMatchObject({
+      "User-Agent": "test",
+    });
   });
 
   it("falls back to Wikidata's search, preferring the right kind, when Wikipedia has no article", async () => {
@@ -1115,8 +1154,8 @@ const ST_HELENS = {
 };
 
 describe("judging a claim against the Smithsonian", () => {
-  const claim = (property, value, extra = {}) =>
-    normalizeClaim({ subject: "Mount St. Helens", property, value, ...extra });
+  const claim = (property: string, value: number, extra = {}) =>
+    normalizeClaim({ subject: "Mount St. Helens", property, value, ...extra })!;
 
   it("compares the summit's height in the claim's unit", () => {
     expect(
@@ -1221,7 +1260,7 @@ describe("judging a claim against the Smithsonian", () => {
       value: 79,
       month: 8,
       day: 24,
-    });
+    })!;
     expect(judgeVolcano(august, vesuvius).status).toBe("agrees");
   });
 
@@ -1241,7 +1280,7 @@ describe("confirming a claim from an article's words", () => {
     "The average lifespan of pet cats has risen in recent decades. In the early 1980s, it was about 7 years, rising to an average of about 13 years as of 2014.",
     "The gestation of queens lasts between 64 and 67 days.",
   ].join("\n");
-  const claim = (raw) => normalizeClaim({ subject: "Cat", ...raw });
+  const claim = (raw: object) => normalizeClaim({ subject: "Cat", ...raw })!;
 
   it("finds a figure in a sentence about the property, in any unit", () => {
     expect(
@@ -1294,8 +1333,8 @@ describe("confirming a claim from an article's words", () => {
   it("reads a figure with its own clause", () => {
     const text =
       "The volcano is 100 metres high and its crater is 200 metres wide.";
-    const height = (value) =>
-      normalizeClaim({ subject: "X", property: "height", value, unit: "m" });
+    const height = (value: number) =>
+      normalizeClaim({ subject: "X", property: "height", value, unit: "m" })!;
     expect(confirmFromText(height(100), text)).toBe(text);
     expect(confirmFromText(height(200), text)).toBeNull();
     // A clause with no words of its own goes with its sentence.
@@ -1315,13 +1354,13 @@ describe("confirming a claim from an article's words", () => {
           property: "population",
           value: 2000,
           qualifier: "about",
-        }),
+        })!,
         "In the 2011 census the village had a population of 812.",
       ),
     ).toBeNull();
     expect(
       confirmFromText(
-        normalizeClaim({ subject: "X", property: "erupted", value: 1500 }),
+        normalizeClaim({ subject: "X", property: "erupted", value: 1500 })!,
         "The eruption sent ash 1500 m into the air.",
       ),
     ).toBeNull();
@@ -1329,13 +1368,13 @@ describe("confirming a claim from an article's words", () => {
 
   it("wants a claim's month in the sentence, not just its year", () => {
     const text = "The volcano erupted in 1980, after weeks of earthquakes.";
-    const erupted = (month) =>
+    const erupted = (month: number) =>
       normalizeClaim({
         subject: "Mount St. Helens",
         property: "erupted",
         value: 1980,
         month,
-      });
+      })!;
     expect(confirmFromText(erupted(0), text)).toBe(text);
     expect(confirmFromText(erupted(5), text)).toBeNull();
     expect(confirmFromText(erupted(5), "It erupted on May 18, 1980.")).toBe(
@@ -1349,8 +1388,8 @@ describe("confirming a claim from an article's words", () => {
       "== History ==",
       "Explorers had searched for its source since the time of the pharaohs, as far away as India.",
     ].join("\n");
-    const country = (stated) =>
-      normalizeClaim({ subject: "Nile", property: "country", stated });
+    const country = (stated: string) =>
+      normalizeClaim({ subject: "Nile", property: "country", stated })!;
     expect(confirmFromText(country("Egypt"), text)).toMatch(/^The Nile/);
     expect(confirmFromText(country("India"), text)).toBeNull();
   });
@@ -1364,7 +1403,8 @@ describe("confirming a claim from an article's words", () => {
 
 describe("kinds of living things", () => {
   it("are taxa, breeds, and animals known by their common name", () => {
-    const of = (pid, statement) => new Map([[pid, [statement]]]);
+    const of = (pid: string, statement: object) =>
+      new Map([[pid, [statement as WikidataStatement]]]);
     expect(isKind(of("P225", { text: "Panthera onca", rank: "normal" }))).toBe(
       true,
     );
@@ -1379,7 +1419,9 @@ describe("kinds of living things", () => {
     const byItem = statementsFromBindings([
       textStatement("Q35694", "P225", "Panthera onca"),
     ]);
-    expect(byItem.get("Q35694").get("P225")[0].text).toBe("Panthera onca");
+    expect(byItem.get("Q35694")?.get("P225")?.[0]).toMatchObject({
+      text: "Panthera onca",
+    });
   });
 });
 
@@ -1412,7 +1454,7 @@ describe("checking claims against every source", () => {
         },
       ],
     });
-    const helens = (property, value, unit) => ({
+    const helens = (property: string, value: number, unit?: string) => ({
       subject: "Mount St. Helens",
       kind: "volcano",
       property,
@@ -1468,7 +1510,7 @@ describe("checking claims against every source", () => {
         Cat: "Adult domestic cats typically weigh 4–5 kg (8.8–11.0 lb).",
       },
     });
-    const cat = (value) => ({
+    const cat = (value: number) => ({
       subject: "Cat",
       property: "mass",
       value,
@@ -1518,7 +1560,7 @@ describe("checking claims against every source", () => {
   });
 
   it("keeps short names apart when picking a title for the kind", async () => {
-    const began = (item, year) => ({
+    const began = (item: string, year: number) => ({
       item: { value: `http://www.wikidata.org/entity/${item}` },
       pid: { value: "P571" },
       st: { value: `${item}-P571` },
@@ -1559,7 +1601,7 @@ describe("checking claims against every source", () => {
   });
 
   it("needs the name in a title it picks for the kind", async () => {
-    const began = (item, year) => ({
+    const began = (item: string, year: number) => ({
       item: { value: `http://www.wikidata.org/entity/${item}` },
       pid: { value: "P571" },
       st: { value: `${item}-P571` },

@@ -11,6 +11,10 @@ import {
   revealedAnswers,
   stepSpeechText,
   validateResponses,
+  type ContentStep,
+  type InteractiveDoc,
+  type QuestionStep,
+  type SpokenStep,
 } from "./interactive.ts";
 
 const doc = {
@@ -24,7 +28,7 @@ const doc = {
         {
           id: "b2",
           type: "image",
-          image: "abc",
+          image: { hash: "abc", mime: "image/png", ext: "png" },
           caption: "Mount Etna erupting",
         },
         {
@@ -52,7 +56,7 @@ const doc = {
       ],
     },
   ],
-};
+} satisfies InteractiveDoc;
 
 describe("buildInteractiveSteps", () => {
   it("puts a section's material first, then its questions in order", () => {
@@ -64,9 +68,14 @@ describe("buildInteractiveSteps", () => {
       "content",
     ]);
     // The content step carries only the non-question blocks.
-    expect(steps[0].blocks.map((b) => b.id)).toEqual(["b1", "b2"]);
-    expect(steps[1].block.id).toBe("b3");
-    expect(steps[2].block.id).toBe("b4");
+    const [content, first, second] = steps as [
+      ContentStep,
+      QuestionStep,
+      QuestionStep,
+    ];
+    expect(content.blocks.map((b) => b.id)).toEqual(["b1", "b2"]);
+    expect(first.block.id).toBe("b3");
+    expect(second.block.id).toBe("b4");
   });
 
   it("numbers questions from 1 within each section", () => {
@@ -82,7 +91,9 @@ describe("buildInteractiveSteps", () => {
         },
       ],
     });
-    expect(steps.map((s) => s.questionNumber)).toEqual([1, 1, 2]);
+    expect(steps.map((s) => (s as QuestionStep).questionNumber)).toEqual([
+      1, 1, 2,
+    ]);
   });
 
   it("skips the content step for an all-questions section", () => {
@@ -162,7 +173,7 @@ describe("stepSpeechText", () => {
         // From before credits had their own field.
         { type: "image", caption: "Image by jdoe from Pixabay" },
       ],
-    };
+    } satisfies SpokenStep;
     expect(stepSpeechText(step)).toBe("Lions\nA lion");
   });
 

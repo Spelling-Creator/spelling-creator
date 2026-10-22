@@ -47,6 +47,31 @@ import { textBlockFootnotes, textBlockLines } from "./lessonText.ts";
 import { questionAnswerItems } from "./questions.ts";
 import { headingText } from "./heading.ts";
 import { vaktText } from "./vakt.ts";
+import type { Block } from "./types.ts";
+
+// Each block type with every field optional but its type.
+type PartialBlock<B extends Block> = B extends Block
+  ? Partial<B> & Pick<B, "type">
+  : never;
+
+/** A block as the lesson readers here take it: any field but its type may be missing. */
+export type LessonBodyBlock = PartialBlock<Block>;
+
+/**
+ * A lesson body as the translation and find readers take it: hand-written,
+ * older or mid-edit, so a section or a block may be missing any field but a
+ * block's type.
+ */
+export interface LessonBody {
+  title?: string;
+  sections?: Array<{ id?: string; name?: string; blocks?: LessonBodyBlock[] }>;
+}
+
+/** One translatable piece of a lesson, under its lessonSegmentKey key. */
+export interface TranslationSegment {
+  key: string;
+  text: string;
+}
 
 /**
  * Stable lookup keys for a lesson's translatable segments. Index-based, so a
@@ -56,24 +81,25 @@ import { vaktText } from "./vakt.ts";
  */
 export const lessonSegmentKey = {
   title: () => "title",
-  textLine: (si, bi, li) => `s${si}.b${bi}.line${li}`,
-  note: (si, bi, i) => `s${si}.b${bi}.note${i}`,
-  prompt: (si, bi) => `s${si}.b${bi}.prompt`,
-  answer: (si, bi, i) => `s${si}.b${bi}.answer${i}`,
-  step: (si, bi, i) => `s${si}.b${bi}.step${i}`,
-  caption: (si, bi) => `s${si}.b${bi}.caption`,
-  vakt: (si, bi) => `s${si}.b${bi}.vakt`,
-  heading: (si, bi) => `s${si}.b${bi}.heading`,
+  textLine: (si: number, bi: number, li: number) => `s${si}.b${bi}.line${li}`,
+  note: (si: number, bi: number, i: number) => `s${si}.b${bi}.note${i}`,
+  prompt: (si: number, bi: number) => `s${si}.b${bi}.prompt`,
+  answer: (si: number, bi: number, i: number) => `s${si}.b${bi}.answer${i}`,
+  step: (si: number, bi: number, i: number) => `s${si}.b${bi}.step${i}`,
+  caption: (si: number, bi: number) => `s${si}.b${bi}.caption`,
+  vakt: (si: number, bi: number) => `s${si}.b${bi}.vakt`,
+  heading: (si: number, bi: number) => `s${si}.b${bi}.heading`,
 };
 
 /**
  * A question's steps as the lesson shows them: only the ones with text, in
  * order. The renderer numbers these and translation keys them by index, so
  * both must filter identically; this is the one place that filter lives.
- * @param {object} block  A question block.
- * @returns {object[]}
+ * @param block  A question block.
  */
-export function questionStepsWithText(block) {
+export function questionStepsWithText<Step extends { text?: unknown }>(
+  block: { steps?: readonly Step[] } | null | undefined,
+): Step[] {
   return (block?.steps || []).filter((s) => inlineTextPlain(s?.text).trim());
 }
 
@@ -87,17 +113,19 @@ export function questionStepsWithText(block) {
  * last one. Batches arrive in reading order, which means the reader can start
  * at the top while the rest catches up.
  *
- * @param {object} doc  The lesson body: { title, sections: [{ blocks }] }.
- * @returns {{key: string, text: string}[][]} Batches of segments; every
- *   segment's text is non-blank.
+ * @param doc  The lesson body: { title, sections: [{ blocks }] }.
+ * @returns Batches of segments; every segment's text is non-blank.
  */
-export function lessonTranslationBatches(doc) {
-  const batches = [];
-  if ((doc?.title || "").trim()) {
-    batches.push([{ key: lessonSegmentKey.title(), text: doc.title }]);
+export function lessonTranslationBatches(
+  doc: LessonBody | null | undefined,
+): TranslationSegment[][] {
+  const batches: TranslationSegment[][] = [];
+  const title = doc?.title || "";
+  if (title.trim()) {
+    batches.push([{ key: lessonSegmentKey.title(), text: title }]);
   }
   (doc?.sections || []).forEach((section, si) => {
-    const segments = [];
+    const segments: TranslationSegment[] = [];
     (section.blocks || []).forEach((block, bi) => {
       if (block.type === "text") {
         textBlockLines(block).forEach((line, li) => {
@@ -172,11 +200,12 @@ export function lessonTranslationBatches(doc) {
  * that swap, and drops one that would otherwise be laid over text it doesn't
  * describe.
  *
- * @param {{key: string, text: string}[][]} a  From lessonTranslationBatches().
- * @param {{key: string, text: string}[][]} b
- * @returns {boolean}
+ * @param a  From lessonTranslationBatches().
  */
-export function sameTranslationSource(a, b) {
+export function sameTranslationSource(
+  a: ReadonlyArray<readonly TranslationSegment[]> | null | undefined,
+  b: ReadonlyArray<readonly TranslationSegment[]> | null | undefined,
+): boolean {
   if (a === b) return true;
   const left = (a || []).flat();
   const right = (b || []).flat();
@@ -193,13 +222,13 @@ export function sameTranslationSource(a, b) {
  * character fed to the detector model costs time, so this stops once it has
  * a solid sample.
  *
- * @param {{text: string}[][]} batches  From lessonTranslationBatches().
- * @param {object} [options]
- * @param {number} [options.maxChars]
- * @returns {string}
+ * @param batches  From lessonTranslationBatches().
  */
-export function lessonLanguageSample(batches, { maxChars = 500 } = {}) {
-  const parts = [];
+export function lessonLanguageSample(
+  batches: ReadonlyArray<readonly TranslationSegment[]>,
+  { maxChars = 500 }: { maxChars?: number } = {},
+): string {
+  const parts: string[] = [];
   let length = 0;
   for (const batch of batches) {
     for (const segment of batch) {

@@ -7,44 +7,6 @@
 // only what the CLI uses. A module's block goes once core has ported that
 // module to TypeScript and its own types take over.
 
-declare module "@spelling-creator/core/lessonChecks" {
-  /** One thing the checks found. See the typedef in core's lessonChecks.js. */
-  export interface Finding {
-    level: "error" | "warning";
-    /** Stable machine code, e.g. "E_GROUNDING_SINGLE". */
-    code: string;
-    /** Identity of the defect, stable across section renumbering. */
-    key: string;
-    /** 1-based section number, or null for lesson-wide findings. */
-    section: number | null;
-    sectionId: string | null;
-    blockId: string | null;
-    itemId: string | null;
-    params: Record<string, unknown>;
-    /** Prose naming the section, the value and the fix. */
-    message: string;
-  }
-
-  export function validateLesson(
-    doc: import("@spelling-creator/core/types").LessonDoc,
-  ): {
-    errors: Finding[];
-    warnings: Finding[];
-  };
-}
-
-declare module "@spelling-creator/core/lessonFixes" {
-  import type { Finding } from "@spelling-creator/core/lessonChecks";
-  import type { LessonDoc } from "@spelling-creator/core/types";
-
-  export function hasQuickFix(finding: { code: string }): boolean;
-  /** The doc with the fix made, or null when there is nothing left to do. */
-  export function applyQuickFix(
-    doc: LessonDoc,
-    finding: Finding,
-  ): LessonDoc | null;
-}
-
 declare module "@spelling-creator/core/documentImport" {
   import type { LessonDoc } from "@spelling-creator/core/types";
 
