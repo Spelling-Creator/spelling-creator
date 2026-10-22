@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 // html2pdf.js wants a browser the moment it loads; nothing here prints.
 vi.mock("html2pdf.js", () => ({ default: () => {} }));
 
-const { layoutImageFigures } = await import("./pdfExport.js");
+const { layoutImageFigures } = await import("./pdfExport.ts");
 
 const IMG = '<p><img src="a.png" width="10" height="10" /></p>';
 

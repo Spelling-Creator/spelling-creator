@@ -68,7 +68,7 @@ import {
   vaktHasContent,
 } from "../vakt.ts";
 import { DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_ALIGN } from "../image.ts";
-import { convertDocImages, resolveImageSrc } from "./imageRef.js";
+import { convertDocImages, resolveImageSrc } from "./imageRef.ts";
 
 // Thrown when a document is readable but not structured as a lesson. EditorPage
 // surfaces the message to the user and refuses to load it (the "refuse to open"

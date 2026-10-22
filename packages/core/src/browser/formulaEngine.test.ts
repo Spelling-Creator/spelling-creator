@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { liteAdaptor } from "@mathjax/src/mjs/adaptors/liteAdaptor.js";
 
-import { createFormulaRenderer } from "./formulaEngine.js";
+import { createFormulaRenderer } from "./formulaEngine.ts";
 
 const adaptor = liteAdaptor();
 const renderer = createFormulaRenderer(adaptor);

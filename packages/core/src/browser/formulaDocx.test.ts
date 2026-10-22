@@ -7,8 +7,8 @@ import { Document, Packer, Paragraph } from "docx";
 import { unzipSync } from "fflate";
 import { liteAdaptor } from "@mathjax/src/mjs/adaptors/liteAdaptor.js";
 
-import { createFormulaRenderer } from "./formulaEngine.js";
-import { formulaToDocx } from "./formulaDocx.js";
+import { createFormulaRenderer } from "./formulaEngine.ts";
+import { formulaToDocx } from "./formulaDocx.ts";
 
 const renderer = createFormulaRenderer(liteAdaptor());
 

@@ -30,7 +30,7 @@
 import * as git from "isomorphic-git";
 import { newId } from "../../id.ts";
 import { preserveLocalFields } from "../../git/doc.ts";
-import { DRAFT_REPO, copyRepo, deleteRepo, repoCtx } from "./fs.js";
+import { DRAFT_REPO, copyRepo, deleteRepo, repoCtx } from "./fs.ts";
 import { applyResolutions, mergeDocs } from "../../git/merge.ts";
 import { diffDocs } from "../../git/ops.ts";
 import {

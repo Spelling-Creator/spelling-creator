@@ -14,8 +14,8 @@
 
 import { googleClientId, hasGoogleDrive } from "../config.ts";
 import { Packer } from "docx";
-import { buildDocument } from "./docxExport.js";
-import { renderLessonFormulas } from "./formulas.js";
+import { buildDocument } from "./docxExport.ts";
+import { renderLessonFormulas } from "./formulas.ts";
 
 // Only request access to files this app creates — the least-privileged Drive scope.
 const SCOPE = "https://www.googleapis.com/auth/drive.file";

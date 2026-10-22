@@ -9,8 +9,8 @@
 import html2pdf from "html2pdf.js";
 import mammoth from "mammoth";
 import { Packer } from "docx";
-import { buildDocument, formulaImageKey } from "./docxExport.js";
-import { renderLessonFormulas } from "./formulas.js";
+import { buildDocument, formulaImageKey } from "./docxExport.ts";
+import { renderLessonFormulas } from "./formulas.ts";
 import {
   LEGEND_SEPARATOR,
   QUESTION_LINE_CLASS,

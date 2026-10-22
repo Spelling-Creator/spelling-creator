@@ -61,7 +61,7 @@ let loading = null;
  * @returns {Promise<typeof import("./formulaBrowser.js")>}
  */
 export function loadFormulas() {
-  loading ??= import("./formulaBrowser.js").catch((err) => {
+  loading ??= import("./formulaBrowser.ts").catch((err) => {
     loading = null;
     throw err;
   });

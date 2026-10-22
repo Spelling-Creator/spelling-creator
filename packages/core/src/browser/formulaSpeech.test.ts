@@ -5,7 +5,7 @@
 import { readFile } from "node:fs/promises";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { createFormulaSpeech } from "./formulaSpeech.js";
+import { createFormulaSpeech } from "./formulaSpeech.ts";
 
 const rules = new URL(
   "../../node_modules/speech-rule-engine/lib/mathmaps/",

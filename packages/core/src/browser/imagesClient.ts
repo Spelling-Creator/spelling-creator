@@ -4,8 +4,8 @@
 // server-side og-image/prerender) can load them by hash.
 import { hasApi } from "../config.ts";
 import { MAX_IMAGE_BYTES } from "../image.ts";
-import { getImageBlob } from "./imageStore.js";
-import { imagePublicUrl, storeImageBytes } from "./imageRef.js";
+import { getImageBlob } from "./imageStore.ts";
+import { imagePublicUrl, storeImageBytes } from "./imageRef.ts";
 
 // Hashes already confirmed present in R2 this session (uploaded, or known to be
 // cloud-sourced). Lets repeated saves of the same lesson skip re-PUTting every

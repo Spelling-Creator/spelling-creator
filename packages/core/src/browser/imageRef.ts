@@ -9,7 +9,7 @@
 
 import { apiUrl } from "../config.ts";
 import { extFromMime } from "../image.ts";
-import { getImageBlob, putImageBlob } from "./imageStore.js";
+import { getImageBlob, putImageBlob } from "./imageStore.ts";
 
 // Public Worker/R2 URL for an uploaded image. Reads the base URL through the
 // config seam rather than the bundler's env, so this module is not tied to one

@@ -30,12 +30,12 @@ import {
 } from "docx";
 import { inlineTextPlain, inlineTextRuns } from "../inlineText.ts";
 import { footnoteParts, textBlockParagraphs } from "../lessonText.ts";
-import { formulaToDocx } from "./formulaDocx.js";
-import { formulaKey, renderLessonFormulas } from "./formulas.js";
+import { formulaToDocx } from "./formulaDocx.ts";
+import { formulaKey, renderLessonFormulas } from "./formulas.ts";
 import { lessonSources, sourceEntryParts, sourcesById } from "../sources.ts";
 import { fitWithin, imageSizeScale } from "../image.ts";
 import { imageCaptionParts } from "../imageCredit.ts";
-import { getImageBytes } from "./imageRef.js";
+import { getImageBytes } from "./imageRef.ts";
 import {
   CAPTION_STYLE_ID,
   CAPTION_STYLE_NAME,

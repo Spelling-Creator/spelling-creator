@@ -7,7 +7,7 @@ import {
   loadInteractiveProgress,
   pruneProgress,
   saveInteractiveProgress,
-} from "./interactiveProgress.js";
+} from "./interactiveProgress.ts";
 import { MAX_RESPONSE_LENGTH } from "../interactive.ts";
 
 // A localStorage that behaves like the real one, plus a switch for the browsers

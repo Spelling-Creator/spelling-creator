@@ -103,15 +103,15 @@ const SSR_UNREACHABLE = [
   // core/browser/readAloud.js, and its model download is 92 MB or more.
   "../../packages/core/src/browser/readAloudEngine.js",
   // Formulas (MathJax, its font and the speech rule engine), same story:
-  // reached only through the dynamic import() in core/browser/formulas.js,
+  // reached only through the dynamic import() in core/browser/formulas.ts,
   // and the server shows a formula as its source.
+  "../../packages/core/src/browser/formulaBrowser.ts",
+  "../../packages/core/src/browser/formulaEngine.ts",
+  "../../packages/core/src/browser/formulaSpeech.ts",
   // The ALTCHA widget (a custom element with its solver workers inlined),
   // reached only through the dynamic import() in src/lib/aiChallenge.jsx, from
   // an open AI dialog on an instance that uses ALTCHA.
   "src/lib/altchaWidget.js",
-  "../../packages/core/src/browser/formulaBrowser.js",
-  "../../packages/core/src/browser/formulaEngine.js",
-  "../../packages/core/src/browser/formulaSpeech.js",
 ];
 
 function stubUnreachableOnServer() {

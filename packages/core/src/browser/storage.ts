@@ -48,8 +48,8 @@ import {
   updateLessonRecord,
   loadCurrentLessonId,
   saveCurrentLessonId,
-} from "./imageStore.js";
-import { convertDocImages } from "./imageRef.js";
+} from "./imageStore.ts";
+import { convertDocImages } from "./imageRef.ts";
 import { DRAFT_REPO } from "../git/doc.ts";
 import { newId } from "../id.ts";
 

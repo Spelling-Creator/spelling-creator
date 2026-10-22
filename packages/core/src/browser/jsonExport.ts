@@ -4,7 +4,7 @@
 
 import { buildLessonFile, lessonFileName } from "../lessonFile.ts";
 import { oslfFileName, toOslf } from "../oslf.ts";
-import { imagePublicUrl } from "./imageRef.js";
+import { imagePublicUrl } from "./imageRef.ts";
 
 function triggerDownload(blob, fileName) {
   const url = URL.createObjectURL(blob);

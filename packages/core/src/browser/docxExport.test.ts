@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildDocument } from "./docxExport.js";
+import { buildDocument } from "./docxExport.ts";
 import { VAKT_DEFAULT_IMAGE_SIZE } from "../vakt.ts";
 import { DOCX_MAX_IMAGE_WIDTH } from "../lessonLayout.ts";
 import { imageSizeScale } from "../image.ts";

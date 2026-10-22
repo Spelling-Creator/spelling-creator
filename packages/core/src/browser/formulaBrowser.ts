@@ -10,8 +10,8 @@ import { browserAdaptor } from "@mathjax/src/mjs/adaptors/browserAdaptor.js";
 import { mathjax } from "@mathjax/src/mjs/mathjax.js";
 import baseRulesUrl from "speech-rule-engine/lib/mathmaps/base.json?url";
 import englishRulesUrl from "speech-rule-engine/lib/mathmaps/en.json?url";
-import { createFormulaRenderer } from "./formulaEngine.js";
-import { createFormulaSpeech } from "./formulaSpeech.js";
+import { createFormulaRenderer } from "./formulaEngine.ts";
+import { createFormulaSpeech } from "./formulaSpeech.ts";
 
 // The glyphs MathJax's font keeps in files of their own (double-struck,
 // script, fraktur, less common symbols and alphabets), each a chunk of the

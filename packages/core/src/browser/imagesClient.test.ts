@@ -7,7 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./imageRef.js", () => ({
+vi.mock("./imageRef.ts", () => ({
   imagePublicUrl: (hash) => `https://here.test/images/${hash}`,
   storeImageBytes: vi.fn(async (blob, mime) => ({
     hash: `local-${blob.size}`,
@@ -15,11 +15,11 @@ vi.mock("./imageRef.js", () => ({
     ext: "png",
   })),
 }));
-vi.mock("./imageStore.js", () => ({
+vi.mock("./imageStore.ts", () => ({
   getImageBlob: async () => null,
 }));
 
-const { copyRemoteImages } = await import("./imagesClient.js");
+const { copyRemoteImages } = await import("./imagesClient.ts");
 const { MAX_IMAGE_BYTES } = await import("../image.ts");
 
 const ORIGIN = "https://there.test";

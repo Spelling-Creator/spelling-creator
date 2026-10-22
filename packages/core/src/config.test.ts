@@ -18,7 +18,7 @@ import {
   turnstileSiteKey,
   type CoreConfig,
 } from "./config.ts";
-import { imagePublicUrl } from "./browser/imageRef.js";
+import { imagePublicUrl } from "./browser/imageRef.ts";
 
 beforeEach(() => {
   configureCore({
