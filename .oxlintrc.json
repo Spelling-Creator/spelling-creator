@@ -119,7 +119,7 @@
     // env that covers the Web-standard globals it leans on (crypto, URL, Blob).
     // packages/core/tsconfig.shared.json holds the types to the same rule.
     {
-      "files": ["packages/core/**/*.js", "packages/core/**/*.ts"],
+      "files": ["packages/core/**/*.ts"],
       "env": { "worker": true }
     },
 
@@ -128,7 +128,7 @@
     // runtime-neutral rule above: a test may reach for `process` (to pin TZ,
     // say), the code it tests may not.
     {
-      "files": ["packages/core/**/*.test.js", "packages/core/**/*.test.ts"],
+      "files": ["packages/core/**/*.test.ts"],
       "env": { "worker": true, "node": true }
     },
 
@@ -138,10 +138,7 @@
     // MCP server can't reach it by accident, and the split above means a module
     // outside this directory still fails lint the moment it touches the DOM.
     {
-      "files": [
-        "packages/core/src/browser/**/*.js",
-        "packages/core/src/browser/**/*.ts"
-      ],
+      "files": ["packages/core/src/browser/**/*.ts"],
       "env": { "browser": true }
     }
   ]

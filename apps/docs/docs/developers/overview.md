@@ -54,11 +54,17 @@ on), the same convention `@spelling-creator/mcp` uses for its own exports. That
 keeps browser-only modules out of the Worker's import graph: importing
 `/questions` never drags in a module that touches `document`.
 
+It is TypeScript, and every app loads its `.ts` sources directly: Vite, wrangler
+and vitest compile them, and Node strips the types as it runs them. The lesson
+document's types are `@spelling-creator/core/types`. See
+[Type checking](./getting-started.md#type-checking).
+
 The modules that genuinely need a DOM (IndexedDB, `<canvas>`, `FileReader`, a
 download link) live under `src/browser/` and are exported as
 `@spelling-creator/core/browser/*`. Everything outside that directory is linted
-against the `worker` environment, so a module there that reaches for a
-browser-only global fails `pnpm lint` instead of breaking inside the Worker. See
+against the `worker` environment and type-checked without the DOM, so a module
+there that reaches for a browser-only global fails `pnpm lint` and
+`pnpm typecheck` instead of breaking inside the Worker. See
 [Code quality](./getting-started.md#code-quality).
 
 Sharing a module does not mean collapsing two callers into one function. Where

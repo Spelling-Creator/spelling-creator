@@ -20,10 +20,6 @@
     "erasableSyntaxOnly": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    // The modules are ported to TypeScript a few at a time. Until the last one
-    // is, a .ts file can still import a .js one, which is read for its types
-    // but not checked.
-    "allowJs": true
+    "skipLibCheck": true
   }
 }

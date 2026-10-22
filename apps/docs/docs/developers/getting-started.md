@@ -390,8 +390,7 @@ there is nothing to disable there.
 ## Type checking
 
 `packages/core` and `apps/cli` are TypeScript, and neither has a compile step in
-development. (Core is being ported a few modules at a time, so for now its `.js`
-and `.ts` files sit side by side, and `allowJs` lets one import the other.) Vite, wrangler and vitest compile their `.ts` files themselves, and
+development. Vite, wrangler and vitest compile their `.ts` files themselves, and
 Node runs them directly by stripping the types. None of those read the types, so
 the check is a separate command:
 
