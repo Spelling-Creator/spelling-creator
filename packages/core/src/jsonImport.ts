@@ -5,9 +5,9 @@
 // doc, ensure every section/block/word/answer has a stable id, drop anything we
 // don't recognise, and reject files that aren't structured as a lesson.
 //
-// An Open Spelling Lesson Format file (oslf.js) comes through the same door:
+// An Open Spelling Lesson Format file (oslf.ts) comes through the same door:
 // it is turned into a bare doc first, then normalised like one. So does the
-// format's XML form (oslfXml.js), which is read into the JSON form's object
+// format's XML form (oslfXml.ts), which is read into the JSON form's object
 // first. The XML reader is only loaded when an XML file arrives.
 
 import { AGE_RANGES } from "./ageRanges.ts";
@@ -30,6 +30,19 @@ import {
   withTextBlockContent,
 } from "./lessonText.ts";
 import { normalizeSources } from "./sources.ts";
+import type {
+  Block,
+  ImageBlock,
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  Section,
+  Source,
+  StepItem,
+  TextItem,
+  VaktBlock,
+  VaktLink,
+} from "./types.ts";
 import {
   vaktHasContent,
   vaktImageAlign,
@@ -40,18 +53,44 @@ import {
 // Thrown when a file is readable but not a usable lesson. EditorPage surfaces
 // the message and refuses to load it — same contract as DocxImportError.
 export class JsonImportError extends Error {
-  constructor(message) {
+  constructor(message: string) {
     super(message);
     this.name = "JsonImportError";
   }
 }
 
-const QUESTION_KEYS = new Set(Object.keys(QUESTION_TYPES));
+/** The part of a File the import reads, so anything shaped like one will do. */
+export interface ImportFile {
+  name?: string;
+  text(): Promise<string>;
+}
+
+// A doc as a file has it, before normalizing: every field may be anything.
+interface DocLike {
+  title?: unknown;
+  ageRange?: unknown;
+  sources?: unknown;
+  sections?: unknown;
+}
+
+// Anything typeof calls an object, arrays included, the way the checks below
+// have always tested for one.
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object";
+
+const QUESTION_KEYS: ReadonlySet<unknown> = new Set(
+  Object.keys(QUESTION_TYPES),
+);
+
+const isQuestionType = (value: unknown): value is QuestionType =>
+  QUESTION_KEYS.has(value);
 
 // Read a .json File (or an OSLF lesson as .xml) and rebuild a lesson document
 // ready for the editor. Resolves to { title, ageRange?, sources?, sections };
 // rejects (JsonImportError) when the file isn't a usable lesson.
-export async function importJsonFile(file) {
+export async function importJsonFile(
+  file: ImportFile | null | undefined,
+): Promise<LessonDoc> {
   if (!file) throw new JsonImportError("No file was selected.");
   const xml = /\.xml$/i.test(file.name || "");
   if (!xml && !/\.json$/i.test(file.name || "")) {
@@ -60,7 +99,7 @@ export async function importJsonFile(file) {
     );
   }
 
-  let text;
+  let text: string;
   try {
     text = await file.text();
   } catch {
@@ -69,7 +108,7 @@ export async function importJsonFile(file) {
 
   if (xml) return importOslfXml(text);
 
-  let parsed;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
@@ -84,12 +123,10 @@ export async function importJsonFile(file) {
 /**
  * An OSLF lesson in its XML form, as a lesson document ready for the editor.
  * Rejects (JsonImportError) when the text isn't one.
- * @param {string} text
- * @returns {Promise<object>}
  */
-export async function importOslfXml(text) {
+export async function importOslfXml(text: string): Promise<LessonDoc> {
   const { fromOslfXml } = await import("./oslfXml.ts");
-  let file;
+  let file: unknown;
   try {
     file = fromOslfXml(text);
   } catch (err) {
@@ -100,10 +137,10 @@ export async function importOslfXml(text) {
 }
 
 // Accept the lesson-file envelope { format, version, doc }, a bare doc
-// { title, sections }, or an Open Spelling Lesson Format file (oslf.js),
+// { title, sections }, or an Open Spelling Lesson Format file (oslf.ts),
 // then normalise and validate it.
-export function normalizeLessonFile(parsed) {
-  if (!parsed || typeof parsed !== "object") {
+export function normalizeLessonFile(parsed: unknown): LessonDoc {
+  if (!isRecord(parsed)) {
     throw new JsonImportError(
       "This file isn't a lesson: expected a JSON object.",
     );
@@ -120,16 +157,17 @@ export function normalizeLessonFile(parsed) {
   // A wrong but explicit format marker is a clear, actionable error.
   if (parsed.format && parsed.format !== LESSON_FILE_FORMAT) {
     throw new JsonImportError(
-      `This JSON file is "${parsed.format}", not a Spelling Creator lesson.`,
+      `This JSON file is "${String(parsed.format)}", not a Spelling Creator lesson.`,
     );
   }
-  const docLike =
-    parsed.doc && typeof parsed.doc === "object" ? parsed.doc : parsed;
+  const docLike = isRecord(parsed.doc) ? parsed.doc : parsed;
   return normalizeDoc(docLike);
 }
 
-function normalizeDoc(docLike) {
-  const rawSections = Array.isArray(docLike.sections) ? docLike.sections : null;
+function normalizeDoc(docLike: DocLike): LessonDoc {
+  const rawSections: unknown[] | null = Array.isArray(docLike.sections)
+    ? docLike.sections
+    : null;
   if (!rawSections) {
     throw new JsonImportError(
       "This lesson file has no sections. A lesson needs a `sections` array.",
@@ -137,7 +175,7 @@ function normalizeDoc(docLike) {
   }
 
   const sections = rawSections
-    .filter((s) => s && typeof s === "object")
+    .filter(isRecord)
     .map(normalizeSection)
     .filter((s) => s.blocks.length > 0);
 
@@ -158,9 +196,11 @@ function normalizeDoc(docLike) {
     typeof docLike.ageRange === "string" ? docLike.ageRange.trim() : "";
 
   const sources = normalizeSources(docLike.sources, { dropEmpty: true });
-  const doc = {
+  const doc: LessonDoc = {
     title,
-    ...(AGE_RANGES.includes(ageRange) ? { ageRange } : {}),
+    ...((AGE_RANGES as readonly string[]).includes(ageRange)
+      ? { ageRange }
+      : {}),
     ...(sources.length ? { sources } : {}),
     sections,
   };
@@ -169,7 +209,7 @@ function normalizeDoc(docLike) {
 
 // A footnote citing a source the file doesn't list would print as "Source no
 // longer listed", so a note-carrying one keeps its note and a bare citation goes.
-function withoutUnknownCitations(doc, sources) {
+function withoutUnknownCitations(doc: LessonDoc, sources: Source[]): LessonDoc {
   const known = new Set(sources.map((source) => source.id));
   const cited = new Set(
     doc.sections
@@ -177,7 +217,7 @@ function withoutUnknownCitations(doc, sources) {
       .filter((block) => block.type === "text")
       .flatMap((block) => textBlockFootnotes(block))
       .map((footnote) => footnote.sourceId)
-      .filter(Boolean),
+      .filter((id): id is string => Boolean(id)),
   );
   let out = doc;
   for (const id of cited) {
@@ -186,9 +226,13 @@ function withoutUnknownCitations(doc, sources) {
   return out;
 }
 
-function normalizeSection(section) {
-  const rawBlocks = Array.isArray(section.blocks) ? section.blocks : [];
-  const blocks = rawBlocks.map(normalizeBlock).filter(Boolean);
+function normalizeSection(section: Record<string, unknown>): Section {
+  const rawBlocks: unknown[] = Array.isArray(section.blocks)
+    ? section.blocks
+    : [];
+  const blocks = rawBlocks
+    .map(normalizeBlock)
+    .filter((block) => block !== null);
   return {
     id: keepId(section.id),
     name:
@@ -200,8 +244,8 @@ function normalizeSection(section) {
 }
 
 // Normalise one block to the exact editor shape, or return null to drop it.
-function normalizeBlock(block) {
-  if (!block || typeof block !== "object") return null;
+function normalizeBlock(block: unknown): Block | null {
+  if (!isRecord(block)) return null;
   switch (block.type) {
     case "text": {
       // Formatted blocks carry a tiptap document in `content`; plain ones a
@@ -209,7 +253,7 @@ function normalizeBlock(block) {
       const content = normalizeTextContent(block.content);
       if (content) {
         return withTextBlockContent(
-          { id: keepId(block.id), type: "text" },
+          { id: keepId(block.id), type: "text" as const },
           content,
         );
       }
@@ -220,7 +264,7 @@ function normalizeBlock(block) {
     case "spelling": {
       const words = (Array.isArray(block.words) ? block.words : [])
         .map(normalizeTextItem)
-        .filter(Boolean);
+        .filter((word) => word !== null);
       if (words.length === 0) return null;
       return { id: keepId(block.id), type: "spelling", words };
     }
@@ -239,7 +283,8 @@ function normalizeBlock(block) {
 
     case "image": {
       // Preserve image blocks verbatim (binary ref / src / dimensions) and just
-      // ensure the editor's required framing fields exist.
+      // ensure the editor's required framing fields exist. Being verbatim, the
+      // fields are whatever the file holds, which the type takes on trust.
       if (!block.image && !block.src) return null;
       return {
         ...block,
@@ -247,7 +292,7 @@ function normalizeBlock(block) {
         type: "image",
         size: block.size || DEFAULT_IMAGE_SIZE,
         align: block.align || DEFAULT_IMAGE_ALIGN,
-      };
+      } as ImageBlock;
     }
 
     default:
@@ -259,11 +304,15 @@ function normalizeBlock(block) {
 // stripped, so nothing ends up doubly prefixed), its links, and an optional
 // image carried verbatim the way an image block's is. Dropped entirely when it
 // holds nothing at all — a blank red card is noise in an imported lesson.
-function normalizeVakt(block) {
+function normalizeVakt(block: Record<string, unknown>): VaktBlock | null {
+  // The picture and its framing, as the file has them. Like an image block's
+  // they are carried unchecked, so the type takes them on trust; the framing
+  // is only ever compared against the known sizes and alignments.
+  const picture = block as Partial<VaktBlock>;
   const links = (Array.isArray(block.links) ? block.links : [])
     .map(normalizeVaktLink)
-    .filter(Boolean);
-  const normalized = {
+    .filter((link) => link !== null);
+  const normalized: VaktBlock = {
     id: keepId(block.id),
     type: "vakt",
     text: vaktText(block),
@@ -275,17 +324,17 @@ function normalizeVakt(block) {
   // convertDocImages pass that turns it into a ref. Dropping `src` here would
   // silently lose the picture — and, for a block that had nothing else, the
   // whole block.
-  if (block.image || block.src) {
-    if (block.image) normalized.image = block.image;
-    if (block.src) normalized.src = block.src;
-    if (block.width != null) normalized.width = block.width;
-    if (block.height != null) normalized.height = block.height;
+  if (picture.image || picture.src) {
+    if (picture.image) normalized.image = picture.image;
+    if (picture.src) normalized.src = picture.src;
+    if (picture.width != null) normalized.width = picture.width;
+    if (picture.height != null) normalized.height = picture.height;
     if (typeof block.caption === "string") normalized.caption = block.caption;
     if (typeof block.credit === "string") normalized.credit = block.credit;
     // The framing, defaulted the VAKT way rather than the image block's, so a
     // file that never carried one imports looking the way it printed.
-    normalized.size = vaktImageSize(block);
-    normalized.align = vaktImageAlign(block);
+    normalized.size = vaktImageSize(picture);
+    normalized.align = vaktImageAlign(picture);
   }
   return vaktHasContent(normalized) ? normalized : null;
 }
@@ -293,9 +342,9 @@ function normalizeVakt(block) {
 // A { id, label, url } link row. A bare string is accepted as a URL with no
 // label, so a hand-written file can use the simpler form. Rows whose destination
 // isn't a real, safe link are dropped rather than imported unusable.
-function normalizeVaktLink(link) {
+function normalizeVaktLink(link: unknown): VaktLink | null {
   const raw = typeof link === "string" ? { url: link } : link;
-  if (!raw || typeof raw !== "object") return null;
+  if (!isRecord(raw)) return null;
   const url = typeof raw.url === "string" ? raw.url.trim() : "";
   if (!isSafeLink(url)) return null;
   return {
@@ -305,9 +354,11 @@ function normalizeVaktLink(link) {
   };
 }
 
-function normalizeQuestion(block) {
-  if (!QUESTION_KEYS.has(block.questionType)) return null;
-  const base = {
+function normalizeQuestion(
+  block: Record<string, unknown>,
+): QuestionBlock | null {
+  if (!isQuestionType(block.questionType)) return null;
+  const base: QuestionBlock = {
     id: keepId(block.id),
     type: "question",
     questionType: block.questionType,
@@ -319,7 +370,7 @@ function normalizeQuestion(block) {
     case "number": {
       const steps = (Array.isArray(block.steps) ? block.steps : [])
         .map(normalizeStepItem)
-        .filter(Boolean);
+        .filter((step) => step !== null);
       return {
         ...base,
         answer: questionAnswerPlain(block.answer),
@@ -332,9 +383,9 @@ function normalizeQuestion(block) {
     case "multiple_open": {
       const answers = (Array.isArray(block.answers) ? block.answers : [])
         .map(normalizeTextItem)
-        .filter(Boolean);
+        .filter((answer) => answer !== null);
       if (answers.length === 0) answers.push({ id: newId(), text: "" });
-      const out = { ...base, answers };
+      const out: QuestionBlock = { ...base, answers };
       // The three-board mark and the Besides line, on the tight type only. A
       // Besides line naming an answer the list doesn't have is dropped rather
       // than carried: it would print nothing and confuse the editor's picker.
@@ -349,7 +400,7 @@ function normalizeQuestion(block) {
     case "tight_open": {
       const answers = (Array.isArray(block.answers) ? block.answers : [])
         .map(normalizeTextItem)
-        .filter(Boolean);
+        .filter((answer) => answer !== null);
       return { ...base, answers };
     }
     // Free written responses: no stored answer, so the base block is complete.
@@ -367,12 +418,12 @@ function normalizeQuestion(block) {
 
 // A { id, text } row (spelling word or multiple-choice answer). Accepts a bare
 // string too, so a hand-written file can use the simpler form.
-function normalizeTextItem(item) {
+function normalizeTextItem(item: unknown): TextItem | null {
   if (typeof item === "string") {
     const text = item.trim();
     return text ? { id: newId(), text } : null;
   }
-  if (item && typeof item === "object" && typeof item.text === "string") {
+  if (isRecord(item) && typeof item.text === "string") {
     const text = item.text.trim();
     return text ? { id: keepId(item.id), text } : null;
   }
@@ -381,9 +432,9 @@ function normalizeTextItem(item) {
 
 // A working step: like a text item, but its text is inline text, so it may
 // be a document as well as a string (see inlineText.ts).
-function normalizeStepItem(item) {
+function normalizeStepItem(item: unknown): StepItem | null {
   if (typeof item === "string") return normalizeTextItem(item);
-  if (!item || typeof item !== "object") return null;
+  if (!isRecord(item)) return null;
   const text = normalizeInlineText(item.text);
   if (typeof text === "string") return normalizeTextItem({ ...item, text });
   return { id: keepId(item.id), text };
@@ -392,6 +443,6 @@ function normalizeStepItem(item) {
 // Reuse an existing string id, or mint a fresh one. Imported files normally
 // already carry ids (the MCP tool and exporter generate them); we regenerate
 // only what's missing so every node has a stable React/collaboration key.
-function keepId(id) {
+function keepId(id: unknown): string {
   return typeof id === "string" && id ? id : newId();
 }

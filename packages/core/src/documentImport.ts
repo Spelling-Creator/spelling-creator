@@ -1,7 +1,7 @@
 // Import a lesson from a document that was never a lesson file: text pasted
 // from anywhere, a .txt, or a Word file written by hand rather than exported
 // from this app. The app's own exports have lossless paths of their own
-// (jsonImport.js, browser/docxImport.js); this is for everything else.
+// (jsonImport.ts, browser/docxImport.js); this is for everything else.
 //
 // It is rules, not a model. An experiment (docs: "Document import experiment")
 // put small on-device models up against these rules on seven document layouts
@@ -21,6 +21,11 @@
 // from the document (nothing in a typed page says it); it is derived from the
 // answers and the wording, the same way a reader would tell them apart.
 
+import type {
+  ParsedQuestion,
+  ParsedSection,
+  PromptSection,
+} from "./documentImportModel.ts";
 import { normalizeLessonFile } from "./jsonImport.ts";
 import {
   ANSWER_GAP,
@@ -29,9 +34,69 @@ import {
   QUESTION_TYPES,
   resolveOpenType,
 } from "./questions.ts";
+import type { LessonDoc, QuestionType } from "./types.ts";
+
+/** What one line of a document is, as classifyLine reads it. */
+export type LineKind =
+  | "prose"
+  | "spelling"
+  | "question"
+  | "steps"
+  | "heading"
+  | "vakt"
+  | "source"
+  | "other";
+
+/** A section of a document's text as splitSections cuts it, the text the model is shown. */
+export type SplitSection = Required<PromptSection>;
+
+/**
+ * A question the rules or the model read. The rules never set a `type`, and
+ * only the rules read a printed three-board mark.
+ */
+export interface SectionQuestion extends Omit<ParsedQuestion, "type"> {
+  type?: ParsedQuestion["type"];
+  threeBoard?: boolean;
+}
+
+/** A section the rules or the model read, as lessonFromSections builds from it. */
+export interface LessonSection extends Omit<
+  ParsedSection,
+  "questions" | "vakt"
+> {
+  questions: SectionQuestion[];
+  vakt?: string[];
+}
+
+/** One section's lines as parseSection reads them. */
+export interface RulesSection extends LessonSection {
+  vakt: string[];
+  /** Lines the rules kept but could not place. */
+  unread: string[];
+}
+
+/** A section of readLessonText's reading: its text, and what the rules made of it. */
+export interface ReadSection extends SplitSection {
+  parsed: RulesSection;
+}
+
+/** A parsed section's counts, as a preview lists them. */
+export interface SectionSummary {
+  name: string;
+  paragraphs: number;
+  spellingWords: number;
+  questions: number;
+  answered: number;
+}
+
+// Each split rule's result: the prompt and the answers found after it.
+interface QuestionSplit {
+  prompt: string;
+  answers: string[];
+}
 
 export class DocumentImportError extends Error {
-  constructor(message) {
+  constructor(message: string) {
     super(message);
     this.name = "DocumentImportError";
   }
@@ -49,10 +114,8 @@ const RUN_TOGETHER = /[?)]\s+\d{1,2}[.)]\s+\S/;
 /**
  * What one line of a document is: "prose", "spelling", "question", "steps",
  * "heading", "vakt", "source" or "other".
- * @param {string} line
- * @returns {string}
  */
-export function classifyLine(line) {
+export function classifyLine(line: string): LineKind {
   // Text copied out of a printed lesson carries the type tag in front of each
   // question ("K Name the island."). Set aside before the wording is read, or
   // "K Name a..." would never match an opener anchored at the start.
@@ -100,17 +163,22 @@ const TITLE_BLOCK_LINE =
 // otherwise a line the rules could not read (a question with no question
 // mark, no number and no opener word, say). The second kind is kept and
 // counted, because it is the sign that a section needs the model.
-const isUnreadLine = (line) =>
+const isUnreadLine = (line: string) =>
   classifyLine(line) === "heading" && line.trim().split(/\s+/).length >= 4;
+
+// A section as segment cuts it, counting the lines read as questions.
+interface Chunk extends SplitSection {
+  questions: number;
+}
 
 // Walk the lines once, starting a section at each passage that follows
 // anything other than passage. A short line directly before that passage is
 // the section's heading; any other short line stays in its section, in order,
 // rather than being dropped.
-function segment(lines) {
-  const sections = [];
-  let current = null;
-  let previous = "heading";
+function segment(lines: string[]): Chunk[] {
+  const sections: Chunk[] = [];
+  let current: Chunk | null = null;
+  let previous: LineKind = "heading";
   let pending = "";
   const flush = () => {
     if (pending && current) current.lines.push(pending);
@@ -153,7 +221,7 @@ function segment(lines) {
   return sections;
 }
 
-const readable = (s) => s.questions > 0 || s.lines.some(isUnreadLine);
+const readable = (s: Chunk) => s.questions > 0 || s.lines.some(isUnreadLine);
 
 /**
  * Cut a document into sections by structure: a passage paragraph that follows
@@ -167,10 +235,12 @@ const readable = (s) => s.questions > 0 || s.lines.some(isUnreadLine);
  * the rules found no lesson, but the text still falls into section-sized
  * pieces, which is what the on-device model reads (one section at a time, as
  * it was trained).
- * @param {string} text
- * @returns {{title: string, sections: Array<{heading: string, lines: string[]}>, loose: boolean}}
  */
-export function splitSections(text) {
+export function splitSections(text: string): {
+  title: string;
+  sections: SplitSection[];
+  loose: boolean;
+} {
   const lines = String(text ?? "")
     .replace(/\r/g, "")
     .split("\n")
@@ -181,12 +251,12 @@ export function splitSections(text) {
   const titled = lines.length > 0 && classifyLine(lines[0]) !== "prose";
   const title = titled ? lines[0] : "";
   const sections = segment(titled ? lines.slice(1) : lines);
-  const shape = (list) =>
+  const shape = (list: Chunk[]): SplitSection[] =>
     list.map(({ heading, lines: ls }) => ({ heading, lines: ls }));
 
   const strict = [...sections];
   while (strict.length && !readable(strict[strict.length - 1])) strict.pop();
-  const merged = [];
+  const merged: Chunk[] = [];
   for (const s of strict) {
     if (!readable(s) && merged.length) {
       merged[merged.length - 1].lines.push(...s.lines);
@@ -210,7 +280,7 @@ const ANSWER_LINE = /^a(?:nswers?)?\s*:\s*/i;
 const LIST_COMMA = /(?<!\d),|,(?!\d{3}(?!\d))/;
 const THOUSANDS_COMMA = /(?<=\d),(?=\d{3}(?!\d))/g;
 
-function listOf(text) {
+function listOf(text: string): string[] {
   const sep = text.includes(";")
     ? ";"
     : text.includes(" / ")
@@ -222,7 +292,7 @@ function listOf(text) {
     .filter(Boolean);
 }
 
-function spellingWordsOf(line) {
+function spellingWordsOf(line: string): string[] {
   return line
     .replace(/^[^:-]*[:-]\s*/, "")
     .replace(/\u00A0/g, " ")
@@ -232,7 +302,7 @@ function spellingWordsOf(line) {
 }
 
 // Each rule returns { prompt, answers } or null when it does not apply.
-const SPLIT_RULES = [
+const SPLIT_RULES: Array<(line: string) => QuestionSplit | null> = [
   // This app's own export: prompt, a gap, the answers each after a gap.
   (line) => {
     if (!GAP.test(line)) return null;
@@ -255,7 +325,7 @@ const CLEAN_END =
   /(\?|defend your (?:answer|choices|thinking)\.|explain (?:your|what|why|in)[^.]*\.|in your own words[^.]*\.)\s*$/i;
 
 // A trailing run of capitals, or a short tail after the last colon.
-function splitByHeuristic(line) {
+function splitByHeuristic(line: string): QuestionSplit {
   // The sentence before the run may end on any word character or a closing
   // bracket or quote: "in 1900? MAX PLANCK", "the year ___. 1900", "a synonym
   // for CRUELTY. HARSHNESS", "(30 minutes)? 350".
@@ -286,7 +356,7 @@ function splitByHeuristic(line) {
   return { prompt: line, answers: [] };
 }
 
-function splitQuestionLine(line) {
+function splitQuestionLine(line: string): QuestionSplit {
   for (const rule of SPLIT_RULES) {
     const split = rule(line);
     if (split) return split;
@@ -297,14 +367,11 @@ function splitQuestionLine(line) {
 
 /**
  * One section's lines to the lesson shape, with no question types yet.
- * @param {string[]} lines
- * @param {string} [heading]
  * `unread` lists the lines the rules kept but could not place: short lines
  * that are neither a label nor anything the classifier recognises.
- * @returns {{name: string, paragraphs: string[], spellingWords: string[], questions: Array<{prompt: string, answers: string[], steps: string[]}>, vakt: string[], unread: string[]}}
  */
-export function parseSection(lines, heading = "") {
-  const out = {
+export function parseSection(lines: string[], heading = ""): RulesSection {
+  const out: RulesSection = {
     name: heading.replace(/^part \d+:\s*/i, ""),
     paragraphs: [],
     spellingWords: [],
@@ -365,7 +432,7 @@ export function parseSection(lines, heading = "") {
 }
 
 // Case, punctuation and the thousands separator do not count.
-const norm = (s) =>
+const norm = (s: unknown) =>
   String(s ?? "")
     .toLowerCase()
     .replace(/(\d),(\d)/g, "$1$2")
@@ -378,21 +445,27 @@ const norm = (s) =>
  * types by their wording, the rest by how many answers there are and whether
  * they are in the passage. Nothing in a typed document names the type, and in
  * the experiment a model guessing it did no better than chance.
- * @param {{prompt: string, answers: string[]}} question
- * @param {string} passage the section's passage, plain text
- * @returns {string} a key of QUESTION_TYPES
+ * @param passage the section's passage, plain text
+ * @returns a key of QUESTION_TYPES
  */
-export function deriveQuestionType(question, passage) {
+export function deriveQuestionType(
+  question: { prompt: string; answers?: string[] },
+  passage: string,
+): QuestionType {
   const prompt = norm(question.prompt);
   const answers = (question.answers || []).map(norm).filter(Boolean);
   if (prompt.startsWith("would you rather")) return "wyr";
   if (/\bin your own words\b/.test(prompt)) return "paraphrase";
-  // No answer makes an open question, and its wording says which kind.
+  // No answer makes an open question, and its wording says which kind (an
+  // `open` always resolves to one of the open types).
   if (!answers.length) {
-    return resolveOpenType({ questionType: "open", prompt: question.prompt });
+    return resolveOpenType({
+      questionType: "open",
+      prompt: question.prompt,
+    }) as QuestionType;
   }
   const text = ` ${norm(passage)} `;
-  const inPassage = (a) =>
+  const inPassage = (a: string) =>
     text.includes(` ${a} `) ||
     text.includes(` ${a.replace(/^(a|an|the) /, "")} `);
   if (answers.length > 1) {
@@ -407,10 +480,11 @@ export function deriveQuestionType(question, passage) {
 // experiment; the parser never sets one. The model was trained before tight
 // and broad opens were separate types, so its `open` is sorted by wording the
 // way a legacy block is.
-function questionBlock(q, passage) {
-  const questionType = QUESTION_TYPES[q.type]
-    ? resolveOpenType({ questionType: q.type, prompt: q.prompt })
-    : deriveQuestionType(q, passage);
+function questionBlock(q: SectionQuestion, passage: string) {
+  const questionType =
+    q.type && QUESTION_TYPES[q.type]
+      ? resolveOpenType({ questionType: q.type, prompt: q.prompt })
+      : deriveQuestionType(q, passage);
   const base = { type: "question", questionType, prompt: q.prompt };
   switch (questionType) {
     case "number":
@@ -441,10 +515,12 @@ function questionBlock(q, passage) {
  * importLessonText all start here, so what the dialog shows and what an
  * import builds cannot drift apart. `loose` is splitSections': the rules
  * found no lesson, and the sections are only pieces for the model.
- * @param {string} text
- * @returns {{title: string, loose: boolean, sections: Array<{heading: string, lines: string[], parsed: ReturnType<typeof parseSection>}>}}
  */
-export function readLessonText(text) {
+export function readLessonText(text: string): {
+  title: string;
+  loose: boolean;
+  sections: ReadSection[];
+} {
   const { title, sections, loose } = splitSections(text);
   return {
     title,
@@ -460,9 +536,12 @@ export function readLessonText(text) {
 /**
  * A parsed section's counts, as a preview lists them. `name` is the section's
  * own, or "" when it has none.
- * @param {{name: string, paragraphs: string[], spellingWords: string[], questions: Array<{answers: string[]}>}} parsed
  */
-export function sectionSummary(parsed) {
+export function sectionSummary(
+  parsed: Pick<LessonSection, "name" | "paragraphs" | "spellingWords"> & {
+    questions: ReadonlyArray<Pick<SectionQuestion, "answers">>;
+  },
+): SectionSummary {
   return {
     name: parsed.name,
     paragraphs: parsed.paragraphs.length,
@@ -474,10 +553,11 @@ export function sectionSummary(parsed) {
 
 /**
  * How much of a lesson the text holds, for showing before importing.
- * @param {string} text
- * @returns {{title: string, sections: Array<{name: string, paragraphs: number, spellingWords: number, questions: number, answered: number}>}}
  */
-export function previewLessonText(text) {
+export function previewLessonText(text: string): {
+  title: string;
+  sections: SectionSummary[];
+} {
   const { title, sections, loose } = readLessonText(text);
   return {
     title,
@@ -492,7 +572,7 @@ export function previewLessonText(text) {
 // prompt: no closing punctuation, no answer found, and a run of capitals at
 // the end ("Species every pet cat descended from THE AFRICAN WILDCAT").
 const GLUED_ANSWER = /\s[A-Z0-9][A-Z0-9 ',./-]*$/;
-const looksGlued = (q) =>
+const looksGlued = (q: Pick<SectionQuestion, "prompt" | "answers">) =>
   q.answers.length === 0 &&
   !/[.!?]$/.test(q.prompt) &&
   GLUED_ANSWER.test(q.prompt) &&
@@ -504,10 +584,11 @@ const looksGlued = (q) =>
  * a question still has its answer glued to it, or several questions came out
  * as one. A section the rules read cleanly stays with the rules, which beat
  * the model on every regular layout.
- * @param {{questions: Array<{prompt: string, answers: string[]}>, unread?: string[]}} parsed
- * @returns {boolean}
  */
-export function sectionNeedsModel(parsed) {
+export function sectionNeedsModel(parsed: {
+  questions: ReadonlyArray<Pick<SectionQuestion, "prompt" | "answers">>;
+  unread?: string[];
+}): boolean {
   return (
     parsed.questions.length === 0 ||
     (parsed.unread?.length ?? 0) > 0 ||
@@ -522,11 +603,11 @@ const NO_LESSON_MESSAGE =
  * A lesson in the editor's shape from sections already parsed (by the rules,
  * by the model, or some of each), or a DocumentImportError when there are
  * none.
- * @param {string} title
- * @param {Array<{name: string, paragraphs: string[], spellingWords: string[], questions: object[], vakt?: string[]}>} sections
- * @returns {{title: string, sections: object[]}}
  */
-export function lessonFromSections(title, sections) {
+export function lessonFromSections(
+  title: string,
+  sections: LessonSection[],
+): LessonDoc {
   if (!sections.length) throw new DocumentImportError(NO_LESSON_MESSAGE);
   return normalizeLessonFile({
     title: title || "Imported lesson",
@@ -550,10 +631,8 @@ export function lessonFromSections(title, sections) {
 /**
  * The text of a document as a lesson in the editor's shape, or a
  * DocumentImportError when no lesson can be found in it.
- * @param {string} text
- * @returns {{title: string, sections: object[]}}
  */
-export function importLessonText(text) {
+export function importLessonText(text: string): LessonDoc {
   const { title, sections, loose } = readLessonText(text);
   if (loose) throw new DocumentImportError(NO_LESSON_MESSAGE);
   return lessonFromSections(

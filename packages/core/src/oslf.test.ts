@@ -1,6 +1,6 @@
 // The Open Spelling Lesson Format round trip: what toOslf writes has to be a
 // file the format's own schema accepts, and what fromOslf reads back has to
-// be the lesson that was written, bar the two things the header of oslf.js
+// be the lesson that was written, bar the two things the header of oslf.ts
 // says don't survive.
 
 import { readFileSync } from "node:fs";
@@ -9,15 +9,35 @@ import Ajv2020 from "ajv/dist/2020.js";
 
 import { normalizeLessonFile } from "./jsonImport.ts";
 import { lessonFileName } from "./lessonFile.ts";
-import { markupToContent } from "./lessonText.ts";
+import { type TextNode, markupToContent } from "./lessonText.ts";
 import {
   OSLF_VERSION,
   OslfExportError,
+  type OslfHeading,
+  type OslfImageBlock,
+  type OslfImportBlock,
+  type OslfPassage,
+  type OslfQuestion,
   fromOslf,
   isOslfFile,
   oslfFileName,
   toOslf,
 } from "./oslf.ts";
+import type {
+  Block,
+  ImageBlock,
+  LessonDoc,
+  QuestionBlock,
+  SpellingBlock,
+  TextBlock,
+  VaktBlock,
+} from "./types.ts";
+
+// One kind of block fromOslf reads.
+type Imported<K extends OslfImportBlock["type"]> = Extract<
+  OslfImportBlock,
+  { type: K }
+>;
 
 const schema = JSON.parse(
   readFileSync(new URL("./oslf.schema.json", import.meta.url), "utf8"),
@@ -31,13 +51,14 @@ const validate = new Ajv2020({ allErrors: true, strict: false }).compile(
 // question with a Besides line, a picture with a credit, a VAKT activity with
 // a link and a heading. One legacy `open` question, to be sorted on the way
 // out.
-const question = (id, questionType, fields) => ({
-  id,
-  type: "question",
-  questionType,
-  ...fields,
-});
-const DOC = {
+const question = (id: string, questionType: string, fields: object) =>
+  ({
+    id,
+    type: "question",
+    questionType,
+    ...fields,
+  }) as QuestionBlock;
+const DOC: LessonDoc = {
   title: "Lighthouses",
   ageRange: "11-14 years",
   sources: [
@@ -134,7 +155,8 @@ const DOC = {
   ],
 };
 
-const imageSrc = (block) => `https://example.org/images/${block.image.hash}`;
+const imageSrc = (block: ImageBlock | VaktBlock) =>
+  `https://example.org/images/${block.image?.hash}`;
 
 describe("toOslf", () => {
   it("writes a file the format's schema accepts", () => {
@@ -177,7 +199,8 @@ describe("toOslf", () => {
   // them. The export reads each the way the lesson checks do, so a lesson
   // that passes the shape check still passes it after a round trip.
   it("writes a legacy open as the type the lesson checks read it as", () => {
-    const legacy = (id, prompt) => question(id, "open", { prompt });
+    const legacy = (id: string, prompt: string) =>
+      question(id, "open", { prompt });
     const file = toOslf({
       title: "T",
       sections: [
@@ -190,16 +213,13 @@ describe("toOslf", () => {
           ],
         },
       ],
-    });
+    } as LessonDoc);
     expect(validate(file)).toBe(true);
-    expect(file.sections[0].blocks.map((b) => b.questionType)).toEqual([
-      "tight-open",
-      "paraphrase",
-      "broad-open",
-      "broad-open",
-    ]);
+    expect(
+      file.sections[0].blocks.map((b) => (b as OslfQuestion).questionType),
+    ).toEqual(["tight-open", "paraphrase", "broad-open", "broad-open"]);
     const back = fromOslf(file).sections[0].blocks;
-    expect(back.map((b) => b.questionType)).toEqual([
+    expect(back.map((b) => (b as Imported<"question">).questionType)).toEqual([
       "tight_open",
       "paraphrase",
       "broad_open",
@@ -210,7 +230,7 @@ describe("toOslf", () => {
   it("writes rich text as runs and notes, and plain paragraphs as strings", () => {
     const file = toOslf(DOC, { imageSrc });
     const passage = file.sections[0].blocks.find((b) => b.type === "passage");
-    expect(passage.paragraphs).toEqual([
+    expect(passage?.paragraphs).toEqual([
       [
         "Sailors looked for ",
         { text: "fires", italic: true },
@@ -259,17 +279,18 @@ describe("toOslf", () => {
   // semi-open question, so a draft with one still blank can't become a valid
   // file. Writing it anyway would hand over a file every reader rejects.
   it("refuses a question the format needs an answer for, and names it", () => {
-    const blank = (questionType, fields) => ({
-      title: "T",
-      sections: [
-        {
-          blocks: [
-            question("q1", "tight_open", { prompt: "Name a color." }),
-            question("q2", questionType, { prompt: "Which way?", ...fields }),
-          ],
-        },
-      ],
-    });
+    const blank = (questionType: string, fields: object) =>
+      ({
+        title: "T",
+        sections: [
+          {
+            blocks: [
+              question("q1", "tight_open", { prompt: "Name a color." }),
+              question("q2", questionType, { prompt: "Which way?", ...fields }),
+            ],
+          },
+        ],
+      }) as LessonDoc;
     expect(() => toOslf(blank("single", { answer: "" }))).toThrow(
       OslfExportError,
     );
@@ -342,9 +363,14 @@ describe("toOslf", () => {
           ],
         },
       ],
-    });
+    } as LessonDoc);
     expect(validate(file)).toBe(true);
-    const [passage, q, heading, image] = file.sections[0].blocks;
+    const [passage, q, heading, image] = file.sections[0].blocks as [
+      OslfPassage,
+      OslfQuestion,
+      OslfHeading,
+      OslfImageBlock,
+    ];
     expect(passage.paragraphs).toEqual([
       ["A line and ", { text: "the next", bold: true }, "."],
     ]);
@@ -378,7 +404,12 @@ describe("fromOslf", () => {
     expect(section.blocks.map((b) => b.id)).toEqual(
       DOC.sections[0].blocks.map((b) => b.id),
     );
-    const [image, text, spelling, ...rest] = section.blocks;
+    const [image, text, spelling, ...rest] = section.blocks as [
+      ImageBlock,
+      TextBlock,
+      SpellingBlock,
+      ...Block[],
+    ];
     expect(image).toMatchObject({
       src: "https://example.org/images/abc123",
       caption: "The tower at Pharos.",
@@ -386,7 +417,9 @@ describe("fromOslf", () => {
       size: "large",
       align: "center",
     });
-    expect(text.content).toEqual(DOC.sections[0].blocks[1].content);
+    expect(text.content).toEqual(
+      (DOC.sections[0].blocks[1] as TextBlock).content,
+    );
     expect(spelling.words.map((w) => w.text)).toEqual(["BEACON", "HARBOR"]);
     const questions = rest.filter((b) => b.type === "question");
     expect(questions.map((q) => q.questionType)).toEqual([
@@ -404,18 +437,18 @@ describe("fromOslf", () => {
       "tight_open",
     ]);
     expect(questions[0].answer).toBe("PHAROS");
-    expect(questions[2].steps.map((s) => s.text)).toEqual([
+    expect(questions[2].steps?.map((s) => s.text)).toEqual([
       "120 times 3 is 360.",
     ]);
     expect(questions[3]).toMatchObject({ threeBoard: true, besides: "ROCKS" });
-    expect(questions[5].answers.map((a) => a.text)).toEqual(["LAMP"]);
+    expect(questions[5].answers?.map((a) => a.text)).toEqual(["LAMP"]);
     expect(questions[6].answers).toEqual([]);
     const vakt = rest.find((b) => b.type === "vakt");
-    expect(vakt.text).toBe("Turn slowly in a full circle.");
-    expect(vakt.links.map((l) => [l.label, l.url])).toEqual([
+    expect(vakt?.text).toBe("Turn slowly in a full circle.");
+    expect(vakt?.links.map((l) => [l.label, l.url])).toEqual([
       ["A video", "https://example.org/v"],
     ]);
-    expect(rest.find((b) => b.type === "heading").text).toBe(
+    expect(rest.find((b) => b.type === "heading")?.text).toBe(
       "WOULD YOU RATHER",
     );
   });
@@ -442,19 +475,21 @@ describe("fromOslf", () => {
         },
       ],
     });
-    expect(back.sections[0].blocks[0].prompt).toEqual({
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [
-            { type: "text", text: "Give a word for " },
-            { type: "text", text: "beam", marks: [{ type: "italic" }] },
-            { type: "text", text: "." },
-          ],
-        },
-      ],
-    });
+    expect((back.sections[0].blocks[0] as Imported<"question">).prompt).toEqual(
+      {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Give a word for " },
+              { type: "text", text: "beam", marks: [{ type: "italic" }] },
+              { type: "text", text: "." },
+            ],
+          },
+        ],
+      },
+    );
     expect(back.sections[0].blocks[1]).toMatchObject({
       questionType: "open",
       prompt: "Pick one.",
@@ -479,7 +514,7 @@ describe("fromOslf", () => {
       "image",
       "text",
     ]);
-    expect(back.sections[0].blocks[0].src).toBe(
+    expect((back.sections[0].blocks[0] as Imported<"image">).src).toBe(
       "https://example.org/pharos.png",
     );
   });
@@ -534,12 +569,12 @@ describe("read-aloud hints", () => {
         ],
       },
     ],
-  };
+  } as LessonDoc;
 
   it("writes pronunciations, substitutions, spell-outs and pauses as the format's runs", () => {
     const file = toOslf(hinted);
     expect(validate(file)).toBe(true);
-    expect(file.sections[0].blocks[0].paragraphs).toEqual([
+    expect((file.sections[0].blocks[0] as OslfPassage).paragraphs).toEqual([
       [
         "Augustin ",
         { text: "Fresnel", italic: true, ipa: "freɪˈnɛl" },
@@ -557,8 +592,8 @@ describe("read-aloud hints", () => {
 
   it("reads them back as they were", () => {
     const back = fromOslf(toOslf(hinted));
-    expect(back.sections[0].blocks[0].content).toEqual(
-      hinted.sections[0].blocks[0].content,
+    expect((back.sections[0].blocks[0] as Imported<"text">).content).toEqual(
+      (hinted.sections[0].blocks[0] as TextBlock).content,
     );
   });
 
@@ -584,7 +619,11 @@ describe("read-aloud hints", () => {
         },
       ],
     });
-    expect(back.sections[0].blocks[0].steps.map((s) => s.text)).toEqual([
+    expect(
+      (back.sections[0].blocks[0] as Imported<"question">).steps?.map(
+        (s) => s.text,
+      ),
+    ).toEqual([
       "There are 60 seconds.",
       {
         type: "doc",
@@ -643,13 +682,13 @@ describe("read-aloud hints", () => {
         },
       ],
     });
-    const block = back.sections[0].blocks[0];
+    const block = back.sections[0].blocks[0] as Imported<"question">;
     expect(typeof block.prompt).toBe("object");
-    expect(typeof block.steps[0].text).toBe("string");
-    expect(typeof block.steps[1].text).toBe("object");
+    expect(typeof block.steps?.[0].text).toBe("string");
+    expect(typeof block.steps?.[1].text).toBe("object");
     const doc = normalizeLessonFile({ title: "T", sections: back.sections });
     const out = toOslf(doc);
-    const question = out.sections[0].blocks[0];
+    const question = out.sections[0].blocks[0] as OslfQuestion;
     expect(question.prompt).toEqual(prompt);
     expect(question.working).toEqual(working);
     expect(validate(out)).toBe(true);
@@ -673,12 +712,12 @@ describe("formulas", () => {
         ],
       },
     ],
-  };
+  } as LessonDoc;
 
   it("writes a formula as the format's math run, with display and spoken only where set", () => {
     const file = toOslf(lesson);
     expect(validate(file)).toBe(true);
-    expect(file.sections[0].blocks[0].paragraphs).toEqual([
+    expect((file.sections[0].blocks[0] as OslfPassage).paragraphs).toEqual([
       [
         "Then ",
         { math: { format: "asciimath", source: "120 xx 3 = 360" } },
@@ -697,9 +736,10 @@ describe("formulas", () => {
   });
 
   it("reads a math run back as the node it was, spoken runs and all", () => {
-    expect(fromOslf(toOslf(lesson)).sections[0].blocks[0].content).toEqual(
-      lesson.sections[0].blocks[0].content,
-    );
+    expect(
+      (fromOslf(toOslf(lesson)).sections[0].blocks[0] as Imported<"text">)
+        .content,
+    ).toEqual((lesson.sections[0].blocks[0] as TextBlock).content);
     const back = fromOslf({
       oslf: OSLF_VERSION,
       title: "T",
@@ -728,7 +768,10 @@ describe("formulas", () => {
         },
       ],
     });
-    expect(back.sections[0].blocks[0].content.content[0].content).toEqual([
+    expect(
+      (back.sections[0].blocks[0] as Imported<"text">).content.content[0]
+        .content,
+    ).toEqual([
       {
         type: "math",
         attrs: {
@@ -757,8 +800,8 @@ describe("formulas", () => {
         },
       ],
     });
-    expect(
-      back.sections[0].blocks[0].content.content[0].content[0].marks,
-    ).toEqual([{ type: "bold" }]);
+    const run = (back.sections[0].blocks[0] as Imported<"text">).content
+      .content[0].content?.[0] as TextNode | undefined;
+    expect(run?.marks).toEqual([{ type: "bold" }]);
   });
 });

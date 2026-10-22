@@ -23,6 +23,7 @@ import {
   type InteractiveDoc,
 } from "./interactive.ts";
 import { normalizeLessonFile } from "./jsonImport.ts";
+import type { VaktBlock } from "./types.ts";
 
 let counter = 0;
 const newId = () => `id-${(counter += 1)}`;
@@ -207,10 +208,10 @@ describe("importing a VAKT block from a lesson file", () => {
       ],
     });
 
-    const [block] = sections[0].blocks;
+    const [block] = sections[0].blocks as VaktBlock[];
     expect(block.type).toBe("vakt");
     expect(block.text).toBe("Do 3 wall pushes");
-    expect(block.links.map((l: { url: string }) => l.url)).toEqual([
+    expect(block.links.map((l) => l.url)).toEqual([
       "https://example.org",
       "https://example.org/two",
     ]);
@@ -243,7 +244,7 @@ describe("importing a VAKT block from a lesson file", () => {
         },
       ],
     });
-    const [block] = sections[0].blocks;
+    const [block] = sections[0].blocks as VaktBlock[];
     expect(block.size).toBe("full");
     expect(block.align).toBe("right");
   });
@@ -271,7 +272,7 @@ describe("importing a VAKT block from a lesson file", () => {
         },
       ],
     });
-    expect(sections[0].blocks[0].src).toBe(
+    expect((sections[0].blocks[0] as VaktBlock).src).toBe(
       "data:image/png;base64,iVBORw0KGgo=",
     );
   });

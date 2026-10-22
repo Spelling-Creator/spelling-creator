@@ -1,6 +1,6 @@
 // The lesson document: the normalized shape jsonImport produces, the editor
 // edits and the hub stores. Types only, so importing it costs nothing at
-// runtime. Keep it in step with jsonImport.js when a block gains a field.
+// runtime. Keep it in step with jsonImport.ts when a block gains a field.
 
 /** A node of a tiptap (ProseMirror) document, as JSON. */
 export interface RichNode {
@@ -151,6 +151,12 @@ export interface Source {
   url: string;
 }
 
+/** One entry of a lesson's trusted-collaborator list. */
+export interface TrustedCollaborator {
+  email: string;
+  name?: string;
+}
+
 export interface LessonDoc {
   title: string;
   /** One of AGE_RANGES in ageRanges.ts. */
@@ -158,11 +164,11 @@ export interface LessonDoc {
   sources?: Source[];
   sections: Section[];
   /**
-   * The email addresses a live session admits without asking. The hub keeps
-   * it with the stored lesson for its author only; a lesson file and a
+   * The people a live session admits without asking, by email. The hub keeps
+   * the list with the stored lesson for its author only; a lesson file and a
    * lesson's history leave it out.
    */
-  trustedCollaborators?: string[];
+  trustedCollaborators?: TrustedCollaborator[];
 }
 
 /** The importable .json envelope (see lessonFile.ts). */

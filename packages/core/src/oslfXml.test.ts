@@ -10,15 +10,23 @@ import { validateXML } from "xmllint-wasm";
 
 import { normalizeLessonFile } from "./jsonImport.ts";
 import { markupToContent } from "./lessonText.ts";
-import { OslfImportError, fromOslf, toOslf } from "./oslf.ts";
+import {
+  type OslfFile,
+  OslfImportError,
+  type OslfPassage,
+  fromOslf,
+  toOslf,
+} from "./oslf.ts";
 import {
   OSLF_XML_EXTENSION,
   fromOslfXml,
   oslfXmlFileName,
   toOslfXml,
 } from "./oslfXml.ts";
+import type { LessonDoc } from "./types.ts";
 
-const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+const read = (path: string) =>
+  readFileSync(new URL(path, import.meta.url), "utf8");
 const XSD = read("./oslf.xsd");
 const EXAMPLE_JSON = JSON.parse(read("./oslf-examples/lighthouses.oslf.json"));
 const EXAMPLE_XML = read("./oslf-examples/lighthouses.oslf.xml");
@@ -26,7 +34,7 @@ const validateJson = new Ajv2020({ allErrors: true, strict: false }).compile(
   JSON.parse(read("./oslf.schema.json")),
 );
 
-async function xsdErrors(xml) {
+async function xsdErrors(xml: string) {
   const result = await validateXML({
     xml: [{ fileName: "lesson.oslf.xml", contents: xml }],
     schema: [{ fileName: "oslf.xsd", contents: XSD }],
@@ -84,7 +92,7 @@ describe("a lesson from the app", () => {
         ],
       },
     ],
-  };
+  } as LessonDoc;
 
   it("survives JSON to XML to JSON, and the XML is valid", async () => {
     const file = toOslf(doc);
@@ -110,34 +118,36 @@ describe("a lesson from the app", () => {
 });
 
 describe("reading", () => {
-  const wrap = (body) =>
+  const wrap = (body: string) =>
     `<?xml version="1.0"?><lesson xmlns="urn:oslf:lesson" version="0.1"><title>T</title><section>${body}</section></lesson>`;
+  // The reader leaves checking the values to fromOslf; these files are good.
+  const readXml = (xml: string) => fromOslfXml(xml) as OslfFile;
 
   it("collapses whitespace in text, and trims it at an element's edges", () => {
-    const file = fromOslfXml(
+    const file = readXml(
       wrap(`<passage><p>
         One   line
         wrapped <b> over </b>  two.
       </p></passage>`),
     );
-    expect(file.sections[0].blocks[0].paragraphs).toEqual([
+    expect((file.sections[0].blocks[0] as OslfPassage).paragraphs).toEqual([
       ["One line wrapped ", { text: "over ", bold: true }, "two."],
     ]);
   });
 
   it("reads marks in any nesting, and keeps a hint innermost", () => {
-    const file = fromOslfXml(
+    const file = readXml(
       wrap(
         '<passage><p><u><b><phoneme alphabet="ipa" ph="ˈbuːi">buoy</phoneme></b></u></p></passage>',
       ),
     );
-    expect(file.sections[0].blocks[0].paragraphs).toEqual([
+    expect((file.sections[0].blocks[0] as OslfPassage).paragraphs).toEqual([
       [{ text: "buoy", bold: true, underline: true, ipa: "ˈbuːi" }],
     ]);
   });
 
   it("keeps the words of an element it doesn't know, and skips other namespaces' blocks", () => {
-    const file = fromOslfXml(
+    const file = readXml(
       wrap(
         '<passage><p>a <emphasis>b</emphasis> c</p></passage><x:extra xmlns:x="https://example.org/x"/>',
       ),

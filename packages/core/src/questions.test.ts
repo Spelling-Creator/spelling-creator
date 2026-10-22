@@ -30,6 +30,7 @@ import {
   type QuestionFields,
 } from "./questions.ts";
 import { normalizeLessonFile } from "./jsonImport.ts";
+import type { QuestionBlock } from "./types.ts";
 
 let counter = 0;
 const newId = () => `id-${(counter += 1)}`;
@@ -226,7 +227,7 @@ describe("questionAnswerPlain", () => {
       ],
     });
     expect(
-      file.sections[0].blocks.map((b: { answer?: unknown }) => b.answer),
+      file.sections[0].blocks.map((b) => (b as QuestionBlock).answer),
     ).toEqual(["1884 or 3/4", "1884 or 3/4"]);
   });
 });
@@ -302,7 +303,9 @@ describe("paraphrase questions", () => {
       ],
     });
     expect(doc.sections[0].blocks).toHaveLength(1);
-    expect(doc.sections[0].blocks[0].questionType).toBe("paraphrase");
+    expect((doc.sections[0].blocks[0] as QuestionBlock).questionType).toBe(
+      "paraphrase",
+    );
   });
 });
 
@@ -346,7 +349,9 @@ describe("W.Y.R. questions", () => {
       ],
     });
     expect(doc.sections[0].blocks).toHaveLength(1);
-    expect(doc.sections[0].blocks[0].questionType).toBe("wyr");
+    expect((doc.sections[0].blocks[0] as QuestionBlock).questionType).toBe(
+      "wyr",
+    );
   });
 });
 

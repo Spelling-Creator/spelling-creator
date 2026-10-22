@@ -14,6 +14,7 @@ import {
   splitSections,
 } from "./documentImport.ts";
 import { ANSWER_GAP } from "./questions.ts";
+import type { LessonDoc, QuestionBlock, SpellingBlock } from "./types.ts";
 
 const PASSAGE_1 =
   "Every pet cat curled up on a sofa today is descended from a single wild species: the AFRICAN WILDCAT. This sandy-coloured hunter still roams the deserts, grasslands, and plains of North Africa and the Near East, and it looks so much like a tabby that the two can be hard to tell apart at a glance.";
@@ -227,7 +228,7 @@ describe("parseSection", () => {
 });
 
 describe("sectionNeedsModel", () => {
-  const needs = (lines) => sectionNeedsModel(parseSection(lines));
+  const needs = (lines: string[]) => sectionNeedsModel(parseSection(lines));
 
   it("leaves a section the rules read cleanly alone", () => {
     for (const text of [TYPED, EXPORTED]) {
@@ -273,12 +274,9 @@ describe("importLessonText", () => {
       "spelling",
       ...Array(7).fill("question"),
     ]);
-    expect(first.blocks[2].words.map((w) => w.text)).toEqual([
-      "FELINE",
-      "CREATURE",
-      "PROWLED",
-      "NATURAL",
-    ]);
+    expect((first.blocks[2] as SpellingBlock).words.map((w) => w.text)).toEqual(
+      ["FELINE", "CREATURE", "PROWLED", "NATURAL"],
+    );
     const questions = first.blocks.filter((b) => b.type === "question");
     expect(questions.map((q) => q.questionType)).toEqual([
       "single",
@@ -294,7 +292,7 @@ describe("importLessonText", () => {
     );
     expect(questions[0].answer).toBe("THE AFRICAN WILDCAT");
     expect(questions[1].answer).toBe("10000");
-    expect(questions[2].answers.map((a) => a.text)).toEqual([
+    expect(questions[2].answers?.map((a) => a.text)).toEqual([
       "MICE",
       "BIRDS",
       "INSECTS",
@@ -323,11 +321,11 @@ describe("importLessonText", () => {
       "wyr",
     ]);
     expect(questions[1].answer).toBe("400");
-    expect(questions[1].steps.map((s) => s.text)).toEqual([
+    expect(questions[1].steps?.map((s) => s.text)).toEqual([
       "Multiply the weekly catch by the number of weeks: 8 × 52",
       "Round to the nearest hundred: about 400",
     ]);
-    expect(doc.sections[0].blocks[2].words).toHaveLength(4);
+    expect((doc.sections[0].blocks[2] as SpellingBlock).words).toHaveLength(4);
   });
 
   it("keeps a three-board mark off the prompt and on the block", () => {
@@ -336,7 +334,7 @@ describe("importLessonText", () => {
     );
     const question = doc.sections[0].blocks.find(
       (b) => b.type === "question" && b.questionType === "multiple",
-    );
+    ) as QuestionBlock;
     expect(question.prompt).toBe(
       "The great piles drew ______ in enormous numbers. Name one creature the piles attracted.",
     );
@@ -389,7 +387,7 @@ What did the boldest cats do. STAYED
     const [question] = doc.sections[0].blocks.filter(
       (b) => b.type === "question",
     );
-    expect(question.answers.map((a) => a.text)).toEqual([
+    expect(question.answers?.map((a) => a.text)).toEqual([
       "MICE",
       "BIRDS",
       "INSECTS",
@@ -412,7 +410,7 @@ Answers: the wildcats; the boldest cats`);
     );
     expect(questions).toHaveLength(2);
     expect(questions[0].answer).toBe("harvests of grain");
-    expect(questions[1].answers.map((a) => a.text)).toEqual([
+    expect(questions[1].answers?.map((a) => a.text)).toEqual([
       "the wildcats",
       "the boldest cats",
     ]);
@@ -433,12 +431,12 @@ Every autumn, millions of MONARCH butterflies fly south. Some travel almost 3,00
       questionType: "number",
       answer: "3000",
     });
-    expect(questions[1].answers.map((a) => a.text)).toEqual([
+    expect(questions[1].answers?.map((a) => a.text)).toEqual([
       "forests",
       "trees",
     ]);
     // Not a thousands separator, so still two answers.
-    expect(questions[2].answers.map((a) => a.text)).toEqual(["1", "5"]);
+    expect(questions[2].answers?.map((a) => a.text)).toEqual(["1", "5"]);
   });
 
   it("keeps the opening paragraph of a lesson pasted without a title", () => {
@@ -542,7 +540,7 @@ describe("previewLessonText", () => {
       previewLessonText(TYPED).sections,
     );
     // Every import gives its blocks fresh ids, so they are left out.
-    const withoutIds = (doc) =>
+    const withoutIds = (doc: LessonDoc) =>
       JSON.parse(JSON.stringify(doc, (k, v) => (k === "id" ? undefined : v)));
     expect(
       withoutIds(

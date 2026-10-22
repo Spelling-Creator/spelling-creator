@@ -6,8 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeLessonFile } from "./jsonImport.ts";
 import { buildLessonFile } from "./lessonFile.ts";
+import type { QuestionBlock, Section, Source, TextBlock } from "./types.ts";
 
-const sections = [
+const sections: Section[] = [
   {
     id: "s1",
     name: "What Is a Penguin?",
@@ -16,7 +17,7 @@ const sections = [
 ];
 
 describe("three-board questions in a lesson file", () => {
-  const multiple = (fields) => ({
+  const multiple = (fields: Record<string, unknown>) => ({
     id: "q1",
     type: "question",
     questionType: "multiple",
@@ -27,11 +28,11 @@ describe("three-board questions in a lesson file", () => {
     ],
     ...fields,
   });
-  const read = (block) =>
+  const read = (block: unknown) =>
     normalizeLessonFile({
       title: "T",
       sections: [{ id: "s1", name: "S", blocks: [block] }],
-    }).sections[0].blocks[0];
+    }).sections[0].blocks[0] as QuestionBlock;
 
   it("keeps the three-board mark and a Besides answer the list has", () => {
     const block = read(multiple({ threeBoard: true, besides: "reefs" }));
@@ -55,7 +56,7 @@ describe("three-board questions in a lesson file", () => {
 });
 
 describe("heading blocks in a lesson file", () => {
-  const read = (block) =>
+  const read = (block: unknown) =>
     normalizeLessonFile({
       title: "T",
       sections: [
@@ -167,7 +168,7 @@ describe("lesson file sources and formatted text", () => {
     sources: [
       { id: "nat", title: "Penguins of the World", url: "https://example.com" },
       { id: "empty" },
-    ],
+    ] as Source[],
     sections: [
       { id: "s1", name: "One", blocks: [{ id: "b1", type: "text", content }] },
     ],
@@ -175,13 +176,13 @@ describe("lesson file sources and formatted text", () => {
 
   it("keeps the sources that say something", () => {
     const doc = normalizeLessonFile(file);
-    expect(doc.sources.map((s) => s.id)).toEqual(["nat"]);
+    expect(doc.sources?.map((s) => s.id)).toEqual(["nat"]);
   });
 
   it("keeps formatting and drops citations of sources the file doesn't list", () => {
-    const block = normalizeLessonFile(file).sections[0].blocks[0];
+    const block = normalizeLessonFile(file).sections[0].blocks[0] as TextBlock;
     expect(block.text).toBeUndefined();
-    expect(block.content.content[0].content).toEqual([
+    expect(block.content?.content?.[0].content).toEqual([
       { type: "text", text: "Penguins ", marks: [{ type: "bold" }] },
       { type: "text", text: "swim." },
       {
