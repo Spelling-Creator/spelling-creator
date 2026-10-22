@@ -19,11 +19,23 @@ import {
   OID_RE,
   parseRefMap,
   serializeRefMap,
+  type RefMap,
 } from "./refs.ts";
 
-/** Whether the lesson hub (and so the shared history) is reachable at all. */
+/** The tips of a lesson's published history, as GET /refs answers. */
+export interface RemoteRefs {
+  head: string;
+  refs?: RefMap;
+}
 
-function endpoint(lessonId, path) {
+/** A downloaded pack, with the tip and branch map that came with it. */
+export interface FetchedPack {
+  packfile: Uint8Array<ArrayBuffer>;
+  head: string;
+  refs: RefMap;
+}
+
+function endpoint(lessonId: string, path: string) {
   const base = apiUrl();
   return `${base}/git/${encodeURIComponent(lessonId)}${path}`;
 }
@@ -32,14 +44,15 @@ function endpoint(lessonId, path) {
  * The tip commits of a lesson's published history: `head` for the lesson itself,
  * and `refs` naming every branch it holds.
  *
- * @returns {Promise<{ head: string, refs?: object } | null>} null when the lesson
- *          has no repo on the server (it predates this feature, or was never
- *          pushed).
+ * @returns null when the lesson has no repo on the server (it predates this
+ *          feature, or was never pushed).
  */
-export async function fetchRefs(lessonId) {
+export async function fetchRefs(
+  lessonId: string | null | undefined,
+): Promise<RemoteRefs | null> {
   if (!hasApi() || !lessonId) return null;
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(endpoint(lessonId, "/refs"), { method: "GET" });
   } catch {
@@ -48,8 +61,9 @@ export async function fetchRefs(lessonId) {
   if (res.status === 404) return null;
   if (!res.ok) return null;
 
-  const data = await res.json().catch(() => null);
-  return data && data.head ? data : null;
+  // The hub's own answer, checked only for the tip it must name.
+  const data: Partial<RemoteRefs> | null = await res.json().catch(() => null);
+  return data && data.head ? (data as RemoteRefs) : null;
 }
 
 /**
@@ -65,13 +79,14 @@ export async function fetchRefs(lessonId) {
  * A lesson stored before it could have more than one branch sends no map, which
  * reads as the one branch it had.
  *
- * @returns {Promise<{ packfile: Uint8Array, head: string, refs: object } | null>}
- *          null when the lesson has no published history.
+ * @returns null when the lesson has no published history.
  */
-export async function fetchPack(lessonId) {
+export async function fetchPack(
+  lessonId: string | null | undefined,
+): Promise<FetchedPack | null> {
   if (!hasApi() || !lessonId) return null;
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(endpoint(lessonId, "/pack"), { method: "GET" });
   } catch {
@@ -89,14 +104,16 @@ export async function fetchPack(lessonId) {
  * the API handed back with the lesson (see fetchRemoteLesson in lessons.ts).
  * The response has the shape fetchPack reads, tip and branch map included.
  *
- * @returns {Promise<{ packfile: Uint8Array, head: string, refs: object } | null>}
- *          null when the lesson has no history there.
+ * @returns null when the lesson has no history there.
  */
-export async function fetchRemotePackFile(packUrl, accessToken) {
+export async function fetchRemotePackFile(
+  packUrl: string | null | undefined,
+  accessToken: string | null | undefined,
+): Promise<FetchedPack | null> {
   if (!hasApi() || !packUrl) return null;
   if (!accessToken) throw new Error("Please sign in before copying a lesson.");
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(
       `${apiUrl()}/remote/pack?url=${encodeURIComponent(packUrl)}`,
@@ -114,7 +131,7 @@ export async function fetchRemotePackFile(packUrl, accessToken) {
 }
 
 /** The pack and the refs that travel in its headers, or null for an unusable one. */
-async function packFromResponse(res) {
+async function packFromResponse(res: Response): Promise<FetchedPack | null> {
   const head = (res.headers.get("X-Git-Head") || "").trim();
   // A pack with no tip is unusable, and so is one whose tip is not a commit
   // id: cloning it would leave a history pointing at nothing. A remote pack
@@ -140,7 +157,7 @@ async function packFromResponse(res) {
  * pushHistory() in sync.js, which does exactly that.
  */
 export class HistoryMovedError extends Error {
-  constructor(message) {
+  constructor(message?: string) {
     super(message);
     this.name = "HistoryMovedError";
   }
@@ -172,15 +189,29 @@ export class HistoryMovedError extends Error {
  * this does — still means "move the lesson, leave everything else alone".
  */
 export async function pushPack(
-  lessonId,
-  { packfile, head, parent, refs, expected, deletes },
-  accessToken,
-) {
+  lessonId: string | null | undefined,
+  {
+    packfile,
+    head,
+    parent,
+    refs,
+    expected,
+    deletes,
+  }: {
+    packfile: Uint8Array<ArrayBuffer>;
+    head: string;
+    parent?: string | null;
+    refs?: RefMap | null;
+    expected?: RefMap | null;
+    deletes?: string[] | null;
+  },
+  accessToken: string | null | undefined,
+): Promise<void> {
   if (!hasApi()) throw new Error("The lesson hub is not configured.");
   if (!lessonId) throw new Error("Missing lesson id.");
   if (!accessToken) throw new Error("Please sign in before saving.");
 
-  const headers = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/x-git-packfile",
     "X-Git-Head": head,
     Authorization: `Bearer ${accessToken}`,
@@ -190,7 +221,7 @@ export async function pushPack(
   if (expected) headers["X-Git-Expected"] = serializeRefMap(expected);
   if (deletes?.length) headers["X-Git-Deletes"] = deletes.join(",");
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(endpoint(lessonId, "/pack"), {
       method: "PUT",

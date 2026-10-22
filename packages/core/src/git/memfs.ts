@@ -1,6 +1,6 @@
 // An in-memory filesystem for the git engine, for the hosts that have no other.
 //
-// repo.js and pack.js take `{ fs, gitdir }` precisely so they don't care where
+// repo.ts and pack.ts take `{ fs, gitdir }` precisely so they don't care where
 // the objects live: the browser hands them LightningFS over IndexedDB (see
 // browser/git/fs.js), and everywhere else hands them this. "Everywhere else" is
 // the MCP server (apps/mcp), which forks a lesson and opens a pull request on an
@@ -27,6 +27,9 @@
 // real cost against a hypothetical caller. Anything else sharing this module must
 // keep to the same rule.
 
+import type { PromiseFsClient } from "isomorphic-git";
+import type { GitContext } from "./repo.ts";
+
 /** File mode for a regular file, as git and node:fs report it. */
 const FILE_MODE = 0o100644;
 /** File mode for a directory. */
@@ -34,14 +37,70 @@ const DIR_MODE = 0o40755;
 /** File mode for a symbolic link. */
 const SYMLINK_MODE = 0o120777;
 
+/** What a node holds, before put() stamps it with an inode and a time. */
+type NodeBody =
+  | { type: "file"; data: Uint8Array; mode: number }
+  | { type: "dir"; mode: number }
+  | { type: "symlink"; target: string; mode: number };
+
+type FsNode = NodeBody & { ino: number; mtimeMs: number };
+
+/** What `stat` and `lstat` report: the fields isomorphic-git reads. */
+export interface MemStats {
+  type: "file" | "dir";
+  mode: number;
+  size: number;
+  ino: number;
+  dev: number;
+  uid: number;
+  gid: number;
+  mtimeMs: number;
+  ctimeMs: number;
+  isFile(): boolean;
+  isDirectory(): boolean;
+  isSymbolicLink(): boolean;
+}
+
+/** The node:fs promise methods memFs implements. */
+export interface MemFsPromises {
+  readFile(
+    path: string,
+    options?: string | { encoding?: string | null } | null,
+  ): Promise<Uint8Array | string | undefined>;
+  writeFile(
+    path: string,
+    data: string | ArrayBuffer | ArrayBufferView,
+    options?: string | { mode?: number } | null,
+  ): Promise<void>;
+  unlink(path: string): Promise<void>;
+  readdir(path: string): Promise<string[]>;
+  mkdir(path: string, options?: { recursive?: boolean } | null): Promise<void>;
+  rmdir(path: string): Promise<void>;
+  stat(path: string): Promise<MemStats>;
+  lstat(path: string): Promise<MemStats>;
+  readlink(path: string): Promise<string>;
+  symlink(target: string, path: string): Promise<void>;
+  chmod(path: string, mode: number): Promise<void>;
+}
+
+/** An in-memory filesystem, in the promise style isomorphic-git takes. */
+export interface MemFs extends PromiseFsClient {
+  promises: MemFsPromises;
+}
+
+/** A repository context on an in-memory filesystem. */
+export interface MemRepo extends GitContext {
+  fs: MemFs;
+}
+
 /** A POSIX-shaped error, so isomorphic-git's `err.code` checks work. */
-function fsError(code, path, syscall) {
-  const err = new Error(`${code}: ${syscall} '${path}'`);
-  err.code = code;
-  err.errno = -1;
-  err.path = path;
-  err.syscall = syscall;
-  return err;
+function fsError(code: string, path: string, syscall: string) {
+  return Object.assign(new Error(`${code}: ${syscall} '${path}'`), {
+    code,
+    errno: -1,
+    path,
+    syscall,
+  });
 }
 
 /**
@@ -49,8 +108,8 @@ function fsError(code, path, syscall) {
  * "..". Everything is keyed by the result, so "/a/b", "/a//b" and "/a/./b" are
  * the same node.
  */
-function normalize(path) {
-  const parts = [];
+function normalize(path: string) {
+  const parts: string[] = [];
   for (const part of String(path).split("/")) {
     if (!part || part === ".") continue;
     if (part === "..") {
@@ -62,13 +121,13 @@ function normalize(path) {
   return `/${parts.join("/")}`;
 }
 
-function dirname(path) {
+function dirname(path: string) {
   const at = path.lastIndexOf("/");
   return at <= 0 ? "/" : path.slice(0, at);
 }
 
 /** Coerce whatever a caller wrote to bytes. isomorphic-git writes both. */
-function toBytes(data) {
+function toBytes(data: unknown): Uint8Array {
   if (typeof data === "string") return new TextEncoder().encode(data);
   if (data instanceof Uint8Array) return data;
   if (data instanceof ArrayBuffer) return new Uint8Array(data);
@@ -79,28 +138,30 @@ function toBytes(data) {
 }
 
 /** The encoding out of node:fs's `options`, which may be a bare string. */
-function encodingOf(options) {
+function encodingOf(
+  options: string | { encoding?: string | null } | null | undefined,
+) {
   if (typeof options === "string") return options;
   return options?.encoding || null;
 }
 
 /**
  * A fresh in-memory filesystem, shaped like `node:fs` — pass it straight to any
- * `{ fs, gitdir }` function in repo.js / pack.js.
+ * `{ fs, gitdir }` function in repo.ts / pack.ts.
  *
  * Nothing is shared between calls: each one is its own empty volume, with its
  * own root. Two repositories built in the same process therefore cannot see each
  * other, which is what we want when one request forks a lesson while another is
  * merging one.
  *
- * @returns {{ promises: object }} An fs whose `promises` is an own data property
- *          — isomorphic-git detects the promise API with
+ * @returns An fs whose `promises` is an own data property, because
+ *          isomorphic-git detects the promise API with
  *          `Object.getOwnPropertyDescriptor(fs, 'promises')`, so a getter or an
  *          inherited property would silently drop it back to callback style.
  */
-export function memFs() {
+export function memFs(): MemFs {
   // path -> { type, data?, target?, mode, mtimeMs, ino }
-  const nodes = new Map();
+  const nodes = new Map<string, FsNode>();
   let nextIno = 1;
 
   const now = () => Date.now();
@@ -108,7 +169,7 @@ export function memFs() {
   // Overwriting keeps the inode: on a real filesystem rewriting a file in place
   // doesn't make it a different file, and isomorphic-git's index caching reads
   // stat data to decide what it can trust.
-  function put(path, node) {
+  function put(path: string, node: NodeBody) {
     const existing = nodes.get(path);
     nodes.set(path, {
       ino: existing ? existing.ino : nextIno++,
@@ -119,20 +180,20 @@ export function memFs() {
 
   put("/", { type: "dir", mode: DIR_MODE });
 
-  function lookup(path, syscall) {
+  function lookup(path: string, syscall: string) {
     const node = nodes.get(path);
     if (!node) throw fsError("ENOENT", path, syscall);
     return node;
   }
 
   /** The parent must exist and be a directory before anything can be made in it. */
-  function requireParentDir(path, syscall) {
+  function requireParentDir(path: string, syscall: string) {
     const parent = nodes.get(dirname(path));
     if (!parent) throw fsError("ENOENT", path, syscall);
     if (parent.type !== "dir") throw fsError("ENOTDIR", path, syscall);
   }
 
-  function statsOf(node) {
+  function statsOf(node: FsNode): MemStats {
     const size = node.type === "file" ? node.data.byteLength : 0;
     return {
       type: node.type === "dir" ? "dir" : "file",
@@ -150,14 +211,16 @@ export function memFs() {
     };
   }
 
-  const promises = {
+  const promises: MemFsPromises = {
     async readFile(path, options) {
       const full = normalize(path);
       const node = lookup(full, "open");
       if (node.type === "dir") throw fsError("EISDIR", full, "read");
+      // A symlink has no bytes of its own, and readFile does not follow it.
+      const data = node.type === "file" ? node.data : undefined;
       const encoding = encodingOf(options);
-      if (encoding) return new TextDecoder().decode(node.data);
-      return node.data;
+      if (encoding) return new TextDecoder().decode(data);
+      return data;
     },
 
     async writeFile(path, data, options) {
@@ -167,10 +230,12 @@ export function memFs() {
       if (existing && existing.type === "dir") {
         throw fsError("EISDIR", full, "open");
       }
+      // A string `options` is an encoding, which carries no mode.
+      const mode = typeof options === "object" ? options?.mode : undefined;
       put(full, {
         type: "file",
         data: toBytes(data),
-        mode: options?.mode ?? existing?.mode ?? FILE_MODE,
+        mode: mode ?? existing?.mode ?? FILE_MODE,
       });
     },
 
@@ -189,7 +254,7 @@ export function memFs() {
       // Direct children only: every descendant shares the prefix, so a name with
       // a "/" left in it belongs to a deeper directory.
       const prefix = full === "/" ? "/" : `${full}/`;
-      const names = [];
+      const names: string[] = [];
       for (const key of nodes.keys()) {
         if (key === full || !key.startsWith(prefix)) continue;
         const rest = key.slice(prefix.length);
@@ -282,9 +347,8 @@ export function memFs() {
  * The gitdir path is arbitrary (nothing else lives on this volume) but named for
  * what it holds, so a stack trace from isomorphic-git reads sensibly.
  *
- * @returns {{ fs: object, gitdir: string }} The context every function in
- *          repo.js / pack.js takes.
+ * @returns The context every function in repo.ts / pack.ts takes.
  */
-export function memRepo(name = "lesson") {
+export function memRepo(name = "lesson"): MemRepo {
   return { fs: memFs(), gitdir: `/${name}/.git` };
 }

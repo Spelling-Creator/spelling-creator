@@ -18,15 +18,23 @@
 //
 // so a plain git tree diff *is* a block-id diff, with no content parsing: two
 // blocks are identical exactly when their blob oids are equal, because git
-// addresses content by hash. That identity is why diffing (ops.js), merging
-// (merge.js) and history (repo.js) can all be expressed as "compare block ids
+// addresses content by hash. That identity is why diffing (ops.ts), merging
+// (merge.ts) and history (repo.ts) can all be expressed as "compare block ids
 // and their oids".
 //
 // Everything here takes `{ fs, gitdir }` rather than reaching for a global, so
 // the same code runs against LightningFS in the browser and node:fs in tests.
 
 import * as git from "isomorphic-git";
-import { canonicalJson, docBlocks, docManifest } from "./doc.ts";
+import type { TreeEntry } from "isomorphic-git";
+import type { Block, LessonDoc, Section } from "../types.ts";
+import {
+  canonicalJson,
+  docBlocks,
+  docManifest,
+  type DocManifest,
+} from "./doc.ts";
+import type { GitContext } from "./repo.ts";
 
 export const MANIFEST_PATH = "lesson.json";
 export const BLOCK_DIR = "blocks";
@@ -42,14 +50,18 @@ const decoder = new TextDecoder();
  * already have, so git stores them once no matter how many commits reference
  * them.
  */
-export async function writeDocTree({ fs, gitdir, doc }) {
+export async function writeDocTree({
+  fs,
+  gitdir,
+  doc,
+}: GitContext & { doc: LessonDoc }): Promise<string> {
   const manifestOid = await git.writeBlob({
     fs,
     gitdir,
     blob: encoder.encode(canonicalJson(docManifest(doc))),
   });
 
-  const blockEntries = [];
+  const blockEntries: TreeEntry[] = [];
   for (const [id, block] of docBlocks(doc)) {
     const oid = await git.writeBlob({
       fs,
@@ -80,7 +92,11 @@ export async function writeDocTree({ fs, gitdir, doc }) {
   });
 }
 
-async function readJsonBlob({ fs, gitdir, oid }) {
+async function readJsonBlob({
+  fs,
+  gitdir,
+  oid,
+}: GitContext & { oid: string }): Promise<unknown> {
   const { blob } = await git.readBlob({ fs, gitdir, oid });
   return JSON.parse(decoder.decode(blob));
 }
@@ -91,10 +107,14 @@ async function readJsonBlob({ fs, gitdir, oid }) {
  * exactly which blocks were added, removed or changed, without reading a single
  * block's content (oid equality *is* content equality).
  */
-export async function readBlockOids({ fs, gitdir, treeOid }) {
+export async function readBlockOids({
+  fs,
+  gitdir,
+  treeOid,
+}: GitContext & { treeOid: string }): Promise<Map<string, string>> {
   const root = await git.readTree({ fs, gitdir, oid: treeOid });
   const blocksEntry = root.tree.find((entry) => entry.path === BLOCK_DIR);
-  const oids = new Map();
+  const oids = new Map<string, string>();
   if (!blocksEntry) return oids;
 
   const blocks = await git.readTree({ fs, gitdir, oid: blocksEntry.oid });
@@ -105,12 +125,20 @@ export async function readBlockOids({ fs, gitdir, treeOid }) {
   return oids;
 }
 
-/** The manifest stored in a tree. */
-export async function readManifest({ fs, gitdir, treeOid }) {
+/**
+ * The manifest stored in a tree. The blob is the one writeDocTree wrote from
+ * docManifest, so it is read back as that shape; readDocTree still treats each
+ * field as possibly missing.
+ */
+export async function readManifest({
+  fs,
+  gitdir,
+  treeOid,
+}: GitContext & { treeOid: string }): Promise<DocManifest> {
   const root = await git.readTree({ fs, gitdir, oid: treeOid });
   const entry = root.tree.find((e) => e.path === MANIFEST_PATH);
   if (!entry) return { title: "", ageRange: null, sections: [] };
-  return readJsonBlob({ fs, gitdir, oid: entry.oid });
+  return (await readJsonBlob({ fs, gitdir, oid: entry.oid })) as DocManifest;
 }
 
 /**
@@ -121,25 +149,30 @@ export async function readManifest({ fs, gitdir, treeOid }) {
  * throwing — a tree that lost a blob is still worth reading back as much of as
  * we can, and the editor can't render an absent block anyway.
  */
-export async function readDocTree({ fs, gitdir, treeOid }) {
+export async function readDocTree({
+  fs,
+  gitdir,
+  treeOid,
+}: GitContext & { treeOid: string }): Promise<LessonDoc> {
   const [manifest, blockOids] = await Promise.all([
     readManifest({ fs, gitdir, treeOid }),
     readBlockOids({ fs, gitdir, treeOid }),
   ]);
 
-  const blocks = new Map();
+  // Each blob is a block writeDocTree stored, under the id it is named for.
+  const blocks = new Map<string, Block>();
   for (const [id, oid] of blockOids) {
-    blocks.set(id, await readJsonBlob({ fs, gitdir, oid }));
+    blocks.set(id, (await readJsonBlob({ fs, gitdir, oid })) as Block);
   }
 
-  const doc = {
+  const doc: LessonDoc = {
     title: manifest.title || "",
-    sections: (manifest.sections || []).map((section) => ({
+    sections: (manifest.sections || []).map((section): Section => ({
       id: section.id,
       name: section.name || "",
       blocks: (section.blocks || [])
         .map((id) => blocks.get(id))
-        .filter(Boolean),
+        .filter((block): block is Block => Boolean(block)),
     })),
   };
   if (manifest.ageRange) doc.ageRange = manifest.ageRange;

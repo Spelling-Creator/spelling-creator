@@ -2,10 +2,11 @@
 
 import { describe, expect, it } from "vitest";
 import { applyResolutions, mergeDocs } from "./merge.ts";
+import type { Block, ImageBlock, LessonDoc } from "../types.ts";
 
-const block = (id, text = id) => ({ id, type: "text", text });
+const block = (id: string, text = id): Block => ({ id, type: "text", text });
 
-function lesson(sections) {
+function lesson(sections: Record<string, Block[]>): LessonDoc {
   return {
     title: "Cats",
     sections: Object.entries(sections).map(([id, blocks]) => ({
@@ -17,7 +18,7 @@ function lesson(sections) {
 }
 
 /** Section id -> its block ids, to compare layouts at a glance. */
-function layout(doc) {
+function layout(doc: LessonDoc) {
   return Object.fromEntries(
     doc.sections.map((section) => [
       section.id,
@@ -105,7 +106,7 @@ describe("merging a lesson with several sections", () => {
 });
 
 describe("merging a picture from before credits had their own field", () => {
-  const picture = (fields) => ({
+  const picture = (fields: Partial<ImageBlock>): ImageBlock => ({
     id: "p",
     type: "image",
     src: "x.png",

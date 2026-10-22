@@ -13,10 +13,11 @@
 // prepareRevert is bound to the browser's filesystem; the call it makes is this.
 
 import { describe, expect, it } from "vitest";
+import type { LessonDoc, TextBlock } from "../types.ts";
 import { mergeDocs } from "./merge.ts";
 import { diffDocs } from "./ops.ts";
 
-function doc(one, two, three) {
+function doc(one: string, two: string, three: string): LessonDoc {
   return {
     title: "Lesson",
     sections: [
@@ -33,11 +34,20 @@ function doc(one, two, three) {
   };
 }
 
-const textOf = (d, id) =>
-  d.sections[0].blocks.find((b) => b.id === id)?.text ?? null;
+const textOf = (d: LessonDoc, id: string) =>
+  (d.sections[0].blocks.find((b) => b.id === id) as TextBlock | undefined)
+    ?.text ?? null;
 
 /** The revert, expressed exactly as prepareRevert expresses it. */
-const revert = ({ before, after, now }) => mergeDocs(after, now, before);
+const revert = ({
+  before,
+  after,
+  now,
+}: {
+  before: LessonDoc;
+  after: LessonDoc;
+  now: LessonDoc;
+}) => mergeDocs(after, now, before);
 
 describe("undoing one change", () => {
   it("puts back what that change touched", () => {
@@ -75,7 +85,7 @@ describe("undoing one change", () => {
 
   it("puts back a block the change removed", () => {
     const before = doc("a", "b", "c");
-    const after = {
+    const after: LessonDoc = {
       ...before,
       sections: [
         {
@@ -91,7 +101,7 @@ describe("undoing one change", () => {
 
   it("removes a block the change added", () => {
     const before = doc("a", "b", "c");
-    const added = {
+    const added: LessonDoc = {
       ...before,
       sections: [
         {

@@ -1,7 +1,7 @@
 // The names a lesson's branches may have, and how a branch's name relates to the
 // words a person actually typed.
 //
-// Deliberately free of any git dependency, for the same reason doc.js and ops.js
+// Deliberately free of any git dependency, for the same reason doc.ts and ops.ts
 // are: the Worker validates a push's ref map (apps/api/src/routes/git.js) and the
 // editor validates a name before offering it, and neither should have to pull in
 // isomorphic-git to do it. Both import this file, so the rules can't drift apart.
@@ -38,13 +38,19 @@ const BRANCH_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 export const OID_RE = /^[0-9a-f]{40}$/;
 
 /**
+ * Branch names to the oids at their tips, `{ "<branch>": "<oid>" }`. In an
+ * *expected* map an oid may be "", meaning "this branch does not exist yet".
+ */
+export type RefMap = Record<string, string>;
+
+/**
  * Whether `name` is a branch name we will store.
  *
  * The exclusions past the character set are git's own: `..` is how a revision
  * range is written, a ref file may not end in `.lock` (the name git gives its own
  * lock files), and a ref may not end in a dot at all.
  */
-export function isBranchName(name) {
+export function isBranchName(name: unknown): name is string {
   if (typeof name !== "string") return false;
   if (name.length === 0 || name.length > MAX_BRANCH_NAME) return false;
   if (!BRANCH_NAME_RE.test(name)) return false;
@@ -65,9 +71,9 @@ export function isBranchName(name) {
  * separator where there is one nearby: cutting "Shorter-sections" to
  * "Shorter-sec" reads worse than cutting it to "Shorter".
  *
- * @returns {string} A valid branch name, or "" when nothing usable was left.
+ * @returns A valid branch name, or "" when nothing usable was left.
  */
-export function toBranchName(label) {
+export function toBranchName(label: string | null | undefined): string {
   let name = (label || "")
     .trim()
     .replace(/\s+/g, "-")
@@ -89,7 +95,7 @@ export function toBranchName(label) {
 }
 
 /** What to show a person for a branch name. The inverse of toBranchName's spaces. */
-export function branchLabel(name) {
+export function branchLabel(name: string | null | undefined): string {
   return (name || "").replace(/-/g, " ");
 }
 
@@ -102,11 +108,11 @@ export function branchLabel(name) {
  * reading a response. An unparseable or over-long map is null rather than a
  * partial one, so a caller can't half-apply somebody's intent.
  *
- * @returns {object|null} The validated map, or null if it is not one.
+ * @returns The validated map, or null if it is not one.
  */
-export function parseRefMap(json) {
+export function parseRefMap(json: unknown): RefMap | null {
   if (!json) return null;
-  let value;
+  let value: unknown;
   try {
     value = typeof json === "string" ? JSON.parse(json) : json;
   } catch {
@@ -117,10 +123,10 @@ export function parseRefMap(json) {
   const names = Object.keys(value);
   if (names.length > MAX_BRANCHES) return null;
 
-  const map = {};
+  const map: RefMap = {};
   for (const name of names) {
     if (!isBranchName(name)) return null;
-    const oid = value[name];
+    const oid = (value as Record<string, unknown>)[name];
     // An empty string is meaningful in an *expected* map: "I believe this branch
     // does not exist yet". Callers that don't accept absence reject it themselves.
     if (oid === "") {
@@ -134,8 +140,9 @@ export function parseRefMap(json) {
 }
 
 /** A ref map as it travels: compact JSON, keys sorted so it is stable to compare. */
-export function serializeRefMap(map) {
-  const out = {};
-  for (const name of Object.keys(map || {}).sort()) out[name] = map[name];
+export function serializeRefMap(map: RefMap | null | undefined): string {
+  const source = map || {};
+  const out: RefMap = {};
+  for (const name of Object.keys(source).sort()) out[name] = source[name];
   return JSON.stringify(out);
 }

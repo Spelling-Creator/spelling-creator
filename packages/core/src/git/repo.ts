@@ -11,14 +11,29 @@
 // the browser and node:fs in tests. See fs.js for the browser binding.
 
 import * as git from "isomorphic-git";
+import type { PromiseFsClient } from "isomorphic-git";
+import type { LessonDoc } from "../types.ts";
 import {
   readBlockOids,
   readDocTree,
   readManifest,
   writeDocTree,
 } from "./layout.ts";
-import { describeOps, diffDocs } from "./ops.ts";
-import { DEFAULT_BRANCH, isBranchName } from "./refs.ts";
+import { describeOps, diffDocs, type Op } from "./ops.ts";
+import { DEFAULT_BRANCH, isBranchName, type RefMap } from "./refs.ts";
+
+/**
+ * Where a lesson's repository lives: a filesystem and the bare gitdir on it.
+ *
+ * The filesystem is isomorphic-git's promise-style client, which LightningFS,
+ * node:fs and memFs all are. It has to be that one rather than the callback
+ * style, because this code calls `fs.promises` itself as well as handing `fs`
+ * on to isomorphic-git.
+ */
+export interface GitContext {
+  fs: PromiseFsClient;
+  gitdir: string;
+}
 
 // The branch a lesson *is*. A lesson can hold several — see the block below —
 // but exactly one of them is what the hub publishes, what a reader sees, and
@@ -40,10 +55,12 @@ export const BRANCH_REF = `refs/heads/${BRANCH}`;
 export const HEADS_PREFIX = "refs/heads/";
 
 /** The full ref for a branch name. */
-export const branchRef = (name) => `${HEADS_PREFIX}${name}`;
+export const branchRef = (name: string): string => `${HEADS_PREFIX}${name}`;
 
 /** The branch name in a full ref, or the ref unchanged if it isn't one. */
-export const branchNameOf = (ref) =>
+export const branchNameOf = <T extends string | null | undefined>(
+  ref: T,
+): string | T =>
   ref?.startsWith(HEADS_PREFIX) ? ref.slice(HEADS_PREFIX.length) : ref;
 
 // A branch the author deleted, remembered until the deletion has been pushed.
@@ -71,9 +88,30 @@ export const UPSTREAM_REF = "refs/remotes/upstream/main";
  * reviewed. One per request, so two open proposals on the same lesson never
  * overwrite each other's tip.
  */
-export const pullRef = (pullId) => `refs/remotes/pull/${pullId}`;
+export const pullRef = (pullId: string): string =>
+  `refs/remotes/pull/${pullId}`;
 
-const DEFAULT_AUTHOR = { name: "Spelling Creator", email: "lessons@local" };
+/** The name and address a commit is signed with. */
+export interface Signature {
+  name: string;
+  email: string;
+}
+
+/**
+ * Who a commit is by, as the signed-in user describes themselves. Only `uid`
+ * and `name` are read; an `email` is accepted and ignored (see
+ * COMMIT_EMAIL_DOMAIN).
+ */
+export interface CommitIdentity {
+  uid?: string | null;
+  name?: string | null;
+  email?: string | null;
+}
+
+const DEFAULT_AUTHOR: Signature = {
+  name: "Spelling Creator",
+  email: "lessons@local",
+};
 
 // A commit's address is never anyone's real email. A published lesson's pack
 // is public (that is what makes forking public), and every signature in it
@@ -90,13 +128,13 @@ export const COMMIT_EMAIL_DOMAIN = "users.spelling-creator.invalid";
 const UID_RE = /^[A-Za-z0-9-]{1,64}$/;
 
 /** The address a commit is signed with for this account, or null without one. */
-export function commitEmail(uid) {
+export function commitEmail(uid: string | null | undefined): string | null {
   const id = String(uid || "").trim();
   return UID_RE.test(id) ? `${id.toLowerCase()}@${COMMIT_EMAIL_DOMAIN}` : null;
 }
 
 /** A name made safe to sit in a signature: one line, no angle brackets. */
-function signatureName(name) {
+function signatureName(name: string | null | undefined) {
   return String(name || "")
     .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
@@ -109,7 +147,9 @@ function signatureName(name) {
  * `identity` is `{ uid, name }`. An `email` on it is ignored on purpose; see
  * COMMIT_EMAIL_DOMAIN.
  */
-export function authorFrom(identity) {
+export function authorFrom(
+  identity: CommitIdentity | null | undefined,
+): Signature {
   const name = signatureName(identity?.name);
   const email = commitEmail(identity?.uid);
   if (!name && !email) return DEFAULT_AUTHOR;
@@ -133,13 +173,14 @@ const CO_AUTHOR_RE = /^co-authored-by:\s*(.*?)\s*<([^<>\s]+)>\s*$/i;
  * The author is never credited twice (an assistant connected on their own
  * account edits under their id), and nor is anyone listed twice.
  *
- * @param {Array<{ uid: string, name?: string }>} coAuthors
- * @param {{ email: string }} author  The commit's own signature.
- * @returns {string[]}
+ * @param author  The commit's own signature.
  */
-export function coAuthorTrailers(coAuthors, author) {
+export function coAuthorTrailers(
+  coAuthors: CommitIdentity[] | null | undefined,
+  author: { email: string } | null | undefined,
+): string[] {
   const seen = new Set([author?.email]);
-  const lines = [];
+  const lines: string[] = [];
   for (const person of Array.isArray(coAuthors) ? coAuthors : []) {
     const email = commitEmail(person?.uid);
     if (!email || seen.has(email)) continue;
@@ -151,7 +192,7 @@ export function coAuthorTrailers(coAuthors, author) {
 }
 
 /** Add trailers to a commit message, as git expects: after a blank line, last. */
-function withTrailers(message, trailers) {
+function withTrailers(message: string, trailers: string[]) {
   if (!trailers.length) return message;
   return `${message.trimEnd()}\n\n${trailers.join("\n")}\n`;
 }
@@ -161,15 +202,13 @@ function withTrailers(message, trailers) {
  * trailers. Only the final paragraph counts, which is where git looks too, so
  * a line in the body that happens to start the same way is not mistaken for
  * one.
- *
- * @returns {Array<{ name: string, email: string }>}
  */
-export function readCoAuthors(message) {
+export function readCoAuthors(message: string | null | undefined): Signature[] {
   const paragraphs = String(message || "")
     .trimEnd()
     .split(/\n\s*\n/);
   const last = paragraphs.length > 1 ? paragraphs[paragraphs.length - 1] : "";
-  const people = [];
+  const people: Signature[] = [];
   for (const line of last.split("\n")) {
     const match = CO_AUTHOR_RE.exec(line.trim());
     if (match) people.push({ name: match[1], email: match[2] });
@@ -178,12 +217,12 @@ export function readCoAuthors(message) {
 }
 
 /** Create the repository if it isn't there yet. Safe to call on every open. */
-export async function ensureRepo({ fs, gitdir }) {
+export async function ensureRepo({ fs, gitdir }: GitContext): Promise<void> {
   if (await exists(fs, `${gitdir}/config`)) return;
   await git.init({ fs, gitdir, bare: true, defaultBranch: BRANCH });
 }
 
-async function exists(fs, path) {
+async function exists(fs: PromiseFsClient, path: string) {
   try {
     await fs.promises.stat(path);
     return true;
@@ -199,7 +238,10 @@ async function exists(fs, path) {
  * HEAD was anything but decorative as well as the moment before the first commit
  * exists.
  */
-export async function currentBranch({ fs, gitdir }) {
+export async function currentBranch({
+  fs,
+  gitdir,
+}: GitContext): Promise<string> {
   try {
     const name = await git.currentBranch({ fs, gitdir, fullname: false });
     return name && isBranchName(name) ? name : BRANCH;
@@ -209,7 +251,7 @@ export async function currentBranch({ fs, gitdir }) {
 }
 
 /** The ref HEAD points at — what a commit will move. */
-export async function currentBranchRef(ctx) {
+export async function currentBranchRef(ctx: GitContext): Promise<string> {
   return branchRef(await currentBranch(ctx));
 }
 
@@ -219,7 +261,11 @@ export async function currentBranchRef(ctx) {
  * With no `ref` this answers for the branch being edited, which is what almost
  * every caller means. Pass one to ask about a particular branch.
  */
-export async function headOid({ fs, gitdir, ref }) {
+export async function headOid({
+  fs,
+  gitdir,
+  ref,
+}: GitContext & { ref?: string | null }): Promise<string | null> {
   try {
     return await git.resolveRef({
       fs,
@@ -232,19 +278,30 @@ export async function headOid({ fs, gitdir, ref }) {
 }
 
 /** The tree oid of a commit. */
-export async function treeOfCommit({ fs, gitdir, oid }) {
+export async function treeOfCommit({
+  fs,
+  gitdir,
+  oid,
+}: GitContext & { oid: string }): Promise<string> {
   const { commit } = await git.readCommit({ fs, gitdir, oid });
   return commit.tree;
 }
 
 /** The doc as it stood at a given commit. */
-export async function readDocAt({ fs, gitdir, oid }) {
+export async function readDocAt({
+  fs,
+  gitdir,
+  oid,
+}: GitContext & { oid: string }): Promise<LessonDoc> {
   const treeOid = await treeOfCommit({ fs, gitdir, oid });
   return readDocTree({ fs, gitdir, treeOid });
 }
 
 /** The doc at HEAD, or null when the repo has no commits yet. */
-export async function readHeadDoc({ fs, gitdir }) {
+export async function readHeadDoc({
+  fs,
+  gitdir,
+}: GitContext): Promise<LessonDoc | null> {
   const head = await headOid({ fs, gitdir });
   if (!head) return null;
   return readDocAt({ fs, gitdir, oid: head });
@@ -259,15 +316,14 @@ export async function readHeadDoc({ fs, gitdir }) {
  * content by hash. So the periodic autocommit can fire as often as it likes and
  * a lesson that hasn't changed never gains an empty commit.
  *
- * @param {object}   args.doc       The document to commit.
- * @param {object}   [args.author]  { uid, name } — defaults to a generic signature.
- * @param {object[]} [args.coAuthors] { uid, name } for each person whose edits
- *                                  from a live session this commit holds; each
- *                                  becomes a `Co-authored-by` trailer.
- * @param {string}   [args.message] Overrides the message derived from the ops.
- * @param {string[]} [args.parents] Overrides the parents (a merge passes two).
- * @returns {Promise<{ oid: string, ops: object[] } | null>} null when there was
- *          nothing to commit.
+ * @param args.doc       The document to commit.
+ * @param args.author    { uid, name }, or a generic signature without one.
+ * @param args.coAuthors { uid, name } for each person whose edits from a live
+ *                       session this commit holds; each becomes a
+ *                       `Co-authored-by` trailer.
+ * @param args.message   Overrides the message derived from the ops.
+ * @param args.parents   Overrides the parents (a merge passes two).
+ * @returns null when there was nothing to commit.
  */
 export async function commitDoc({
   fs,
@@ -277,7 +333,13 @@ export async function commitDoc({
   coAuthors,
   message,
   parents,
-}) {
+}: GitContext & {
+  doc: LessonDoc;
+  author?: CommitIdentity | null;
+  coAuthors?: CommitIdentity[] | null;
+  message?: string;
+  parents?: string[];
+}): Promise<{ oid: string; ops: Op[] } | null> {
   await ensureRepo({ fs, gitdir });
 
   // Whatever HEAD points at — the lesson itself, or the variation being tried
@@ -326,6 +388,22 @@ export async function commitDoc({
   return { oid, ops };
 }
 
+/** One commit in the lesson's history, as the history list shows it. */
+export interface HistoryEntry {
+  oid: string;
+  message: string;
+  /** The message's first line. */
+  summary: string;
+  /** The author's name. */
+  author: string;
+  /** The names the commit's `Co-authored-by` trailers credit. */
+  coAuthors: string[];
+  /** When it was authored, in milliseconds. */
+  timestamp: number;
+  parents: string[];
+  isMerge: boolean;
+}
+
 /**
  * The lesson's history, newest first.
  *
@@ -338,10 +416,15 @@ export async function commitDoc({
  * `coAuthors` names the people a commit's trailers credit alongside its author
  * (see coAuthorTrailers), so a commit taken during a live session can say who
  * was editing.
- *
- * @returns {Promise<Array<{ oid, message, summary, author, coAuthors, timestamp, parents, isMerge }>>}
  */
-export async function history({ fs, gitdir, depth = 100, ref }) {
+export async function history({
+  fs,
+  gitdir,
+  depth = 100,
+  ref,
+}: GitContext & { depth?: number; ref?: string | null }): Promise<
+  HistoryEntry[]
+> {
   // Only the implicit case needs the "is there anything here yet" guard: an
   // explicit oid a caller handed us says nothing about whether HEAD resolves.
   const target = ref || (await currentBranchRef({ fs, gitdir }));
@@ -368,11 +451,16 @@ export async function history({ fs, gitdir, depth = 100, ref }) {
  * Content is only read for `block.edit`, to name the fields that differ, and for
  * moves, which are read out of the two manifests.
  *
- * @param {string|null} fromOid  The older commit (null = the empty tree, i.e. the root commit).
- * @param {string}      toOid    The newer commit.
- * @returns {Promise<object[]>} ops, in the same shape diffDocs produces.
+ * @param fromOid  The older commit (null = the empty tree, i.e. the root commit).
+ * @param toOid    The newer commit.
+ * @returns ops, in the same shape diffDocs produces.
  */
-export async function diffCommits({ fs, gitdir, fromOid, toOid }) {
+export async function diffCommits({
+  fs,
+  gitdir,
+  fromOid,
+  toOid,
+}: GitContext & { fromOid: string | null; toOid: string }): Promise<Op[]> {
   const before = fromOid ? await readDocAt({ fs, gitdir, oid: fromOid }) : null;
   const after = await readDocAt({ fs, gitdir, oid: toOid });
   return diffDocs(before, after);
@@ -383,7 +471,11 @@ export async function diffCommits({ fs, gitdir, fromOid, toOid }) {
  * as "what this merge brought in, relative to our side". The root commit has no
  * parent, so it diffs against nothing and reads as the lesson's starting state.
  */
-export async function diffFromParent({ fs, gitdir, oid }) {
+export async function diffFromParent({
+  fs,
+  gitdir,
+  oid,
+}: GitContext & { oid: string }): Promise<Op[]> {
   const { commit } = await git.readCommit({ fs, gitdir, oid });
   return diffCommits({
     fs,
@@ -398,7 +490,16 @@ export async function diffFromParent({ fs, gitdir, oid }) {
  * and removed — computed from tree entries alone (one readTree per side, no blob
  * reads). This is the cheap path the history list uses to badge each commit.
  */
-export async function changedBlockIds({ fs, gitdir, fromOid, toOid }) {
+export async function changedBlockIds({
+  fs,
+  gitdir,
+  fromOid,
+  toOid,
+}: GitContext & { fromOid: string | null; toOid: string }): Promise<{
+  added: string[];
+  removed: string[];
+  changed: string[];
+}> {
   const after = await readBlockOids({
     fs,
     gitdir,
@@ -410,11 +511,11 @@ export async function changedBlockIds({ fs, gitdir, fromOid, toOid }) {
         gitdir,
         treeOid: await treeOfCommit({ fs, gitdir, oid: fromOid }),
       })
-    : new Map();
+    : new Map<string, string>();
 
-  const added = [];
-  const removed = [];
-  const changed = [];
+  const added: string[] = [];
+  const removed: string[] = [];
+  const changed: string[] = [];
   for (const [id, oid] of after) {
     if (!before.has(id)) added.push(id);
     else if (before.get(id) !== oid) changed.push(id);
@@ -432,7 +533,16 @@ export async function changedBlockIds({ fs, gitdir, fromOid, toOid }) {
  * timeline and the restore itself can be undone by restoring again. Returns the
  * restored doc so the editor can adopt it.
  */
-export async function restoreCommit({ fs, gitdir, oid, author }) {
+export async function restoreCommit({
+  fs,
+  gitdir,
+  oid,
+  author,
+}: GitContext & { oid: string; author?: CommitIdentity | null }): Promise<{
+  doc: LessonDoc;
+  oid: string;
+  restored: boolean;
+}> {
   const doc = await readDocAt({ fs, gitdir, oid });
   const manifest = await readManifest({
     fs,
@@ -455,7 +565,11 @@ export async function restoreCommit({ fs, gitdir, oid, author }) {
 }
 
 /** Whether the working doc differs from what's committed at HEAD. */
-export async function pendingOps({ fs, gitdir, doc }) {
+export async function pendingOps({
+  fs,
+  gitdir,
+  doc,
+}: GitContext & { doc: LessonDoc }): Promise<Op[]> {
   const head = await headOid({ fs, gitdir });
   const committed = head ? await readDocAt({ fs, gitdir, oid: head }) : null;
   return diffDocs(committed, doc);
@@ -463,18 +577,32 @@ export async function pendingOps({ fs, gitdir, doc }) {
 
 // ---- Branches ---------------------------------------------------------------
 
+/** A branch, as listBranches describes it. */
+export interface BranchInfo {
+  name: string;
+  ref: string;
+  /** Its tip, or null on a branch with no commits yet. */
+  oid: string | null;
+  isDefault: boolean;
+  isCurrent: boolean;
+  /** How many commits it has that the default branch doesn't. */
+  ahead: number;
+}
+
 /**
  * Every branch in the repository, with the one being edited marked.
  *
  * `ahead` is how many commits this branch has that the default branch doesn't —
  * which is the only number about a variation anybody actually wants: how much
  * work is sitting on it. The default branch's own `ahead` is 0 by definition.
- *
- * @returns {Promise<Array<{ name, ref, oid, isDefault, isCurrent, ahead }>>}
  */
-export async function listBranches({ fs, gitdir, depth = 200 }) {
+export async function listBranches({
+  fs,
+  gitdir,
+  depth = 200,
+}: GitContext & { depth?: number }): Promise<BranchInfo[]> {
   const [names, current] = await Promise.all([
-    git.listBranches({ fs, gitdir }).catch(() => []),
+    git.listBranches({ fs, gitdir }).catch((): string[] => []),
     currentBranch({ fs, gitdir }),
   ]);
 
@@ -509,7 +637,7 @@ export async function listBranches({ fs, gitdir, depth = 200 }) {
 
 // The lesson first, then the variations alphabetically. The default branch is not
 // one variation among others — it is the thing they are variations of.
-function sortBranches(a, b) {
+function sortBranches(a: string, b: string) {
   if (a === BRANCH) return -1;
   if (b === BRANCH) return 1;
   return a.localeCompare(b);
@@ -522,7 +650,17 @@ function sortBranches(a, b) {
  * answer for a very long history is worth less than a fast one. A branch that has
  * outrun the window reports the window, which reads as "a lot" and is true.
  */
-export async function aheadCount({ fs, gitdir, ours, theirs, depth = 200 }) {
+export async function aheadCount({
+  fs,
+  gitdir,
+  ours,
+  theirs,
+  depth = 200,
+}: GitContext & {
+  ours: string | null;
+  theirs: string | null;
+  depth?: number;
+}): Promise<number> {
   if (!ours || ours === theirs) return 0;
   if (!theirs) {
     const log = await git.log({ fs, gitdir, ref: ours, depth }).catch(() => []);
@@ -544,7 +682,16 @@ export async function aheadCount({ fs, gitdir, ours, theirs, depth = 200 }) {
  * Refuses to overwrite an existing branch: the caller asked to create one, and
  * silently moving somebody's work somewhere else is not a version of that.
  */
-export async function createBranch({ fs, gitdir, name, from }) {
+export async function createBranch({
+  fs,
+  gitdir,
+  name,
+  from,
+}: GitContext & { name: string; from?: string | null }): Promise<{
+  name: string;
+  ref: string;
+  oid: string;
+}> {
   if (!isBranchName(name)) throw new Error("That name can't be used.");
 
   const ref = branchRef(name);
@@ -576,9 +723,17 @@ export async function createBranch({ fs, gitdir, name, from }) {
  * update and no uncommitted state to carry over — the editor commits on a pause,
  * so anything worth keeping is already a commit on the branch being left.
  *
- * @returns {Promise<{ name, oid, doc }>} `doc` is null on a branch with no commits.
+ * @returns `doc` is null on a branch with no commits.
  */
-export async function checkoutBranch({ fs, gitdir, name }) {
+export async function checkoutBranch({
+  fs,
+  gitdir,
+  name,
+}: GitContext & { name: string }): Promise<{
+  name: string;
+  oid: string | null;
+  doc: LessonDoc | null;
+}> {
   if (!isBranchName(name)) throw new Error("That name can't be used.");
 
   const ref = branchRef(name);
@@ -604,7 +759,15 @@ export async function checkoutBranch({ fs, gitdir, name }) {
  * the branch would be gone and its commits unreachable, and interrupted this way
  * the worst case is a duplicate the author can delete.
  */
-export async function renameBranch({ fs, gitdir, from, to }) {
+export async function renameBranch({
+  fs,
+  gitdir,
+  from,
+  to,
+}: GitContext & { from: string; to: string }): Promise<{
+  name: string;
+  oid?: string;
+}> {
   if (from === BRANCH)
     throw new Error("The lesson itself can't be renamed here.");
   if (!isBranchName(to)) throw new Error("That name can't be used.");
@@ -643,7 +806,11 @@ export async function renameBranch({ fs, gitdir, from, to }) {
  * The default branch can't go — it is the lesson — and neither can the one being
  * edited, because there would then be no answer to "what am I looking at".
  */
-export async function deleteBranch({ fs, gitdir, name }) {
+export async function deleteBranch({
+  fs,
+  gitdir,
+  name,
+}: GitContext & { name: string }): Promise<boolean> {
   if (name === BRANCH) throw new Error("The lesson itself can't be deleted.");
   if ((await currentBranch({ fs, gitdir })) === name) {
     throw new Error("Switch to another version before deleting this one.");
@@ -657,7 +824,12 @@ export async function deleteBranch({ fs, gitdir, name }) {
   return true;
 }
 
-async function markDeleted({ fs, gitdir, name, oid }) {
+async function markDeleted({
+  fs,
+  gitdir,
+  name,
+  oid,
+}: GitContext & { name: string; oid: string }) {
   await git.writeRef({
     fs,
     gitdir,
@@ -673,12 +845,15 @@ async function markDeleted({ fs, gitdir, name, oid }) {
  * swapped against, so a push can't remove work somebody else put on that name in
  * the meantime.
  */
-export async function deletedBranches({ fs, gitdir }) {
+export async function deletedBranches({
+  fs,
+  gitdir,
+}: GitContext): Promise<RefMap> {
   const refs = await git
     .listRefs({ fs, gitdir, filepath: DELETED_PREFIX.replace(/\/$/, "") })
     .catch(() => []);
 
-  const out = {};
+  const out: RefMap = {};
   for (const name of refs) {
     if (!isBranchName(name)) continue;
     const oid = await headOid({ fs, gitdir, ref: `${DELETED_PREFIX}${name}` });
@@ -688,7 +863,11 @@ export async function deletedBranches({ fs, gitdir }) {
 }
 
 /** Forget a deletion, once the hub has been told about it. */
-export async function clearDeletedBranch({ fs, gitdir, name }) {
+export async function clearDeletedBranch({
+  fs,
+  gitdir,
+  name,
+}: GitContext & { name: string }): Promise<void> {
   await git
     .deleteRef({ fs, gitdir, ref: `${DELETED_PREFIX}${name}` })
     .catch(() => {});

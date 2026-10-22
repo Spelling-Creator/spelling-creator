@@ -10,7 +10,7 @@
 //   block.add   | block.remove   | block.edit     | block.move
 //   source.add  | source.remove  | source.edit    | sources.reorder
 //
-// Because blocks carry stable ids (lib/id.js) this diff is exact where a textual
+// Because blocks carry stable ids (../id.ts) this diff is exact where a textual
 // diff would only guess: a block dragged between sections is a `block.move`, not
 // a delete plus an unrelated add, and a block whose text changed is a `block.edit`
 // even if it also moved. Ops are what the commit message is written from, and
@@ -18,19 +18,79 @@
 //
 // The same op list is derivable two ways, and both are used:
 //   - diffDocs(prev, next)          in-memory, for the pending-changes indicator
-//   - diffTrees(...) in repo.js     from two commits' block-id -> blob-oid maps
+//   - diffTrees(...) in repo.ts     from two commits' block-id -> blob-oid maps
 // They agree by construction, because a block's blob oid is a hash of its
-// canonical JSON (see layout.js).
+// canonical JSON (see layout.ts).
 
-// From doc.js, not layout.js: these are pure, so the diff (and the history UI
+// From doc.ts, not layout.ts: these are pure, so the diff (and the history UI
 // that renders it) never pulls the git engine into the main bundle.
-import { canonicalJson, docBlocks } from "./doc.ts";
+import { canonicalJson, docBlocks, type DocLike } from "./doc.ts";
+import type { Block, Section, Source } from "../types.ts";
+
+export type BlockType = Block["type"];
+
+/** One operation of an edit, as diffDocs recovers it. */
+export type Op =
+  | { op: "title.set"; from: string; to: string }
+  | { op: "ageRange.set"; from: string | null; to: string | null }
+  | { op: "section.add"; sectionId: string; name: string; index: number }
+  | { op: "section.remove"; sectionId: string; name: string }
+  | { op: "section.rename"; sectionId: string; from: string; to: string }
+  | {
+      op: "section.move";
+      sectionId: string;
+      name: string;
+      from: number;
+      to: number;
+    }
+  | {
+      op: "block.add";
+      blockId: string;
+      blockType: BlockType;
+      sectionId?: string;
+      index?: number;
+    }
+  | {
+      op: "block.remove";
+      blockId: string;
+      blockType: BlockType;
+      sectionId?: string;
+    }
+  | {
+      op: "block.edit";
+      blockId: string;
+      blockType: BlockType;
+      sectionId?: string;
+      /** The fields that changed, sorted (see changedFields). */
+      fields: string[];
+    }
+  | {
+      op: "block.move";
+      blockId: string;
+      blockType: BlockType;
+      fromSectionId: string;
+      toSectionId: string;
+      fromIndex: number;
+      toIndex: number;
+    }
+  | { op: "source.add"; sourceId: string; name: string }
+  | { op: "source.remove"; sourceId: string; name: string }
+  | { op: "source.edit"; sourceId: string; name: string; fields: string[] }
+  | { op: "sources.reorder" };
+
+export type OpKind = Op["op"];
 
 /** Deep value equality via canonical JSON — key order can't cause a false diff. */
-export function sameValue(a, b) {
+export function sameValue(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
   return canonicalJson(a) === canonicalJson(b);
+}
+
+// A block's or a source's field by name. Their interfaces have no index
+// signature, so a field only known at runtime is read through this.
+function fieldOf(value: object | null | undefined, key: string): unknown {
+  return (value as Record<string, unknown> | null | undefined)?.[key];
 }
 
 /**
@@ -38,23 +98,27 @@ export function sameValue(a, b) {
  * are excluded: `id` is the block's identity (equal by construction here) and a
  * block's `type` never changes in the editor — a retyped block is a new block.
  */
-export function changedFields(before, after) {
+export function changedFields(
+  before: object | null | undefined,
+  after: object | null | undefined,
+): string[] {
   const keys = new Set([
     ...Object.keys(before || {}),
     ...Object.keys(after || {}),
   ]);
   keys.delete("id");
   keys.delete("type");
-  const changed = [];
+  const changed: string[] = [];
   for (const key of keys) {
-    if (!sameValue(before?.[key], after?.[key])) changed.push(key);
+    if (!sameValue(fieldOf(before, key), fieldOf(after, key)))
+      changed.push(key);
   }
   return changed.sort();
 }
 
 // Where each block lives in a doc: blockId -> { sectionId, index }.
-function blockPositions(doc) {
-  const positions = new Map();
+function blockPositions(doc: DocLike) {
+  const positions = new Map<string, { sectionId: string; index: number }>();
   for (const section of doc?.sections || []) {
     (section.blocks || []).forEach((block, index) => {
       positions.set(block.id, { sectionId: section.id, index });
@@ -63,8 +127,8 @@ function blockPositions(doc) {
   return positions;
 }
 
-function sectionIndex(doc) {
-  const sections = new Map();
+function sectionIndex(doc: DocLike) {
+  const sections = new Map<string, { section: Section; index: number }>();
   (doc?.sections || []).forEach((section, index) => {
     sections.set(section.id, { section, index });
   });
@@ -74,12 +138,12 @@ function sectionIndex(doc) {
 /**
  * Diff two documents into an ordered list of operations.
  *
- * @param {object} prev  The document before the edit.
- * @param {object} next  The document after it.
- * @returns {Array<object>} ops — [] when the documents are equivalent.
+ * @param prev  The document before the edit.
+ * @param next  The document after it.
+ * @returns ops, or [] when the documents are equivalent.
  */
-export function diffDocs(prev, next) {
-  const ops = [];
+export function diffDocs(prev: DocLike, next: DocLike): Op[] {
+  const ops: Op[] = [];
 
   if (!sameValue(prev?.title, next?.title)) {
     ops.push({
@@ -207,19 +271,19 @@ export function diffDocs(prev, next) {
   return ops;
 }
 
-function sourceList(doc) {
+function sourceList(doc: DocLike): Source[] {
   return (Array.isArray(doc?.sources) ? doc.sources : []).filter(
     (source) => source && typeof source.id === "string",
   );
 }
 
-function sourceName(source) {
+function sourceName(source: Partial<Source> | undefined): string {
   return (source?.title || source?.url || source?.author || "").trim();
 }
 
 // The lesson's sources, compared by id the way blocks are.
-function diffSources(prev, next) {
-  const ops = [];
+function diffSources(prev: DocLike, next: DocLike): Op[] {
+  const ops: Op[] = [];
   const before = new Map(sourceList(prev).map((s) => [s.id, s]));
   const after = new Map(sourceList(next).map((s) => [s.id, s]));
 
@@ -245,7 +309,7 @@ function diffSources(prev, next) {
     }
   }
 
-  const kept = (list) =>
+  const kept = (list: Source[]) =>
     list.filter((s) => before.has(s.id) && after.has(s.id)).map((s) => s.id);
   if (!sameValue(kept(sourceList(prev)), kept(sourceList(next)))) {
     ops.push({ op: "sources.reorder" });
@@ -254,7 +318,7 @@ function diffSources(prev, next) {
 }
 
 // Human-readable names for block types, singular and plural.
-const TYPE_LABEL = {
+const TYPE_LABEL: Partial<Record<BlockType, readonly [string, string]>> = {
   text: ["text block", "text blocks"],
   image: ["image", "images"],
   spelling: ["spelling list", "spelling lists"],
@@ -262,20 +326,31 @@ const TYPE_LABEL = {
   vakt: ["VAKT activity", "VAKT activities"],
 };
 
-function label(type, count) {
+function label(type: BlockType, count: number) {
   const pair = TYPE_LABEL[type] || ["block", "blocks"];
   return count === 1 ? pair[0] : pair[1];
 }
 
-function phrase(verb, type, count) {
+function phrase(verb: string, type: BlockType, count: number) {
   return `${verb} ${count} ${label(type, count)}`;
 }
 
+function isKind<K extends OpKind>(
+  op: Op,
+  kind: K,
+): op is Extract<Op, { op: K }> {
+  return op.op === kind;
+}
+
 // Group ops of one kind by block type and render them as "added 2 questions".
-function summarizeKind(ops, kind, verb) {
-  const counts = new Map();
+function summarizeKind(
+  ops: Op[],
+  kind: "block.add" | "block.edit" | "block.remove",
+  verb: string,
+) {
+  const counts = new Map<BlockType, number>();
   for (const op of ops) {
-    if (op.op !== kind) continue;
+    if (!isKind(op, kind)) continue;
     counts.set(op.blockType, (counts.get(op.blockType) || 0) + 1);
   }
   return [...counts].map(([type, count]) => phrase(verb, type, count));
@@ -286,9 +361,9 @@ function summarizeKind(ops, kind, verb) {
  * listing each op. The summary is what the history timeline shows.
  *
  * "Untitled change" is never produced — describeOps is only called with a
- * non-empty op list (an empty one means nothing to commit; see repo.js).
+ * non-empty op list (an empty one means nothing to commit; see repo.ts).
  */
-export function describeOps(ops) {
+export function describeOps(ops: Op[]): string {
   // Verbs stay lowercase here and the whole summary is sentence-cased at the
   // end, so a multi-part summary reads "Add 1 image, remove 2 questions".
   const parts = [
@@ -346,7 +421,7 @@ export function describeOps(ops) {
 }
 
 /** One op as a single line, for the commit body and the history detail view. */
-export function describeOp(op) {
+export function describeOp(op: Op): string {
   switch (op.op) {
     case "title.set":
       return `- retitle: "${op.from}" -> "${op.to}"`;
@@ -376,12 +451,14 @@ export function describeOp(op) {
       return `- edit source "${op.name}" (${op.fields.join(", ")})`;
     case "sources.reorder":
       return "- reorder sources";
-    default:
-      return `- ${op.op}`;
+    default: {
+      const unknownOp: { op: string } = op;
+      return `- ${unknownOp.op}`;
+    }
   }
 }
 
 /** The summary line of a commit message (what the timeline renders). */
-export function summaryOf(message) {
+export function summaryOf(message: string | null | undefined): string {
   return (message || "").split("\n")[0].trim();
 }

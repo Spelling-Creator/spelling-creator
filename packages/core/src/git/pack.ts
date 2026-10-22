@@ -11,7 +11,7 @@
 //
 // That shared ancestry is the whole payoff. Because the fork's history and the
 // original's descend from commits with identical oids, git can find their merge
-// base — which is what lets merge.js do a real *three*-way merge (base/ours/
+// base — which is what lets merge.ts do a real *three*-way merge (base/ours/
 // theirs) later on, instead of guessing at two.
 //
 // Lesson images are NOT in the pack. Blocks reference images by content hash and
@@ -19,6 +19,7 @@
 // a pack is pure JSON and stays small.
 
 import * as git from "isomorphic-git";
+import type { PromiseFsClient } from "isomorphic-git";
 import { newId } from "../id.ts";
 import {
   BRANCH,
@@ -27,8 +28,31 @@ import {
   branchRef,
   ensureRepo,
   headOid,
+  type GitContext,
 } from "./repo.ts";
-import { isBranchName } from "./refs.ts";
+import { isBranchName, type RefMap } from "./refs.ts";
+
+/** A lesson's history, packed for upload: what packRepo returns. */
+export interface PackedRepo {
+  packfile: Uint8Array<ArrayBuffer>;
+  filename: string;
+  /** The tip of the branch the pack is for. */
+  head: string;
+  /** Every packed branch name to its tip. */
+  refs: RefMap;
+}
+
+/**
+ * A pack on its way in. `filename` is the one packRepo chose, which a pack
+ * downloaded from a hub arrives without, and `refs` is absent on a pack from
+ * before a lesson could have more than one branch.
+ */
+export interface IncomingPack {
+  packfile: Uint8Array;
+  filename?: string | null;
+  head: string;
+  refs?: RefMap | null;
+}
 
 /**
  * Every object reachable from a commit: the commit itself, its ancestors, and
@@ -40,12 +64,17 @@ import { isBranchName } from "./refs.ts";
  * doesn't re-send history the receiver already has: identical content has an
  * identical oid.
  */
-export async function reachableOids({ fs, gitdir, oid }) {
-  const oids = new Set();
+export async function reachableOids({
+  fs,
+  gitdir,
+  oid,
+}: GitContext & { oid: string }): Promise<string[]> {
+  const oids = new Set<string>();
   const commits = [oid];
 
   while (commits.length > 0) {
-    const commitOid = commits.pop();
+    // The loop only runs while there is one to take.
+    const commitOid = commits.pop()!;
     if (oids.has(commitOid)) continue;
     oids.add(commitOid);
 
@@ -59,7 +88,12 @@ export async function reachableOids({ fs, gitdir, oid }) {
   return [...oids];
 }
 
-async function collectTree({ fs, gitdir, oid, oids }) {
+async function collectTree({
+  fs,
+  gitdir,
+  oid,
+  oids,
+}: GitContext & { oid: string; oids: Set<string> }) {
   if (oids.has(oid)) return; // shared subtree — already packed
   oids.add(oid);
 
@@ -82,21 +116,27 @@ async function collectTree({ fs, gitdir, oid, oids }) {
  * lesson share nearly all of their objects, and reachableOids dedupes by oid, so
  * a second variation adds only the commits that are actually unique to it.
  *
- * @param {string[]} [args.only] Restrict the pack to these branches. A proposal
- *        offers one version of the lesson, not every variation its author
- *        happens to have open, so submitPullRequest asks for a single branch.
- * @param {string} [args.headBranch] Which branch the pack's `head` names. The
- *        default branch — the lesson — unless the caller says otherwise, which a
+ * @param args.only Restrict the pack to these branches. A proposal offers one
+ *        version of the lesson, not every variation its author happens to have
+ *        open, so submitPullRequest asks for a single branch.
+ * @param args.headBranch Which branch the pack's `head` names. The default
+ *        branch (the lesson) unless the caller says otherwise, which a
  *        proposal does: it offers the branch its author was working on.
- * @returns {Promise<{ packfile: Uint8Array, filename: string, head: string, refs: object } | null>}
- *          `refs` maps every packed branch name to its tip. null when there is
- *          nothing to send.
+ * @returns null when there is nothing to send.
  */
-export async function packRepo({ fs, gitdir, only, headBranch = BRANCH }) {
+export async function packRepo({
+  fs,
+  gitdir,
+  only,
+  headBranch = BRANCH,
+}: GitContext & {
+  only?: string[] | null;
+  headBranch?: string;
+}): Promise<PackedRepo | null> {
   const names =
     only || (await git.listBranches({ fs, gitdir }).catch(() => []));
 
-  const refs = {};
+  const refs: RefMap = {};
   for (const name of names) {
     if (!isBranchName(name)) continue; // not one of ours; don't publish it
     const oid = await headOid({ fs, gitdir, ref: branchRef(name) });
@@ -108,7 +148,7 @@ export async function packRepo({ fs, gitdir, only, headBranch = BRANCH }) {
   const head = refs[headBranch] || null;
   if (!head) return null;
 
-  const oids = new Set();
+  const oids = new Set<string>();
   for (const oid of Object.values(refs)) {
     for (const reachable of await reachableOids({ fs, gitdir, oid })) {
       oids.add(reachable);
@@ -122,7 +162,8 @@ export async function packRepo({ fs, gitdir, only, headBranch = BRANCH }) {
     write: false,
   });
 
-  return { packfile, filename, head, refs };
+  // Only a pack written straight to disk comes back without its bytes.
+  return { packfile: packfile!, filename, head, refs };
 }
 
 /**
@@ -132,7 +173,12 @@ export async function packRepo({ fs, gitdir, only, headBranch = BRANCH }) {
  * (pack-<sha>.pack) and indexed in place, which is what makes its objects
  * readable — a .pack without its .idx is inert.
  */
-async function absorbPack({ fs, gitdir, packfile, filename }) {
+async function absorbPack({
+  fs,
+  gitdir,
+  packfile,
+  filename,
+}: GitContext & Pick<IncomingPack, "packfile" | "filename">) {
   const dir = `${gitdir}/objects/pack`;
   await mkdirp(fs, dir);
 
@@ -167,7 +213,7 @@ export async function cloneFromPack({
   filename,
   head,
   refs,
-}) {
+}: GitContext & IncomingPack): Promise<string> {
   await ensureRepo({ fs, gitdir });
   await absorbPack({ fs, gitdir, packfile, filename });
 
@@ -205,7 +251,7 @@ export async function cloneFromPack({
  *
  * The objects land in the same store as ours, so the commits the two histories
  * share are literally the same objects — findMergeBase can then walk both back to
- * their common ancestor. That ancestor is the `base` merge.js needs.
+ * their common ancestor. That ancestor is the `base` merge.ts needs.
  *
  * `ref` says *which* remote this is: UPSTREAM_REF for the lesson we forked from,
  * ORIGIN_REF for this lesson's own published history (which a trusted
@@ -225,7 +271,12 @@ export async function fetchRemotePack({
   ref = UPSTREAM_REF,
   refs,
   remote,
-}) {
+}: GitContext &
+  IncomingPack & {
+    ref?: string;
+    /** The remote's name, as in `refs/remotes/<remote>/<name>`. */
+    remote?: string | null;
+  }): Promise<string> {
   await ensureRepo({ fs, gitdir });
   await absorbPack({ fs, gitdir, packfile, filename });
   await git.writeRef({ fs, gitdir, ref, value: head, force: true });
@@ -246,7 +297,12 @@ export async function fetchRemotePack({
 }
 
 /** Whether `oid` has `ancestor` somewhere in its history (so it contains it). */
-export async function contains({ fs, gitdir, oid, ancestor }) {
+export async function contains({
+  fs,
+  gitdir,
+  oid,
+  ancestor,
+}: GitContext & { oid: string; ancestor: string }): Promise<boolean> {
   if (oid === ancestor) return true;
   try {
     return await git.isDescendent({ fs, gitdir, oid, ancestor });
@@ -260,16 +316,26 @@ export async function contains({ fs, gitdir, oid, ancestor }) {
  * (which happens when a lesson was forked before it had a repo — there, merging
  * degrades to a two-way compare, with `base` null).
  */
-export async function mergeBase({ fs, gitdir, ours, theirs }) {
+export async function mergeBase({
+  fs,
+  gitdir,
+  ours,
+  theirs,
+}: GitContext & { ours: string; theirs: string }): Promise<string | null> {
   try {
-    const bases = await git.findMergeBase({ fs, gitdir, oids: [ours, theirs] });
+    // isomorphic-git types the result as any[]; it is a list of commit oids.
+    const bases: string[] = await git.findMergeBase({
+      fs,
+      gitdir,
+      oids: [ours, theirs],
+    });
     return bases[0] || null;
   } catch {
     return null;
   }
 }
 
-async function mkdirp(fs, path) {
+async function mkdirp(fs: PromiseFsClient, path: string) {
   const parts = path.split("/").filter(Boolean);
   let current = "";
   for (const part of parts) {

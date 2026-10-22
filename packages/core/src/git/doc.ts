@@ -1,11 +1,38 @@
 // Document helpers shared by the version-control layer.
 //
-// These are deliberately kept free of any git dependency: the diff (ops.js) and
-// the merge (merge.js) are pure functions over documents, and the editor's
+// These are deliberately kept free of any git dependency: the diff (ops.ts) and
+// the merge (merge.ts) are pure functions over documents, and the editor's
 // history UI imports them. Only the modules that actually touch the object store
-// (layout.js, repo.js, pack.js, sync.js) pull in isomorphic-git, which lets the
+// (layout.ts, repo.ts, pack.ts, sync.js) pull in isomorphic-git, which lets the
 // whole git engine be loaded on demand rather than shipped to every visitor —
 // see load.js.
+
+import type { Block, LessonDoc, Source } from "../types.ts";
+
+/**
+ * A document as these helpers take it. They read every part of it defensively,
+ * so a missing doc (no previous commit, no merge base) or a half-built one is
+ * fine.
+ */
+export type DocLike = Partial<LessonDoc> | null | undefined;
+
+/** One section of a manifest: its name and its block ids, in order. */
+export interface ManifestSection {
+  id: string;
+  name: string;
+  blocks: string[];
+}
+
+/** The structure of a doc, without its block content (see docManifest). */
+export interface DocManifest {
+  title: string;
+  ageRange: string | null;
+  sections: ManifestSection[];
+  sources?: Source[];
+}
+
+/** A doc's blocks by id (see docBlocks). */
+export type BlockMap = Map<string, Block>;
 
 /**
  * Canonical JSON: object keys sorted, recursively. Arrays keep their order —
@@ -18,16 +45,17 @@
  * for identical content, and every such block would look "changed" on each
  * commit. Sorting the keys makes the oid depend only on content.
  */
-export function canonicalJson(value) {
+export function canonicalJson(value: unknown): string {
   return JSON.stringify(sortKeys(value), null, 2) + "\n";
 }
 
-function sortKeys(value) {
+function sortKeys(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortKeys);
   if (value && typeof value === "object") {
-    const out = {};
-    for (const key of Object.keys(value).sort())
-      out[key] = sortKeys(value[key]);
+    const fields = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(fields).sort())
+      out[key] = sortKeys(fields[key]);
     return out;
   }
   return value;
@@ -44,8 +72,8 @@ function sortKeys(value) {
  * renderers normalise them on the way out, and normalising here would make a
  * half-typed source differ from its own commit forever.
  */
-export function docManifest(doc) {
-  const manifest = {
+export function docManifest(doc: DocLike): DocManifest {
+  const manifest: DocManifest = {
     title: typeof doc?.title === "string" ? doc.title : "",
     ageRange: doc?.ageRange ?? null,
     sections: (doc?.sections || []).map((section) => ({
@@ -61,8 +89,8 @@ export function docManifest(doc) {
 }
 
 /** Every block in a doc, flattened to a Map of blockId -> block. */
-export function docBlocks(doc) {
-  const blocks = new Map();
+export function docBlocks(doc: DocLike): BlockMap {
+  const blocks: BlockMap = new Map();
   for (const section of doc?.sections || []) {
     for (const block of section.blocks || []) blocks.set(block.id, block);
   }
@@ -88,7 +116,9 @@ export function docBlocks(doc) {
  * (stripLocalFields), and put it back from the live document when one comes back
  * (preserveLocalFields).
  */
-const LOCAL_ONLY_FIELDS = ["trustedCollaborators"];
+const LOCAL_ONLY_FIELDS = [
+  "trustedCollaborators",
+] as const satisfies readonly (keyof LessonDoc)[];
 
 /**
  * Carry the local-only fields from the doc the user is editing onto a doc that
@@ -96,7 +126,10 @@ const LOCAL_ONLY_FIELDS = ["trustedCollaborators"];
  * adopting a document from a live session must not wipe the lesson's
  * trusted-collaborator list, which none of those ever saw.
  */
-export function preserveLocalFields(restored, current) {
+export function preserveLocalFields(
+  restored: LessonDoc,
+  current: DocLike,
+): LessonDoc {
   const doc = { ...restored };
   for (const field of LOCAL_ONLY_FIELDS) {
     if (current && current[field] !== undefined) doc[field] = current[field];
@@ -111,7 +144,7 @@ export function preserveLocalFields(restored, current) {
  * the blocks, and neither includes them). Anything that copies the document
  * wholesale, like the collaboration Y.Doc, has to drop them explicitly.
  */
-export function stripLocalFields(doc) {
+export function stripLocalFields<T extends DocLike>(doc: T): T {
   if (!doc || typeof doc !== "object") return doc;
   const out = { ...doc };
   for (const field of LOCAL_ONLY_FIELDS) delete out[field];
@@ -132,6 +165,9 @@ export const DRAFT_REPO = "draft";
  * `localId` is optional because the readers of a *published* lesson's repository
  * (the history tab, a proposal's diff) know its hub id and nothing else.
  */
-export function repoIdFor(lessonId, localId) {
+export function repoIdFor(
+  lessonId: string | null | undefined,
+  localId?: string | null,
+): string {
   return lessonId || localId || DRAFT_REPO;
 }

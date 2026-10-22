@@ -2,11 +2,12 @@
 // trying out".
 //
 // These drive the real engine over the in-memory filesystem, for the reason
-// memfs.test.js does: the contract that matters is not "we wrote a ref" but
+// memfs.test.ts does: the contract that matters is not "we wrote a ref" but
 // "isomorphic-git agrees, a pack carries it, and a clone gets it back". The
 // round trip below is exactly the one a second device makes.
 
 import { describe, expect, it } from "vitest";
+import type { LessonDoc, TextBlock } from "../types.ts";
 import { memRepo } from "./memfs.ts";
 import { cloneFromPack, packRepo } from "./pack.ts";
 import {
@@ -31,7 +32,7 @@ import {
 
 const author = { name: "Test", email: "test@example.com" };
 
-function doc(title, text) {
+function doc(title: string, text: string): LessonDoc {
   return {
     title,
     sections: [
@@ -126,7 +127,7 @@ describe("committing on a branch", () => {
     await commitDoc({ ...ctx, doc: doc("Lesson", "changed here"), author });
 
     const back = await checkoutBranch({ ...ctx, name: BRANCH });
-    expect(back.doc.sections[0].blocks[0].text).toBe("first");
+    expect((back.doc!.sections[0].blocks[0] as TextBlock).text).toBe("first");
     expect(await currentBranch(ctx)).toBe(BRANCH);
   });
 
@@ -138,8 +139,8 @@ describe("committing on a branch", () => {
 
     const branches = await listBranches(ctx);
     expect(branches.map((b) => b.name)).toEqual([BRANCH, "Fewer-pictures"]);
-    expect(branches.find((b) => b.name === BRANCH).ahead).toBe(0);
-    expect(branches.find((b) => b.name === "Fewer-pictures").ahead).toBe(2);
+    expect(branches.find((b) => b.name === BRANCH)?.ahead).toBe(0);
+    expect(branches.find((b) => b.name === "Fewer-pictures")?.ahead).toBe(2);
   });
 });
 
@@ -150,7 +151,7 @@ describe("travelling", () => {
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
     await checkoutBranch({ ...ctx, name: BRANCH });
 
-    const packed = await packRepo(ctx);
+    const packed = (await packRepo(ctx))!;
     expect(new Set(Object.keys(packed.refs))).toEqual(
       new Set([BRANCH, "Fewer-pictures"]),
     );
@@ -178,13 +179,13 @@ describe("travelling", () => {
     await createBranch({ ...ctx, name: "Fewer-pictures" });
     await commitDoc({ ...ctx, doc: doc("Lesson", "variation"), author });
 
-    const packed = await packRepo({ ...ctx, only: [BRANCH] });
+    const packed = (await packRepo({ ...ctx, only: [BRANCH] }))!;
     expect(Object.keys(packed.refs)).toEqual([BRANCH]);
   });
 
   it("treats a pack with no branch map as the one branch it has", async () => {
     const ctx = await seeded();
-    const packed = await packRepo(ctx);
+    const packed = (await packRepo(ctx))!;
 
     const clone = memRepo("clone");
     await cloneFromPack({ ...clone, ...packed, refs: null });

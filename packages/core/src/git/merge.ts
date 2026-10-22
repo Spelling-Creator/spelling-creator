@@ -31,7 +31,7 @@
 // a merged doc plus the conflicts. The caller (useLessonGit) fetches base/ours/
 // theirs out of git and commits the result with two parents.
 
-import { docBlocks } from "./doc.ts";
+import { docBlocks, type DocLike } from "./doc.ts";
 import { sameValue } from "./ops.ts";
 import { hasPicture, withSeparateCredit } from "../imageCredit.ts";
 import {
@@ -39,18 +39,98 @@ import {
   textBlockContent,
   textBlockPlain,
   withTextBlockContent,
+  type TextBlockFields,
 } from "../lessonText.ts";
+import type { Block, LessonDoc, Section, Source } from "../types.ts";
+
+/** One field both sides changed, to different values. */
+export interface FieldConflict {
+  field: string;
+  ours: unknown;
+  theirs: unknown;
+  /** undefined when the field wasn't in the base (or there was no base). */
+  base: unknown;
+}
+
+/** The result of merging one block (see mergeBlockFields). */
+export interface BlockMerge {
+  block: Block;
+  conflicts: FieldConflict[];
+}
+
+export type MergeSide = "ours" | "theirs";
+
+/** Both sides edited a block, and at least one field to different values. */
+export interface EditConflict {
+  blockId: string;
+  kind: "edit/edit";
+  ours: Block;
+  theirs: Block;
+  /** undefined when both sides added a block with this id. */
+  base: Block | undefined;
+  fields: FieldConflict[];
+  /** Every auto-resolvable field already merged, contested ones left at ours. */
+  merged: Block;
+}
+
+/** One side deleted a block the other edited. */
+export type DeleteConflict = {
+  blockId: string;
+  kind: "delete/edit";
+  base: Block;
+  fields: [];
+  /** The surviving edit. */
+  merged: Block;
+} & (
+  | { deletedBy: "theirs"; ours: Block; theirs: null }
+  | { deletedBy: "ours"; ours: null; theirs: Block }
+);
+
+export type MergeConflict = EditConflict | DeleteConflict;
+
+/** The block ids a merge settled on its own, for the summary. */
+export interface AutoMerged {
+  /** Changed on both sides, in different fields. */
+  merged: string[];
+  /** Changed on their side only. */
+  tookTheirs: string[];
+  /** Added on their side. */
+  added: string[];
+  /** Deleted on one side and untouched on the other, or deleted on both. */
+  removed: string[];
+}
+
+export interface MergeResult {
+  /** The merged doc, with contested blocks left at OUR value. */
+  doc: LessonDoc;
+  /** One per contested block; resolve with applyResolutions(). */
+  conflicts: MergeConflict[];
+  auto: AutoMerged;
+}
+
+/** A choice in the conflict dialog, for one block. */
+export type MergeChoice = MergeSide | "both";
+
+// A block or a source as a bag of fields, the way the merge compares them.
+type Fields = Record<string, unknown>;
+
+function fieldOf(value: object | null | undefined, key: string): unknown {
+  return (value as Fields | null | undefined)?.[key];
+}
 
 /** Fields that identify a block rather than describe it — never merged. */
 const IDENTITY_FIELDS = new Set(["id", "type"]);
 
 /**
  * Merge one block three ways, field by field.
- * @returns {{ block: object, conflicts: Array<{field, ours, theirs, base}> }}
- *          `block` holds every auto-resolvable field already merged; contested
+ * @returns `block` holds every auto-resolvable field already merged; contested
  *          fields are left at *our* value so the block is always renderable.
  */
-export function mergeBlockFields(base, ours, theirs) {
+export function mergeBlockFields(
+  base: Block | undefined,
+  ours: Block,
+  theirs: Block,
+): BlockMerge {
   // A picture from before credits had their own field keeps its credit inside
   // `caption`. Edited on one side, it comes back as a caption and a credit,
   // so a caption edit there and a credit fix on the other would both touch
@@ -58,7 +138,7 @@ export function mergeBlockFields(base, ours, theirs) {
   // met. Every side is compared with the two fields split (see
   // ../imageCredit.ts), which also leaves the merged block split.
   if ([base, ours, theirs].some(hasPicture)) {
-    const split = (b) => (b ? withSeparateCredit(b) : b);
+    const split = (b: Block | undefined) => (b ? withSeparateCredit(b) : b);
     return mergeFields(split(base), split(ours), split(theirs));
   }
   // A text block keeps its words in `text` or in `content` depending on whether
@@ -67,14 +147,16 @@ export function mergeBlockFields(base, ours, theirs) {
   // merge "cleanly", and lose the typo fix behind the formatted copy. Merged as
   // the one field they are, that is a conflict the user gets to see.
   if ([base, ours, theirs].some((b) => b?.type === "text")) {
-    const asContent = (b) => (b ? withContentField(b) : b);
+    const asContent = (b: Block | undefined) => (b ? withContentField(b) : b);
     const merged = mergeFields(
       asContent(base),
       asContent(ours),
       asContent(theirs),
     );
     return {
-      block: withTextBlockContent(merged.block, merged.block.content),
+      // The text helpers type a block by the fields they read; the rest of
+      // the block rides along untouched.
+      block: withTextBlockContent(merged.block, merged.block.content) as Block,
       conflicts: merged.conflicts.map(asTextConflict),
     };
   }
@@ -83,13 +165,13 @@ export function mergeBlockFields(base, ours, theirs) {
 
 // Two plain versions of the words are still a disagreement about `text`, and
 // are reported as one, with the strings themselves to choose between.
-function asTextConflict(conflict) {
+function asTextConflict(conflict: FieldConflict): FieldConflict {
   if (conflict.field !== "content") return conflict;
   const sides = [conflict.ours, conflict.theirs, conflict.base];
   if (!sides.every((side) => side === undefined || isPlainContent(side))) {
     return conflict;
   }
-  const plain = (side) =>
+  const plain = (side: unknown) =>
     side === undefined ? undefined : textBlockPlain({ content: side });
   return {
     field: "text",
@@ -99,25 +181,31 @@ function asTextConflict(conflict) {
   };
 }
 
-function withContentField(block) {
+function withContentField(block: TextBlockFields): TextBlockFields {
   const out = { ...block, content: textBlockContent(block) };
   delete out.text;
   return out;
 }
 
-function mergeFields(base, ours, theirs) {
+// `block` comes back as a B because it is made of the fields of B's: ours and
+// theirs, which are always the same block.
+function mergeFields<B extends object>(
+  base: B | undefined,
+  ours: B | undefined,
+  theirs: B | undefined,
+): { block: B; conflicts: FieldConflict[] } {
   const fields = new Set([
     ...Object.keys(ours || {}),
     ...Object.keys(theirs || {}),
   ]);
 
-  const block = {};
-  const conflicts = [];
+  const block: Fields = {};
+  const conflicts: FieldConflict[] = [];
 
   for (const field of fields) {
-    const o = ours?.[field];
-    const t = theirs?.[field];
-    const b = base?.[field];
+    const o = fieldOf(ours, field);
+    const t = fieldOf(theirs, field);
+    const b = fieldOf(base, field);
 
     if (IDENTITY_FIELDS.has(field)) {
       block[field] = o !== undefined ? o : t;
@@ -138,7 +226,7 @@ function mergeFields(base, ours, theirs) {
     }
   }
 
-  return { block, conflicts };
+  return { block: block as B, conflicts };
 }
 
 /**
@@ -153,7 +241,13 @@ function mergeFields(base, ours, theirs) {
  * merged against the kept blocks of the whole lesson, so it passes false, or
  * every other section's blocks would land in the first one.
  */
-function mergeIdList(base, ours, theirs, keep, { placeRest = true } = {}) {
+function mergeIdList(
+  base: string[],
+  ours: string[],
+  theirs: string[],
+  keep: Set<string>,
+  { placeRest = true }: { placeRest?: boolean } = {},
+): string[] {
   const baseSet = new Set(base);
   const ourSet = new Set(ours);
   const theirSet = new Set(theirs);
@@ -191,13 +285,13 @@ function mergeIdList(base, ours, theirs, keep, { placeRest = true } = {}) {
   return merged;
 }
 
-function sectionsById(doc) {
-  const map = new Map();
+function sectionsById(doc: DocLike) {
+  const map = new Map<string, Section>();
   for (const section of doc?.sections || []) map.set(section.id, section);
   return map;
 }
 
-function blockIdsOf(doc, sectionId) {
+function blockIdsOf(doc: DocLike, sectionId: string) {
   const section = sectionsById(doc).get(sectionId);
   return (section?.blocks || []).map((block) => block.id);
 }
@@ -205,16 +299,15 @@ function blockIdsOf(doc, sectionId) {
 /**
  * Merge two documents that share a common ancestor.
  *
- * @param {object|null} base    The doc at the merge base (null = unrelated histories).
- * @param {object} ours         Our doc.
- * @param {object} theirs       Theirs.
- * @returns {{
- *   doc: object,                the merged doc, with contested blocks left at OUR value
- *   conflicts: Array<object>,   one per contested block — resolve with applyResolutions()
- *   auto: { merged: string[], tookTheirs: string[], added: string[], removed: string[] }
- * }}
+ * @param base    The doc at the merge base (null = unrelated histories).
+ * @param ours    Our doc.
+ * @param theirs  Theirs.
  */
-export function mergeDocs(base, ours, theirs) {
+export function mergeDocs(
+  base: DocLike,
+  ours: DocLike,
+  theirs: DocLike,
+): MergeResult {
   const baseBlocks = docBlocks(base);
   const ourBlocks = docBlocks(ours);
   const theirBlocks = docBlocks(theirs);
@@ -226,9 +319,14 @@ export function mergeDocs(base, ours, theirs) {
   ]);
 
   /** blockId -> the resolved block, or null when the merge deletes it. */
-  const resolved = new Map();
-  const conflicts = [];
-  const auto = { merged: [], tookTheirs: [], added: [], removed: [] };
+  const resolved = new Map<string, Block | null>();
+  const conflicts: MergeConflict[] = [];
+  const auto: AutoMerged = {
+    merged: [],
+    tookTheirs: [],
+    added: [],
+    removed: [],
+  };
 
   for (const id of ids) {
     const b = baseBlocks.get(id);
@@ -294,7 +392,8 @@ export function mergeDocs(base, ours, theirs) {
       continue;
     }
 
-    // Both have it.
+    // Both have it: every other case was settled above.
+    if (!o || !t) continue;
     if (sameValue(o, t)) {
       resolved.set(id, o); // identical — nothing to decide
       continue;
@@ -341,8 +440,13 @@ export function mergeDocs(base, ours, theirs) {
  * Rebuild a doc from the resolved blocks, merging structure (section list,
  * section names, block order) around them.
  */
-function assemble(base, ours, theirs, resolved) {
-  const kept = new Set();
+function assemble(
+  base: DocLike,
+  ours: DocLike,
+  theirs: DocLike,
+  resolved: Map<string, Block | null>,
+): LessonDoc {
+  const kept = new Set<string>();
   for (const [id, block] of resolved) if (block) kept.add(id);
 
   const baseSections = sectionsById(base);
@@ -362,7 +466,7 @@ function assemble(base, ours, theirs, resolved) {
   // moved between sections on one side can't end up duplicated.
   const placed = new Set();
   /** sectionId -> its merged block ids, in order. */
-  const layout = new Map();
+  const layout = new Map<string, string[]>();
 
   for (const sectionId of sectionIds) {
     const blockIds = mergeIdList(
@@ -387,7 +491,8 @@ function assemble(base, ours, theirs, resolved) {
       const home = (doc?.sections || []).find((section) =>
         (section.blocks || []).some((b) => b.id === id),
       );
-      const blockIds = home && layout.get(home.id);
+      if (!home) continue;
+      const blockIds = layout.get(home.id);
       if (!blockIds) continue;
 
       const order = home.blocks.map((b) => b.id);
@@ -405,14 +510,20 @@ function assemble(base, ours, theirs, resolved) {
     }
   }
 
-  const sections = sectionIds.map((sectionId) => ({
+  // Every id placed or orphaned is in `kept`, so it resolved to a block.
+  const keptBlock = (id: string) => resolved.get(id)!;
+
+  // Every merged section id was given a layout above.
+  const sections: Section[] = sectionIds.map((sectionId) => ({
     id: sectionId,
+    // Undefined for a section we deleted and they kept, since ours is then
+    // the side that changed it.
     name: mergeName(
       baseSections.get(sectionId)?.name,
       ourSections.get(sectionId)?.name,
       theirSections.get(sectionId)?.name,
-    ),
-    blocks: layout.get(sectionId).map((id) => resolved.get(id)),
+    ) as string,
+    blocks: layout.get(sectionId)!.map(keptBlock),
   }));
 
   // A kept block whose every section disappeared would otherwise be dropped.
@@ -421,11 +532,11 @@ function assemble(base, ours, theirs, resolved) {
     sections.push({
       id: `recovered-${orphans[0]}`,
       name: "Recovered blocks",
-      blocks: orphans.map((id) => resolved.get(id)),
+      blocks: orphans.map(keptBlock),
     });
   }
 
-  const doc = {
+  const doc: LessonDoc = {
     title: mergeName(base?.title, ours?.title, theirs?.title) || "",
     sections,
   };
@@ -436,8 +547,8 @@ function assemble(base, ours, theirs, resolved) {
   return doc;
 }
 
-function sourcesOf(doc) {
-  const map = new Map();
+function sourcesOf(doc: DocLike) {
+  const map = new Map<string, Source>();
   for (const source of Array.isArray(doc?.sources) ? doc.sources : []) {
     if (source && typeof source.id === "string") map.set(source.id, source);
   }
@@ -448,19 +559,24 @@ function sourcesOf(doc) {
  * Three-way merge of the lesson's source lists. Never a conflict: see the note
  * at the top of the file.
  */
-function mergeSources(base, ours, theirs) {
+function mergeSources(base: DocLike, ours: DocLike, theirs: DocLike) {
   const b = sourcesOf(base);
   const o = sourcesOf(ours);
   const t = sourcesOf(theirs);
 
-  const resolved = new Map();
+  const resolved = new Map<string, Source>();
   for (const id of new Set([...o.keys(), ...t.keys()])) {
     const before = b.get(id);
     const mine = o.get(id);
     const other = t.get(id);
     if (mine && other) {
-      const fields = new Set([...Object.keys(mine), ...Object.keys(other)]);
-      const source = {};
+      // Two copies of one source, so their keys are a source's, and so are
+      // those of what they merge into.
+      const fields = new Set([
+        ...Object.keys(mine),
+        ...Object.keys(other),
+      ] as (keyof Source)[]);
+      const source = {} as Source;
       for (const field of fields) {
         source[field] = mergeName(before?.[field], mine[field], other[field]);
       }
@@ -468,7 +584,7 @@ function mergeSources(base, ours, theirs) {
     } else if (mine) {
       // Deleted on their side: gone, unless we edited it since.
       if (!before || !sameValue(mine, before)) resolved.set(id, mine);
-    } else if (!before || !sameValue(other, before)) {
+    } else if (other && (!before || !sameValue(other, before))) {
       resolved.set(id, other);
     }
   }
@@ -479,11 +595,12 @@ function mergeSources(base, ours, theirs) {
     [...t.keys()],
     new Set(resolved.keys()),
   );
-  return order.map((id) => resolved.get(id));
+  // mergeIdList only places ids from `keep`, which are resolved's own keys.
+  return order.map((id) => resolved.get(id)!);
 }
 
 /** Three-way merge of a scalar, preferring ours when both sides changed it. */
-function mergeName(base, ours, theirs) {
+function mergeName<T>(base: T | undefined, ours: T, theirs: T): T {
   if (sameValue(ours, theirs)) return ours;
   if (sameValue(ours, base)) return theirs;
   return ours;
@@ -492,12 +609,17 @@ function mergeName(base, ours, theirs) {
 /**
  * Apply the user's choices from the conflict dialog to a merge result.
  *
- * @param {object} merged   The `doc` from mergeDocs (contested blocks at our value).
- * @param {object[]} conflicts  The conflicts from the same call.
- * @param {Record<string, "ours"|"theirs"|"both">} choices  Keyed by blockId.
- * @param {Function} newId  Id factory, for the clone a "both" choice creates.
+ * @param merged     The `doc` from mergeDocs (contested blocks at our value).
+ * @param conflicts  The conflicts from the same call.
+ * @param choices    Keyed by blockId.
+ * @param newId      Id factory, for the clone a "both" choice creates.
  */
-export function applyResolutions(merged, conflicts, choices, newId) {
+export function applyResolutions(
+  merged: LessonDoc,
+  conflicts: MergeConflict[],
+  choices: Record<string, MergeChoice>,
+  newId: () => string,
+): LessonDoc {
   let doc = { ...merged, sections: merged.sections.map((s) => ({ ...s })) };
 
   for (const conflict of conflicts) {
@@ -549,14 +671,20 @@ export function applyResolutions(merged, conflicts, choices, newId) {
 }
 
 /** Which side of a delete/edit conflict still holds the block. */
-function keptSide(conflict) {
+function keptSide(conflict: DeleteConflict): MergeSide {
   return conflict.deletedBy === "theirs" ? "ours" : "theirs";
 }
 
 /** The merged block with its contested fields set from one side. */
-function withFields(merged, conflict, side) {
+function withFields(
+  merged: Block,
+  conflict: EditConflict,
+  side: MergeSide,
+): Block {
   const block = { ...merged };
-  for (const field of conflict.fields) block[field.field] = field[side];
+  // The same object, by field name.
+  const fields: Fields = block;
+  for (const field of conflict.fields) fields[field.field] = field[side];
   // A contested text block was merged with its words in `content`; store it
   // back in whichever shape fits what was chosen.
   if (
@@ -572,7 +700,13 @@ function withFields(merged, conflict, side) {
  * Put `block` in place of `blockId` (or remove it when null), optionally
  * inserting `clone` right after it under a fresh id.
  */
-function replaceBlock(doc, blockId, block, clone, newId) {
+function replaceBlock(
+  doc: LessonDoc,
+  blockId: string,
+  block: Block | null,
+  clone: Block | null,
+  newId: () => string,
+): LessonDoc {
   return {
     ...doc,
     sections: doc.sections.map((section) => {

@@ -7,6 +7,7 @@
 
 import * as git from "isomorphic-git";
 import { describe, expect, it } from "vitest";
+import type { LessonDoc } from "../types.ts";
 import { memRepo } from "./memfs.ts";
 import {
   COMMIT_EMAIL_DOMAIN,
@@ -21,7 +22,7 @@ const HOST = { uid: "11111111-1111-4111-8111-111111111111", name: "Alex" };
 const SAM = { uid: "22222222-2222-4222-8222-222222222222", name: "Sam" };
 const PRIYA = { uid: "33333333-3333-4333-8333-333333333333", name: "Priya" };
 
-function doc(text) {
+function doc(text: string): LessonDoc {
   return {
     title: "Week 1",
     sections: [

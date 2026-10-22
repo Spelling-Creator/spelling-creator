@@ -5,13 +5,14 @@
 // sequence, with the packs travelling over HTTP in between.
 
 import { describe, expect, it } from "vitest";
+import type { LessonDoc } from "../types.ts";
 import { memFs, memRepo } from "./memfs.ts";
 import { commitDoc, headOid, readDocAt } from "./repo.ts";
 import { cloneFromPack, contains, mergeBase, packRepo } from "./pack.ts";
 
 const author = { name: "Test", email: "test@example.com" };
 
-function doc(title, text) {
+function doc(title: string, text: string): LessonDoc {
   return {
     title,
     sections: [
@@ -39,7 +40,7 @@ describe("memFs", () => {
       "readlink",
       "symlink",
       "chmod",
-    ]) {
+    ] as const) {
       expect(typeof fs.promises[method]).toBe("function");
     }
   });
@@ -106,8 +107,8 @@ describe("the git engine on an in-memory repo", () => {
     });
 
     expect(first?.oid).toMatch(/^[0-9a-f]{40}$/);
-    expect(await headOid(ctx)).toBe(first.oid);
-    expect(await readDocAt({ ...ctx, oid: first.oid })).toMatchObject({
+    expect(await headOid(ctx)).toBe(first!.oid);
+    expect(await readDocAt({ ...ctx, oid: first!.oid })).toMatchObject({
       title: "Volcanoes",
     });
   });
@@ -127,12 +128,12 @@ describe("the git engine on an in-memory repo", () => {
     // The original: two commits, packed for upload exactly as the Worker stores it.
     const origin = memRepo("origin");
     await commitDoc({ ...origin, doc: doc("Rivers", "Source"), author });
-    const forkPoint = await commitDoc({
+    const forkPoint = (await commitDoc({
       ...origin,
       doc: doc("Rivers", "Source to sea"),
       author,
-    });
-    const packed = await packRepo(origin);
+    }))!;
+    const packed = (await packRepo(origin))!;
     expect(packed.head).toBe(forkPoint.oid);
 
     // The fork: a genuine clone, so the same commit oids and the same content.
@@ -144,11 +145,11 @@ describe("the git engine on an in-memory repo", () => {
     });
 
     // What the assistant proposes: one commit on top of the clone.
-    const proposal = await commitDoc({
+    const proposal = (await commitDoc({
       ...fork,
       doc: doc("Rivers", "Source to sea, and the delta"),
       author,
-    });
+    }))!;
 
     // And the ancestry that makes a reviewer's three-way merge real.
     expect(
@@ -167,10 +168,10 @@ describe("the git engine on an in-memory repo", () => {
     await commitDoc({ ...origin, doc: doc("Tides", "High"), author });
     // Without the filename packRepo hands back: a pack downloaded from a hub
     // arrives with none, which is the path that names the file itself.
-    const { filename: _local, ...downloaded } = await packRepo(origin);
+    const { filename: _local, ...downloaded } = (await packRepo(origin))!;
 
     const real = globalThis.crypto.randomUUID;
-    globalThis.crypto.randomUUID = undefined;
+    (globalThis.crypto as Partial<Crypto>).randomUUID = undefined;
     try {
       const fork = memRepo("fork");
       await cloneFromPack({ ...fork, ...downloaded });
@@ -186,7 +187,7 @@ describe("the git engine on an in-memory repo", () => {
     // Assert both halves: that a's commit landed, so this proves isolation
     // rather than that nothing happened anywhere.
     const committed = await commitDoc({ ...a, doc: doc("A", "a"), author });
-    expect(await headOid(a)).toBe(committed.oid);
+    expect(await headOid(a)).toBe(committed?.oid);
     expect(await headOid(b)).toBeNull();
   });
 });

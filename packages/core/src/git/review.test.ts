@@ -11,6 +11,7 @@
 // but the three calls it makes are these, over the same objects.
 
 import { describe, expect, it } from "vitest";
+import type { LessonDoc } from "../types.ts";
 import { memRepo } from "./memfs.ts";
 import {
   cloneFromPack,
@@ -26,7 +27,7 @@ import { commitDoc, headOid, readDocAt } from "./repo.ts";
 const author = { name: "Test", email: "test@example.com" };
 
 /** A lesson of two text blocks, each addressable so a test can move one. */
-function doc(one, two) {
+function doc(one: string, two: string): LessonDoc {
   return {
     title: "Lesson",
     sections: [
@@ -51,7 +52,7 @@ async function lessonAndFork() {
   await commitDoc({ ...lesson, doc: doc("first", "second"), author });
 
   const fork = memRepo("fork");
-  await cloneFromPack({ ...fork, ...(await packRepo(lesson)) });
+  await cloneFromPack({ ...fork, ...(await packRepo(lesson))! });
   return { lesson, fork };
 }
 
@@ -65,9 +66,9 @@ describe("what a proposal changes", () => {
 
     // One store holding both histories — the reviewer's repository.
     const shared = memRepo("shared");
-    await cloneFromPack({ ...shared, ...(await packRepo(lesson)) });
-    const ours = await headOid(shared);
-    const theirPack = await packRepo(fork);
+    await cloneFromPack({ ...shared, ...(await packRepo(lesson))! });
+    const ours = (await headOid(shared))!;
+    const theirPack = (await packRepo(fork))!;
     await fetchRemotePack({
       ...shared,
       ...theirPack,
@@ -75,7 +76,7 @@ describe("what a proposal changes", () => {
     });
     const theirs = theirPack.head;
 
-    const base = await mergeBase({ ...shared, ours, theirs });
+    const base = (await mergeBase({ ...shared, ours, theirs }))!;
     expect(base).toBeTruthy();
 
     const [baseDoc, theirDoc] = [
@@ -103,16 +104,20 @@ describe("what a proposal changes", () => {
     await commitDoc({ ...fork, doc: doc("PROPOSER", "second"), author });
 
     const shared = memRepo("shared");
-    await cloneFromPack({ ...shared, ...(await packRepo(lesson)) });
-    const ours = await headOid(shared);
-    const theirPack = await packRepo(fork);
+    await cloneFromPack({ ...shared, ...(await packRepo(lesson))! });
+    const ours = (await headOid(shared))!;
+    const theirPack = (await packRepo(fork))!;
     await fetchRemotePack({
       ...shared,
       ...theirPack,
       ref: "refs/remotes/pull/1",
     });
 
-    const base = await mergeBase({ ...shared, ours, theirs: theirPack.head });
+    const base = (await mergeBase({
+      ...shared,
+      ours,
+      theirs: theirPack.head,
+    }))!;
     const merged = mergeDocs(
       await readDocAt({ ...shared, oid: base }),
       await readDocAt({ ...shared, oid: ours }),
@@ -127,16 +132,20 @@ describe("what a proposal changes", () => {
     await commitDoc({ ...fork, doc: doc("PROPOSER", "second"), author });
 
     const shared = memRepo("shared");
-    await cloneFromPack({ ...shared, ...(await packRepo(lesson)) });
-    const ours = await headOid(shared);
-    const theirPack = await packRepo(fork);
+    await cloneFromPack({ ...shared, ...(await packRepo(lesson))! });
+    const ours = (await headOid(shared))!;
+    const theirPack = (await packRepo(fork))!;
     await fetchRemotePack({
       ...shared,
       ...theirPack,
       ref: "refs/remotes/pull/1",
     });
 
-    const base = await mergeBase({ ...shared, ours, theirs: theirPack.head });
+    const base = (await mergeBase({
+      ...shared,
+      ours,
+      theirs: theirPack.head,
+    }))!;
     const merged = mergeDocs(
       await readDocAt({ ...shared, oid: base }),
       await readDocAt({ ...shared, oid: ours }),
@@ -150,9 +159,9 @@ describe("what a proposal changes", () => {
     await commitDoc({ ...fork, doc: doc("PROPOSER", "second"), author });
 
     const shared = memRepo("shared");
-    await cloneFromPack({ ...shared, ...(await packRepo(lesson)) });
-    const before = await headOid(shared);
-    const theirPack = await packRepo(fork);
+    await cloneFromPack({ ...shared, ...(await packRepo(lesson))! });
+    const before = (await headOid(shared))!;
+    const theirPack = (await packRepo(fork))!;
     await fetchRemotePack({
       ...shared,
       ...theirPack,
@@ -175,7 +184,7 @@ describe("what a proposal changes", () => {
     expect(
       await contains({
         ...shared,
-        oid: await headOid(shared),
+        oid: (await headOid(shared))!,
         ancestor: theirPack.head,
       }),
     ).toBe(true);
@@ -188,9 +197,9 @@ describe("fast-forwarding", () => {
     await commitDoc({ ...fork, doc: doc("PROPOSER", "second"), author });
 
     const shared = memRepo("shared");
-    await cloneFromPack({ ...shared, ...(await packRepo(lesson)) });
-    const ours = await headOid(shared);
-    const theirPack = await packRepo(fork);
+    await cloneFromPack({ ...shared, ...(await packRepo(lesson))! });
+    const ours = (await headOid(shared))!;
+    const theirPack = (await packRepo(fork))!;
     await fetchRemotePack({
       ...shared,
       ...theirPack,
@@ -210,9 +219,9 @@ describe("fast-forwarding", () => {
     await commitDoc({ ...lesson, doc: doc("first", "AUTHOR"), author });
 
     const shared = memRepo("shared");
-    await cloneFromPack({ ...shared, ...(await packRepo(lesson)) });
-    const ours = await headOid(shared);
-    const theirPack = await packRepo(fork);
+    await cloneFromPack({ ...shared, ...(await packRepo(lesson))! });
+    const ours = (await headOid(shared))!;
+    const theirPack = (await packRepo(fork))!;
     await fetchRemotePack({
       ...shared,
       ...theirPack,

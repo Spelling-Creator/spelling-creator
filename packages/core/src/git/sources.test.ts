@@ -8,16 +8,26 @@ import { docManifest } from "./doc.ts";
 import { describeOps, diffDocs } from "./ops.ts";
 import { applyResolutions, mergeDocs } from "./merge.ts";
 import { markupToContent, textBlockPlain } from "../lessonText.ts";
+import type { LessonDoc, RichNode, Source, TextBlock } from "../types.ts";
 
 const author = { name: "Test", email: "test@example.com" };
 
-function lesson({ sources, text = "Words", content } = {}) {
-  const block = content
+function lesson({
+  sources,
+  text = "Words",
+  content,
+}: {
+  // As the editor may hold them, half typed.
+  sources?: Partial<Source>[];
+  text?: string;
+  content?: RichNode;
+} = {}): LessonDoc {
+  const block: TextBlock = content
     ? { id: "b1", type: "text", content }
     : { id: "b1", type: "text", text };
   return {
     title: "Cats",
-    ...(sources ? { sources } : {}),
+    ...(sources ? { sources: sources as Source[] } : {}),
     sections: [{ id: "s1", name: "One", blocks: [block] }],
   };
 }
@@ -41,7 +51,8 @@ describe("the manifest", () => {
       sources: [smith],
       content: markupToContent("Cats^[@smith, p. 2] *purr*."),
     });
-    const { oid } = await commitDoc({ ...ctx, doc, author });
+    // An empty repo always takes the commit.
+    const { oid } = (await commitDoc({ ...ctx, doc, author }))!;
     expect(await readDocAt({ ...ctx, oid })).toEqual(doc);
   });
 });
@@ -90,7 +101,7 @@ describe("merging sources", () => {
       lesson({ sources: [{ ...smith, year: "1999" }] }),
       lesson({ sources: [{ ...smith, year: "2001" }] }),
     );
-    expect(doc.sources[0].year).toBe("1999");
+    expect(doc.sources?.[0].year).toBe("1999");
   });
 
   it("honours a delete the other side didn't touch", () => {
@@ -114,7 +125,7 @@ describe("merging a text block's words", () => {
     expect(conflicts[0].fields.map((f) => f.field)).toEqual(["content"]);
 
     const mine = applyResolutions(doc, conflicts, { b1: "ours" }, () => "x");
-    expect(mine.sections[0].blocks[0].content).toBeDefined();
+    expect((mine.sections[0].blocks[0] as TextBlock).content).toBeDefined();
     const theirsWon = applyResolutions(
       doc,
       conflicts,
