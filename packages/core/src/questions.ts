@@ -650,7 +650,7 @@ export function createQuestionBlock(
   }
 }
 
-// Build a question block from an AI suggestion (see lib/aiSuggest.js). `data`
+// Build a question block from an AI suggestion (see ./aiSuggest.ts). `data`
 // is the JSON the Worker returns for the given type; this maps it onto the same
 // block shape `createQuestionBlock` produces. Anything missing falls back to
 // sensible blanks so the resulting block is always editable, even if the model

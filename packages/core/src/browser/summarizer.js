@@ -1,6 +1,6 @@
 // On-device lesson summaries, in two layers (the same shape as translator.js).
 //
-// Unlike the other AI helpers in this app (aiSuggest.js), nothing here talks to
+// Unlike the other AI helpers in this app (aiSuggest.ts), nothing here talks to
 // the Worker: no Turnstile, no API key, no network round-trip. A local model
 // runs on the reader's device, so a summary costs us nothing and the lesson
 // text never leaves the machine.

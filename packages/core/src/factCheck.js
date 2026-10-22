@@ -24,7 +24,7 @@
 //
 //   Wikidata     every property, for every claim.
 //   Smithsonian  a volcano's height and eruptions, from the Global Volcanism
-//                Program (./smithsonian.js), for an item Wikidata gives a GVP
+//                Program (./smithsonian.ts), for an item Wikidata gives a GVP
 //                number. Asked alongside Wikidata, not instead of it.
 //   Wikipedia    the subject's article (./factText.ts), read when neither can
 //                settle the claim: no value to compare with, or a value that
@@ -68,7 +68,7 @@
 //   - The Smithsonian is asked once for every volcano in the check, and an
 //     article is read once however many claims need it.
 //
-// The Wikimedia requests go through ./wikidata.js, shared with the picture
+// The Wikimedia requests go through ./wikidata.ts, shared with the picture
 // and sound lookups. It runs in the Worker, in Node and in the MCP server, and
 // server callers must pass a User-Agent (see there).
 

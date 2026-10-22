@@ -86,7 +86,7 @@ export async function fetchPack(lessonId) {
  * Download the packed history of a lesson on ANOTHER instance, through this
  * hub's API, which fetches it on the caller's behalf (the other instance does
  * not answer a browser from here, and should not). `packUrl` is the address
- * the API handed back with the lesson (see fetchRemoteLesson in lessons.js).
+ * the API handed back with the lesson (see fetchRemoteLesson in lessons.ts).
  * The response has the shape fetchPack reads, tip and branch map included.
  *
  * @returns {Promise<{ packfile: Uint8Array, head: string, refs: object } | null>}

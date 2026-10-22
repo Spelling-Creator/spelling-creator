@@ -1,6 +1,6 @@
 // Searches Wikimedia Commons for freely-licensed images, entirely in the browser.
 //
-// Unlike the Pixabay source (web/src/lib/pixabay.js), this needs no API key and
+// Unlike the Pixabay source (../pixabay.ts), this needs no API key and
 // no Worker proxy: the MediaWiki action API answers anonymous cross-origin
 // requests when called with `origin=*`, and Commons' image CDN
 // (thumb.wikimedia.org and upload.wikimedia.org) serves images with
@@ -13,7 +13,7 @@
 // Wikimedia Commons") that the dialog sets as the image's credit.
 //
 // The Commons round-trip and the attribution handling are shared with the MCP
-// server — see ../wikimedia.js. Only the pieces that differ
+// server — see ../wikimedia.ts. Only the pieces that differ
 // live here: paging, the hit shape the dialog renders, and the wording of the
 // errors it surfaces.
 
@@ -78,7 +78,7 @@ function normaliseHit(page, info) {
  * each with `wikidata: { role, item }` saying what it is and of what, and are
  * not repeated among the search's own results. They are looked up alongside
  * the search, not before it, and on a budget of a few seconds
- * (wikidataPickPages in ../wikimedia.js), so a slow query service costs the
+ * (wikidataPickPages in ../wikimedia.ts), so a slow query service costs the
  * picks and never the search.
  *
  * @param {string} query  Free-text search terms.

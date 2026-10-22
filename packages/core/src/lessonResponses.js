@@ -1,6 +1,6 @@
 // Saved answers from interactive mode — the private record of a learner working
 // through a lesson. Talks to the same `apps/api` Worker as the rest of the hub
-// (see lessons.js); the browser never touches the database directly.
+// (see lessons.ts); the browser never touches the database directly.
 //
 // Worker endpoints this expects:
 //   GET    {apiUrl()}/lessons/:id/responses      -> { responses: LessonResponse[] }  (auth: Bearer; the caller's own only)

@@ -51,7 +51,7 @@ is what the panel asks.
 5. The editor runs `checkFix` again on the lesson as it is now, shows the
    preview, and applies the fix on **Apply**.
 
-The editor sends the whole lesson (`suggestFix()` in `aiSuggest.js`), since the
+The editor sends the whole lesson (`suggestFix()` in `aiSuggest.ts`), since the
 checks are lesson-wide, and the `key` of the finding. Image blocks go as their
 id and type only, since the checks never read an image and an old lesson can
 hold one inline as a data URL. The Worker runs the checks itself and looks the
@@ -129,7 +129,7 @@ cached: asking again should give a different fix. A request is refused with a
 | `packages/core/src/lessonAiFixes.js`                   | `AI_FIX_CODES`, `fixContext`, `aiEditsToOperations`, `applyFixOperations`, `checkFix`. Shared.    |
 | `apps/api/src/lib/lessonFix.js`                        | The prompt, `FIX_SCHEMA`, finding the finding again, and the two tries.                           |
 | `apps/api/src/routes/ai.js`                            | The `fix` mode: input checks, the AI check, rate limit.                                           |
-| `packages/core/src/aiSuggest.js`                       | `suggestFix()`, the browser's call to the Worker.                                                 |
+| `packages/core/src/aiSuggest.ts`                       | `suggestFix()`, the browser's call to the Worker.                                                 |
 | `apps/web/src/components/editor/AiFixDialog.jsx`       | The dialog, the preview and the word diff (`diff`'s `diffWordsWithSpace`).                        |
 | `apps/web/src/components/editor/LessonChecksSheet.jsx` | The **Fix with AI** button, shown only when `hasAiChallenge()`: an API, and a check it can pass.  |
 | `apps/web/src/pages/EditorPage.jsx`                    | `applyAiFix`, which checks the fix once more and applies it through the same path as a quick fix. |

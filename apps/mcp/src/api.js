@@ -1,5 +1,5 @@
 // Thin client over the Spelling Creator Worker's `/lessons` endpoints (the same
-// contract the web app uses — see apps/web/src/lib/lessons.js) plus a Supabase
+// contract the web app uses — see packages/core/src/lessons.ts) plus a Supabase
 // `whoami` used to confirm the session and read the publisher's display name.
 //
 // Every write reuses the Worker's existing validation, ban checks, and author
@@ -277,7 +277,7 @@ export function createApi(config, auth) {
     // packages/core/src/git/). These are what forking, proposing and reviewing
     // need: read a lesson's history, write a fork's, open a proposal carrying
     // it, and read that proposal back to diff or merge it.
-    // Unlike the browser's equivalents (core/git/remote.js, core/pulls.js) these
+    // Unlike the browser's equivalents (core/git/remote.js, core/pulls.ts) these
     // always send the caller's token — a fork starts life as a private draft, so
     // its own history is not a public read.
 

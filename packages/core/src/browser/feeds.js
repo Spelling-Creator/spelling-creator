@@ -9,7 +9,7 @@
 // deliberately a real XML parser: the alternative is regex over untrusted markup,
 // and the feeds carry user-written titles and summaries.
 //
-// lessons.js and users.js keep the URL builders (they are runtime-neutral, and
+// lessons.ts and users.ts keep the URL builders (they are runtime-neutral, and
 // the Worker and MCP server may want them); only the reading is here.
 
 import { lessonsFeedUrl } from "../lessons.ts";

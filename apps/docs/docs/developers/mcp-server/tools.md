@@ -186,7 +186,7 @@ Some mechanics worth knowing:
   they have been reading. `updated` in the result says which happened. (The hub allows
   one person at most 5 open proposals on one lesson, `MAX_OPEN_PER_AUTHOR` in
   `apps/api/src/routes/pulls.js`, and at most 20 updates to one proposal,
-  `MAX_PULL_REVISIONS` in `packages/core/src/pulls.js`.)
+  `MAX_PULL_REVISIONS` in `packages/core/src/pulls.ts`.)
 - **Images aren't copied.** Blocks reference them by content hash and the bytes are
   already stored, so forking is cheap.
 - **Forks are private drafts** and count against the draft cap (8 per person,

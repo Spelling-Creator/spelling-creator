@@ -1,7 +1,7 @@
 // The homepage hero's animated backdrop: spelling words drifting upward, with
 // fresh words continually emitted from the bottom edge. Words are the real ones
 // taught across the hub's published lessons (fetched from the Worker's cached
-// /spelling-words.json — see lib/spellingWords.js).
+// /spelling-words.json — see core's spellingWords.ts).
 //
 // Built on tsParticles (v4) via its React binding. The engine is initialised
 // once for the whole app through <ParticlesProvider>, whose `init` callback must

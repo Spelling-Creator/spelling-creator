@@ -1,6 +1,6 @@
 // Supabase client — used in the browser for authentication ONLY (magic-link
 // sign-in). Lesson data never goes through this client; it is read from and
-// written to the companion Worker (`apps/api`; see ../lessons.js),
+// written to the companion Worker (`apps/api`; see ../lessons.ts),
 // which talks to Supabase Postgres server-side with privileged credentials.
 //
 // The client manages the signed-in session (persisting it in localStorage) and

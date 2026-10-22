@@ -20,7 +20,7 @@ and the image search.
 | Question     | `AiQuestionDialog.jsx`   | **Generate with AI** > **Question** in a section's toolbar | `question`   | `suggestQuestion()`    |
 
 The dialogs are in `apps/web/src/components/`, the wrappers in
-`packages/core/src/aiSuggest.js`. The two section helpers are mounted by
+`packages/core/src/aiSuggest.ts`. The two section helpers are mounted by
 `SectionCard.jsx`, the idea dialog by `EditorPage.jsx`.
 
 ## The shared flow
