@@ -21,7 +21,7 @@
 // For the same reason answers are never moderated: nobody but their author ever
 // reads them, so there is nothing to moderate them for.
 import { apiUrl, hasApi } from "./config.ts";
-import { validateResponses } from "./interactive.js";
+import { validateResponses } from "./interactive.ts";
 
 function endpoint(lessonId) {
   return `${apiUrl()}/lessons/${encodeURIComponent(lessonId)}/responses`;

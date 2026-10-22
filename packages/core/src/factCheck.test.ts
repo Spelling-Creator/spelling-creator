@@ -19,7 +19,7 @@ import {
   statementsFromBindings,
   statementsQuery,
   timeAgrees,
-} from "./factCheck.js";
+} from "./factCheck.ts";
 
 describe("rounding", () => {
   it("allows half a unit in the last place the number was written to", () => {

@@ -11,7 +11,7 @@ import {
   lessonTranslationBatches,
   questionStepsWithText,
   sameTranslationSource,
-} from "./lessonTranslation.js";
+} from "./lessonTranslation.ts";
 
 const doc = {
   title: "Volcanoes",

@@ -4,7 +4,7 @@
 import { deriveQuestionType } from "../../src/documentImport.js";
 import { inlineTextPlain } from "../../src/inlineText.ts";
 import { normalizeLessonFile } from "../../src/jsonImport.js";
-import { validateLesson } from "../../src/lessonChecks.js";
+import { validateLesson } from "../../src/lessonChecks.ts";
 import { textBlockPlain } from "../../src/lessonText.ts";
 import { questionAnswerItems } from "../../src/questions.ts";
 

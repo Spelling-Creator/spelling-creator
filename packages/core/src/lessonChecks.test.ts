@@ -4,7 +4,7 @@
 // apps/mcp/test/validate.test.js; this covers the fields that suite never reads.
 
 import { describe, expect, it } from "vitest";
-import { validateLesson } from "./lessonChecks.js";
+import { validateLesson } from "./lessonChecks.ts";
 
 const question = (id, questionType, fields) => ({
   id,

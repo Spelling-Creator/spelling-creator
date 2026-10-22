@@ -16,7 +16,7 @@
 // Text blocks are written with withTextBlockDocument, the way the editor writes
 // them (see lessonText.ts for why a touched block always stores `content`).
 
-import { isCapsSpan } from "./lessonChecks.js";
+import { isCapsSpan } from "./lessonChecks.ts";
 import {
   TEXT_MARKS,
   textBlockContent,

@@ -31,7 +31,7 @@
 // browser that refuses us storage gets a walkthrough that simply doesn't
 // remember, and the caller is told so it can say as much.
 
-import { MAX_RESPONSES, MAX_RESPONSE_LENGTH } from "../interactive.js";
+import { MAX_RESPONSES, MAX_RESPONSE_LENGTH } from "../interactive.ts";
 
 const STORAGE_KEY = "spelling-creator:interactive-progress";
 

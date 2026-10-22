@@ -21,12 +21,12 @@
 // the first try fails. The editor runs it again on the lesson as it is when the
 // fix comes back, since the author may have changed it in the meantime.
 
-import { applyPatch } from "./lessonPatch.js";
+import { applyPatch } from "./lessonPatch.ts";
 import {
   isFormattingFinding,
   newFindings,
   validateLesson,
-} from "./lessonChecks.js";
+} from "./lessonChecks.ts";
 import { inlineTextMarkup } from "./inlineText.ts";
 import { questionAnswerPlain } from "./questions.ts";
 import {

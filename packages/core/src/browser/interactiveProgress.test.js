@@ -8,7 +8,7 @@ import {
   pruneProgress,
   saveInteractiveProgress,
 } from "./interactiveProgress.js";
-import { MAX_RESPONSE_LENGTH } from "../interactive.js";
+import { MAX_RESPONSE_LENGTH } from "../interactive.ts";
 
 // A localStorage that behaves like the real one, plus a switch for the browsers
 // that refuse us storage entirely (private browsing, a full quota).

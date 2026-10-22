@@ -5,7 +5,7 @@ import {
   findRanges,
   findTerms,
   lessonFindEntries,
-} from "./lessonFind.js";
+} from "./lessonFind.ts";
 
 const doc = {
   title: "Volcanoes",

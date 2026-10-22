@@ -11,7 +11,7 @@ import {
   revealedAnswers,
   stepSpeechText,
   validateResponses,
-} from "./interactive.js";
+} from "./interactive.ts";
 
 const doc = {
   title: "Volcanoes",

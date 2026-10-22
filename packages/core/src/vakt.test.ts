@@ -20,7 +20,7 @@ import {
   buildInteractiveSteps,
   countInteractiveQuestions,
   stepSpeechText,
-} from "./interactive.js";
+} from "./interactive.ts";
 import { normalizeLessonFile } from "./jsonImport.js";
 
 let counter = 0;

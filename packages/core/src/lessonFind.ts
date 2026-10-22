@@ -25,7 +25,7 @@ import { textBlockLines } from "./lessonText.ts";
 import {
   lessonSegmentKey,
   questionStepsWithText,
-} from "./lessonTranslation.js";
+} from "./lessonTranslation.ts";
 import { questionAnswerItems } from "./questions.ts";
 import { vaktLinks, vaktText } from "./vakt.ts";
 

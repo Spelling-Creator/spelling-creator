@@ -4,8 +4,8 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { validateLesson } from "./lessonChecks.js";
-import { QUICK_FIX_CODES, applyQuickFix, hasQuickFix } from "./lessonFixes.js";
+import { validateLesson } from "./lessonChecks.ts";
+import { QUICK_FIX_CODES, applyQuickFix, hasQuickFix } from "./lessonFixes.ts";
 import {
   markupToContent,
   textBlockMarkup,
@@ -247,7 +247,7 @@ describe("hasQuickFix", () => {
 
   it("covers only codes the checks produce", () => {
     const source = readFileSync(
-      new URL("./lessonChecks.js", import.meta.url),
+      new URL("./lessonChecks.ts", import.meta.url),
       "utf8",
     );
     for (const code of QUICK_FIX_CODES) {

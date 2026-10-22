@@ -12,7 +12,7 @@
 // block is validated exactly like one created from scratch.
 
 import { removeSourceCitations } from "./lessonText.ts";
-import { buildBlock, buildSources, newId } from "./lessonBuild.js";
+import { buildBlock, buildSources, newId } from "./lessonBuild.ts";
 
 const OPS = [
   "set_title",

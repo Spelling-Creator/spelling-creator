@@ -2,14 +2,14 @@
 // operations, and the check that decides whether a fix is offered at all.
 
 import { describe, expect, it } from "vitest";
-import { validateLesson } from "./lessonChecks.js";
+import { validateLesson } from "./lessonChecks.ts";
 import {
   aiEditsToOperations,
   applyFixOperations,
   checkFix,
   fixContext,
   hasAiFix,
-} from "./lessonAiFixes.js";
+} from "./lessonAiFixes.ts";
 import {
   markupToContent,
   textBlockMarkup,
