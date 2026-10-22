@@ -314,7 +314,7 @@ const MODEL_SIZE_POLL_MS = 5000;
 // The models the on-device features have downloaded (natural voices,
 // summaries, translation, reading imported text), and a way to delete them
 // without clearing the site's data, which would take the lessons too.
-// core/browser/modelCache.js has why deleting is safe even mid-download.
+// core/browser/modelCache.ts has why deleting is safe even mid-download.
 //
 // `bytes` is undefined until the first measurement, and null on a browser that
 // can't have saved any, where the row is left out like the install row is.

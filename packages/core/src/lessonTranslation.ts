@@ -2,7 +2,7 @@
 // read-only renderer looks translated text up by.
 //
 // A lesson translates with the same two engines as a comment (see
-// browser/translator.js): plain strings in, plain strings out. What differs is
+// browser/translator.ts): plain strings in, plain strings out. What differs is
 // what a lesson is for. A comment is all prose, but part of a lesson's content
 // is the language being taught, and translating that part would change the
 // lesson instead of making it readable. The line sits exactly there, and

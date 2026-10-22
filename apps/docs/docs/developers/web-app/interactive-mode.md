@@ -291,7 +291,7 @@ The natural voices are
 [Kokoro](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX), an
 82M-parameter voice model that runs in the page with transformers.js
 (`@huggingface/transformers` 4), like the summary and import models. The model is
-pinned to a commit (`MODEL_REVISION` in `readAloudVoices.js`) and loaded at fp32
+pinned to a commit (`MODEL_REVISION` in `readAloudVoices.ts`) and loaded at fp32
 on WebGPU. Eight of its English voices, the ones graded C+ or better on the model
 card, are listed under **Natural voices** in the voice picker, above the
 browser's own, in both the popover and the settings page
@@ -316,7 +316,7 @@ How it behaves:
 - **Only where it can run.** The list is shown only on a device with a WebGPU
   adapter that isn't a phone or tablet, and isn't on a metered connection unless
   the model is already downloaded, since loading it from the cache uses no data
-  (`readAloudPossible` in `packages/core/src/browser/readAloud.js`). Phones and
+  (`readAloudPossible` in `packages/core/src/browser/readAloud.ts`). Phones and
   tablets are excluded by name, because WebGPU alone doesn't rule them out: an
   iPad has it, and Kokoro froze and then crashed Safari on one. iPadOS calls
   itself a Mac, so it's recognized by having a touch screen. A stored natural
@@ -335,7 +335,7 @@ How it behaves:
   that it's downloading once, not every percent. The natural voice takes over
   from the next thing spoken.
 - **Ready from the first step once downloaded.** When the model is already in the
-  cache (`readAloudCached` in `readAloud.js` looks for its weights), it loads as
+  cache (`readAloudCached` in `readAloud.ts` looks for its weights), it loads as
   soon as practice mode opens with speech on, which takes a couple of seconds. A
   step spoken meanwhile waits for it, up to five seconds from when it was asked
   for (`CACHED_WAIT_MS`), instead of being read in the browser's voice, and the
@@ -371,22 +371,22 @@ How it behaves:
 - **English only.** Like choosing an English browser voice, picking one for a
   lesson in another language reads it with English pronunciation.
 
-Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudText.js`
+Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudText.ts`
 spells out numbers and abbreviations, turns the words into IPA with
 [Spellophone](https://spellophone.spellingcreator.org/) (our WebAssembly build of
 espeak-ng, the phonemizer Kokoro was trained against, installed from npm as
-`@spelling-creator/spellophone`), and `readAloudEngine.js` passes that to the
+`@spelling-creator/spellophone`), and `readAloudEngine.ts` passes that to the
 model. A read-aloud hint changes what goes in: a pronunciation's IPA goes in as
 written (with the ASCII people type for IPA, such as a plain `g` or `:` for
 length, swapped for the symbols in Kokoro's vocabulary by `kokoroIpa`), an
 alias or a spell-out is turned into phonemes in place of its words, and a
-short pause is a comma, which Kokoro pauses at. `readAloudText.js` loads none of
+short pause is a comma, which Kokoro pauses at. `readAloudText.ts` loads none of
 the model, so its tests run against the Node build of Spellophone. The text
 clean-up follows kokoro.js, the reference JavaScript port. That package isn't used itself
 because it pins transformers.js 3, which would put a second ONNX runtime in the
 bundle. Only Spellophone's English data is bundled, as hashed assets of the build
-rather than fetched from a CDN: about 860 KB with the WebAssembly. `readAloudEngine.js` is only ever
-reached through a dynamic `import()` in `readAloud.js`, so none of this weight
+rather than fetched from a CDN: about 860 KB with the WebAssembly. `readAloudEngine.ts` is only ever
+reached through a dynamic `import()` in `readAloud.ts`, so none of this weight
 lands in the main bundle.
 
 ### Timing it
@@ -446,9 +446,9 @@ What the numbers decided:
 | `apps/web/src/lib/useSpeech.js`                    | Speaking: the browser's voices or a natural one, the fallback, making ahead.                   |
 | `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice lists, shared with the settings page.                     |
 | `apps/web/src/components/SpeechVoiceSelect.jsx`    | The voice picker the popover and the settings page share.                                      |
-| `packages/core/src/browser/readAloud.js`           | The device check for natural voices, the cache check, and the door to their engine.            |
+| `packages/core/src/browser/readAloud.ts`           | The device check for natural voices, the cache check, and the door to their engine.            |
 | `packages/core/src/speech.ts`                      | Spoken text: a text block's hints and pauses, chunking, plain text for the browser's voice.    |
-| `packages/core/src/browser/readAloudText.js`       | Kokoro's input: text clean-up, espeak-ng phonemes, read-aloud hints.                           |
-| `packages/core/src/browser/readAloudEngine.js`     | Kokoro: the model, made from the phonemes readAloudText.js gives.                              |
-| `packages/core/src/browser/readAloudVoices.js`     | The model id and pin, and the Kokoro voices on offer, listable without loading the engine.     |
+| `packages/core/src/browser/readAloudText.ts`       | Kokoro's input: text clean-up, espeak-ng phonemes, read-aloud hints.                           |
+| `packages/core/src/browser/readAloudEngine.ts`     | Kokoro: the model, made from the phonemes readAloudText.ts gives.                              |
+| `packages/core/src/browser/readAloudVoices.ts`     | The model id and pin, and the Kokoro voices on offer, listable without loading the engine.     |
 | `apps/web/bench/read-aloud.html`                   | The dev-only timing page for Kokoro.                                                           |

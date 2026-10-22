@@ -1,7 +1,7 @@
 // The light half of formulas: which formulas a lesson has, and the one door to
 // formulaBrowser.ts, which holds MathJax, its font and the speech rule engine
 // and so is only ever fetched by a dynamic import(), the same split as
-// readAloud.js and readAloudEngine.js.
+// readAloud.ts and readAloudEngine.ts.
 //
 // Nothing here loads anything until a lesson with a formula is drawn, exported
 // or read aloud, so a lesson without math costs nothing extra.

@@ -6,7 +6,7 @@
 //   and the fallback.
 //
 //   A natural voice: Kokoro, a small voice model running in the page (see
-//   core/browser/readAloudEngine.js). Offered only where the device can run it
+//   core/browser/readAloudEngine.ts). Offered only where the device can run it
 //   (lib/speechPrefs.js useNaturalVoices), and chosen in the same voice picker.
 //
 // Everything here runs on the reader's own device. Like the on-device lesson

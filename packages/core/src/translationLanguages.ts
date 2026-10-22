@@ -9,7 +9,7 @@
 // Adding a language is adding a row. Note that a row only makes a language a
 // possible *source* when a detector can name it: the browser's LanguageDetector
 // covers the table, the fallback detector classifies twenty of these languages
-// (see fallbackTranslator.js).
+// (see fallbackTranslator.ts).
 
 /** A row of the table: one language under both of its names. */
 export interface TranslationLanguage {

@@ -13,7 +13,7 @@
 // (see lessonText.ts) become these runs, and so do a question prompt's (see
 // inlineText.ts); everything else a step says (a caption, a heading) is plain
 // words. The voices (the web app's useSpeech and
-// core/browser/readAloudEngine.js) take it from here:
+// core/browser/readAloudEngine.ts) take it from here:
 //
 //   Kokoro speaks phonemes, so it can follow every run: IPA goes in as it is,
 //   an alias or a spelled-out word is turned into phonemes in place of the

@@ -34,7 +34,7 @@ import { loadExportEngine } from "../../lib/exports/load.js";
  *
  * A section the rules could not read (no questions found, lines they could
  * not place, an answer left glued on, questions run together) can be handed
- * to the on-device model (core/browser/documentModel.js) on a device that can
+ * to the on-device model (core/browser/documentModel.ts) on a device that can
  * run it. Only those sections go to the model; the rest keep the rules'
  * result. When the rules found no lesson at all, the text is still cut into
  * section-sized pieces (a `loose` split) and every piece goes to the model;

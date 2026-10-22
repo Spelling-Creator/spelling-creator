@@ -12,7 +12,7 @@ on-device step for sections the rules can't read: the editor offers "Read with
 the on-device model" only on a device with WebGPU that can hold the weights,
 and loads the `q4f16` file (about 640 MB) from
 `playforgecoding/LFM2-1.2B-Extract-lesson-ONNX`, pinned to commit `6dbcb51`
-(`packages/core/src/browser/documentModelEngine.js`). There is no CPU path in
+(`packages/core/src/browser/documentModelEngine.ts`). There is no CPU path in
 the browser and no hosted fallback. The findings below are kept as measured.
 
 Can a small on-device model turn a lesson that exists only as a document (a
@@ -363,7 +363,7 @@ and the capitals layout's long section now fits. The app pins this export, and
 loads only its `q4f16` file, on WebGPU. The `int8` file that runs well on a CPU
 is about 2.5 GB, too large to ask a browser to download, so a device without a
 capable WebGPU adapter is never offered the model at all
-(`packages/core/src/browser/documentModel.js`).
+(`packages/core/src/browser/documentModel.ts`).
 
 The model cards for both repos live in `scripts/extract-eval/model-cards/`
 and are pushed with the Hub CLI (the README there has the commands). The
@@ -397,7 +397,7 @@ converts the result to ONNX with the onnxruntime-genai builder and
 `relayout-onnx.py` (`q4f16` for WebGPU, `int8` for a CPU; see above), and
 pushes a repo in the onnx-community layout, which `run.mjs --models` then
 measures against the same held-out lessons. A new upload only reaches the app
-once `MODEL_REVISION` in `packages/core/src/browser/documentModelEngine.js`
+once `MODEL_REVISION` in `packages/core/src/browser/documentModelEngine.ts`
 points at its commit.
 
 `--models` takes any transformers.js-compatible causal LM on the Hub; a model

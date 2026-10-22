@@ -148,13 +148,13 @@ for the fallback, and for the "already in your language" check.
 ## Keeping the heavy path out of every bundle
 
 transformers.js and its ONNX runtime are far too big to ride along with the app.
-`fallbackTranslator.js` is therefore reached **only** through a memoized dynamic
-`import()` inside `translator.js` (the same pattern as the
+`fallbackTranslator.ts` is therefore reached **only** through a memoized dynamic
+`import()` inside `translator.ts` (the same pattern as the
 [export pipeline](./export-pipeline.md)'s `lib/exports/load.js`, and with the
 same rule: a failed load isn't cached, so the next click retries). These guards
 keep it contained:
 
-- Nothing may static-import `fallbackTranslator.js`. That would pull the library
+- Nothing may static-import `fallbackTranslator.ts`. That would pull the library
   into the main bundle for every visitor.
 - `vite.config.js` lists it in `SSR_UNREACHABLE`, so the Worker's
   [server-rendering](./server-rendering.md) build ships a stub instead of an
