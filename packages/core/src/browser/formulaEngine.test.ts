@@ -3,18 +3,33 @@
 
 import { describe, expect, it } from "vitest";
 import { liteAdaptor } from "@mathjax/src/mjs/adaptors/liteAdaptor.js";
+import type {
+  LiteElement,
+  LiteNode,
+} from "@mathjax/src/mjs/adaptors/lite/Element.js";
 
-import { createFormulaRenderer } from "./formulaEngine.ts";
+import {
+  createFormulaRenderer,
+  type FormulaInput,
+  type RenderedFormula,
+} from "./formulaEngine.ts";
 
 const adaptor = liteAdaptor();
 const renderer = createFormulaRenderer(adaptor);
-const svgOf = (rendered) => adaptor.outerHTML(rendered.node);
+// Every formula here is in a notation the renderer knows.
+const render = async (formula: FormulaInput) =>
+  (await renderer.render(formula))!;
+// The lite adaptor's nodes are typed as LiteNode; a rendered one is the
+// `mjx-container` element.
+const svgOf = (rendered: RenderedFormula<LiteNode>) =>
+  adaptor.outerHTML(rendered.node as LiteElement);
 // MathJax serializes MathML pretty-printed; one line is easier to match.
-const mathmlOf = (rendered) => rendered.mathml.replace(/\n\s*/g, "");
+const mathmlOf = (rendered: RenderedFormula<LiteNode>) =>
+  rendered.mathml.replace(/\n\s*/g, "");
 
 describe("createFormulaRenderer", () => {
   it("renders AsciiMath to MathML and an SVG", async () => {
-    const rendered = await renderer.render({
+    const rendered = await render({
       format: "asciimath",
       source: "120 xx 3 = 360",
     });
@@ -27,7 +42,7 @@ describe("createFormulaRenderer", () => {
   });
 
   it("renders TeX, on its own line when asked", async () => {
-    const rendered = await renderer.render({
+    const rendered = await render({
       format: "tex",
       source: "\\frac{60}{5} = 12",
       display: true,
@@ -44,7 +59,7 @@ describe("createFormulaRenderer", () => {
   });
 
   it("shows a TeX error in place of the formula, and says so", async () => {
-    const rendered = await renderer.render({
+    const rendered = await render({
       format: "tex",
       source: "\\frac{1}",
     });
@@ -53,7 +68,7 @@ describe("createFormulaRenderer", () => {
   });
 
   it("gives a link or an extension no way in", async () => {
-    const rendered = await renderer.render({
+    const rendered = await render({
       format: "tex",
       source: "\\href{javascript:alert(1)}{x} \\require{html}",
     });

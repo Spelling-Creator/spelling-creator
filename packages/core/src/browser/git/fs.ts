@@ -3,14 +3,14 @@
 // isomorphic-git needs a filesystem; browsers don't have one. LightningFS gives
 // it an IndexedDB-backed POSIX-ish fs, in its own database — separate from the
 // `s2c-lesson-maker` store that holds the working doc and image blobs (see
-// imageStore.js), so a repo can never collide with a lesson image.
+// imageStore.ts), so a repo can never collide with a lesson image.
 //
 // One repository per lesson, bare (no working tree — see repo.ts):
 //
 //   /lessons/<repoId>/.git      the object store, refs and config
 //
 // `repoId` is the hub lesson's id once it has one, and the lesson's id in this
-// device's library (see browser/storage.js) while it is still an unattached
+// device's library (see browser/storage.ts) while it is still an unattached
 // local draft — so every lesson held locally has a repository to itself, and
 // switching lessons in the editor switches histories. Publishing a draft copies
 // its repo under the new lesson id (adoptDraftRepo), so the history a user built
@@ -18,26 +18,27 @@
 
 import LightningFS from "@isomorphic-git/lightning-fs";
 import { DRAFT_REPO } from "../../git/doc.ts";
+import type { GitContext } from "../../git/repo.ts";
 
 const DB_NAME = "s2c-lesson-git";
 const ROOT = "/lessons";
 
 export { DRAFT_REPO };
 
-let fsInstance = null;
+let fsInstance: LightningFS | null = null;
 
 /** The LightningFS instance, created on first use. */
-export function gitFs() {
+export function gitFs(): LightningFS {
   if (!fsInstance) fsInstance = new LightningFS(DB_NAME);
   return fsInstance;
 }
 
 /** `{ fs, gitdir }` — the context every function in repo.ts/pack.ts takes. */
-export function repoCtx(repoId) {
+export function repoCtx(repoId: string): GitContext & { fs: LightningFS } {
   return { fs: gitFs(), gitdir: `${ROOT}/${repoId}/.git` };
 }
 
-async function exists(fs, path) {
+async function exists(fs: LightningFS, path: string) {
   try {
     await fs.promises.stat(path);
     return true;
@@ -47,7 +48,7 @@ async function exists(fs, path) {
 }
 
 /** Whether a repository already exists locally for this lesson. */
-export async function repoExists(repoId) {
+export async function repoExists(repoId: string): Promise<boolean> {
   const { fs, gitdir } = repoCtx(repoId);
   return exists(fs, `${gitdir}/config`);
 }
@@ -64,7 +65,10 @@ export async function repoExists(repoId) {
  * `draftRepoId` is the library id the lesson has been living under; it defaults
  * to the old single-draft slot for anything still calling this the old way.
  */
-export async function adoptDraftRepo(lessonId, draftRepoId = DRAFT_REPO) {
+export async function adoptDraftRepo(
+  lessonId: string | null | undefined,
+  draftRepoId: string | null | undefined = DRAFT_REPO,
+): Promise<void> {
   if (!lessonId || !draftRepoId || lessonId === draftRepoId) return;
   const fs = gitFs();
   if (!(await exists(fs, `${ROOT}/${draftRepoId}/.git/config`))) return;
@@ -78,7 +82,7 @@ export async function adoptDraftRepo(lessonId, draftRepoId = DRAFT_REPO) {
 }
 
 /** Delete a lesson's repository (used when the draft is reset or a lesson deleted). */
-export async function deleteRepo(repoId) {
+export async function deleteRepo(repoId: string): Promise<void> {
   await removeDir(gitFs(), `${ROOT}/${repoId}`);
 }
 
@@ -90,7 +94,10 @@ export async function deleteRepo(repoId) {
  * are immutable and content-addressed, so the copy holds the same commits under
  * the same oids, and the fork therefore shares ancestry with what it came from.
  */
-export async function copyRepo(fromRepoId, toRepoId) {
+export async function copyRepo(
+  fromRepoId: string,
+  toRepoId: string,
+): Promise<boolean> {
   const fs = gitFs();
   if (!(await exists(fs, `${ROOT}/${fromRepoId}/.git/config`))) return false;
   await removeDir(fs, `${ROOT}/${toRepoId}`);
@@ -98,7 +105,7 @@ export async function copyRepo(fromRepoId, toRepoId) {
   return true;
 }
 
-async function mkdirp(fs, path) {
+async function mkdirp(fs: LightningFS, path: string) {
   const parts = path.split("/").filter(Boolean);
   let current = "";
   for (const part of parts) {
@@ -111,7 +118,7 @@ async function mkdirp(fs, path) {
   }
 }
 
-async function copyDir(fs, from, to) {
+async function copyDir(fs: LightningFS, from: string, to: string) {
   await mkdirp(fs, to);
   for (const name of await fs.promises.readdir(from)) {
     const src = `${from}/${name}`;
@@ -125,7 +132,7 @@ async function copyDir(fs, from, to) {
   }
 }
 
-async function removeDir(fs, path) {
+async function removeDir(fs: LightningFS, path: string) {
   if (!(await exists(fs, path))) return;
   for (const name of await fs.promises.readdir(path)) {
     const child = `${path}/${name}`;

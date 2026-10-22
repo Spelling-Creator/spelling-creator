@@ -14,8 +14,51 @@
 
 import { googleClientId, hasGoogleDrive } from "../config.ts";
 import { Packer } from "docx";
+import type { LessonMeta } from "../lessonLayout.ts";
+import type { LessonDoc } from "../types.ts";
 import { buildDocument } from "./docxExport.ts";
 import { renderLessonFormulas } from "./formulas.ts";
+
+// The parts of Google Identity Services' token flow used here.
+interface TokenResponse {
+  access_token: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface TokenClient {
+  callback: (response: TokenResponse) => void;
+  error_callback?: (error: { type?: string; message?: string }) => void;
+  requestAccessToken(overrides?: { prompt?: string }): void;
+}
+
+interface GisOAuth2 {
+  initTokenClient(config: {
+    client_id: string;
+    scope: string;
+    callback: (response: TokenResponse) => void;
+  }): TokenClient;
+}
+
+declare global {
+  interface Window {
+    google?: { accounts?: { oauth2?: GisOAuth2 } };
+  }
+}
+
+/** The uploaded file, with the fields UPLOAD_URL asks Drive for. */
+export interface DriveFile {
+  id: string;
+  name: string;
+  webViewLink: string;
+}
+
+// The parts of a Drive error body that classifyFailure reads.
+interface DriveError {
+  errors?: Array<{ reason?: string }>;
+  status?: string;
+  message?: string;
+}
 
 // Only request access to files this app creates — the least-privileged Drive scope.
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -45,7 +88,7 @@ const RETRYABLE_403_REASONS = new Set([
   "userRateLimitExceeded",
 ]);
 
-let tokenClient = null;
+let tokenClient: TokenClient | null = null;
 let inFlight = false; // guards against concurrent uploads
 let lastUploadAt = 0; // timestamp of the last upload start, for throttling
 
@@ -53,17 +96,17 @@ let lastUploadAt = 0; // timestamp of the last upload start, for throttling
  * Resolves with `google.accounts.oauth2` once the GIS script has loaded.
  * Rejects if it has not appeared within `timeoutMs`.
  */
-function whenGisReady(timeoutMs = 10000) {
+function whenGisReady(timeoutMs = 10000): Promise<GisOAuth2> {
   const ready = () => window.google?.accounts?.oauth2;
-  if (typeof window !== "undefined" && ready()) {
-    return Promise.resolve(window.google.accounts.oauth2);
-  }
+  const loaded = typeof window !== "undefined" ? ready() : undefined;
+  if (loaded) return Promise.resolve(loaded);
   return new Promise((resolve, reject) => {
     let waited = 0;
     const timer = setInterval(() => {
-      if (ready()) {
+      const oauth2 = ready();
+      if (oauth2) {
         clearInterval(timer);
-        resolve(window.google.accounts.oauth2);
+        resolve(oauth2);
       } else if ((waited += 100) >= timeoutMs) {
         clearInterval(timer);
         reject(
@@ -78,7 +121,7 @@ function whenGisReady(timeoutMs = 10000) {
  * Requests an OAuth2 access token, prompting the user to sign in / consent if
  * needed. Resolves with the access token string.
  */
-async function getAccessToken() {
+async function getAccessToken(): Promise<string> {
   if (!hasGoogleDrive()) {
     throw new Error("Google saving is not configured (no OAuth client id).");
   }
@@ -92,41 +135,42 @@ async function getAccessToken() {
       callback: () => {},
     });
   }
+  const client = tokenClient;
 
   return new Promise((resolve, reject) => {
-    tokenClient.callback = (response) => {
+    client.callback = (response) => {
       if (response.error) {
         reject(new Error(response.error_description || response.error));
         return;
       }
       resolve(response.access_token);
     };
-    tokenClient.error_callback = (err) => {
+    client.error_callback = (err) => {
       reject(new Error(err?.message || "Google sign-in was cancelled."));
     };
     // Empty prompt reuses an existing grant when possible, only showing the
     // consent screen the first time.
-    tokenClient.requestAccessToken({ prompt: "" });
+    client.requestAccessToken({ prompt: "" });
   });
 }
 
 // Google Doc title — the Drive UI shows this; no file extension needed.
-function driveDocName(title) {
+function driveDocName(title: string | null | undefined) {
   return (title || "").trim() || "Untitled Lesson";
 }
 
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Inspect a failed response and decide whether (and how long) to wait before a
 // retry. Returns { retry: boolean, delayMs: number, message: string }.
-async function classifyFailure(res, attempt) {
+async function classifyFailure(res: Response, attempt: number) {
   const text = await res.text().catch(() => "");
   let reason = "";
   let message = text;
   try {
-    const err = JSON.parse(text)?.error;
+    const err: DriveError | undefined = JSON.parse(text)?.error;
     reason = err?.errors?.[0]?.reason || err?.status || "";
     message = err?.message || text;
   } catch {
@@ -152,8 +196,11 @@ async function classifyFailure(res, attempt) {
 
 // POST the multipart body, retrying transient quota / rate-limit errors with
 // exponential backoff so we never keep hammering the API past its quota.
-async function uploadWithBackoff(body, token) {
-  let lastErr;
+async function uploadWithBackoff(
+  body: Blob,
+  token: string,
+): Promise<DriveFile> {
+  let lastErr: Error | undefined;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const res = await fetch(UPLOAD_URL, {
       method: "POST",
@@ -179,12 +226,14 @@ async function uploadWithBackoff(body, token) {
 
 /**
  * Builds the lesson docx and uploads it to the user's Drive as a Google Doc.
- * @param {object} doc  The lesson document state.
- * @param {{author?: string, published?: string|number|Date}} [meta]
- *   By-line and copyright metadata — see buildDocument in docxExport.js.
- * @returns {Promise<{id: string, name: string, webViewLink: string}>}
+ * @param doc  The lesson document state.
+ * @param meta  By-line and copyright metadata; see buildDocument in
+ *   docxExport.ts.
  */
-export async function saveToGoogleDrive(doc, meta = {}) {
+export async function saveToGoogleDrive(
+  doc: LessonDoc,
+  meta: LessonMeta = {},
+): Promise<DriveFile> {
   // Never allow two uploads at once — a second click while one is running would
   // double our request rate for no benefit.
   if (inFlight) {

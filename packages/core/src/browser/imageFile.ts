@@ -6,18 +6,32 @@ const CONVERTIBLE_TO_WEBP = new Set(["image/png", "image/jpeg", "image/jpg"]);
 // Same quality the server targets, on canvas's 0–1 scale (server uses 0–100).
 const WEBP_QUALITY = 0.8;
 
+/** An image file read for a block: its bytes and its natural size in pixels. */
+export interface ImageFileData {
+  bytes: Uint8Array<ArrayBuffer>;
+  mime: string;
+  width: number;
+  height: number;
+  name: string;
+}
+
 // Re-encode a decoded <img> to WEBP on a canvas. Returns null if the browser's
 // canvas can't encode WEBP (toBlob silently falls back to PNG in that case),
 // the encode fails, or the result isn't actually smaller than the original —
 // mirroring the server's keep-whichever-is-smaller rule.
-async function tryEncodeWebp(img, width, height, originalSize) {
+async function tryEncodeWebp(
+  img: HTMLImageElement,
+  width: number,
+  height: number,
+  originalSize: number,
+) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.drawImage(img, 0, 0, width, height);
-  const blob = await new Promise((resolve) =>
+  const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/webp", WEBP_QUALITY),
   );
   if (!blob || blob.type !== "image/webp" || blob.size >= originalSize) {
@@ -37,12 +51,13 @@ async function tryEncodeWebp(img, width, height, originalSize) {
 // content type and performs the same conversion as a fallback for anything
 // that reaches it as a non-WEBP raster (unsupported browser, modified client,
 // etc.), so correctness never depends on this step succeeding.
-export function readImageFile(file) {
+export function readImageFile(file: File): Promise<ImageFileData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Could not read the image file."));
     reader.onload = () => {
-      const bytes = new Uint8Array(reader.result);
+      // readAsArrayBuffer (below) always gives an ArrayBuffer.
+      const bytes = new Uint8Array(reader.result as ArrayBuffer);
       const mime = file.type || "image/png";
       // Measure via a temporary object URL — cheaper than a base64 data URL and
       // revoked as soon as we have the dimensions.

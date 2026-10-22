@@ -25,14 +25,38 @@ import {
   isUsableImage,
   rankPages,
   wikidataPickPages,
+  type CommonsPage,
+  type UsableImageInfo,
+  type WikidataPick,
 } from "../wikimedia.ts";
+
+/** One search result, in the shape the image dialog renders. */
+export interface CommonsHit {
+  id?: number;
+  title: string;
+  previewURL: string;
+  width?: number;
+  height?: number;
+  mime?: string;
+  descriptionURL: string;
+  licenseURL: string;
+  author: string;
+  license: string;
+  tags: string;
+  credit: string;
+  /** Set on a picture Wikidata lists for the topic: what it is, and of what. */
+  wikidata?: {
+    role: WikidataPick["image"]["role"];
+    item: WikidataPick["item"];
+  };
+}
 
 // Strip HTML to plain text using DOMParser, which (unlike assigning innerHTML)
 // never executes scripts or fetches sub-resources. Commons' extmetadata fields
 // like Artist arrive as HTML (often an <a> link), so we flatten them to text and
 // collapse whitespace. Falls back to the shared regex strip if DOMParser is
 // unavailable.
-function stripHtml(html) {
+function stripHtml(html: unknown) {
   if (!html) return "";
   try {
     const doc = new DOMParser().parseFromString(String(html), "text/html");
@@ -47,7 +71,7 @@ function stripHtml(html) {
 
 // Map one generator=search result page (+ its imageinfo) to a normalised hit
 // with the same shape the dialog uses for Pixabay, plus the attribution fields.
-function normaliseHit(page, info) {
+function normaliseHit(page: CommonsPage, info: UsableImageInfo): CommonsHit {
   const meta = info.extmetadata || {};
   const { author, license, credit } = extmetaCredit(meta, stripHtml);
   return {
@@ -81,15 +105,15 @@ function normaliseHit(page, info) {
  * (wikidataPickPages in ../wikimedia.ts), so a slow query service costs the
  * picks and never the search.
  *
- * @param {string} query  Free-text search terms.
- * @param {object} [opts]
- * @param {number} [opts.page]     1-based page number (default 1).
- * @param {number} [opts.perPage]  Results per page (default 20, max 50).
- * @returns {Promise<{hits: object[], total: number, totalHits: number}>}
- *   Normalised hits: { id, title, previewURL, width, height, mime,
- *   descriptionURL, licenseURL, author, license, tags, credit, wikidata? }.
+ * @param query  Free-text search terms.
+ * @param opts.page     1-based page number (default 1).
+ * @param opts.perPage  Results per page (default 20, max 50).
+ * @returns Normalised hits (see CommonsHit).
  */
-export async function searchWikimediaImages(query, opts = {}) {
+export async function searchWikimediaImages(
+  query: string,
+  opts: { page?: number; perPage?: number } = {},
+): Promise<{ hits: CommonsHit[]; total: number; totalHits: number }> {
   const q = (query || "").trim();
   if (!q) {
     throw new Error("Type something to search for first.");
@@ -114,10 +138,12 @@ export async function searchWikimediaImages(query, opts = {}) {
     ),
   ]);
 
-  const hits = picks.map(({ page: picked, info, image, item }) => ({
-    ...normaliseHit(picked, info),
-    wikidata: { role: image.role, item },
-  }));
+  const hits: CommonsHit[] = picks.map(
+    ({ page: picked, info, image, item }) => ({
+      ...normaliseHit(picked, info),
+      wikidata: { role: image.role, item },
+    }),
+  );
   const picked = new Set(hits.map((hit) => hit.title));
   for (const p of rankPages(pages)) {
     const info = p.imageinfo && p.imageinfo[0];
@@ -137,12 +163,18 @@ export async function searchWikimediaImages(query, opts = {}) {
  * from Commons' image CDN (which sends CORS headers, so the browser can read
  * them). The bytes are returned for storeImageBytes to hash and store.
  *
- * @param {object} hit  A hit from searchWikimediaImages (needs `title`).
- * @returns {Promise<{bytes: Uint8Array, mime: string, width: number, height: number}>}
+ * @param hit  A hit from searchWikimediaImages (needs `title`).
  */
-export async function fetchWikimediaImage(hit) {
+export async function fetchWikimediaImage(
+  hit: Pick<CommonsHit, "title" | "width" | "height"> | null | undefined,
+): Promise<{
+  bytes: Uint8Array<ArrayBuffer>;
+  mime: string;
+  width: number | undefined;
+  height: number | undefined;
+}> {
   const title = hit && hit.title;
-  if (!title) {
+  if (!hit || !title) {
     throw new Error("That image can no longer be loaded.");
   }
 
@@ -161,11 +193,11 @@ export async function fetchWikimediaImage(hit) {
   const info = pages[0] && pages[0].imageinfo && pages[0].imageinfo[0];
   // thumburl is the scaled version; fall back to the original if scaling failed.
   const src = (info && (info.thumburl || info.url)) || "";
-  if (!src) {
+  if (!info || !src) {
     throw new Error("The image could not be downloaded.");
   }
 
-  let imgRes;
+  let imgRes: Response;
   try {
     imgRes = await fetch(src);
   } catch (e) {

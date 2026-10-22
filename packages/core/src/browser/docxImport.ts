@@ -1,5 +1,5 @@
 // Best-effort import of a Word .docx back into the lesson model. This is the
-// inverse of docxExport.js, and it is deliberately lossy: we run the file
+// inverse of docxExport.ts, and it is deliberately lossy: we run the file
 // through mammoth (docx → semantic HTML, the same converter the preview uses),
 // then walk that HTML and rebuild the blocks our editor understands.
 //
@@ -55,11 +55,24 @@ import {
   SOURCES_HEADING_STYLE_NAME,
 } from "../lessonLayout.ts";
 import {
+  type TextMark,
   normalizeTextContent,
   textBlockHasContent,
   withTextBlockContent,
 } from "../lessonText.ts";
 import { partsText, sourceCitationParts } from "../sources.ts";
+import type {
+  Block,
+  ImageBlock,
+  LessonDoc,
+  QuestionBlock,
+  QuestionType,
+  Section,
+  Source,
+  SpellingBlock,
+  VaktBlock,
+  VaktLink,
+} from "../types.ts";
 import {
   VAKT_DEFAULT_IMAGE_ALIGN,
   VAKT_DEFAULT_IMAGE_SIZE,
@@ -75,15 +88,68 @@ import { convertDocImages, resolveImageSrc } from "./imageRef.ts";
 // requirement). Distinct from unexpected errors so callers can tell the two
 // apart if they ever want to.
 export class DocxImportError extends Error {
-  constructor(message) {
+  constructor(message: string) {
     super(message);
     this.name = "DocxImportError";
   }
 }
 
+// A footnote or endnote as readNote finds it.
+interface ImportedNote {
+  text: string;
+  cite?: string;
+  locator?: string;
+  note?: string;
+}
+
+// A paragraph's words as inlineContent reads them, before finishTextBlocks
+// turns its footnotes into citations.
+interface ImportedText {
+  type: "text";
+  text: string;
+  marks?: Array<{ type: TextMark }>;
+}
+type ImportedInline = ImportedText | { type: "footnote"; note: ImportedNote };
+
+const isImportedText = (node: ImportedInline): node is ImportedText =>
+  node.type === "text";
+
+// A text block still gathering its paragraphs.
+interface PendingTextBlock {
+  id: string;
+  type: "text";
+  paragraphs: ImportedInline[][];
+}
+
+interface ImportedSection {
+  id: string;
+  name: string;
+  blocks: Array<Block | PendingTextBlock>;
+}
+
+// A question read off its prompt paragraph by matchQuestion.
+interface MatchedQuestion {
+  type: QuestionType;
+  prompt: string;
+  answer: string;
+  threeBoard: boolean;
+}
+
+// The caption and credit lines under a picture (see pictureLines).
+interface PictureLines {
+  caption: string;
+  credit: string | undefined;
+  used: number;
+}
+
+type LinesAt = (k: number) => PictureLines;
+
+const isTextNode = (node: Node): node is Text => node.nodeType === 3;
+const isElement = (node: Node): node is Element => node.nodeType === 1;
+
 // The class mammoth emits for each question style (e.g. "s2c-q-number") mapped
 // back to its type key.
-const CLASS_TO_TYPE = Object.fromEntries(
+const CLASS_TO_TYPE: Record<string, QuestionType> = Object.fromEntries(
   QUESTION_TYPE_LIST.map((q) => [questionStyleClass(q.key), q.key]),
 );
 
@@ -114,7 +180,9 @@ const IMPORT_STYLE_MAP = [
 // Read a .docx File and rebuild a lesson document. Resolves to a doc shaped like
 // { title, sections } ready for the editor; rejects (DocxImportError) when the
 // file isn't a usable lesson.
-export async function importDocxFile(file) {
+export async function importDocxFile(
+  file: File | null | undefined,
+): Promise<LessonDoc> {
   if (!file) throw new DocxImportError("No file was selected.");
   if (!/\.docx$/i.test(file.name || "")) {
     throw new DocxImportError(
@@ -122,7 +190,7 @@ export async function importDocxFile(file) {
     );
   }
 
-  let html;
+  let html: string;
   try {
     const arrayBuffer = await file.arrayBuffer();
     // The style map is what carries each question's type through the conversion,
@@ -153,30 +221,33 @@ export async function importDocxFile(file) {
 // Walk mammoth's HTML and rebuild the lesson. We iterate the body's block-level
 // children in order; question and spelling blocks greedily consume the metadata
 // paragraphs that follow their heading, so the loop index is advanced past them.
-function parseHtmlToDoc(html, fileName) {
+function parseHtmlToDoc(html: string, fileName: string): LessonDoc {
   const dom = new DOMParser().parseFromString(html, "text/html");
   // The footnote lists come out first: they aren't lesson content, they are
   // what the footnote markers in the text point at.
   const notes = takeNotes(dom);
   const nodes = Array.from(dom.body.children);
-  const sources = [];
+  const sources: Source[] = [];
   // A file this app exported since captions were given their own style says
   // which paragraphs are captions; an older one leaves it to the shape.
   const styledCaptions = Boolean(dom.querySelector(`p.${CAPTION_CLASS}`));
-  const captionOf = (el) => captionText(el, styledCaptions);
+  const captionOf = (el: Element | undefined) =>
+    captionText(el, styledCaptions);
   // A file exported since credits had their own paragraph says so, and in one
   // of those a picture with no credit paragraph has no credit.
   const separateCredits = Boolean(
     dom.querySelector(`span.${LESSON_TITLE_CLASS}`),
   );
-  const linesAt = (k) => pictureLines(nodes, k, captionOf, separateCredits);
+  const linesAt: LinesAt = (k) =>
+    pictureLines(nodes, k, captionOf, separateCredits);
 
   // Decide which heading levels act as section dividers. Our own exports use
   // `<h2>`; we also accept `<h3>`, and fall back to `<h1>` for documents that
   // only use top-level headings (with the first one taken as the title).
-  const hasTag = (t) => nodes.some((n) => n.tagName.toLowerCase() === t);
+  const hasTag = (t: string) =>
+    nodes.some((n) => n.tagName.toLowerCase() === t);
   const h1Count = nodes.filter((n) => n.tagName.toLowerCase() === "h1").length;
-  const sectionLevels =
+  const sectionLevels: Set<string> =
     hasTag("h2") || hasTag("h3")
       ? new Set(["h2", "h3"])
       : h1Count >= 2
@@ -184,30 +255,33 @@ function parseHtmlToDoc(html, fileName) {
         : new Set();
 
   let title = "";
-  const sections = [];
-  let current = null;
+  const sections: ImportedSection[] = [];
+  let current: ImportedSection | null = null;
 
-  const startSection = (name) => {
-    current = { id: newId(), name: name || "Untitled section", blocks: [] };
-    sections.push(current);
+  const startSection = (name: string) => {
+    const section: ImportedSection = {
+      id: newId(),
+      name: name || "Untitled section",
+      blocks: [],
+    };
+    current = section;
+    sections.push(section);
+    return section;
   };
   // Content that appears before the first heading still needs a home.
-  const ensureSection = () => {
-    if (!current) startSection("Imported section");
-    return current;
-  };
+  const ensureSection = () => current ?? startSection("Imported section");
   // Text blocks gather paragraphs as they go and become real blocks at the end
   // (finishTextBlocks), once the sources their footnotes may cite are known.
-  const pushParagraph = (inline) => {
+  const pushParagraph = (inline: ImportedInline[]) => {
     const section = ensureSection();
     const last = section.blocks[section.blocks.length - 1];
-    if (last && last.type === "text" && last.paragraphs) {
+    if (last && last.type === "text" && "paragraphs" in last) {
       last.paragraphs.push(inline);
     } else {
       section.blocks.push({ id: newId(), type: "text", paragraphs: [inline] });
     }
   };
-  const pushText = (text) => pushParagraph([{ type: "text", text }]);
+  const pushText = (text: string) => pushParagraph([{ type: "text", text }]);
 
   for (let i = 0; i < nodes.length; i += 1) {
     const el = nodes[i];
@@ -232,11 +306,11 @@ function parseHtmlToDoc(html, fileName) {
 
     // Images (a `<p>` wrapping an `<img>`) — checked before the empty-text skip
     // below, since the wrapping paragraph has no text of its own.
-    const img = el.querySelector?.("img");
-    if (img?.getAttribute("src")) {
-      ensureSection();
+    const src = el.querySelector?.("img")?.getAttribute("src");
+    if (src) {
+      const section = ensureSection();
       const { caption, credit, used } = linesAt(i + 1);
-      current.blocks.push(imageBlock(img, caption, credit));
+      section.blocks.push(imageBlock(src, caption, credit));
       i += used; // consume the caption and credit paragraphs
       continue;
     }
@@ -285,26 +359,26 @@ function parseHtmlToDoc(html, fileName) {
     }
 
     if (isSpellingHeading(text)) {
-      ensureSection();
+      const section = ensureSection();
       const { block, next } = readSpelling(nodes, i);
-      current.blocks.push(block);
+      section.blocks.push(block);
       i = next;
       continue;
     }
 
     if (isVaktHeading(text)) {
-      ensureSection();
+      const section = ensureSection();
       const { block, next } = readVakt(nodes, i, linesAt);
-      current.blocks.push(block);
+      section.blocks.push(block);
       i = next;
       continue;
     }
 
     const question = matchQuestion(el);
     if (question) {
-      ensureSection();
+      const section = ensureSection();
       const { block, next } = readQuestion(nodes, i, question);
-      current.blocks.push(block);
+      section.blocks.push(block);
       i = next;
       continue;
     }
@@ -313,19 +387,17 @@ function parseHtmlToDoc(html, fileName) {
     // Word's own heading levels are section breaks (handled above); this one
     // is content and stays where it sits.
     if (el.classList?.contains(HEADING_STYLE_CLASS)) {
-      ensureSection();
-      current.blocks.push({ id: newId(), type: "heading", text });
+      ensureSection().blocks.push({ id: newId(), type: "heading", text });
       continue;
     }
 
     pushParagraph(inlineContent(el, notes));
   }
 
-  finishTextBlocks(sections, sources);
   return {
     title: title || stripExtension(fileName) || "Imported lesson",
     ...(sources.length ? { sources } : {}),
-    sections,
+    sections: finishTextBlocks(sections, sources),
   };
 }
 
@@ -334,12 +406,12 @@ function parseHtmlToDoc(html, fileName) {
 // { text } for a note from anywhere, plus { cite, locator, note } when the
 // exporter marked its parts with their styles (see footnoteParts), which is
 // what lets a citation be read back exactly.
-function takeNotes(dom) {
-  const notes = new Map();
+function takeNotes(dom: Document): Map<string, ImportedNote> {
+  const notes = new Map<string, ImportedNote>();
   const items = dom.body.querySelectorAll(
     'li[id^="footnote-"], li[id^="endnote-"]',
   );
-  const lists = new Set();
+  const lists = new Set<Element>();
   for (const li of items) {
     // The arrow mammoth adds to lead back to the marker.
     for (const back of li.querySelectorAll(
@@ -354,9 +426,9 @@ function takeNotes(dom) {
   return notes;
 }
 
-const squash = (text) => text.replace(/\s+/g, " ").trim();
+const squash = (text: string) => text.replace(/\s+/g, " ").trim();
 
-function readNote(li) {
+function readNote(li: Element): ImportedNote {
   const text = squash(li.textContent);
   const locatorEl = li.querySelector(`span.${FOOTNOTE_LOCATOR_CLASS}`);
   const noteEl = li.querySelector(`span.${FOOTNOTE_NOTE_CLASS}`);
@@ -364,7 +436,8 @@ function readNote(li) {
 
   // What's left once the locator and note are lifted out is the citation,
   // closed by the full stop the exporter puts after it.
-  const rest = li.cloneNode(true);
+  // cloneNode is typed as returning a Node, but a clone of an element is one.
+  const rest = li.cloneNode(true) as Element;
   for (const el of rest.querySelectorAll(
     `span.${FOOTNOTE_LOCATOR_CLASS}, span.${FOOTNOTE_NOTE_CLASS}`,
   )) {
@@ -382,10 +455,13 @@ function readNote(li) {
 
 // A paragraph's words as content: formatting from the tags mammoth writes, and
 // a footnote wherever a marker links into the notes.
-function inlineContent(el, notes) {
-  const out = [];
-  const walk = (node, marks) => {
-    if (node.nodeType === 3) {
+function inlineContent(
+  el: Element,
+  notes: Map<string, ImportedNote>,
+): ImportedInline[] {
+  const out: ImportedInline[] = [];
+  const walk = (node: Node, marks: Set<TextMark>) => {
+    if (isTextNode(node)) {
       if (node.nodeValue) {
         out.push({
           type: "text",
@@ -395,14 +471,15 @@ function inlineContent(el, notes) {
       }
       return;
     }
-    if (node.nodeType !== 1) return;
+    if (!isElement(node)) return;
     const link = node.matches('a[href^="#footnote-"], a[href^="#endnote-"]')
       ? node
       : node.tagName === "SUP"
         ? node.querySelector('a[href^="#footnote-"], a[href^="#endnote-"]')
         : null;
     if (link) {
-      const note = notes.get(link.getAttribute("href").slice(1));
+      // The selectors above only match a link that has an href.
+      const note = notes.get(link.getAttribute("href")!.slice(1));
       if (note?.text) out.push({ type: "footnote", note });
       return;
     }
@@ -416,16 +493,16 @@ function inlineContent(el, notes) {
   for (const child of el.childNodes) walk(child, new Set());
 
   // Trim the paragraph's outer whitespace, as the plain-text path always has.
-  const first = out.find((node) => node.type === "text");
+  const first = out.find(isImportedText);
   if (first) first.text = first.text.replace(/^\s+/, "");
-  const last = [...out].reverse().find((node) => node.type === "text");
+  const last = [...out].reverse().find(isImportedText);
   if (last) last.text = last.text.replace(/\s+$/, "");
   return out;
 }
 
 // One entry of the exporter's Sources list: "Author. Title. Publisher, Year.
 // https://...", with the title in italics and the address a link.
-function readSource(el) {
+function readSource(el: Element): Source | null {
   const em = el.querySelector("em, i");
   const link = el.querySelector("a[href]");
   const full = el.textContent.replace(/\s+/g, " ").trim();
@@ -433,12 +510,13 @@ function readSource(el) {
 
   const url =
     link && isSafeLink(link.getAttribute("href"))
-      ? link.getAttribute("href")
+      ? (link.getAttribute("href") ?? "")
       : "";
   // The words between two points in the paragraph. The title and the link are
   // found by where their elements sit, not by searching for their text, which
   // could match inside the author ("Egypt Society" writing "Egypt").
-  const textBetween = (setStart, setEnd) => {
+  type MoveEdge = ((range: Range) => void) | null;
+  const textBetween = (setStart: MoveEdge, setEnd: MoveEdge) => {
     const range = el.ownerDocument.createRange();
     range.selectNodeContents(el);
     setStart?.(range);
@@ -448,13 +526,13 @@ function readSource(el) {
   const linkAfterTitle =
     link && url && (!em || em.compareDocumentPosition(link) & 4) ? link : null;
   const endAtLink = linkAfterTitle
-    ? (range) => range.setEndBefore(linkAfterTitle)
+    ? (range: Range) => range.setEndBefore(linkAfterTitle)
     : null;
 
   let title = em ? em.textContent.trim() : "";
   let author = "";
-  let details;
-  if (title) {
+  let details: string;
+  if (em && title) {
     author = textBetween(null, (range) => range.setEndBefore(em))
       .trim()
       .replace(/\.$/, "");
@@ -487,10 +565,14 @@ function readSource(el) {
 
 // Turn each gathered text block into a stored one, matching footnotes against
 // the sources read off the end of the document.
-function finishTextBlocks(sections, sources) {
-  for (const section of sections) {
-    section.blocks = section.blocks.map((block) => {
-      if (block.type !== "text" || !block.paragraphs) return block;
+function finishTextBlocks(
+  sections: ImportedSection[],
+  sources: Source[],
+): Section[] {
+  return sections.map((section) => ({
+    ...section,
+    blocks: section.blocks.map((block): Block => {
+      if (block.type !== "text" || !("paragraphs" in block)) return block;
       const content = normalizeTextContent({
         type: "doc",
         content: block.paragraphs.map((inline) => ({
@@ -502,9 +584,12 @@ function finishTextBlocks(sections, sources) {
           ),
         })),
       });
-      return withTextBlockContent({ id: block.id, type: "text" }, content);
-    });
-  }
+      return withTextBlockContent(
+        { id: block.id, type: "text" as const },
+        content,
+      );
+    }),
+  }));
 }
 
 // A footnote read back as a citation of one of the sources, or as a note.
@@ -515,8 +600,8 @@ function finishTextBlocks(sections, sources) {
 // in the two shapes that can't be misread: the citation alone, or the citation
 // then a note. A locator can't be told from a note without the styles ("p. 12"
 // has a full stop in it), so anything else stays a note with its words intact.
-function citationFor(note, sources) {
-  const citeOf = (source) =>
+function citationFor(note: ImportedNote, sources: Source[]) {
+  const citeOf = (source: Source) =>
     partsText(sourceCitationParts(source)).replace(/\.$/, "");
 
   if (note.cite !== undefined) {
@@ -542,7 +627,7 @@ function citationFor(note, sources) {
 
 // True when the paragraph's entire content is a single <strong> (our title and
 // question prompts look like this).
-function isBoldOnly(el) {
+function isBoldOnly(el: Element) {
   return el.children.length === 1 && el.children[0].tagName === "STRONG";
 }
 
@@ -551,12 +636,12 @@ function isBoldOnly(el) {
 // is a paragraph that is one italic run and nothing else, text nodes included:
 // counting only element children would take "*Felis catus* is the house cat."
 // for a caption, now that text blocks keep their italics.
-function captionText(el, styledCaptions) {
+function captionText(el: Element | undefined, styledCaptions: boolean) {
   if (!el || el.tagName !== "P") return "";
   if (styledCaptions) {
     return el.classList.contains(CAPTION_CLASS) ? el.textContent.trim() : "";
   }
-  if (el.childNodes.length === 1 && el.firstChild.nodeName === "EM") {
+  if (el.childNodes.length === 1 && el.firstChild?.nodeName === "EM") {
     return el.textContent.trim();
   }
   return "";
@@ -569,7 +654,12 @@ function captionText(el, styledCaptions) {
 // for one of those `credit` is undefined so the block is left to that split.
 // In a newer file (`separateCredits`) a missing credit is an empty one, which
 // imageCaptionParts takes as removed on purpose.
-function pictureLines(nodes, k, captionOf, separateCredits) {
+function pictureLines(
+  nodes: Element[],
+  k: number,
+  captionOf: (el: Element | undefined) => string,
+  separateCredits: boolean,
+): PictureLines {
   const caption = captionOf(nodes[k]);
   let used = caption ? 1 : 0;
   const next = nodes[k + used];
@@ -585,7 +675,7 @@ function pictureLines(nodes, k, captionOf, separateCredits) {
 // The exporter's spelling line is "Spell: FIRST SECOND THIRD". Older exports
 // used a "Spelling words" heading above a numbered list, which readSpelling
 // still understands, so both shapes import.
-function isSpellingHeading(text) {
+function isSpellingHeading(text: string) {
   return (
     /^spelling words$/i.test(text) ||
     text.toLowerCase().startsWith(SPELLING_LABEL.toLowerCase())
@@ -595,7 +685,7 @@ function isSpellingHeading(text) {
 // Read a question off a paragraph whose prompt carries one of our question
 // character styles: `<p><span class="s2c-q-single">prompt</span>  answer</p>`.
 // Returns { type, prompt, answer } or null when the paragraph isn't one.
-function matchQuestion(el) {
+function matchQuestion(el: Element): MatchedQuestion | null {
   // A Besides line's label wears the question style too (so the PDF can
   // colour it), but the line belongs to the question above it: readQuestion
   // takes it from there, and one it can't attach is not a question either.
@@ -625,13 +715,13 @@ function matchQuestion(el) {
 // The Besides line printed under a three-board question: 'Besides "rocks"' in
 // its own paragraph style, then the other answers. Returns the named answer,
 // or null when the paragraph isn't one.
-function matchBesides(el) {
+function matchBesides(el: Element | undefined) {
   if (!el?.classList?.contains(BESIDES_LINE_CLASS)) return null;
   const match = el.textContent.match(/^\s*Besides\s+"([^"]+)"/);
   return match ? match[1].trim() : null;
 }
 
-function matchQuestionClass(span) {
+function matchQuestionClass(span: Element) {
   for (const name of span.classList) {
     if (CLASS_TO_TYPE[name]) return CLASS_TO_TYPE[name];
   }
@@ -642,8 +732,17 @@ function matchQuestionClass(span) {
 // with the prompt; only a number question's working-out spills onto the indented
 // paragraphs that follow. Returns { block, next } where `next` is the index of
 // the last node consumed (so the caller resumes after it).
-function readQuestion(nodes, i, { type, prompt, answer, threeBoard }) {
-  const block = { id: newId(), type: "question", questionType: type, prompt };
+function readQuestion(
+  nodes: Element[],
+  i: number,
+  { type, prompt, answer, threeBoard }: MatchedQuestion,
+) {
+  const block: QuestionBlock = {
+    id: newId(),
+    type: "question",
+    questionType: type,
+    prompt,
+  };
   let last = i;
   if (type === "multiple" && threeBoard) block.threeBoard = true;
 
@@ -711,8 +810,8 @@ function readQuestion(nodes, i, { type, prompt, answer, threeBoard }) {
 // Build a spelling block from either shape: the current "Spell: FIRST SECOND"
 // line, or the older "Spelling words" heading followed by numbered (or
 // bulleted/list) word paragraphs.
-function readSpelling(nodes, i) {
-  const block = { id: newId(), type: "spelling", words: [] };
+function readSpelling(nodes: Element[], i: number) {
+  const block: SpellingBlock = { id: newId(), type: "spelling", words: [] };
   let last = i;
   let k = i + 1;
 
@@ -766,7 +865,7 @@ function readSpelling(nodes, i) {
 // The style is there (the exporter writes one so the red survives to the PDF),
 // but the label is in the visible text either way, which means a lesson typed by
 // hand in Word imports just as well as one this app printed.
-function isVaktHeading(text) {
+function isVaktHeading(text: string) {
   return text.toLowerCase().startsWith(VAKT_LABEL.toLowerCase());
 }
 
@@ -775,10 +874,10 @@ function isVaktHeading(text) {
 // caption and the credit that may follow, read by `linesAt`, see
 // pictureLines), and one paragraph per link. Returns { block, next } where
 // `next` is the index of the last node consumed.
-function readVakt(nodes, i, linesAt) {
+function readVakt(nodes: Element[], i: number, linesAt: LinesAt) {
   const heading = nodes[i].textContent.trim();
   const text = heading.slice(VAKT_LABEL.length).trim();
-  const block = {
+  const block: VaktBlock = {
     id: newId(),
     type: "vakt",
     // "(no activity yet)" is the exporter's own placeholder for an activity the
@@ -790,10 +889,10 @@ function readVakt(nodes, i, linesAt) {
   let last = i;
   let k = i + 1;
 
-  const img = nodes[k]?.querySelector?.("img");
-  if (img?.getAttribute("src")) {
+  const src = nodes[k]?.querySelector?.("img")?.getAttribute("src");
+  if (src) {
     const { caption, credit, used } = linesAt(k + 1);
-    block.src = img.getAttribute("src");
+    block.src = src;
     block.width = 0; // filled in by measureImages()
     block.height = 0;
     // The framing starts at the VAKT defaults, the way an imported image block
@@ -826,7 +925,7 @@ function readVakt(nodes, i, linesAt) {
 
 // Read one printed link line back into a { id, label, url } row. The joiner is
 // searched for from the right, so a label that happens to contain one survives.
-function parseVaktLink(text) {
+function parseVaktLink(text: string): VaktLink | null {
   if (!text) return null;
   const at = text.lastIndexOf(VAKT_LINK_JOINER);
   const label = at === -1 ? "" : text.slice(0, at).trim();
@@ -837,11 +936,15 @@ function parseVaktLink(text) {
   return { id: newId(), label, url };
 }
 
-function imageBlock(img, caption, credit) {
+function imageBlock(
+  src: string,
+  caption: string,
+  credit: string | undefined,
+): ImageBlock {
   return {
     id: newId(),
     type: "image",
-    src: img.getAttribute("src"),
+    src,
     width: 0, // filled in by measureImages()
     height: 0,
     size: DEFAULT_IMAGE_SIZE,
@@ -851,7 +954,7 @@ function imageBlock(img, caption, credit) {
   };
 }
 
-function stripExtension(name) {
+function stripExtension(name: string) {
   return (name || "").replace(/\.docx$/i, "").trim();
 }
 
@@ -861,7 +964,7 @@ function stripExtension(name) {
 // Section headings are no longer required: an exported lesson has none, so
 // demanding them would reject our own documents. What has to be there is
 // readable content.
-function validateImportedDoc(doc) {
+function validateImportedDoc(doc: LessonDoc) {
   const hasContent = doc.sections.some((s) => s.blocks.some(blockHasContent));
   if (!hasContent) {
     throw new DocxImportError(
@@ -870,7 +973,7 @@ function validateImportedDoc(doc) {
   }
 }
 
-function blockHasContent(block) {
+function blockHasContent(block: Block) {
   if (block.type === "text") return textBlockHasContent(block);
   if (block.type === "image") return Boolean(block.image || block.src);
   if (block.type === "question") return Boolean(block.prompt);
@@ -884,17 +987,17 @@ function blockHasContent(block) {
 // Imported images carry no dimensions, but the exporter and editor preview need
 // them to preserve aspect ratio. Decode each image to read its natural size;
 // failures leave it at 0 (the exporter then falls back to a square fit).
-async function measureImages(doc) {
+async function measureImages(doc: LessonDoc) {
   const images = doc.sections
     .flatMap((s) => s.blocks)
     .filter(
-      (b) =>
+      (b): b is ImageBlock | VaktBlock =>
         (b.type === "image" || b.type === "vakt") && Boolean(b.image || b.src),
     );
   await Promise.all(
     images.map(
       (block) =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           resolveImageSrc(block)
             .then(({ url, revoke }) => {
               const img = new Image();

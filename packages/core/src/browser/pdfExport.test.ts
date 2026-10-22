@@ -10,7 +10,7 @@ const { layoutImageFigures } = await import("./pdfExport.ts");
 
 const IMG = '<p><img src="a.png" width="10" height="10" /></p>';
 
-function picture(caption, credit) {
+function picture(caption: string, credit: string) {
   return { width: 100, align: "center", caption, credit };
 }
 

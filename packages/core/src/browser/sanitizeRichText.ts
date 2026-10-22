@@ -65,10 +65,9 @@ if (hasDom) {
 /**
  * Sanitize rich-text HTML for rendering. See the note above on why this runs even
  * though the Worker already sanitized on write.
- * @param {string} html
- * @returns {string} HTML safe to inject.
+ * @returns HTML safe to inject.
  */
-export function sanitizeRichText(html) {
+export function sanitizeRichText(html: string | null | undefined): string {
   if (!html) return "";
   if (!hasDom) {
     // Loud rather than a silent pass-through: returning the input unsanitized

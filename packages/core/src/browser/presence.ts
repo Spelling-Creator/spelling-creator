@@ -25,7 +25,7 @@ const PALETTE = [
   "#c0ca33",
 ];
 
-export function colorForId(id) {
+export function colorForId(id: string | null | undefined): string {
   const s = String(id || "");
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
@@ -67,16 +67,28 @@ const MIRROR_PROPS = [
   "MozTabSize",
 ];
 
+// A style declaration as a bag of properties by name, which is how the mirror
+// copies them (the DOM's types don't list MozTabSize).
+type StyleProps = Record<string, string>;
+
+/** Where a caret sits, in pixels. */
+export interface CaretRect {
+  left: number;
+  top: number;
+  height: number;
+}
+
 /**
  * Pixel coordinates of the caret at `index` within a textarea/input, relative
  * to the element's own top-left (border box). Add the element's
  * getBoundingClientRect() and subtract its scroll offsets to get a viewport
  * position. Works by mirroring the field in an off-screen div and measuring
  * where a marker span lands.
- *
- * @returns {{ left: number, top: number, height: number }}
  */
-export function getCaretCoordinates(element, index) {
+export function getCaretCoordinates(
+  element: HTMLTextAreaElement | HTMLInputElement,
+  index: number,
+): CaretRect {
   const isInput = element.nodeName.toLowerCase() === "input";
   const computed = window.getComputedStyle(element);
 
@@ -87,13 +99,15 @@ export function getCaretCoordinates(element, index) {
   style.whiteSpace = "pre-wrap";
   if (!isInput) style.wordWrap = "break-word";
 
+  const from = computed as unknown as StyleProps;
+  const to = style as unknown as StyleProps;
   for (const prop of MIRROR_PROPS) {
     if (isInput && prop === "lineHeight") {
       // Single-line inputs render text vertically centred; approximate that by
       // letting the line fill the element's height.
       style.lineHeight = computed.height;
     } else {
-      style[prop] = computed[prop];
+      to[prop] = from[prop];
     }
   }
   // Inputs never wrap and we don't want the mirror to scroll.
@@ -134,18 +148,18 @@ export function getCaretCoordinates(element, index) {
 // offset taken on one screen lands on the same character on another, and the
 // cursor message stays { field, start, end } whichever kind of field it is.
 
-function paragraphsOf(root) {
+function paragraphsOf(root: Element) {
   return Array.from(root.children);
 }
 
 // How many characters of plain text a paragraph holds.
-function paragraphLength(paragraph) {
+function paragraphLength(paragraph: Element) {
   return paragraph.textContent.length;
 }
 
 // The paragraph of `root` that contains `node`, or null.
-function paragraphContaining(root, node) {
-  let el = node;
+function paragraphContaining(root: Element, node: Node) {
+  let el: Node | null = node;
   while (el && el.parentNode !== root) el = el.parentNode;
   return el && el.parentNode === root ? el : null;
 }
@@ -153,14 +167,14 @@ function paragraphContaining(root, node) {
 /**
  * The plain-text offset of a DOM point (as a Selection reports it) within a
  * contenteditable's paragraphs.
- * @param {Element} root
- * @param {Node} node
- * @param {number} offset
- * @returns {number}
  */
-export function contentEditableOffset(root, node, offset) {
+export function contentEditableOffset(
+  root: Element,
+  node: Node,
+  offset: number,
+): number {
   const paragraphs = paragraphsOf(root);
-  const lengthBefore = (count) =>
+  const lengthBefore = (count: number) =>
     paragraphs
       .slice(0, count)
       .reduce((sum, p) => sum + paragraphLength(p) + 1, 0);
@@ -178,19 +192,21 @@ export function contentEditableOffset(root, node, offset) {
   const range = document.createRange();
   range.setStart(paragraph, 0);
   range.setEnd(node, offset);
-  return lengthBefore(paragraphs.indexOf(paragraph)) + range.toString().length;
+  const index = (paragraphs as Node[]).indexOf(paragraph);
+  return lengthBefore(index) + range.toString().length;
 }
 
 /**
  * The local selection inside a contenteditable as { start, end } plain-text
  * offsets, or null when the selection isn't in it.
- * @param {Element} root
- * @returns {{ start: number, end: number } | null}
  */
-export function contentEditableSelection(root) {
+export function contentEditableSelection(
+  root: Element,
+): { start: number; end: number } | null {
   const selection = window.getSelection();
   if (!selection || !selection.rangeCount) return null;
   const { anchorNode, anchorOffset, focusNode, focusOffset } = selection;
+  if (!anchorNode || !focusNode) return null;
   if (!root.contains(anchorNode) || !root.contains(focusNode)) return null;
   const a = contentEditableOffset(root, anchorNode, anchorOffset);
   const b = contentEditableOffset(root, focusNode, focusOffset);
@@ -201,11 +217,11 @@ export function contentEditableSelection(root) {
  * Where the caret at plain-text `index` sits in a contenteditable, in viewport
  * pixels, or null when the field has no paragraphs to measure. An index past the
  * end (the block is a moment behind a collaborator's typing) clamps to the end.
- * @param {Element} root
- * @param {number} index
- * @returns {{ left: number, top: number, height: number } | null}
  */
-export function contentEditableCaretRect(root, index) {
+export function contentEditableCaretRect(
+  root: Element,
+  index: number,
+): CaretRect | null {
   const paragraphs = paragraphsOf(root);
   if (!paragraphs.length) return null;
 
@@ -221,17 +237,19 @@ export function contentEditableCaretRect(root, index) {
   remaining = Math.min(Math.max(remaining, 0), paragraphLength(paragraph));
 
   // Find the text node the offset falls in.
+  // SHOW_TEXT: every node the walker yields is a Text.
   const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  let last = null;
+  const nextText = () => walker.nextNode() as Text | null;
+  let node = nextText();
+  let last: Text | null = null;
   while (node) {
     if (remaining <= node.data.length) break;
     remaining -= node.data.length;
     last = node;
-    node = walker.nextNode();
+    node = nextText();
   }
 
-  const lineHeight = (el) =>
+  const lineHeight = (el: Element) =>
     parseFloat(window.getComputedStyle(el).lineHeight) ||
     parseFloat(window.getComputedStyle(el).fontSize) * 1.5 ||
     18;
@@ -244,7 +262,7 @@ export function contentEditableCaretRect(root, index) {
 
   const range = document.createRange();
   if (node) range.setStart(node, remaining);
-  else range.setStart(last, last.data.length);
+  else if (last) range.setStart(last, last.data.length);
   range.collapse(true);
   const rect = range.getClientRects()[0] || range.getBoundingClientRect();
   const height = rect.height || lineHeight(paragraph);

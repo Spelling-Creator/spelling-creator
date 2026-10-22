@@ -12,8 +12,8 @@
 // page. When the lesson lists sources they close the document under a
 // "Sources" line.
 //
-// pdfExport.js converts this document to HTML with mammoth and renders that, so
-// the PDF matches page for page; docxImport.js reads the same shape back.
+// pdfExport.ts converts this document to HTML with mammoth and renders that, so
+// the PDF matches page for page; docxImport.ts reads the same shape back.
 import {
   Document,
   Packer,
@@ -27,9 +27,32 @@ import {
   Footer,
   PageNumber,
   FootnoteReferenceRun,
+  type ICharacterStyleOptions,
+  type IImageOptions,
+  type IParagraphOptions,
+  type IRunOptions,
+  type ParagraphChild,
 } from "docx";
+import type { MmlNode } from "@mathjax/src/mjs/core/MmlTree/MmlNode.js";
+import type {
+  InlineText,
+  LessonDoc,
+  Picture,
+  QuestionBlock,
+  Section,
+  SpellingBlock,
+  Source,
+  TextBlock,
+  VaktBlock,
+} from "../types.ts";
 import { inlineTextPlain, inlineTextRuns } from "../inlineText.ts";
-import { footnoteParts, textBlockParagraphs } from "../lessonText.ts";
+import {
+  footnoteParts,
+  textBlockParagraphs,
+  type Footnote,
+  type Formula,
+} from "../lessonText.ts";
+import type { CitationPart } from "../sources.ts";
 import { formulaToDocx } from "./formulaDocx.ts";
 import { formulaKey, renderLessonFormulas } from "./formulas.ts";
 import { lessonSources, sourceEntryParts, sourcesById } from "../sources.ts";
@@ -60,6 +83,7 @@ import {
   TITLE_LINE_STYLE_NAME,
   lessonCopyright,
   lessonTitleLines,
+  type LessonMeta,
 } from "../lessonLayout.ts";
 import {
   ANSWER_GAP,
@@ -80,6 +104,7 @@ import {
   questionMeta,
   questionStyleId,
   questionStyleName,
+  type QuestionTypeMeta,
 } from "../questions.ts";
 import {
   HEADING_STYLE_ID,
@@ -107,6 +132,63 @@ import {
 // pulls in the whole `docx` library.
 export { DOCX_MAX_IMAGE_WIDTH };
 
+/**
+ * One picture the document really carries, as buildDocument reports it in
+ * `embedded`: the width the docx used, and how the PDF path frames it.
+ */
+export interface EmbeddedPicture {
+  width: number;
+  align: string;
+  caption: string;
+  credit: string;
+}
+
+/**
+ * What the exports need of a rendered formula (renderLessonFormulas in
+ * formulas.ts): its MathML tree, and its picture when one was asked for.
+ */
+export interface RenderedFormula {
+  root: MmlNode;
+  png?: { bytes: Uint8Array; width: number; height: number } | null;
+}
+
+/** How buildDocument writes a formula. */
+export type FormulasAs = "equation" | "image";
+
+export interface BuildDocumentOptions {
+  /**
+   * The lesson's formulas, rendered (renderLessonFormulas in formulas.ts).
+   * Without it a formula prints as its source.
+   */
+  formulas?: ReadonlyMap<string, RenderedFormula> | null;
+  /**
+   * A Word equation (the default), or a picture of the formula, for the PDF
+   * path, whose docx goes through mammoth, which drops equations. Pictures
+   * need `formulas` rendered with `images`.
+   */
+  formulasAs?: FormulasAs;
+}
+
+// The rendered formulas as the builders below pass them along.
+interface FormulaContext {
+  rendered: ReadonlyMap<string, RenderedFormula>;
+  as: FormulasAs;
+}
+
+// The footnotes collected while the body is built (see createNotes).
+interface Notes {
+  sources: Map<string, Source>;
+  footnotes: Record<string, { children: Paragraph[] }>;
+  next: number;
+}
+
+// The picture fields imageBlockParagraphs reads: an image block's, or a VAKT
+// activity's once vaktImageBlock has framed it.
+type FramedPicture = Picture & { size?: string; align?: string };
+
+// The image types ImageRun takes without a fallback picture.
+type ImageRunType = Exclude<IImageOptions["type"], "svg">;
+
 // Body text size, in docx half-points (28 = 14pt).
 const BODY_SIZE = 28;
 // The type tag in front of a prompt: smaller than the body and grey, so it
@@ -116,30 +198,35 @@ const BODY_SIZE = 28;
 const TAG_SIZE = 20;
 const QUESTION_TAG_COLOR = "555555";
 
-const ALIGNMENT_MAP = {
+type Alignment = NonNullable<IParagraphOptions["alignment"]>;
+
+const ALIGNMENT_MAP: Partial<Record<string, Alignment>> = {
   left: AlignmentType.LEFT,
   center: AlignmentType.CENTER,
   right: AlignmentType.RIGHT,
 };
 
-function imageAlignment(block) {
-  return ALIGNMENT_MAP[block.align] || AlignmentType.CENTER;
+function imageAlignment(block: { align?: string }): Alignment {
+  return ALIGNMENT_MAP[block.align ?? ""] || AlignmentType.CENTER;
 }
 
 // `docx` wants colours as bare hex, without the leading '#'.
-function hex(color) {
+function hex(color: string): string {
   return color.replace("#", "");
 }
 
 // The character style a footnote run carries, by its role (see footnoteParts).
-const ROLE_STYLES = {
+const ROLE_STYLES: Record<NonNullable<CitationPart["role"]>, string> = {
   locator: FOOTNOTE_LOCATOR_STYLE_ID,
   note: FOOTNOTE_NOTE_STYLE_ID,
 };
 
 // Runs ({ text, italic?, url?, role? }, from sources.ts and lessonText.ts) as
 // docx children: a link becomes a real hyperlink, everything else a plain run.
-function partRuns(parts, size) {
+function partRuns(
+  parts: readonly CitationPart[],
+  size: number,
+): ParagraphChild[] {
   return parts.map((part) =>
     part.url
       ? new ExternalHyperlink({
@@ -151,7 +238,7 @@ function partRuns(parts, size) {
       : new TextRun({
           text: part.text,
           italics: Boolean(part.italic),
-          style: ROLE_STYLES[part.role],
+          style: part.role ? ROLE_STYLES[part.role] : undefined,
           size,
         }),
   );
@@ -159,11 +246,11 @@ function partRuns(parts, size) {
 
 // Footnotes are collected as the body is built: each one takes the next number,
 // and its text goes into the document's footnotes part under that number.
-function createNotes(doc) {
+function createNotes(doc: LessonDoc): Notes {
   return { sources: sourcesById(doc), footnotes: {}, next: 1 };
 }
 
-function footnoteRun(footnote, notes) {
+function footnoteRun(footnote: Footnote, notes: Notes): FootnoteReferenceRun {
   const id = notes.next++;
   notes.footnotes[id] = {
     children: [
@@ -178,10 +265,15 @@ function footnoteRun(footnote, notes) {
 // Pauses and speech hints are for read-aloud, so a pause prints nothing and a
 // hinted run prints as its text. A formula set on its own line becomes a
 // centered paragraph of its own, splitting the paragraph it sits in.
-function textBlockDocxParagraphs(block, notes, formulas, embedded) {
-  const out = [];
+function textBlockDocxParagraphs(
+  block: TextBlock,
+  notes: Notes,
+  formulas: FormulaContext | null,
+  embedded: EmbeddedPicture[] | undefined,
+): Paragraph[] {
+  const out: Paragraph[] = [];
   for (const paragraph of textBlockParagraphs(block)) {
-    let children = [];
+    let children: ParagraphChild[] = [];
     let written = 0;
     const flush = () => {
       out.push(
@@ -234,16 +326,16 @@ function textBlockDocxParagraphs(block, notes, formulas, embedded) {
 }
 
 // Alt text marks a formula's picture in the PDF path's docx, so the HTML
-// mammoth makes of it can be given the picture's size (see pdfExport.js).
+// mammoth makes of it can be given the picture's size (see pdfExport.ts).
 const FORMULA_ALT_PREFIX = "formula:";
 
 /**
  * The formula key a picture's alt text carries, or null for any other
  * picture.
- * @param {string | undefined} altText
- * @returns {string | null}
  */
-export function formulaImageKey(altText) {
+export function formulaImageKey(
+  altText: string | null | undefined,
+): string | null {
   return typeof altText === "string" && altText.startsWith(FORMULA_ALT_PREFIX)
     ? altText.slice(FORMULA_ALT_PREFIX.length)
     : null;
@@ -253,10 +345,16 @@ export function formulaImageKey(altText) {
 // a picture of it where the file is bound for the PDF (mammoth, which the PDF
 // path converts the docx with, drops equations), or its source as text when
 // it wasn't rendered (no MathJax, or a formula MathJax couldn't make sense of).
-function formulaChild(run, formulas, embedded) {
+function formulaChild(
+  run: Pick<Formula, "format" | "source" | "display">,
+  formulas: FormulaContext | null,
+  embedded: EmbeddedPicture[] | undefined,
+): ParagraphChild {
   const key = formulaKey(run);
   const rendered = formulas?.rendered.get(key);
-  if (!rendered) return new TextRun({ text: run.source, size: BODY_SIZE });
+  if (!formulas || !rendered) {
+    return new TextRun({ text: run.source, size: BODY_SIZE });
+  }
   if (formulas.as === "image" && rendered.png) {
     const { bytes, width, height } = rendered.png;
     // A picture on a line of its own is framed like a lesson picture by the
@@ -279,7 +377,7 @@ function formulaChild(run, formulas, embedded) {
 }
 
 // The Sources list that closes the lesson, when it has any.
-function sourcesParagraphs(doc) {
+function sourcesParagraphs(doc: LessonDoc): Paragraph[] {
   const sources = lessonSources(doc);
   if (!sources.length) return [];
   return [
@@ -313,8 +411,11 @@ function sourcesParagraphs(doc) {
 // not be fetched (the catch below, which writes text instead) must NOT be in
 // this list, or every image after it in the lesson is framed with the wrong
 // block's width and alignment.
-async function imageBlockParagraphs(block, embedded) {
-  const paragraphs = [];
+async function imageBlockParagraphs(
+  block: FramedPicture,
+  embedded: EmbeddedPicture[] | undefined,
+): Promise<Paragraph[]> {
+  const paragraphs: Paragraph[] = [];
   const alignment = imageAlignment(block);
   const align = block.align || "center";
   const { caption, credit } = imageCaptionParts(block);
@@ -331,7 +432,9 @@ async function imageBlockParagraphs(block, embedded) {
         spacing: { before: 120, after: 60 },
         children: [
           new ImageRun({
-            type: ext,
+            // A stored ext comes from extFromMime, which gives only these, and
+            // getImageBytes turns webp into png.
+            type: ext as ImageRunType,
             data: bytes,
             transformation: { width, height },
           }),
@@ -388,8 +491,13 @@ async function imageBlockParagraphs(block, embedded) {
 // is the TextRun options every text run shares (the prompt's style and
 // colour), and the text's own marks are laid over it. A formula set on its
 // own line stays in the line here: a prompt is one line.
-function inlineTextChildren(value, run, formulas, embedded) {
-  const children = [];
+function inlineTextChildren(
+  value: InlineText,
+  run: IRunOptions,
+  formulas: FormulaContext | null,
+  embedded: EmbeddedPicture[] | undefined,
+): ParagraphChild[] {
+  const children: ParagraphChild[] = [];
   for (const piece of inlineTextRuns(value)) {
     if (piece.type === "pause") continue;
     if (piece.type === "math") {
@@ -415,7 +523,11 @@ function inlineTextChildren(value, run, formulas, embedded) {
 // answer in black on the same line. Consecutive questions sit directly under
 // one another, so the run of them reads as a block of colour-coded lines rather
 // than a list of headings.
-function questionBlockParagraphs(block, formulas, embedded) {
+function questionBlockParagraphs(
+  block: QuestionBlock,
+  formulas: FormulaContext | null,
+  embedded: EmbeddedPicture[] | undefined,
+): Paragraph[] {
   const meta = questionMeta(block.questionType);
   const answer = questionAnswerText(block);
   const steps = (block.steps || [])
@@ -432,7 +544,7 @@ function questionBlockParagraphs(block, formulas, embedded) {
   // PDF and the importer; the explicit colour is what Word itself renders.
   // Every run of the prompt wears it, so the importer reads the whole prompt
   // back off the styled spans.
-  const promptRun = {
+  const promptRun: IRunOptions = {
     style: questionStyleId(meta.key),
     color: hex(meta.color),
     italics: Boolean(meta.italic),
@@ -522,7 +634,7 @@ function questionBlockParagraphs(block, formulas, embedded) {
 }
 
 // The spelling words as one running line: "Spell: FIRST SECOND THIRD".
-function spellingBlockParagraphs(block) {
+function spellingBlockParagraphs(block: SpellingBlock): Paragraph[] {
   const words = (block.words || [])
     .map((w) => (w.text || "").trim())
     .filter(Boolean);
@@ -554,7 +666,10 @@ function spellingBlockParagraphs(block) {
 // just the label — a regulation break is an instruction to whoever is running
 // the lesson, not one more prompt in the colour-coded run above it, and it has
 // to be findable at a glance on a page of black body text.
-async function vaktBlockParagraphs(block, embedded) {
+async function vaktBlockParagraphs(
+  block: VaktBlock,
+  embedded: EmbeddedPicture[] | undefined,
+): Promise<Paragraph[]> {
   const text = vaktText(block);
   const paragraphs = [
     new Paragraph({
@@ -620,8 +735,13 @@ async function vaktBlockParagraphs(block, embedded) {
 
 // A section's blocks, with no heading of its own. Section names are an
 // organising device inside the editor; a printed lesson runs straight through.
-async function sectionParagraphs(section, embedded, notes, formulas) {
-  const paragraphs = [];
+async function sectionParagraphs(
+  section: Section,
+  embedded: EmbeddedPicture[] | undefined,
+  notes: Notes,
+  formulas: FormulaContext | null,
+): Promise<Paragraph[]> {
+  const paragraphs: Paragraph[] = [];
   for (const block of section.blocks) {
     if (block.type === "text") {
       paragraphs.push(
@@ -658,7 +778,7 @@ async function sectionParagraphs(section, embedded, notes, formulas) {
 }
 
 // Title, by-line and the age/release lines, all centred.
-function titleParagraphs(doc, meta) {
+function titleParagraphs(doc: LessonDoc, meta: LessonMeta): Paragraph[] {
   const lines = lessonTitleLines(doc, meta);
   const paragraphs = [
     new Paragraph({
@@ -692,8 +812,11 @@ function titleParagraphs(doc, meta) {
 // The page footer: the copyright line, then the legend naming each question
 // type the lesson uses in its own colour (questionLegendFor). The legend is
 // what makes the colour coding above it readable, so it repeats on every page.
-function pageFooter(meta, legendTypes) {
-  const children = [];
+function pageFooter(
+  meta: LessonMeta,
+  legendTypes: readonly QuestionTypeMeta[],
+): Footer {
+  const children: Paragraph[] = [];
 
   const copyright = lessonCopyright(meta);
   if (copyright) {
@@ -706,7 +829,7 @@ function pageFooter(meta, legendTypes) {
     );
   }
 
-  const legend = [];
+  const legend: TextRun[] = [];
   legendTypes.forEach((type, i) => {
     if (i > 0) {
       legend.push(
@@ -749,7 +872,7 @@ function pageHeader() {
 // One Word character style per question type, plus one for VAKT activities, so
 // the colour coding survives the round trip through mammoth (see questions.ts
 // for why these exist at all).
-function colourCharacterStyles() {
+function colourCharacterStyles(): ICharacterStyleOptions[] {
   return [
     ...QUESTION_TYPE_LIST.map((type) => ({
       id: questionStyleId(type.key),
@@ -798,33 +921,29 @@ function colourCharacterStyles() {
  * Build an in-memory docx Document from the lesson state. Async because image
  * bytes may need fetching from R2 for a lesson whose images aren't held locally.
  *
- * @param {object} doc   the lesson document ({ title, ageRange, sources, sections })
- * @param {{author?: string, published?: string|number|Date}} [meta]
+ * @param doc   the lesson document ({ title, ageRange, sources, sections })
+ * @param meta
  *   who the lesson is by and when it was published — used for the by-line and
  *   the footer's copyright line. Both lines are omitted when not supplied.
- * @param {Array<{width: number, align: string, caption: string, credit: string}>} [embedded]
+ * @param embedded
  *   an out-parameter the PDF path passes in: each picture this document really
  *   ends up carrying appends its framing, in document order, so the converted
- *   HTML's `<img>` tags can be matched to them one for one. See pdfExport.js.
+ *   HTML's `<img>` tags can be matched to them one for one. See pdfExport.ts.
  *   Omit it (the DOCX download does) and nothing is collected.
- * @param {object} [options]
- * @param {Map<string, object> | null} [options.formulas]  The lesson's
- *   formulas, rendered (renderLessonFormulas in formulas.js). Without it a
- *   formula prints as its source.
- * @param {"equation" | "image"} [options.formulasAs]  A Word equation (the
- *   default), or a picture of the formula, for the PDF path, whose docx goes
- *   through mammoth, which drops equations. Pictures need `formulas` rendered
- *   with `images`.
+ * @param options  The rendered formulas and how to write them (see
+ *   BuildDocumentOptions).
  */
 export async function buildDocument(
-  doc,
-  meta = {},
-  embedded = undefined,
-  { formulas = null, formulasAs = "equation" } = {},
-) {
+  doc: LessonDoc,
+  meta: LessonMeta = {},
+  embedded?: EmbeddedPicture[],
+  { formulas = null, formulasAs = "equation" }: BuildDocumentOptions = {},
+): Promise<Document> {
   const children = titleParagraphs(doc, meta);
   const notes = createNotes(doc);
-  const rendered = formulas ? { rendered: formulas, as: formulasAs } : null;
+  const rendered: FormulaContext | null = formulas
+    ? { rendered: formulas, as: formulasAs }
+    : null;
 
   for (const section of doc.sections) {
     children.push(
@@ -911,7 +1030,7 @@ export async function buildDocument(
   });
 }
 
-function safeFileName(title) {
+function safeFileName(title: string | undefined): string {
   const base = (title || "lesson")
     .trim()
     .replace(/[^a-z0-9\-_ ]/gi, "")
@@ -921,10 +1040,11 @@ function safeFileName(title) {
 
 /**
  * Generate and download the .docx file.
- * @param {object} doc
- * @param {{author?: string, published?: string|number|Date}} [meta]
  */
-export async function exportDocx(doc, meta = {}) {
+export async function exportDocx(
+  doc: LessonDoc,
+  meta: LessonMeta = {},
+): Promise<void> {
   // Null for a lesson without formulas, so MathJax never loads for one.
   const formulas = await renderLessonFormulas(doc);
   const document = await buildDocument(doc, meta, undefined, { formulas });
@@ -932,7 +1052,7 @@ export async function exportDocx(doc, meta = {}) {
   triggerDownload(blob, safeFileName(doc.title));
 }
 
-function triggerDownload(blob, fileName) {
+function triggerDownload(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

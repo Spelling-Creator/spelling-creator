@@ -5,15 +5,15 @@
 import { readFile } from "node:fs/promises";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { createFormulaSpeech } from "./formulaSpeech.ts";
+import { createFormulaSpeech, type FormulaSpeech } from "./formulaSpeech.ts";
 
 const rules = new URL(
   "../../node_modules/speech-rule-engine/lib/mathmaps/",
   import.meta.url,
 );
-const loaded = [];
+const loaded: string[] = [];
 
-let speech;
+let speech: FormulaSpeech;
 beforeAll(async () => {
   speech = await createFormulaSpeech({
     loadLocale: (locale) => {
@@ -29,7 +29,7 @@ describe("createFormulaSpeech", () => {
   });
 
   it("says a lesson's arithmetic the way a teacher would", () => {
-    const say = (mathml) => speech.speak(`<math>${mathml}</math>`);
+    const say = (mathml: string) => speech.speak(`<math>${mathml}</math>`);
     expect(say("<mn>120</mn><mo>×</mo><mn>3</mn><mo>=</mo><mn>360</mn>")).toBe(
       "120 times 3 equals 360",
     );

@@ -9,9 +9,14 @@
 import html2pdf from "html2pdf.js";
 import mammoth from "mammoth";
 import { Packer } from "docx";
-import { buildDocument, formulaImageKey } from "./docxExport.ts";
-import { renderLessonFormulas } from "./formulas.ts";
 import {
+  type EmbeddedPicture,
+  buildDocument,
+  formulaImageKey,
+} from "./docxExport.ts";
+import { type LessonFormula, renderLessonFormulas } from "./formulas.ts";
+import {
+  type LessonMeta,
   LEGEND_SEPARATOR,
   QUESTION_LINE_CLASS,
   QUESTION_LINE_STYLE_NAME,
@@ -26,6 +31,7 @@ import {
   lessonCopyright,
 } from "../lessonLayout.ts";
 import {
+  type QuestionTypeMeta,
   BESIDES_LINE_CLASS,
   QUESTION_TAG_STYLE_CLASS,
   QUESTION_TYPE_LIST,
@@ -38,10 +44,37 @@ import {
 } from "../questions.ts";
 import { HEADING_STYLE_CLASS, headingStyleMap } from "../heading.ts";
 import { VAKT_COLOR, VAKT_STYLE_CLASS, vaktStyleMap } from "../vakt.ts";
+import type { LessonDoc } from "../types.ts";
+
+// What this file asks of the jsPDF document html2pdf.js hands back. jsPDF is
+// html2pdf.js's own dependency, not this package's, and html2pdf.js's types
+// give the document as `any`.
+interface PdfDocument {
+  internal: { getNumberOfPages(): number };
+  setPage(page: number): unknown;
+  setFont(fontName: string, fontStyle?: string): unknown;
+  setFontSize(size: number): unknown;
+  setTextColor(r: number, g: number, b: number): unknown;
+  getTextWidth(text: string): number;
+  text(
+    text: string,
+    x: number,
+    y: number,
+    options?: { align?: "left" | "center" | "right" },
+  ): unknown;
+  output(type: "blob"): Blob;
+  save(fileName: string): unknown;
+}
+
+// The options html2pdf.js takes. Its types leave out the page-break option,
+// which it reads all the same.
+type PdfOptions = Parameters<InstanceType<typeof html2pdf.Worker>["set"]>[0] & {
+  pagebreak?: { mode?: Array<"avoid-all" | "css" | "legacy"> };
+};
 
 // Text destined for an HTML string we build ourselves. The PDF container is
 // filled with innerHTML, so anything interpolated into it has to arrive as text.
-function escapeHtml(text) {
+function escapeHtml(text: string) {
   return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -82,11 +115,19 @@ function escapeHtml(text) {
 // second would keep mammoth's natural size, lose its alignment and caption, and
 // throw the block pairing off by one for every image after it. The lookahead
 // leaves an image paragraph for the next iteration to claim.
-export function layoutImageFigures(html, embedded) {
+export function layoutImageFigures(
+  html: string,
+  embedded: ReadonlyArray<EmbeddedPicture>,
+): string {
   let index = 0;
   return html.replace(
     /<p>\s*(<img\b[^>]*>)\s*<\/p>(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?(\s*<p>(?!\s*<img\b)[\s\S]*?<\/p>)?/g,
-    (match, imgTag, firstTrailing, secondTrailing) => {
+    (
+      match: string,
+      imgTag: string,
+      firstTrailing: string | undefined,
+      secondTrailing: string | undefined,
+    ) => {
       // A formula in a sentence that happens to be the whole paragraph is
       // not a lesson picture: it has no entry in `embedded`, and keeps the
       // size inlineImages gave it. (A display formula does have an entry.)
@@ -161,7 +202,7 @@ const NOTES_HEADING_TEXT = "Notes";
 // after the Sources list, with a "back to the text" arrow on each. A page has no
 // foot to put them at, so they print as endnotes: moved above the Sources list,
 // headed "Notes", and without the arrows, which link nowhere on paper.
-export function layoutNotes(html) {
+export function layoutNotes(html: string): string {
   const match = html.match(
     /<ol>(?:(?!<ol>)[\s\S])*?<li id="footnote-1">[\s\S]*<\/ol>\s*$/,
   );
@@ -183,10 +224,10 @@ export function layoutNotes(html) {
 
 // Build the docx in memory and convert it to HTML with mammoth, so the PDF
 // matches what the docx export produces. Returns an HTML string.
-async function docToHtml(doc, meta) {
+async function docToHtml(doc: LessonDoc, meta: LessonMeta) {
   // Filled in as the document is built, with one entry per picture that really
   // made it in — see layoutImageFigures for why "really" is load-bearing.
-  const embedded = [];
+  const embedded: EmbeddedPicture[] = [];
   // Formulas go into this docx as pictures: mammoth drops Word equations. A
   // display formula counts as a picture in `embedded`, since it sits alone in
   // its paragraph the way a lesson picture does.
@@ -206,12 +247,28 @@ async function docToHtml(doc, meta) {
   return layoutNotes(layoutImageFigures(html, embedded));
 }
 
+// An image as mammoth passes it to imgElement. mammoth's types don't name it,
+// and leave out the alt text it carries.
+type MammothImage = Parameters<
+  Parameters<typeof mammoth.images.imgElement>[0]
+>[0] & { altText?: string };
+
+// The attributes of the <img> written for one, which mammoth's types give
+// only as `src`.
+interface ImageAttributes {
+  src: string;
+  alt?: string;
+  width?: string;
+  height?: string;
+  style?: string;
+}
+
 // mammoth's own data-URI images, plus the size of a formula's picture, which
 // mammoth doesn't carry over and which an inline formula needs to sit in its
 // sentence at the size of the words (a display one is sized by its figure).
-function inlineImages(formulas) {
-  return mammoth.images.imgElement(async (image) => {
-    const attributes = {
+function inlineImages(formulas: ReadonlyMap<string, LessonFormula> | null) {
+  return mammoth.images.imgElement(async (image: MammothImage) => {
+    const attributes: ImageAttributes = {
       src: `data:${image.contentType};base64,${await image.read("base64")}`,
     };
     if (image.altText) attributes.alt = image.altText;
@@ -313,7 +370,9 @@ const MARGIN = 38; // ~10mm
 // the legend a strip of their own, clear of the body text.
 const FOOTER_MARGIN = 60;
 
-function hexToRgb(color) {
+type Rgb = [number, number, number];
+
+function hexToRgb(color: string): Rgb {
   const value = parseInt(color.replace("#", ""), 16);
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
@@ -321,11 +380,16 @@ function hexToRgb(color) {
 // The legend naming each question type the lesson uses in its own colour,
 // centred on `y`. Drawn segment by segment because each entry needs its own
 // colour, so the line has to be measured first to know where to start.
-function drawLegend(pdf, centerX, y, legendTypes) {
+function drawLegend(
+  pdf: PdfDocument,
+  centerX: number,
+  y: number,
+  legendTypes: QuestionTypeMeta[],
+) {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
 
-  const parts = [];
+  const parts: Array<{ text: string; rgb: Rgb; italic?: boolean }> = [];
   legendTypes.forEach((type, i) => {
     if (i > 0) parts.push({ text: LEGEND_SEPARATOR, rgb: [110, 110, 110] });
     parts.push({
@@ -339,7 +403,7 @@ function drawLegend(pdf, centerX, y, legendTypes) {
 
   // Measured with each part's own face selected: an italic entry is not the
   // same width as the upright one, and the line is centred on the total.
-  const width = (part) => {
+  const width = (part: (typeof parts)[number]) => {
     pdf.setFont("helvetica", part.italic ? "italic" : "normal");
     return pdf.getTextWidth(part.text);
   };
@@ -357,7 +421,11 @@ function drawLegend(pdf, centerX, y, legendTypes) {
 // The page number (top right) and the footer, on every page — the furniture
 // html2pdf doesn't carry over from the docx's own header and footer, since
 // mammoth converts only the document body.
-function drawPageFurniture(pdf, meta, legendTypes) {
+function drawPageFurniture(
+  pdf: PdfDocument,
+  meta: LessonMeta,
+  legendTypes: QuestionTypeMeta[],
+) {
   const copyright = lessonCopyright(meta);
   const pageCount = pdf.internal.getNumberOfPages();
 
@@ -385,7 +453,7 @@ function drawPageFurniture(pdf, meta, legendTypes) {
   }
 }
 
-function safeFileName(title) {
+function safeFileName(title: string | undefined) {
   const base = (title || "lesson")
     .trim()
     .replace(/[^a-z0-9\-_ ]/gi, "")
@@ -395,12 +463,13 @@ function safeFileName(title) {
 
 /**
  * Build the docx, convert to HTML (mammoth), then render to a PDF (html2pdf.js).
- * @param {object} doc
- * @param {{author?: string, published?: string|number|Date}} meta
- * @returns {Promise<import("jspdf").jsPDF>} the finished document, which the
- *   two entry points below either save or print.
+ * @returns the finished document, which the two entry points below either
+ *   save or print.
  */
-async function renderPdf(doc, meta) {
+async function renderPdf(
+  doc: LessonDoc,
+  meta: LessonMeta,
+): Promise<PdfDocument> {
   // docToHtml builds the docx, converts it to HTML via mammoth and re-applies
   // each image's picked size + alignment, so the PDF mirrors the docx output.
   const html = await docToHtml(doc, meta);
@@ -441,28 +510,29 @@ async function renderPdf(doc, meta) {
   window.document.body.appendChild(offscreen);
 
   try {
-    const pdf = await html2pdf()
-      .set({
-        // Pixel units (not mm) on purpose. html2pdf places page breaks using a
-        // page height it derives by rounding mm→px (floor(277mm) = 1046px), but
-        // it slices the rendered canvas at a *separately* computed height
-        // (floor(canvas.width × inner ratio) = 1046.5px). That ½px-per-page
-        // mismatch makes the top sliver of each page's first line bleed onto the
-        // bottom of the previous page — text cut off at the page edge — and it
-        // grows with page count. Driving jsPDF in px with an integer A4 format
-        // (794×1123px @96dpi) and integer 38px (~10mm) margins makes both
-        // computations use the identical integer inner height (1047px), so the
-        // break positions and the slice positions line up exactly.
-        margin: [MARGIN, MARGIN, FOOTER_MARGIN, MARGIN],
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: {
-          unit: "px",
-          format: [PAGE_WIDTH, PAGE_HEIGHT],
-          orientation: "portrait",
-        },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
+    const options: PdfOptions = {
+      // Pixel units (not mm) on purpose. html2pdf places page breaks using a
+      // page height it derives by rounding mm→px (floor(277mm) = 1046px), but
+      // it slices the rendered canvas at a *separately* computed height
+      // (floor(canvas.width × inner ratio) = 1046.5px). That ½px-per-page
+      // mismatch makes the top sliver of each page's first line bleed onto the
+      // bottom of the previous page — text cut off at the page edge — and it
+      // grows with page count. Driving jsPDF in px with an integer A4 format
+      // (794×1123px @96dpi) and integer 38px (~10mm) margins makes both
+      // computations use the identical integer inner height (1047px), so the
+      // break positions and the slice positions line up exactly.
+      margin: [MARGIN, MARGIN, FOOTER_MARGIN, MARGIN],
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      jsPDF: {
+        unit: "px",
+        format: [PAGE_WIDTH, PAGE_HEIGHT],
+        orientation: "portrait",
+      },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+    };
+    const pdf: PdfDocument = await html2pdf()
+      .set(options)
       .from(container)
       .toPdf()
       .get("pdf");
@@ -478,11 +548,12 @@ async function renderPdf(doc, meta) {
 
 /**
  * Render the lesson to a PDF and download it.
- * @param {object} doc
- * @param {{author?: string, published?: string|number|Date}} [meta]
- *   the by-line and copyright metadata (see buildDocument).
+ * @param meta  the by-line and copyright metadata (see buildDocument).
  */
-export async function exportPdf(doc, meta = {}) {
+export async function exportPdf(
+  doc: LessonDoc,
+  meta: LessonMeta = {},
+): Promise<void> {
   const pdf = await renderPdf(doc, meta);
   pdf.save(safeFileName(doc.title));
 }
@@ -493,8 +564,8 @@ export async function exportPdf(doc, meta = {}) {
 // press in the page instead. The print dialog is modal in Chrome and Firefox,
 // so input can only reach the page once it has closed, and leaving the page
 // takes a click too.
-let printFrame = null;
-let stopWaitingForInput = null;
+let printFrame: HTMLIFrameElement | null = null;
+let stopWaitingForInput: (() => void) | null = null;
 
 /** Remove the print frame, revoke its PDF's URL and stop waiting for input. */
 function clearPrintFrame() {
@@ -506,7 +577,7 @@ function clearPrintFrame() {
   printFrame = null;
 }
 
-const INPUT_EVENTS = ["pointerdown", "keydown"];
+const INPUT_EVENTS = ["pointerdown", "keydown"] as const;
 
 /** Clear the print frame on the next click or key press anywhere in the page. */
 function clearPrintFrameOnNextInput() {
@@ -528,11 +599,11 @@ const PRINT_LOAD_TIMEOUT = 15000;
 /**
  * Load the PDF into a hidden frame and open the print dialog on it, so what
  * prints is the PDF itself, page numbers and footer included.
- * @param {Blob} blob the PDF.
- * @returns {Promise<void>} resolves once print() has been called; rejects if
- *   the frame doesn't load in time or print() throws.
+ * @param blob the PDF.
+ * @returns resolves once print() has been called; rejects if the frame
+ *   doesn't load in time or print() throws.
  */
-function printBlob(blob) {
+function printBlob(blob: Blob): Promise<void> {
   clearPrintFrame();
   return new Promise((resolve, reject) => {
     const frame = window.document.createElement("iframe");
@@ -559,7 +630,8 @@ function printBlob(blob) {
         // PDF either way, and leaving focus in the page is what lets a key
         // press there clear the frame afterward.
         try {
-          frame.contentWindow.print();
+          // A frame in the page that has loaded has a window.
+          frame.contentWindow!.print();
           clearPrintFrameOnNextInput();
           resolve();
         } catch (err) {
@@ -585,9 +657,8 @@ function printBlob(blob) {
  * opened in Preview prints properly, so Safari gets that. Every browser on
  * iOS is WebKit underneath and reports Apple as its vendor too, so they all
  * take the download. Recheck this when Safari changes.
- * @returns {boolean}
  */
-function canPrintPdfInPlace() {
+function canPrintPdfInPlace(): boolean {
   return (
     Boolean(navigator.pdfViewerEnabled) && !navigator.vendor.startsWith("Apple")
   );
@@ -596,17 +667,18 @@ function canPrintPdfInPlace() {
 /**
  * Render the lesson to a PDF and open the browser's print dialog on it. Where
  * that can't happen, the PDF is downloaded instead.
- * @param {object} doc
- * @param {{author?: string, published?: string|number|Date}} [meta]
- *   the by-line and copyright metadata (see buildDocument).
- * @returns {Promise<"printed" | "unsupported" | "failed">} "printed" when the
- *   dialog opened; "unsupported" when this browser can't print a PDF from the
- *   page, and "failed" when it should have but the viewer didn't load in time
- *   or print() threw. The PDF was downloaded in both of those.
+ * @param meta  the by-line and copyright metadata (see buildDocument).
+ * @returns "printed" when the dialog opened; "unsupported" when this browser
+ *   can't print a PDF from the page, and "failed" when it should have but the
+ *   viewer didn't load in time or print() threw. The PDF was downloaded in
+ *   both of those.
  */
-export async function printPdf(doc, meta = {}) {
+export async function printPdf(
+  doc: LessonDoc,
+  meta: LessonMeta = {},
+): Promise<"printed" | "unsupported" | "failed"> {
   const pdf = await renderPdf(doc, meta);
-  let result = "unsupported";
+  let result: "unsupported" | "failed" = "unsupported";
   if (canPrintPdfInPlace()) {
     try {
       await printBlob(pdf.output("blob"));

@@ -4,6 +4,7 @@
 // server-side og-image/prerender) can load them by hash.
 import { hasApi } from "../config.ts";
 import { MAX_IMAGE_BYTES } from "../image.ts";
+import type { ImageRef, LessonDoc } from "../types.ts";
 import { getImageBlob } from "./imageStore.ts";
 import { imagePublicUrl, storeImageBytes } from "./imageRef.ts";
 
@@ -11,7 +12,7 @@ import { imagePublicUrl, storeImageBytes } from "./imageRef.ts";
 // cloud-sourced). Lets repeated saves of the same lesson skip re-PUTting every
 // image — keeping R2 write (class-A) operations ≈ the number of distinct images,
 // not number of saves.
-const known = new Set();
+const known = new Set<string>();
 
 // Every distinct image hash referenced by the doc. Legacy `src` blocks must be
 // converted to refs (convertDocImages) before calling this.
@@ -20,8 +21,10 @@ const known = new Set();
 // one too, in the same `{ image: { hash } }` shape. Missing those here would save
 // a lesson whose activity image exists only in the author's own IndexedDB, so it
 // would show for them and be a broken frame for everyone else.
-export function collectImageHashes(doc) {
-  const hashes = new Set();
+export function collectImageHashes(
+  doc: Partial<LessonDoc> | null | undefined,
+): string[] {
+  const hashes = new Set<string>();
   for (const section of doc?.sections || []) {
     for (const block of section.blocks || []) {
       if (
@@ -37,8 +40,8 @@ export function collectImageHashes(doc) {
 
 // PUT one blob to R2. The endpoint is content-addressed and idempotent, so a
 // re-upload of identical bytes is harmless.
-async function uploadImage(hash, blob, accessToken) {
-  let res;
+async function uploadImage(hash: string, blob: Blob, accessToken: string) {
+  let res: Response;
   try {
     res = await fetch(imagePublicUrl(hash), {
       method: "PUT",
@@ -60,7 +63,10 @@ async function uploadImage(hash, blob, accessToken) {
 // Ensure every image referenced by the doc exists in R2, uploading any blob that
 // is currently only local. Throws on the first failure so the caller aborts the
 // save before writing a doc row that would reference a missing object.
-export async function ensureImagesUploaded(doc, accessToken) {
+export async function ensureImagesUploaded(
+  doc: Partial<LessonDoc> | null | undefined,
+  accessToken: string | null | undefined,
+): Promise<void> {
   if (!hasApi()) throw new Error("The image store is not configured.");
   if (!accessToken) throw new Error("Please sign in before saving.");
   for (const hash of collectImageHashes(doc)) {
@@ -85,7 +91,7 @@ const COPY_CONCURRENCY = 4;
 // the size limit. A picture kept here is uploaded on every save until it
 // lands, so an `application/octet-stream` object or an error page kept as one
 // would make every later save of the fork fail on it.
-async function copyRemoteImage(base, hash) {
+async function copyRemoteImage(base: string, hash: string): Promise<ImageRef> {
   const res = await fetch(`${base}/images/${hash}`);
   if (!res.ok) throw new Error(`Image fetch failed (${res.status}).`);
   const type = (res.headers.get("content-type") || "")
@@ -124,14 +130,15 @@ async function copyRemoteImage(base, hash) {
  * offers on a secure origin, so on an instance served over plain http at a
  * network address no picture can be copied (or added at all).
  *
- * @param {object} doc
- * @param {string} origin  The other instance's origin, e.g. `https://other.example`.
- * @returns {Promise<{ doc: object, copied: number, failed: number }>}
+ * @param origin  The other instance's origin, e.g. `https://other.example`.
  */
-export async function copyRemoteImages(doc, origin) {
+export async function copyRemoteImages(
+  doc: LessonDoc,
+  origin: string,
+): Promise<{ doc: LessonDoc; copied: number; failed: number }> {
   const base = origin.replace(/\/$/, "");
   const hashes = collectImageHashes(doc);
-  const refs = new Map();
+  const refs = new Map<string, ImageRef>();
   let failed = 0;
   let next = 0;
   const worker = async () => {
@@ -154,7 +161,10 @@ export async function copyRemoteImages(doc, origin) {
       sections: doc.sections.map((section) => ({
         ...section,
         blocks: (section.blocks || []).map((block) =>
-          block?.image?.hash && refs.has(block.image.hash)
+          block &&
+          "image" in block &&
+          block.image?.hash &&
+          refs.has(block.image.hash)
             ? { ...block, image: refs.get(block.image.hash) }
             : block,
         ),

@@ -8,21 +8,20 @@
 // publish. We use the PKCE flow so the magic-link callback returns a `?code=`
 // in the query string rather than access tokens in the URL fragment (hash).
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { supabaseConfig } from "../config.ts";
 
 // Built on first use rather than at import time. The host calls configureCore()
 // after this module has already been evaluated (ES imports are hoisted), so a
 // client constructed here at module scope would be constructed from nothing.
-let client;
+let client: SupabaseClient | null | undefined;
 
 /**
  * The Supabase browser client, or null when auth isn't configured. Memoised —
  * the SDK holds the session and its refresh timer, so there must be exactly one.
- * @returns {import("@supabase/supabase-js").SupabaseClient | null}
  */
-export function getSupabase() {
+export function getSupabase(): SupabaseClient | null {
   if (client !== undefined) return client;
   const cfg = supabaseConfig();
   client = cfg
@@ -75,12 +74,15 @@ function storageKey() {
  * since this deliberately duplicates that private detail rather than
  * depending on it.
  */
-export function readPersistedRefreshToken() {
+export function readPersistedRefreshToken(): string | null {
   const key = storageKey();
   if (!key || typeof localStorage === "undefined") return null;
   try {
     const raw = localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : null;
+    // The SDK's own record, of which only this one field is read.
+    const parsed: { refresh_token?: string | null } | null = raw
+      ? JSON.parse(raw)
+      : null;
     return (parsed && parsed.refresh_token) || null;
   } catch {
     return null;

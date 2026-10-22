@@ -9,12 +9,29 @@
 
 import { apiUrl } from "../config.ts";
 import { extFromMime } from "../image.ts";
-import { getImageBlob, putImageBlob } from "./imageStore.ts";
+import type { ImageRef, LessonDoc, Picture } from "../types.ts";
+import { getImageBlob, putImageBlob, type ImageInput } from "./imageStore.ts";
+
+/** The picture fields the helpers read: a stored ref, or a legacy data URL. */
+export type PictureSource = Pick<Picture, "image" | "src">;
+
+/** An `<img>` src, and how to release it once it is no longer shown. */
+export interface ResolvedImageSrc {
+  url: string;
+  revoke: () => void;
+}
+
+/** A picture's bytes, for a file that embeds them. */
+export interface ImageBytes {
+  bytes: Uint8Array<ArrayBuffer>;
+  mime: string;
+  ext: string;
+}
 
 // Public Worker/R2 URL for an uploaded image. Reads the base URL through the
 // config seam rather than the bundler's env, so this module is not tied to one
 // build tool — see ../config.ts.
-export function imagePublicUrl(hash) {
+export function imagePublicUrl(hash: string): string {
   return `${apiUrl()}/images/${hash}`;
 }
 
@@ -25,13 +42,16 @@ export { extFromMime };
 
 // Split a data URL into raw bytes + mime. Handles both base64 (the common case:
 // FileReader, the Pixabay proxy, mammoth) and percent-encoded payloads.
-export function decodeDataUrl(dataUrl) {
+export function decodeDataUrl(dataUrl: string): {
+  bytes: Uint8Array<ArrayBuffer>;
+  mime: string;
+} {
   const comma = dataUrl.indexOf(",");
   if (comma === -1) throw new Error("Not a data URL.");
   const header = dataUrl.slice(5, comma); // strip the leading "data:"
   const mime = header.split(";")[0] || "image/png";
   const payload = dataUrl.slice(comma + 1);
-  let bytes;
+  let bytes: Uint8Array<ArrayBuffer>;
   if (/;base64/i.test(header)) {
     const binary = atob(payload);
     bytes = new Uint8Array(binary.length);
@@ -43,14 +63,19 @@ export function decodeDataUrl(dataUrl) {
 }
 
 // Store raw bytes locally and return the persisted image ref to put on a block.
-export async function storeImageBytes(bytes, mime) {
+export async function storeImageBytes(
+  bytes: ImageInput,
+  mime: string,
+): Promise<ImageRef> {
   const hash = await putImageBlob(bytes, mime);
   return { hash, mime, ext: extFromMime(mime) };
 }
 
 // Resolve an image block to a usable `<img>` src. Returns { url, revoke } where
 // revoke() releases an object URL (a no-op for data:/https: URLs).
-export async function resolveImageSrc(block) {
+export async function resolveImageSrc(
+  block: PictureSource | null | undefined,
+): Promise<ResolvedImageSrc> {
   if (block?.src) return { url: block.src, revoke: () => {} };
   const ref = block?.image;
   if (!ref?.hash) return { url: "", revoke: () => {} };
@@ -65,7 +90,7 @@ export async function resolveImageSrc(block) {
 // Is this blob a WEBP? The server compresses uploaded images to WEBP, so bytes
 // fetched from R2 are WEBP regardless of the doc's original mime. Trust the
 // blob's type when present, and sniff the RIFF/WEBP magic as a fallback.
-async function isWebpBlob(blob) {
+async function isWebpBlob(blob: Blob) {
   if ((blob.type || "").toLowerCase() === "image/webp") return true;
   const head = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
   // "RIFF" .... "WEBP"
@@ -84,7 +109,7 @@ async function isWebpBlob(blob) {
 
 // docx's ImageRun only accepts png/jpg/gif/bmp, never webp. Browsers decode
 // webp natively, so paint it onto a canvas and read PNG bytes back out.
-async function transcodeWebpToPng(blob) {
+async function transcodeWebpToPng(blob: Blob): Promise<Blob> {
   const url = URL.createObjectURL(blob);
   try {
     const img = new Image();
@@ -96,8 +121,10 @@ async function transcodeWebpToPng(blob) {
     const canvas = document.createElement("canvas");
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
-    canvas.getContext("2d").drawImage(img, 0, 0);
-    const png = await new Promise((resolve) =>
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not encode PNG image.");
+    context.drawImage(img, 0, 0);
+    const png = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/png"),
     );
     if (!png) throw new Error("Could not encode PNG image.");
@@ -110,7 +137,9 @@ async function transcodeWebpToPng(blob) {
 // Raw bytes for export (docx ImageRun). Legacy → decode the data URL; ref →
 // local blob, else fetch from R2. Throws when the bytes can't be obtained so the
 // caller can fall back to an "[image could not be embedded]" placeholder.
-export async function getImageBytes(block) {
+export async function getImageBytes(
+  block: PictureSource | null | undefined,
+): Promise<ImageBytes> {
   if (block?.src) {
     const { bytes, mime } = decodeDataUrl(block.src);
     return { bytes, mime, ext: extFromMime(mime) };
@@ -143,7 +172,9 @@ export async function getImageBytes(block) {
 // Image blocks are the usual source, but a VAKT activity can hold a picture in
 // the same shape, and a freshly DOCX-imported one arrives with mammoth's base64
 // `src` exactly as an image block does.
-export async function convertDocImages(doc) {
+export async function convertDocImages<D extends LessonDoc | null | undefined>(
+  doc: D,
+): Promise<D> {
   if (!doc || !Array.isArray(doc.sections)) return doc;
   let changed = false;
   const sections = await Promise.all(

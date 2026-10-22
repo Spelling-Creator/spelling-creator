@@ -10,9 +10,9 @@
 // IndexedDB has no reason to hold one lesson rather than fifty, so it holds as
 // many as the user makes. A library record is the small stuff — title, counts,
 // which hub lesson it's attached to, when it was last touched — and the document
-// itself lives in its own store keyed by the same id (see imageStore.js for why
+// itself lives in its own store keyed by the same id (see imageStore.ts for why
 // the two are split). Each lesson also owns a git repository named by that same
-// id while it is a local draft (see browser/git/fs.js and `repoIdFor`), so
+// id while it is a local draft (see browser/git/fs.ts and `repoIdFor`), so
 // switching lessons switches histories too.
 //
 // Everything here is async — IndexedDB has no synchronous API. Callers await.
@@ -48,12 +48,18 @@ import {
   updateLessonRecord,
   loadCurrentLessonId,
   saveCurrentLessonId,
+  type LessonRecord,
 } from "./imageStore.ts";
 import { convertDocImages } from "./imageRef.ts";
 import { DRAFT_REPO } from "../git/doc.ts";
 import { newId } from "../id.ts";
+import type { LessonDoc } from "../types.ts";
 
 export { loadWizardSeen, saveWizardSeen };
+export type { LessonRecord };
+
+/** A library lesson: its record, and its document when one is stored. */
+export type Lesson = LessonRecord & { doc: LessonDoc | null };
 
 // ---- the library -----------------------------------------------------------
 
@@ -64,7 +70,7 @@ export { loadWizardSeen, saveWizardSeen };
  * a size for each lesson, and reading every document to work them out would
  * make listing the library cost as much as opening all of it.
  */
-function statsFor(doc) {
+function statsFor(doc: Partial<LessonDoc> | null | undefined) {
   const sections = doc?.sections || [];
   let blocks = 0;
   for (const section of sections) blocks += (section.blocks || []).length;
@@ -76,17 +82,19 @@ function statsFor(doc) {
 }
 
 /** Newest first — "what I was working on" is the order a library is read in. */
-function byRecency(a, b) {
+function byRecency(a: LessonRecord, b: LessonRecord) {
   return (b.updatedAt || 0) - (a.updatedAt || 0);
 }
 
 /** Every lesson on this device, newest first. Metadata only — no documents. */
-export async function listLessons() {
+export async function listLessons(): Promise<LessonRecord[]> {
   return (await listLessonRecords()).sort(byRecency);
 }
 
 /** One lesson, document included, or null if this device doesn't have it. */
-export async function getLesson(id) {
+export async function getLesson(
+  id: string | null | undefined,
+): Promise<Lesson | null> {
   const record = await getLessonRecord(id);
   if (!record) return null;
   return { ...record, doc: await getLessonDoc(id) };
@@ -101,13 +109,12 @@ export async function getLesson(id) {
  * repository into a new lesson (a fork, an import) creates the record first and
  * clones into `record.id`.
  *
- * @param {object}  [opts]
- * @param {string}  [opts.id]         The lesson's id here, and its repo id. Ours to make unless you need to know it in advance.
- * @param {object}  [opts.doc]        The document to start from. Defaults to an empty one.
- * @param {?string} [opts.lessonId]   The hub lesson this one is attached to, if it is already published or saved as a cloud draft.
- * @param {boolean} [opts.published]  Whether that hub lesson is public or a private draft. Only meaningful with `lessonId`.
- * @param {?string} [opts.forkedFrom] The hub lesson this one was forked from, so it can be synced with it later.
- * @param {?string} [opts.forkedFromUrl] Or, for a lesson forked from another instance, the address of the page it was forked from there.
+ * @param opts.id         The lesson's id here, and its repo id. Ours to make unless you need to know it in advance.
+ * @param opts.doc        The document to start from. Defaults to an empty one.
+ * @param opts.lessonId   The hub lesson this one is attached to, if it is already published or saved as a cloud draft.
+ * @param opts.published  Whether that hub lesson is public or a private draft. Only meaningful with `lessonId`.
+ * @param opts.forkedFrom The hub lesson this one was forked from, so it can be synced with it later.
+ * @param opts.forkedFromUrl Or, for a lesson forked from another instance, the address of the page it was forked from there.
  */
 export async function createLesson({
   id = newId(),
@@ -116,9 +123,16 @@ export async function createLesson({
   published = true,
   forkedFrom = null,
   forkedFromUrl = null,
-} = {}) {
+}: {
+  id?: string;
+  doc?: LessonDoc;
+  lessonId?: string | null;
+  published?: boolean;
+  forkedFrom?: string | null;
+  forkedFromUrl?: string | null;
+} = {}): Promise<LessonRecord & { doc: LessonDoc }> {
   const now = Date.now();
-  const record = {
+  const record: LessonRecord = {
     id,
     ...statsFor(doc),
     lessonId,
@@ -145,7 +159,10 @@ export async function createLesson({
  * must neither resurrect the lesson nor leave a document body behind that
  * nothing points at.
  */
-export async function saveLessonDoc(id, doc) {
+export async function saveLessonDoc(
+  id: string | null | undefined,
+  doc: LessonDoc,
+): Promise<LessonRecord | null> {
   return updateLessonRecord(
     id,
     (record) => ({ ...record, ...statsFor(doc), updatedAt: Date.now() }),
@@ -161,7 +178,10 @@ export async function saveLessonDoc(id, doc) {
  * the cloud rather than edits, and re-ordering the library because a lesson
  * learnt its own hub id would be noise.
  */
-export async function saveLessonMeta(id, patch) {
+export async function saveLessonMeta(
+  id: string | null | undefined,
+  patch: Partial<LessonRecord>,
+): Promise<LessonRecord | null> {
   return updateLessonRecord(id, (record) => ({ ...record, ...patch }));
 }
 
@@ -170,7 +190,9 @@ export async function saveLessonMeta(id, patch) {
  * that lives in a different database (LightningFS) and needs the git engine
  * loaded, which this module deliberately doesn't pull in.
  */
-export async function deleteLesson(id) {
+export async function deleteLesson(
+  id: string | null | undefined,
+): Promise<void> {
   if (!id) return;
   await deleteLessonRecord(id);
   await deleteLessonDoc(id);
@@ -178,7 +200,7 @@ export async function deleteLesson(id) {
 }
 
 /** The lesson the editor last had open, so a reload comes back to it. */
-export async function getCurrentLessonId() {
+export async function getCurrentLessonId(): Promise<string | null> {
   return loadCurrentLessonId();
 }
 
@@ -186,7 +208,9 @@ export async function getCurrentLessonId() {
  * Remember which lesson is open, so a reload comes back to it. A nullish `id`
  * clears the memory, and the editor then opens the most recently edited lesson.
  */
-export async function setCurrentLessonId(id) {
+export async function setCurrentLessonId(
+  id: string | null | undefined,
+): Promise<void> {
   return saveCurrentLessonId(id);
 }
 
@@ -201,7 +225,7 @@ const LS_WIZARD_SEEN = "s2c-lesson-maker:wizard-seen";
 // Set once the migration has run, so we don't repeatedly poke localStorage.
 const MIGRATED_FLAG = "s2c-lesson-maker:migrated-to-idb";
 
-function safeGet(key) {
+function safeGet(key: string) {
   try {
     return localStorage.getItem(key);
   } catch {
@@ -212,8 +236,8 @@ function safeGet(key) {
 // One-time move of the old localStorage draft into IndexedDB. Safe to call on
 // every load: once the migrated flag is set (or the old keys are gone) it's a
 // no-op. Run before hydrating editor state from IndexedDB.
-export async function migrateLocalStorage() {
-  let rawDoc;
+export async function migrateLocalStorage(): Promise<void> {
+  let rawDoc: string | null;
   try {
     if (localStorage.getItem(MIGRATED_FLAG)) return;
     rawDoc = localStorage.getItem(LS_DOC);
@@ -233,7 +257,8 @@ export async function migrateLocalStorage() {
     if (safeGet(LS_WIZARD_SEEN) === "1") await saveWizardSeen();
 
     if (rawDoc) {
-      const doc = JSON.parse(rawDoc);
+      // The old draft, saved by this editor, so taken to be a lesson document.
+      const doc: LessonDoc = JSON.parse(rawDoc);
       const converted = await convertDocImages(doc);
       // Don't clobber a doc already created in IndexedDB after a prior partial
       // migration; only seed when the IndexedDB doc is still empty.
@@ -267,14 +292,14 @@ export async function migrateLocalStorage() {
  *
  * The record takes the id `draft` on purpose. That is the name the old working
  * lesson's repository already has on disk (`/lessons/draft/.git` — see
- * browser/git/fs.js), and a library lesson's id *is* its repo id while it is
+ * browser/git/fs.ts), and a library lesson's id *is* its repo id while it is
  * unpublished, so naming the record after the repository carries the history
  * across without copying a single git object. Lessons created from here on get
  * ordinary random ids, which cannot collide with it.
  *
  * A no-op once the library has anything in it, so it is safe on every load.
  */
-export async function migrateToLibrary() {
+export async function migrateToLibrary(): Promise<void> {
   const existing = await listLessonRecords();
   if (existing.length > 0) {
     // Already a library. Make sure something is open — a device whose current

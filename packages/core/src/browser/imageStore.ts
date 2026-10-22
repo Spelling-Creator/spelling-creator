@@ -20,10 +20,47 @@
 //
 // Everything here is async — IndexedDB has no synchronous API. Callers await.
 
+import type { LessonDoc } from "../types.ts";
+
+/** Image bytes in any of the shapes the store takes. */
+export type ImageInput = Blob | ArrayBuffer | ArrayBufferView<ArrayBuffer>;
+
+/** A stored image, keyed by `hash`. */
+export interface ImageRecord {
+  hash: string;
+  blob: Blob;
+  mime: string;
+  size: number;
+  createdAt: number;
+}
+
+/**
+ * A lesson's library record: the metadata kept beside its document (see
+ * storage.ts), keyed by `id`.
+ */
+export interface LessonRecord {
+  /** The lesson's id here, and its git repository's while it is a local draft. */
+  id: string;
+  title: string;
+  /** How many sections and blocks the document has. */
+  sections: number;
+  blocks: number;
+  /** The hub lesson this one is attached to, if any. */
+  lessonId: string | null;
+  /** Whether that hub lesson is public rather than a private draft. */
+  published: boolean;
+  /** The hub lesson this one was forked from. */
+  forkedFrom: string | null;
+  /** Or the address of the page on another instance it was forked from. */
+  forkedFromUrl: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
 const DB_NAME = "s2c-lesson-maker";
 // v2 added the `lessons` / `lessonDocs` stores — the library. v1 held a single
 // working document under the app store's `doc` key; see migrateToLibrary() in
-// storage.js, which moves it across.
+// storage.ts, which moves it across.
 const DB_VERSION = 2;
 const IMAGE_STORE = "images";
 const APP_STORE = "app";
@@ -37,17 +74,17 @@ const EDITING_PUBLISHED_KEY = "editing-published";
 const WIZARD_SEEN_KEY = "wizard-seen";
 // The lesson the working doc was forked from, if any. Persisted alongside the
 // editing id so a fork still knows where it came from after a reload, and can
-// offer to pull the original's later changes in (see lib/git/sync.js).
+// offer to pull the original's later changes in (see git/sync.ts).
 const FORKED_FROM_KEY = "forked-from";
 // Which lesson in the library is open in the editor.
 const CURRENT_LESSON_KEY = "current-lesson";
 
-let dbPromise = null;
+let dbPromise: Promise<IDBDatabase> | null = null;
 
-function openDb() {
+function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
-    let req;
+    let req: IDBOpenDBRequest;
     try {
       req = indexedDB.open(DB_NAME, DB_VERSION);
     } catch (err) {
@@ -75,11 +112,13 @@ function openDb() {
   return dbPromise;
 }
 
-function store(db, name, mode) {
+function store(db: IDBDatabase, name: string, mode: IDBTransactionMode) {
   return db.transaction(name, mode).objectStore(name);
 }
 
-function reqToPromise(request) {
+// IndexedDB types what a store gives back as `any`; the caller names what it
+// stored there.
+function reqToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -88,7 +127,7 @@ function reqToPromise(request) {
 
 // Normalise any supported image input (Blob / ArrayBuffer / typed array) to a
 // Uint8Array we can both hash and wrap in a Blob.
-async function toBytes(input) {
+async function toBytes(input: ImageInput): Promise<Uint8Array<ArrayBuffer>> {
   if (input instanceof Blob) return new Uint8Array(await input.arrayBuffer());
   if (input instanceof ArrayBuffer) return new Uint8Array(input);
   if (ArrayBuffer.isView(input)) {
@@ -100,7 +139,7 @@ async function toBytes(input) {
 // Lowercase hex SHA-256 of the given bytes — the content-address used as both
 // the IndexedDB key and the R2 object key, so a hash computed here matches one
 // the Worker recomputes from the same bytes.
-export async function sha256Hex(input) {
+export async function sha256Hex(input: ImageInput): Promise<string> {
   const bytes = await toBytes(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)]
@@ -112,7 +151,10 @@ export async function sha256Hex(input) {
 
 // Store image bytes and return their content hash. Idempotent: identical bytes
 // map to the same hash and are stored only once.
-export async function putImageBlob(input, mime) {
+export async function putImageBlob(
+  input: ImageInput,
+  mime?: string | null,
+): Promise<string> {
   const bytes = await toBytes(input);
   const hash = await sha256Hex(bytes);
   if (await hasImageBlob(hash)) return hash;
@@ -126,16 +168,18 @@ export async function putImageBlob(input, mime) {
       mime: type,
       size: bytes.byteLength,
       createdAt: Date.now(),
-    }),
+    } satisfies ImageRecord),
   );
   return hash;
 }
 
-export async function getImageBlob(hash) {
+export async function getImageBlob(
+  hash: string | null | undefined,
+): Promise<Blob | null> {
   if (!hash) return null;
   try {
     const db = await openDb();
-    const rec = await reqToPromise(
+    const rec = await reqToPromise<ImageRecord | undefined>(
       store(db, IMAGE_STORE, "readonly").get(hash),
     );
     return rec ? rec.blob : null;
@@ -144,7 +188,9 @@ export async function getImageBlob(hash) {
   }
 }
 
-export async function hasImageBlob(hash) {
+export async function hasImageBlob(
+  hash: string | null | undefined,
+): Promise<boolean> {
   if (!hash) return false;
   try {
     const db = await openDb();
@@ -159,13 +205,14 @@ export async function hasImageBlob(hash) {
 
 // Every image hash currently held locally — handy for a future garbage-collect
 // of blobs no longer referenced by any doc.
-export async function getAllImageHashes() {
+export async function getAllImageHashes(): Promise<Set<string>> {
   try {
     const db = await openDb();
     const keys = await reqToPromise(
       store(db, IMAGE_STORE, "readonly").getAllKeys(),
     );
-    return new Set(keys);
+    // The store's keys are its records' hashes.
+    return new Set(keys as string[]);
   } catch {
     return new Set();
   }
@@ -173,22 +220,34 @@ export async function getAllImageHashes() {
 
 // ---- app state (replaces the old localStorage storage.js) ------------------
 
-async function appGet(key) {
+// What each app-store key holds.
+interface AppState {
+  [DOC_KEY]: LessonDoc;
+  [EDITING_ID_KEY]: string;
+  [EDITING_PUBLISHED_KEY]: boolean;
+  [WIZARD_SEEN_KEY]: boolean;
+  [FORKED_FROM_KEY]: string;
+  [CURRENT_LESSON_KEY]: string;
+}
+
+async function appGet<K extends keyof AppState>(
+  key: K,
+): Promise<AppState[K] | undefined> {
   const db = await openDb();
   return reqToPromise(store(db, APP_STORE, "readonly").get(key));
 }
 
-async function appSet(key, value) {
+async function appSet<K extends keyof AppState>(key: K, value: AppState[K]) {
   const db = await openDb();
   await reqToPromise(store(db, APP_STORE, "readwrite").put(value, key));
 }
 
-async function appDelete(key) {
+async function appDelete(key: keyof AppState) {
   const db = await openDb();
   await reqToPromise(store(db, APP_STORE, "readwrite").delete(key));
 }
 
-export async function loadDocument() {
+export async function loadDocument(): Promise<LessonDoc | null> {
   try {
     return (await appGet(DOC_KEY)) || null;
   } catch {
@@ -196,7 +255,7 @@ export async function loadDocument() {
   }
 }
 
-export async function saveDocument(doc) {
+export async function saveDocument(doc: LessonDoc): Promise<void> {
   try {
     await appSet(DOC_KEY, doc);
   } catch {
@@ -204,7 +263,7 @@ export async function saveDocument(doc) {
   }
 }
 
-export async function clearDocument() {
+export async function clearDocument(): Promise<void> {
   try {
     await appDelete(DOC_KEY);
   } catch {
@@ -212,7 +271,7 @@ export async function clearDocument() {
   }
 }
 
-export async function loadEditingId() {
+export async function loadEditingId(): Promise<string | null> {
   try {
     return (await appGet(EDITING_ID_KEY)) || null;
   } catch {
@@ -220,7 +279,9 @@ export async function loadEditingId() {
   }
 }
 
-export async function saveEditingId(id) {
+export async function saveEditingId(
+  id: string | null | undefined,
+): Promise<void> {
   try {
     if (id) await appSet(EDITING_ID_KEY, id);
     else await appDelete(EDITING_ID_KEY);
@@ -229,7 +290,7 @@ export async function saveEditingId(id) {
   }
 }
 
-export async function loadForkedFrom() {
+export async function loadForkedFrom(): Promise<string | null> {
   try {
     return (await appGet(FORKED_FROM_KEY)) || null;
   } catch {
@@ -237,7 +298,9 @@ export async function loadForkedFrom() {
   }
 }
 
-export async function saveForkedFrom(id) {
+export async function saveForkedFrom(
+  id: string | null | undefined,
+): Promise<void> {
   try {
     if (id) await appSet(FORKED_FROM_KEY, id);
     else await appDelete(FORKED_FROM_KEY);
@@ -248,7 +311,7 @@ export async function saveForkedFrom(id) {
 
 // Returns true when no flag is stored, matching the pre-draft behaviour where
 // every saved lesson was published.
-export async function loadEditingPublished() {
+export async function loadEditingPublished(): Promise<boolean> {
   try {
     return (await appGet(EDITING_PUBLISHED_KEY)) !== false;
   } catch {
@@ -256,7 +319,9 @@ export async function loadEditingPublished() {
   }
 }
 
-export async function saveEditingPublished(published) {
+export async function saveEditingPublished(
+  published: boolean | null | undefined,
+): Promise<void> {
   try {
     if (published === null || published === undefined) {
       await appDelete(EDITING_PUBLISHED_KEY);
@@ -268,7 +333,7 @@ export async function saveEditingPublished(published) {
   }
 }
 
-export async function loadWizardSeen() {
+export async function loadWizardSeen(): Promise<boolean> {
   try {
     return (await appGet(WIZARD_SEEN_KEY)) === true;
   } catch {
@@ -277,7 +342,7 @@ export async function loadWizardSeen() {
   }
 }
 
-export async function saveWizardSeen() {
+export async function saveWizardSeen(): Promise<void> {
   try {
     await appSet(WIZARD_SEEN_KEY, true);
   } catch {
@@ -287,30 +352,36 @@ export async function saveWizardSeen() {
 
 // ---- the lesson library ----------------------------------------------------
 //
-// Raw store access, no policy: storage.js layers the library API (titles,
+// Raw store access, no policy: storage.ts layers the library API (titles,
 // counts, timestamps, the current lesson) on top of these. Every one of them
 // swallows a failed transaction and answers with "nothing", because a browser
 // that has denied us IndexedDB (private mode, a full disk) must still let the
 // editor run against an in-memory document.
 
 /** Every lesson's metadata record, in no particular order. */
-export async function listLessonRecords() {
+export async function listLessonRecords(): Promise<LessonRecord[]> {
   try {
     const db = await openDb();
     return (
-      (await reqToPromise(store(db, LESSON_STORE, "readonly").getAll())) || []
+      (await reqToPromise<LessonRecord[]>(
+        store(db, LESSON_STORE, "readonly").getAll(),
+      )) || []
     );
   } catch {
     return [];
   }
 }
 
-export async function getLessonRecord(id) {
+export async function getLessonRecord(
+  id: string | null | undefined,
+): Promise<LessonRecord | null> {
   if (!id) return null;
   try {
     const db = await openDb();
     return (
-      (await reqToPromise(store(db, LESSON_STORE, "readonly").get(id))) || null
+      (await reqToPromise<LessonRecord | undefined>(
+        store(db, LESSON_STORE, "readonly").get(id),
+      )) || null
     );
   } catch {
     return null;
@@ -337,12 +408,18 @@ export async function getLessonRecord(id) {
  * `derive` must be synchronous; awaiting anything else would let the transaction
  * close underneath it.
  */
-export async function updateLessonRecord(id, derive, doc) {
+export async function updateLessonRecord(
+  id: string | null | undefined,
+  derive: (record: LessonRecord) => LessonRecord,
+  doc?: LessonDoc,
+): Promise<LessonRecord | null> {
   if (!id) return null;
   try {
     const db = await openDb();
     const tx = db.transaction([LESSON_STORE, LESSON_DOC_STORE], "readwrite");
-    const record = await reqToPromise(tx.objectStore(LESSON_STORE).get(id));
+    const record = await reqToPromise<LessonRecord | undefined>(
+      tx.objectStore(LESSON_STORE).get(id),
+    );
     if (!record) return null;
     const next = derive(record);
     if (doc !== undefined) tx.objectStore(LESSON_DOC_STORE).put(doc, id);
@@ -354,7 +431,7 @@ export async function updateLessonRecord(id, derive, doc) {
   }
 }
 
-export async function putLessonRecord(record) {
+export async function putLessonRecord(record: LessonRecord): Promise<void> {
   try {
     const db = await openDb();
     await reqToPromise(store(db, LESSON_STORE, "readwrite").put(record));
@@ -363,7 +440,9 @@ export async function putLessonRecord(record) {
   }
 }
 
-export async function deleteLessonRecord(id) {
+export async function deleteLessonRecord(
+  id: string | null | undefined,
+): Promise<void> {
   if (!id) return;
   try {
     const db = await openDb();
@@ -374,20 +453,26 @@ export async function deleteLessonRecord(id) {
 }
 
 /** One lesson's document, or null when it has none stored yet. */
-export async function getLessonDoc(id) {
+export async function getLessonDoc(
+  id: string | null | undefined,
+): Promise<LessonDoc | null> {
   if (!id) return null;
   try {
     const db = await openDb();
     return (
-      (await reqToPromise(store(db, LESSON_DOC_STORE, "readonly").get(id))) ||
-      null
+      (await reqToPromise<LessonDoc | undefined>(
+        store(db, LESSON_DOC_STORE, "readonly").get(id),
+      )) || null
     );
   } catch {
     return null;
   }
 }
 
-export async function putLessonDoc(id, doc) {
+export async function putLessonDoc(
+  id: string | null | undefined,
+  doc: LessonDoc,
+): Promise<void> {
   if (!id) return;
   try {
     const db = await openDb();
@@ -397,7 +482,9 @@ export async function putLessonDoc(id, doc) {
   }
 }
 
-export async function deleteLessonDoc(id) {
+export async function deleteLessonDoc(
+  id: string | null | undefined,
+): Promise<void> {
   if (!id) return;
   try {
     const db = await openDb();
@@ -408,7 +495,7 @@ export async function deleteLessonDoc(id) {
 }
 
 /** The library lesson the editor is on, so a reload comes back to it. */
-export async function loadCurrentLessonId() {
+export async function loadCurrentLessonId(): Promise<string | null> {
   try {
     return (await appGet(CURRENT_LESSON_KEY)) || null;
   } catch {
@@ -416,7 +503,9 @@ export async function loadCurrentLessonId() {
   }
 }
 
-export async function saveCurrentLessonId(id) {
+export async function saveCurrentLessonId(
+  id: string | null | undefined,
+): Promise<void> {
   try {
     if (id) await appSet(CURRENT_LESSON_KEY, id);
     else await appDelete(CURRENT_LESSON_KEY);

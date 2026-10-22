@@ -13,8 +13,10 @@ import { formulaToDocx } from "./formulaDocx.ts";
 const renderer = createFormulaRenderer(liteAdaptor());
 
 // The document's body XML, with the equation in it: a docx is a zip.
-async function xmlOf(formula) {
-  const { root } = await renderer.render(formula);
+async function xmlOf(formula: { format: string; source: string }) {
+  const rendered = await renderer.render(formula);
+  if (!rendered) throw new Error(`No renderer for ${formula.format}.`);
+  const { root } = rendered;
   const document = new Document({
     sections: [
       { children: [new Paragraph({ children: [formulaToDocx(root)] })] },

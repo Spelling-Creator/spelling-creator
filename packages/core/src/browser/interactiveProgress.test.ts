@@ -13,29 +13,32 @@ import { MAX_RESPONSE_LENGTH } from "../interactive.ts";
 // A localStorage that behaves like the real one, plus a switch for the browsers
 // that refuse us storage entirely (private browsing, a full quota).
 function fakeStorage() {
-  const entries = new Map();
+  const entries = new Map<string, string>();
   return {
     throws: false,
-    getItem(key) {
+    getItem(key: string) {
       if (this.throws) throw new Error("nope");
-      return entries.has(key) ? entries.get(key) : null;
+      return entries.get(key) ?? null;
     },
-    setItem(key, value) {
+    setItem(key: string, value: unknown) {
       if (this.throws) throw new Error("nope");
       entries.set(key, String(value));
     },
   };
 }
 
-let storage;
+// Loosely typed, since the tests swap in the fake and remove storage outright.
+const runtime = globalThis as { localStorage?: unknown };
+
+let storage: ReturnType<typeof fakeStorage>;
 
 beforeEach(() => {
   storage = fakeStorage();
-  globalThis.localStorage = storage;
+  runtime.localStorage = storage;
 });
 
 afterEach(() => {
-  delete globalThis.localStorage;
+  delete runtime.localStorage;
   vi.useRealTimers();
 });
 
@@ -70,10 +73,10 @@ describe("saveInteractiveProgress / loadInteractiveProgress", () => {
       answers: { b4: "Pressure" },
     });
 
-    expect(loadInteractiveProgress("lesson-1", "user-1").answers).toEqual({
+    expect(loadInteractiveProgress("lesson-1", "user-1")?.answers).toEqual({
       b3: "Italy",
     });
-    expect(loadInteractiveProgress("lesson-1", "user-2").answers).toEqual({
+    expect(loadInteractiveProgress("lesson-1", "user-2")?.answers).toEqual({
       b4: "Pressure",
     });
     // A signed-out learner is their own owner, not either of the two above.
@@ -89,7 +92,7 @@ describe("saveInteractiveProgress / loadInteractiveProgress", () => {
     saveInteractiveProgress("lesson-1", "user-1", {
       answers: { b3: "Italy", b4: "   ", b5: "" },
     });
-    expect(loadInteractiveProgress("lesson-1", "user-1").answers).toEqual({
+    expect(loadInteractiveProgress("lesson-1", "user-1")?.answers).toEqual({
       b3: "Italy",
     });
   });
@@ -99,7 +102,7 @@ describe("saveInteractiveProgress / loadInteractiveProgress", () => {
       answers: { b3: "x".repeat(MAX_RESPONSE_LENGTH + 100) },
     });
     expect(
-      loadInteractiveProgress("lesson-1", "user-1").answers.b3,
+      loadInteractiveProgress("lesson-1", "user-1")?.answers.b3,
     ).toHaveLength(MAX_RESPONSE_LENGTH);
   });
 
@@ -116,7 +119,7 @@ describe("saveInteractiveProgress / loadInteractiveProgress", () => {
     // site data switched off. Nothing throws here, so a write that only guarded
     // against exceptions would report success and promise a resume that can't
     // happen.
-    delete globalThis.localStorage;
+    delete runtime.localStorage;
     expect(
       saveInteractiveProgress("lesson-1", "user-1", { answers: { b3: "a" } }),
     ).toBe(false);
@@ -130,7 +133,7 @@ describe("saveInteractiveProgress / loadInteractiveProgress", () => {
     expect(
       saveInteractiveProgress("lesson-1", "user-1", { answers: { b3: "a" } }),
     ).toBe(true);
-    expect(loadInteractiveProgress("lesson-1", "user-1").answers).toEqual({
+    expect(loadInteractiveProgress("lesson-1", "user-1")?.answers).toEqual({
       b3: "a",
     });
   });

@@ -24,7 +24,7 @@
 // than not resuming at all. Signing in mid-lesson therefore starts a fresh
 // record; the signed-out one is left to expire.
 //
-// localStorage rather than the IndexedDB the editor uses (see storage.js): this
+// localStorage rather than the IndexedDB the editor uses (see storage.ts): this
 // is a few kilobytes of text that must be readable and writable synchronously as
 // someone types and as a dialog closes, and losing it to a cleared browser is a
 // disappointment rather than a disaster. Everything here is best-effort — a
@@ -34,6 +34,22 @@
 import { MAX_RESPONSES, MAX_RESPONSE_LENGTH } from "../interactive.ts";
 
 const STORAGE_KEY = "spelling-creator:interactive-progress";
+
+/** An unfinished run-through, as loadInteractiveProgress hands it back. */
+export interface InteractiveProgress {
+  /** The `key` of the InteractiveStep the learner was on, or "". */
+  stepKey: string;
+  /** What they had typed, by question block id. */
+  answers: Record<string, string>;
+  updatedAt: number;
+}
+
+/** A stored record that isLive accepted: the fields it checks, and no more. */
+interface LiveRecord {
+  stepKey?: unknown;
+  answers: object;
+  updatedAt: number;
+}
 
 /** How many lessons' worth of progress one browser keeps. Past that the least
  * recently touched is dropped: this is a resume cache, not the learner's own
@@ -49,23 +65,23 @@ export const PROGRESS_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 /** The record key for one learner's attempt at one lesson. `owner` is the signed-in
  * user's id, or absent for a signed-out learner — see the note above on why the
  * two are kept apart. */
-function recordKey(lessonId, owner) {
+function recordKey(lessonId: string, owner: string | null | undefined) {
   return `${owner || "anon"}:${lessonId}`;
 }
 
 // Every record in one localStorage entry rather than a key each: pruning and
 // expiry are then one read and one write, and there is no way to leave a browser
 // littered with keys nothing knows how to enumerate.
-function readAll() {
+function readAll(): Record<string, unknown> {
   try {
     // Property access, not a bare global: this module is only loaded in a browser,
     // but a server render importing it transitively must not throw a ReferenceError.
     const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
       return {};
-    return parsed;
+    return parsed as Record<string, unknown>;
   } catch {
     // Unavailable, or something else wrote nonsense under our key. Either way
     // there is nothing to resume.
@@ -73,7 +89,7 @@ function readAll() {
   }
 }
 
-function writeAll(records) {
+function writeAll(records: Record<string, unknown>) {
   try {
     // Checked rather than optional-chained: `localStorage?.setItem(...)` on a
     // runtime that has no localStorage at all does nothing and throws nothing,
@@ -93,15 +109,13 @@ function writeAll(records) {
 /**
  * Whether a stored record is still worth offering, i.e. it is the shape we write
  * and it hasn't gone stale.
- * @param {unknown} record
- * @param {number} now
- * @returns {boolean}
  */
-function isLive(record, now) {
+function isLive(record: unknown, now: number): record is LiveRecord {
   if (!record || typeof record !== "object") return false;
-  if (!record.answers || typeof record.answers !== "object") return false;
-  if (typeof record.updatedAt !== "number") return false;
-  return now - record.updatedAt < PROGRESS_MAX_AGE_MS;
+  const { answers, updatedAt } = record as Record<string, unknown>;
+  if (!answers || typeof answers !== "object") return false;
+  if (typeof updatedAt !== "number") return false;
+  return now - updatedAt < PROGRESS_MAX_AGE_MS;
 }
 
 /**
@@ -109,13 +123,14 @@ function isLive(record, now) {
  * touched records. Exported for its own test — the pruning is the part of this
  * module with a rule in it, and it shouldn't need a fake localStorage to check.
  *
- * @param {Record<string, object>} records
- * @param {number} [now]
- * @returns {Record<string, object>} A new map; the input is not modified.
+ * @returns A new map; the input is not modified.
  */
-export function pruneProgress(records, now = Date.now()) {
-  const live = Object.entries(records || {}).filter(([, record]) =>
-    isLive(record, now),
+export function pruneProgress(
+  records: Record<string, unknown> | null | undefined,
+  now: number = Date.now(),
+): Record<string, LiveRecord> {
+  const live = Object.entries(records || {}).filter(
+    (entry): entry is [string, LiveRecord] => isLive(entry[1], now),
   );
   live.sort(([, a], [, b]) => b.updatedAt - a.updatedAt);
   return Object.fromEntries(live.slice(0, MAX_PROGRESS_RECORDS));
@@ -127,8 +142,8 @@ export function pruneProgress(records, now = Date.now()) {
  * stick — a resumed run-through that helpfully restored an answer the learner had
  * deleted would be worse than one that restored nothing.
  */
-function normaliseAnswers(answers) {
-  const out = {};
+function normaliseAnswers(answers: unknown) {
+  const out: Record<string, string> = {};
   if (!answers || typeof answers !== "object") return out;
   for (const [blockId, value] of Object.entries(answers)) {
     if (typeof value !== "string" || !value.trim()) continue;
@@ -142,11 +157,12 @@ function normaliseAnswers(answers) {
  * The unfinished run-through this browser is holding for a lesson, or null if
  * there isn't one (or it has expired, or storage is unavailable).
  *
- * @param {string} lessonId
- * @param {?string} [owner]  The signed-in user's id, if any.
- * @returns {{ stepKey: string, answers: Record<string, string>, updatedAt: number } | null}
+ * @param owner  The signed-in user's id, if any.
  */
-export function loadInteractiveProgress(lessonId, owner) {
+export function loadInteractiveProgress(
+  lessonId: string | null | undefined,
+  owner?: string | null,
+): InteractiveProgress | null {
   if (!lessonId) return null;
   const record = readAll()[recordKey(lessonId, owner)];
   if (!isLive(record, Date.now())) return null;
@@ -166,12 +182,16 @@ export function loadInteractiveProgress(lessonId, owner) {
  * between steps, so it is deliberately cheap and deliberately silent about
  * failure — bar the return value.
  *
- * @param {string} lessonId
- * @param {?string} owner
- * @param {{ stepKey?: string, answers?: Record<string, string> }} progress
- * @returns {boolean} Whether it was actually stored.
+ * @returns Whether it was actually stored.
  */
-export function saveInteractiveProgress(lessonId, owner, progress) {
+export function saveInteractiveProgress(
+  lessonId: string | null | undefined,
+  owner: string | null | undefined,
+  progress:
+    | { stepKey?: string; answers?: Record<string, string> }
+    | null
+    | undefined,
+): boolean {
   if (!lessonId) return false;
   const records = pruneProgress(readAll());
   records[recordKey(lessonId, owner)] = {
@@ -186,11 +206,12 @@ export function saveInteractiveProgress(lessonId, owner, progress) {
  * Forget a lesson's progress — because the run-through finished, because the
  * learner started it again, or because they chose to throw it away.
  *
- * @param {string} lessonId
- * @param {?string} owner
- * @returns {boolean} Whether storage was writable (true when there was nothing to forget).
+ * @returns Whether storage was writable (true when there was nothing to forget).
  */
-export function clearInteractiveProgress(lessonId, owner) {
+export function clearInteractiveProgress(
+  lessonId: string | null | undefined,
+  owner: string | null | undefined,
+): boolean {
   if (!lessonId) return false;
   const records = readAll();
   const key = recordKey(lessonId, owner);
@@ -204,11 +225,11 @@ export function clearInteractiveProgress(lessonId, owner) {
  * asks to decide between "Start lesson" and "Continue lesson". A read-only peek:
  * it never writes, so a page that merely renders a lesson doesn't touch storage.
  *
- * @param {string} lessonId
- * @param {?string} [owner]
- * @returns {boolean}
  */
-export function hasInteractiveProgress(lessonId, owner) {
+export function hasInteractiveProgress(
+  lessonId: string | null | undefined,
+  owner?: string | null,
+): boolean {
   const progress = loadInteractiveProgress(lessonId, owner);
   if (!progress) return false;
   return Boolean(progress.stepKey) || Object.keys(progress.answers).length > 0;

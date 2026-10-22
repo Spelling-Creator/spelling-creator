@@ -29,28 +29,38 @@
 
 import * as git from "isomorphic-git";
 import { newId } from "../../id.ts";
-import { preserveLocalFields } from "../../git/doc.ts";
+import { preserveLocalFields, type DocLike } from "../../git/doc.ts";
 import { DRAFT_REPO, copyRepo, deleteRepo, repoCtx } from "./fs.ts";
-import { applyResolutions, mergeDocs } from "../../git/merge.ts";
-import { diffDocs } from "../../git/ops.ts";
+import {
+  applyResolutions,
+  mergeDocs,
+  type AutoMerged,
+  type MergeChoice,
+  type MergeConflict,
+} from "../../git/merge.ts";
+import { diffDocs, type Op } from "../../git/ops.ts";
 import {
   cloneFromPack,
   contains,
   fetchRemotePack,
   mergeBase,
   packRepo,
+  type IncomingPack,
 } from "../../git/pack.ts";
+import type { RefMap } from "../../git/refs.ts";
 import {
   fetchPack,
   fetchRefs,
   fetchRemotePackFile,
   pushPack,
+  type FetchedPack,
 } from "../../git/remote.ts";
 import {
   closePullRequest,
   createPullRequest,
   fetchPullPack,
   uploadPullPack,
+  type PullRequest,
 } from "../../pulls.ts";
 import {
   BRANCH,
@@ -65,9 +75,96 @@ import {
   headOid,
   pullRef,
   readDocAt,
+  type CommitIdentity,
+  type GitContext,
 } from "../../git/repo.ts";
+import type { LessonDoc } from "../../types.ts";
 
-const EMPTY_AUTO = { merged: [], tookTheirs: [], added: [], removed: [] };
+const EMPTY_AUTO: AutoMerged = {
+  merged: [],
+  tookTheirs: [],
+  added: [],
+  removed: [],
+};
+
+/** How our local history stands against the hub's (see remoteStatus). */
+export type RemoteState =
+  | "fresh"
+  | "identical"
+  | "ahead"
+  | "behind"
+  | "diverged";
+
+/** What remoteStatus found. */
+export interface RemoteStatus {
+  state: RemoteState;
+  /** Our tip on the branch being edited, or null before the first commit. */
+  ours: string | null;
+  /** The hub's tip for the same branch, or null when it has none. */
+  theirs: string | null;
+  /** The commit the two share, when both exist. */
+  base?: string | null;
+  branch: string;
+  /** Whether the hub holds any history for the lesson at all. */
+  hasRemote: boolean;
+  needsMerge: boolean;
+}
+
+/**
+ * A merge worked out but not yet committed: what prepareMerge, preparePullMerge,
+ * prepareBranchMerge and prepareRevert hand back for completeMerge().
+ */
+export interface PreparedMerge {
+  /** The merged doc, with contested blocks left at our value. */
+  doc: LessonDoc;
+  conflicts: MergeConflict[];
+  auto: AutoMerged;
+  ours: string;
+  theirs: string;
+  base: string | null;
+  /** We're on the same commit, so there is nothing to merge. */
+  identical: boolean;
+  /**
+   * We already contain their tip: nothing to merge, but we have commits they
+   * don't (i.e. something to contribute).
+   */
+  ahead: boolean;
+  /** identical || ahead: there is nothing to pull. */
+  upToDate: boolean;
+  /** Their history contains ours and we added nothing, so only a ref moves. */
+  fastForward?: boolean;
+  /** The branch ref the merge was computed against. */
+  ref?: string;
+  /** Overrides the merge commit's two parents (an undo has one). */
+  parents?: string[];
+  /** The first line of the commit being undone. */
+  summary?: string;
+  /** Overrides the merge commit's generated message. */
+  message?: string;
+}
+
+/** What pushHistory did, or why it didn't. */
+export interface PushResult {
+  pushed: boolean;
+  needsMerge?: boolean;
+  prepared?: PreparedMerge | null;
+  status: RemoteStatus;
+}
+
+/** What prepareProposalReview found. */
+export interface ProposalReview {
+  ops: Op[];
+  /** What the proposer's latest update changed, when there has been one. */
+  updateOps: Op[] | null;
+  conflicts: MergeConflict[];
+  auto: AutoMerged;
+  base: string | null;
+  ours: string | null;
+  theirs: string;
+  /** Every commit the proposal has is already in the lesson's history. */
+  contained: boolean;
+  hasLesson: boolean;
+}
 
 /**
  * How our local history stands against what the hub holds for a lesson.
@@ -83,7 +180,15 @@ const EMPTY_AUTO = { merged: [], tookTheirs: [], added: [], removed: [] };
  *
  * `behind` and `diverged` both mean "merge first"; that's `needsMerge`.
  */
-export async function remoteStatus({ repoId, lessonId, ref = ORIGIN_REF }) {
+export async function remoteStatus({
+  repoId,
+  lessonId,
+  ref = ORIGIN_REF,
+}: {
+  repoId: string;
+  lessonId: string;
+  ref?: string;
+}): Promise<RemoteStatus> {
   const ctx = repoCtx(repoId);
   const branch = await currentBranch(ctx);
   const ours = await headOid(ctx);
@@ -206,7 +311,10 @@ export async function remoteStatus({ repoId, lessonId, ref = ORIGIN_REF }) {
  * say something true, and one branch that won't adopt is no reason to fail the
  * save it is riding along with — including the lesson's own.
  */
-async function syncRemoteBranches(ctx, refs) {
+async function syncRemoteBranches(
+  ctx: GitContext,
+  refs: RefMap | null | undefined,
+) {
   if (!refs) return;
   const deleted = await deletedBranches(ctx);
 
@@ -258,13 +366,9 @@ async function syncRemoteBranches(ctx, refs) {
  *   pulling the original's changes into a fork (lessonId = the original)
  *   catching up with our own lesson before pushing (lessonId = this lesson)
  *
- * @returns {Promise<null | {
- *   doc, conflicts, auto, ours, theirs, base,
- *   identical,  we're on the same commit — nothing to merge
- *   ahead,      we already contain their tip — nothing to merge, but we have
- *               commits they don't (i.e. something to contribute)
- *   upToDate    identical || ahead — there is nothing to pull
- * }>} null when the lesson has no published history to merge with.
+ * @returns The prepared merge (see PreparedMerge for what `identical`, `ahead`
+ *          and `upToDate` say), or null when the lesson has no published
+ *          history to merge with.
  */
 export async function prepareMerge({
   repoId,
@@ -272,7 +376,14 @@ export async function prepareMerge({
   doc,
   ref = UPSTREAM_REF,
   theirs,
-}) {
+}: {
+  repoId: string;
+  lessonId: string;
+  doc: LessonDoc;
+  ref?: string;
+  /** Which of the pack's commits to merge; the lesson's tip by default. */
+  theirs?: string | null;
+}): Promise<PreparedMerge | null> {
   const pack = await fetchPack(lessonId).catch(() => null);
   if (!pack) return null;
   return mergeAgainstPack({ repoId, pack, doc, ref, theirs });
@@ -286,7 +397,19 @@ export async function prepareMerge({
  * The objects land in our own store, so the commits the two sides share are
  * literally the same objects and the merge base below is a real answer.
  */
-async function mergeAgainstPack({ repoId, pack, doc, ref, theirs }) {
+async function mergeAgainstPack({
+  repoId,
+  pack,
+  doc,
+  ref,
+  theirs,
+}: {
+  repoId: string;
+  pack: IncomingPack;
+  doc: LessonDoc;
+  ref: string;
+  theirs?: string | null;
+}) {
   await fetchRemotePack({ ...repoCtx(repoId), ...pack, ref });
   // `theirs` names which of the pack's commits to merge. It defaults to the
   // lesson itself, which is what pulling an original's changes or reviewing a
@@ -305,7 +428,15 @@ async function mergeAgainstPack({ repoId, pack, doc, ref, theirs }) {
  * hold, and the answer is the same three-way merge against the commit the two
  * sides last agreed on.
  */
-async function mergeAgainstCommit({ repoId, theirs, doc }) {
+async function mergeAgainstCommit({
+  repoId,
+  theirs,
+  doc,
+}: {
+  repoId: string;
+  theirs: string;
+  doc: LessonDoc;
+}): Promise<PreparedMerge | null> {
   const ctx = repoCtx(repoId);
 
   const ours = await headOid(ctx);
@@ -392,9 +523,17 @@ async function mergeAgainstCommit({ repoId, theirs, doc }) {
  * The result is an ordinary forward commit with one parent, like a restore:
  * history is never rewritten, so an undo can itself be undone.
  *
- * @returns {Promise<object>} A prepared merge, for completeMerge().
+ * @returns A prepared merge, for completeMerge().
  */
-export async function prepareRevert({ repoId, oid, doc }) {
+export async function prepareRevert({
+  repoId,
+  oid,
+  doc,
+}: {
+  repoId: string;
+  oid: string;
+  doc: LessonDoc;
+}): Promise<PreparedMerge> {
   const ctx = repoCtx(repoId);
 
   const { commit } = await git.readCommit({ ...ctx, oid });
@@ -453,12 +592,22 @@ export async function prepareRevert({ repoId, oid, doc }) {
  *
  * Feed the result to completeMerge(), exactly as with a merge from the hub.
  *
- * @param {string} args.name  The variation to bring in.
- * @param {string} [args.into] The branch to bring it into. The lesson by default.
- * @returns {Promise<object|null>} The prepared merge, or null when the variation
- *          is already contained in the target — there is nothing to bring in.
+ * @param args.name  The variation to bring in.
+ * @param args.into  The branch to bring it into. The lesson by default.
+ * @returns The prepared merge, or null when the variation is already
+ *          contained in the target, so there is nothing to bring in.
  */
-export async function prepareBranchMerge({ repoId, name, into = BRANCH, doc }) {
+export async function prepareBranchMerge({
+  repoId,
+  name,
+  into = BRANCH,
+  doc,
+}: {
+  repoId: string;
+  name: string;
+  into?: string;
+  doc: LessonDoc;
+}): Promise<PreparedMerge | null> {
   const ctx = repoCtx(repoId);
 
   const theirs = await headOid({ ...ctx, ref: branchRef(name) });
@@ -478,7 +627,7 @@ export async function prepareBranchMerge({ repoId, name, into = BRANCH, doc }) {
  * commit with *two* parents — ours and theirs. That's what joins the two
  * histories, so a later merge can find this point as its base.
  *
- * @returns {Promise<object>} The merged doc, as committed.
+ * @returns The merged doc, as committed.
  */
 export async function completeMerge({
   repoId,
@@ -487,7 +636,17 @@ export async function completeMerge({
   author,
   theirName,
   currentDoc,
-}) {
+}: {
+  repoId: string;
+  prepared: PreparedMerge;
+  /** The conflict dialog's answer for each contested block id. */
+  choices?: Record<string, MergeChoice>;
+  author?: CommitIdentity | null;
+  /** The other side's lesson title, for the merge commit's message. */
+  theirName?: string | null;
+  /** The doc in the editor now, whose local-only fields the result keeps. */
+  currentDoc?: DocLike;
+}): Promise<LessonDoc> {
   const ctx = repoCtx(repoId);
 
   const resolved = applyResolutions(
@@ -539,10 +698,18 @@ export async function completeMerge({
  * Refuses to push a history that doesn't contain what the hub already holds:
  * that would erase whoever pushed it. When that's the case it returns the merge
  * for the caller to put to the user (`needsMerge`), rather than pushing.
- *
- * @returns {Promise<{ pushed: boolean, needsMerge?: boolean, prepared?: object, status: object }>}
  */
-export async function pushHistory({ repoId, lessonId, doc, accessToken }) {
+export async function pushHistory({
+  repoId,
+  lessonId,
+  doc,
+  accessToken,
+}: {
+  repoId: string;
+  lessonId: string;
+  doc: LessonDoc;
+  accessToken: string | null | undefined;
+}): Promise<PushResult> {
   const status = await remoteStatus({ repoId, lessonId, ref: ORIGIN_REF });
 
   if (status.needsMerge) {
@@ -582,7 +749,7 @@ export async function pushHistory({ repoId, lessonId, doc, accessToken }) {
   // Say what we believe about every branch we are touching. A branch we hold that
   // the hub doesn't gets "" — "I believe this is new" — which is the claim that
   // fails if somebody else created the same name in the meantime.
-  const expected = {};
+  const expected: RefMap = {};
   for (const name of Object.keys(packed.refs))
     expected[name] = remote[name] || "";
   for (const [name, oid] of Object.entries(deleted)) expected[name] = oid;
@@ -612,12 +779,12 @@ export async function pushHistory({ repoId, lessonId, doc, accessToken }) {
 }
 
 /** The hub's branches as of our last fetch, from the remote-tracking refs. */
-async function remoteBranches(ctx) {
+async function remoteBranches(ctx: GitContext) {
   const names = await git
     .listRefs({ ...ctx, filepath: "refs/remotes/origin" })
     .catch(() => []);
 
-  const out = {};
+  const out: RefMap = {};
   for (const name of names) {
     const oid = await headOid({ ...ctx, ref: `refs/remotes/origin/${name}` });
     if (oid) out[name] = oid;
@@ -640,7 +807,7 @@ async function remoteBranches(ctx) {
  * uploaded against the request's id. If the upload fails, the empty request is
  * withdrawn rather than left in the author's queue with nothing in it.
  *
- * @returns {Promise<object>} The open pull request.
+ * @returns The open pull request.
  */
 export async function submitPullRequest({
   repoId,
@@ -649,7 +816,14 @@ export async function submitPullRequest({
   body,
   sourceLessonId = null,
   accessToken,
-}) {
+}: {
+  repoId: string;
+  lessonId: string;
+  title: string;
+  body?: string;
+  sourceLessonId?: string | null;
+  accessToken: string;
+}): Promise<PullRequest> {
   const ctx = repoCtx(repoId);
 
   // The branch the proposer is actually looking at, and only that one.
@@ -714,7 +888,8 @@ export async function submitPullRequest({
  * changed in this update" stays answerable — and it is checked here because the
  * Worker holds a proposal's history as an opaque packfile and cannot walk it.
  *
- * @returns {Promise<object>} The updated proposal.
+ * @param args.head  The commit the proposal points at now.
+ * @returns The updated proposal.
  */
 export async function updatePullRequest({
   repoId,
@@ -722,7 +897,13 @@ export async function updatePullRequest({
   pullId,
   head,
   accessToken,
-}) {
+}: {
+  repoId: string;
+  lessonId: string;
+  pullId: string;
+  head: string;
+  accessToken: string;
+}): Promise<PullRequest | null> {
   const ctx = repoCtx(repoId);
 
   const branch = await currentBranch(ctx);
@@ -762,11 +943,11 @@ export async function updatePullRequest({
  * request merged — the Worker checks that the merge really landed before it will
  * accept that.
  *
- * @returns {Promise<null | object>} null when the proposal's changes are no
- *          longer stored (it was resolved while we were looking at it). Anything
- *          else — signed out, offline, a failing server — throws, because those
- *          are not the same answer: reporting a proposal as gone when the
- *          network dropped sends the reviewer looking for the wrong problem.
+ * @returns null when the proposal's changes are no longer stored (it was
+ *          resolved while we were looking at it). Anything else (signed out,
+ *          offline, a failing server) throws, because those are not the same
+ *          answer: reporting a proposal as gone when the network dropped sends
+ *          the reviewer looking for the wrong problem.
  */
 export async function preparePullMerge({
   repoId,
@@ -774,7 +955,13 @@ export async function preparePullMerge({
   pullId,
   doc,
   accessToken,
-}) {
+}: {
+  repoId: string;
+  lessonId: string;
+  pullId: string;
+  doc: LessonDoc;
+  accessToken?: string;
+}): Promise<PreparedMerge | null> {
   const pack = await fetchPullPack(lessonId, pullId, accessToken);
   if (!pack) return null;
   return mergeAgainstPack({ repoId, pack, doc, ref: pullRef(pullId) });
@@ -802,8 +989,9 @@ export async function preparePullMerge({
  * Nothing is committed and no branch moves; the only writes are objects and a
  * remote-tracking ref, which is what indexing a pack means.
  *
- * @returns {Promise<null | { ops, conflicts, auto, base, ours, theirs, contained,
- *          hasLesson }>} null when the proposal's changes are no longer stored.
+ * @param args.previousHead  What the proposal pointed at before its latest
+ *        update, if it has had one.
+ * @returns null when the proposal's changes are no longer stored.
  */
 export async function prepareProposalReview({
   repoId,
@@ -811,7 +999,13 @@ export async function prepareProposalReview({
   pullId,
   previousHead,
   accessToken,
-}) {
+}: {
+  repoId: string;
+  lessonId: string;
+  pullId: string;
+  previousHead?: string | null;
+  accessToken?: string;
+}): Promise<ProposalReview | null> {
   const ctx = repoCtx(repoId);
 
   // The lesson's own history, so there is something to compare against. A lesson
@@ -853,7 +1047,7 @@ export async function prepareProposalReview({
   // — so this costs a tree read rather than another download. It is best-effort:
   // a proposal from before updates existed has no previous head to read, and a
   // reader who can see the current changes shouldn't lose them over that.
-  let updateOps = null;
+  let updateOps: Op[] | null = null;
   if (previousHead && previousHead !== theirs) {
     updateOps = await readDocAt({ ...ctx, oid: previousHead })
       .then((previousDoc) => diffDocs(previousDoc, theirDoc))
@@ -887,9 +1081,9 @@ export async function prepareProposalReview({
  * fork is a lesson of its own now, not a takeover of the one draft slot.
  */
 export async function forkLessonRepo(
-  sourceLessonId,
-  targetRepoId = DRAFT_REPO,
-) {
+  sourceLessonId: string,
+  targetRepoId: string = DRAFT_REPO,
+): Promise<LessonDoc | null> {
   const pack = await fetchPack(sourceLessonId).catch(() => null);
   return cloneForFork(pack, targetRepoId);
 }
@@ -900,14 +1094,18 @@ export async function forkLessonRepo(
  * result is as much a clone as a fork from here, same commits and same oids,
  * which is what a later sync against that instance would merge on.
  */
-export async function forkRemoteLessonRepo(packUrl, targetRepoId, accessToken) {
+export async function forkRemoteLessonRepo(
+  packUrl: string,
+  targetRepoId: string,
+  accessToken: string | null | undefined,
+): Promise<LessonDoc | null> {
   const pack = await fetchRemotePackFile(packUrl, accessToken).catch(
     () => null,
   );
   return cloneForFork(pack, targetRepoId);
 }
 
-async function cloneForFork(pack, targetRepoId) {
+async function cloneForFork(pack: FetchedPack | null, targetRepoId: string) {
   if (!pack) return null;
 
   // A fork starts from a clean repo — anything already under this id belongs to
@@ -946,7 +1144,10 @@ async function cloneForFork(pack, targetRepoId) {
  * back later — and the lesson it was forked from stays in the library, still
  * attached to whatever it was attached to.
  */
-export async function forkLocalRepo(sourceRepoId, targetRepoId = DRAFT_REPO) {
+export async function forkLocalRepo(
+  sourceRepoId: string,
+  targetRepoId: string = DRAFT_REPO,
+): Promise<boolean> {
   const copied = await copyRepo(sourceRepoId, targetRepoId);
   if (!copied) return false;
 
@@ -958,7 +1159,11 @@ export async function forkLocalRepo(sourceRepoId, targetRepoId = DRAFT_REPO) {
   return true;
 }
 
-function mergeSummary(prepared, choices, theirName) {
+function mergeSummary(
+  prepared: PreparedMerge,
+  choices: Record<string, MergeChoice>,
+  theirName: string | null | undefined,
+) {
   const name = theirName ? `"${theirName}"` : "the original lesson";
   const lines = [`Merge ${name}`, ""];
 

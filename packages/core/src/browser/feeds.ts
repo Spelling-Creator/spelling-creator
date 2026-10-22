@@ -17,24 +17,34 @@ import { userFeedUrl } from "../users.ts";
 
 // Pull the trimmed text of the first descendant with the given local name
 // (namespace-agnostic, so the Atom default xmlns doesn't get in the way).
-function entryText(el, tag) {
+function entryText(el: Element, tag: string) {
   const node = el.getElementsByTagNameNS("*", tag)[0];
   return node ? (node.textContent || "").trim() : "";
+}
+
+/** One entry of an Atom feed, flattened. */
+export interface FeedEntry {
+  id: string;
+  title: string;
+  author: string;
+  summary: string;
+  updated: string;
+  link: string;
 }
 
 /**
  * Fetch an Atom feed and flatten its entries. Error wording is injected so each
  * caller keeps the message its UI already showed.
  *
- * @param {string} url
- * @param {object} messages
- * @param {string} messages.unreachable  Network failure.
- * @param {string} messages.unparsable   Served, but not valid XML.
- * @returns {Promise<Array<{id: string, title: string, author: string, summary: string, updated: string, link: string}>>}
- *   Newest first, as the feed orders them.
+ * @param messages.unreachable  Network failure.
+ * @param messages.unparsable   Served, but not valid XML.
+ * @returns Newest first, as the feed orders them.
  */
-async function fetchAtomEntries(url, messages) {
-  let res;
+async function fetchAtomEntries(
+  url: string,
+  messages: { unreachable: string; unparsable: string },
+): Promise<FeedEntry[]> {
+  let res: Response;
   try {
     res = await fetch(url, { method: "GET" });
   } catch {
@@ -68,9 +78,9 @@ async function fetchAtomEntries(url, messages) {
 /**
  * The hub's "latest lessons" feed, rendered on the signed-in homepage dashboard.
  * Each entry's `<link rel="alternate">` points at the lesson's /hub/:id page.
- * @returns {Promise<Array<object>>} Newest first.
+ * @returns Newest first.
  */
-export async function fetchLatestLessons() {
+export async function fetchLatestLessons(): Promise<FeedEntry[]> {
   const url = lessonsFeedUrl();
   if (!url) throw new Error("The lesson hub is not configured.");
   return fetchAtomEntries(url, {
@@ -81,10 +91,10 @@ export async function fetchLatestLessons() {
 
 /**
  * A user's recent activity, for the in-page activity menu.
- * @param {string} id  The user's Supabase id.
- * @returns {Promise<Array<object>>} Newest first.
+ * @param id  The user's Supabase id.
+ * @returns Newest first.
  */
-export async function fetchUserActivity(id) {
+export async function fetchUserActivity(id: string): Promise<FeedEntry[]> {
   const url = userFeedUrl(id);
   if (!url) throw new Error("Profiles are not configured.");
   return fetchAtomEntries(url, {

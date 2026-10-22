@@ -1,17 +1,32 @@
 // Formulas in the browser: MathJax on the page's own document, the speech
 // rule engine fed from the app's own assets, and a formula as a picture.
 //
-// This module is HEAVY (see formulaEngine.js and formulaSpeech.js). Nothing
+// This module is HEAVY (see formulaEngine.ts and formulaSpeech.ts). Nothing
 // may static-import it: it is reached only through the dynamic import() in
-// formulas.js. vite.config.js additionally stubs it out of the Worker's SSR
+// formulas.ts. vite.config.js additionally stubs it out of the Worker's SSR
 // build.
 
 import { browserAdaptor } from "@mathjax/src/mjs/adaptors/browserAdaptor.js";
 import { mathjax } from "@mathjax/src/mjs/mathjax.js";
 import baseRulesUrl from "speech-rule-engine/lib/mathmaps/base.json?url";
 import englishRulesUrl from "speech-rule-engine/lib/mathmaps/en.json?url";
-import { createFormulaRenderer } from "./formulaEngine.ts";
-import { createFormulaSpeech } from "./formulaSpeech.ts";
+import {
+  createFormulaRenderer,
+  type FormulaInput,
+  type FormulaRenderer,
+  type RenderedFormula,
+} from "./formulaEngine.ts";
+import { createFormulaSpeech, type FormulaSpeech } from "./formulaSpeech.ts";
+
+/**
+ * A formula as a PNG. `width` and `height` are the size to show it at, in
+ * CSS pixels.
+ */
+export interface FormulaImage {
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+}
 
 // The glyphs MathJax's font keeps in files of their own (double-struck,
 // script, fraktur, less common symbols and alphabets), each a chunk of the
@@ -30,9 +45,9 @@ mathjax.asyncLoad = (name) => {
     : Promise.reject(new Error(`No font file for ${name}`));
 };
 
-let renderer = null;
+let renderer: FormulaRenderer<HTMLElement> | null = null;
 
-function rendererForPage() {
+function rendererForPage(): FormulaRenderer<HTMLElement> {
   if (!renderer) {
     renderer = createFormulaRenderer(browserAdaptor(), { document });
     // The SVG output's few rules (how a container sits in a line, and a
@@ -42,17 +57,16 @@ function rendererForPage() {
   return renderer;
 }
 
-/**
- * A formula rendered on this page: see createFormulaRenderer's `render`.
- * @param {{ format: string, source: string, display?: boolean }} formula
- */
-export function renderFormula(formula) {
+/** A formula rendered on this page: see createFormulaRenderer's `render`. */
+export function renderFormula(
+  formula: FormulaInput,
+): Promise<RenderedFormula<HTMLElement> | null> {
   return rendererForPage().render(formula);
 }
 
 // A second renderer for pictures: the page's one cuts an inline formula into
 // pieces where a line may wrap, and a picture needs it whole.
-let pictureRenderer = null;
+let pictureRenderer: FormulaRenderer<HTMLElement> | null = null;
 
 function rendererForPictures() {
   pictureRenderer ??= createFormulaRenderer(browserAdaptor(), {
@@ -62,9 +76,12 @@ function rendererForPictures() {
   return pictureRenderer;
 }
 
-const RULE_FILES = { base: baseRulesUrl, en: englishRulesUrl };
+const RULE_FILES: Partial<Record<string, string>> = {
+  base: baseRulesUrl,
+  en: englishRulesUrl,
+};
 
-async function loadLocale(locale) {
+async function loadLocale(locale: string) {
   const url = RULE_FILES[locale];
   if (!url) throw new Error(`No speech rules for the locale "${locale}".`);
   const response = await fetch(url);
@@ -74,14 +91,10 @@ async function loadLocale(locale) {
   return response.text();
 }
 
-let speech = null;
+let speech: Promise<FormulaSpeech> | null = null;
 
-/**
- * MathML read out in words. The engine and its rules load on the first call.
- * @param {string} mathml
- * @returns {Promise<string>}
- */
-export function speakMathml(mathml) {
+/** MathML read out in words. The engine and its rules load on the first call. */
+export function speakMathml(mathml: string): Promise<string> {
   speech ??= createFormulaSpeech({ loadLocale }).catch((err) => {
     speech = null;
     throw err;
@@ -97,13 +110,13 @@ const EX_PX = 8.4;
 // Drawn at twice its size, so it stays sharp where the PDF is zoomed.
 const IMAGE_SCALE = 2;
 
-function exToPx(value) {
-  const ex = parseFloat(value);
+function exToPx(value: string | null) {
+  const ex = parseFloat(value ?? "");
   return Number.isFinite(ex) ? ex * EX_PX : 0;
 }
 
-function loadImage(url) {
-  return new Promise((resolve, reject) => {
+function loadImage(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("The formula's picture didn't load."));
@@ -111,20 +124,18 @@ function loadImage(url) {
   });
 }
 
-/**
- * A formula as a PNG, for a file that can't hold an equation.
- * @param {{ format: string, source: string, display?: boolean }} formula
- * @returns {Promise<{ bytes: Uint8Array, width: number, height: number }>}
- *   `width` and `height` are the size to show it at, in CSS pixels.
- */
-export async function formulaImage(formula) {
+/** A formula as a PNG, for a file that can't hold an equation. */
+export async function formulaImage(
+  formula: FormulaInput,
+): Promise<FormulaImage> {
   const rendered = await rendererForPictures().render(formula);
   const svg = rendered?.node.querySelector("svg");
   if (!svg) throw new Error("The formula has no picture to draw.");
   const width = Math.max(1, exToPx(svg.getAttribute("width")));
   const height = Math.max(1, exToPx(svg.getAttribute("height")));
-  // Sized in pixels for the image, whose ex is nobody's font.
-  const copy = svg.cloneNode(true);
+  // Sized in pixels for the image, whose ex is nobody's font. (The DOM types
+  // give any clone as a plain Node.)
+  const copy = svg.cloneNode(true) as SVGSVGElement;
   copy.setAttribute("width", `${width}px`);
   copy.setAttribute("height", `${height}px`);
   copy.removeAttribute("style");
@@ -138,7 +149,7 @@ export async function formulaImage(formula) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("The formula's picture couldn't be drawn.");
     context.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise((resolve, reject) => {
+    const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (result) =>
           result ? resolve(result) : reject(new Error("No PNG was made.")),

@@ -14,10 +14,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildDocument } from "./docxExport.ts";
+import { buildDocument, type EmbeddedPicture } from "./docxExport.ts";
 import { VAKT_DEFAULT_IMAGE_SIZE } from "../vakt.ts";
 import { DOCX_MAX_IMAGE_WIDTH } from "../lessonLayout.ts";
 import { imageSizeScale } from "../image.ts";
+import type { Block, LessonDoc } from "../types.ts";
 
 // A 1x1 PNG, small enough to sit in the source.
 const PNG =
@@ -27,12 +28,12 @@ const PNG =
 // there is no API to fall back to.
 const MISSING = { hash: "0".repeat(40), mime: "image/png", ext: "png" };
 
-function lesson(blocks) {
+function lesson(blocks: Block[]): LessonDoc {
   return { title: "t", sections: [{ id: "s1", name: "One", blocks }] };
 }
 
-async function embeddedFor(blocks) {
-  const embedded = [];
+async function embeddedFor(blocks: Block[]) {
+  const embedded: EmbeddedPicture[] = [];
   await buildDocument(lesson(blocks), {}, embedded);
   return embedded;
 }
@@ -186,7 +187,7 @@ describe("the embedded-picture list", () => {
 describe("formatted text, footnotes and sources", () => {
   // Read back through mammoth, the converter the PDF path uses, so this checks
   // what both the Word file and the printout end up carrying.
-  async function html(doc) {
+  async function html(doc: LessonDoc) {
     const { Packer } = await import("docx");
     const { default: mammoth } = await import("mammoth");
     const buffer = await Packer.toBuffer(await buildDocument(doc));
@@ -201,7 +202,16 @@ describe("formatted text, footnotes and sources", () => {
     const { markupToContent } = await import("../lessonText.ts");
     const out = await html({
       title: "t",
-      sources: [{ id: "smith", title: "Cats of Egypt", author: "Jane Smith" }],
+      sources: [
+        {
+          id: "smith",
+          title: "Cats of Egypt",
+          author: "Jane Smith",
+          publisher: "",
+          year: "",
+          url: "",
+        },
+      ],
       sections: [
         {
           id: "s1",
@@ -290,7 +300,7 @@ describe("headings", () => {
 describe("questions", () => {
   // Read back with the same style map the PDF path and the importer use, so
   // the tag's own span and the prompt's are both visible.
-  async function html(doc) {
+  async function html(doc: LessonDoc) {
     const { Packer } = await import("docx");
     const { default: mammoth } = await import("mammoth");
     const { questionStyleMap, questionTagStyleMap } =

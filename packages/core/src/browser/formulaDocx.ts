@@ -15,28 +15,38 @@ import {
   MathSubScript,
   MathSubSuperScript,
   MathSuperScript,
+  type MathComponent,
 } from "docx";
+import type {
+  MmlNode,
+  TextNode,
+} from "@mathjax/src/mjs/core/MmlTree/MmlNode.js";
 
 // The invisible operators TeX and AsciiMath put between tokens (invisible
 // times, function application), which Word would show as nothing anyway but
 // which some readers show as boxes.
 const INVISIBLE = /[⁡-⁤]/g;
 
-function textOf(node) {
-  if (node.isKind("text")) return node.getText();
-  if (typeof node.getText === "function" && node.isToken) {
+// Token nodes carry their text, though MmlNode doesn't declare getText.
+function hasText(node: MmlNode): node is MmlNode & { getText(): string } {
+  return "getText" in node && typeof node.getText === "function";
+}
+
+function textOf(node: MmlNode): string {
+  if (node.isKind("text")) return (node as TextNode).getText();
+  if (hasText(node) && node.isToken) {
     return node.getText();
   }
   return (node.childNodes || []).map(textOf).join("");
 }
 
 // A node's children as math components, each child in turn.
-function childComponents(node) {
+function childComponents(node: MmlNode): MathComponent[] {
   return (node.childNodes || []).flatMap(components);
 }
 
 // The components for one MathML node.
-function components(node) {
+function components(node: MmlNode | undefined): MathComponent[] {
   if (!node || !node.childNodes) return [];
   switch (node.kind) {
     case "mfrac": {
@@ -107,16 +117,15 @@ function components(node) {
 
 // Word rejects an empty equation part, so a part with nothing in it (an
 // empty group in the source) gets a space.
-function nonEmpty(list) {
+function nonEmpty(list: MathComponent[]): MathComponent[] {
   return list.length ? list : [new MathRun(" ")];
 }
 
 /**
  * A formula as a `docx` Math component, from the MathML tree MathJax parsed
  * it into (the `root` a formula renderer gives).
- * @param {object} root  A MathJax MmlNode (the <math> element).
- * @returns {import("docx").Math}
+ * @param root  A MathJax MmlNode (the <math> element).
  */
-export function formulaToDocx(root) {
+export function formulaToDocx(root: MmlNode): DocxMath {
   return new DocxMath({ children: nonEmpty(components(root)) });
 }
