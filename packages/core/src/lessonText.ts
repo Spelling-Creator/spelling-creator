@@ -42,7 +42,7 @@
 // They are the Open Spelling Lesson Format's pronunciation, substitution,
 // spell-out and pause (a small subset of SSML), stored the tiptap way. A text
 // run carries at most one speech hint, so the mark holds exactly one of the
-// three. speech.js turns them into what the voices are given.
+// three. speech.ts turns them into what the voices are given.
 //
 // And one inline node holds a formula:
 //
@@ -54,7 +54,7 @@
 //
 // That is the format's math run. A formula is rendered by MathJax (the web
 // app's Formula component, and the Word export), and read aloud from the
-// MathML MathJax makes of it (speech.js); as plain text it is its source,
+// MathML MathJax makes of it (speech.ts); as plain text it is its source,
 // which is also what shows wherever MathJax can't run.
 //
 // normalizeTextContent enforces all of this on anything that arrives from
@@ -70,14 +70,18 @@
 // page, the printout and the editor agree on every number.
 
 import {
+  type CitationPart,
   isSourceId,
   partsText,
   sourceCitationParts,
   sourceHasContent,
 } from "./sources.ts";
+import type { LessonDoc, Source } from "./types.ts";
 
 /** The marks a text run may carry, in the canonical order they are stored in. */
-export const TEXT_MARKS = ["bold", "italic", "underline"];
+export const TEXT_MARKS = ["bold", "italic", "underline"] as const;
+
+export type TextMark = (typeof TEXT_MARKS)[number];
 
 const LOCATOR_LIMIT = 200;
 const NOTE_LIMIT = 2000;
@@ -96,13 +100,23 @@ export const MISSING_SOURCE_TEXT = "Source no longer listed.";
  */
 export const UNTITLED_SOURCE_TEXT = "Untitled source";
 
-function isObject(value) {
+// The attributes below are types rather than interfaces so that a stored
+// document is also a RichNode, whose attrs are a Record.
+
+/** A footnote's attributes in their stored shape. */
+export type Footnote = {
+  sourceId: string | null;
+  locator: string;
+  note: string;
+};
+
+function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 // One line of text: footnote fields and text runs never hold line breaks, since
 // a line break is what separates two paragraphs.
-function oneLine(value, limit) {
+function oneLine(value: unknown, limit: number) {
   if (typeof value !== "string") return "";
   return value.replace(/\s+/g, " ").trim().slice(0, limit);
 }
@@ -110,22 +124,33 @@ function oneLine(value, limit) {
 /**
  * A footnote's attributes in their exact stored shape, or null when the
  * footnote says nothing (no source and no note).
- * @param {unknown} attrs
- * @returns {{ sourceId: string|null, locator: string, note: string }|null}
  */
-export function normalizeFootnote(attrs) {
-  const sourceId = isSourceId(attrs?.sourceId) ? attrs.sourceId : null;
-  const locator = sourceId ? oneLine(attrs.locator, LOCATOR_LIMIT) : "";
-  const note = oneLine(attrs?.note, NOTE_LIMIT);
+export function normalizeFootnote(attrs: unknown): Footnote | null {
+  const fields: Record<string, unknown> = isObject(attrs) ? attrs : {};
+  const sourceId = isSourceId(fields.sourceId) ? fields.sourceId : null;
+  const locator = sourceId ? oneLine(fields.locator, LOCATOR_LIMIT) : "";
+  const note = oneLine(fields.note, NOTE_LIMIT);
   if (!sourceId && !note) return null;
   return { sourceId, locator, note };
 }
 
 /** How long a pause can be: about a comma's worth, or clearly longer. */
-export const PAUSE_LENGTHS = ["short", "long"];
+export const PAUSE_LENGTHS = ["short", "long"] as const;
+
+export type PauseLength = (typeof PAUSE_LENGTHS)[number];
+
+function isPauseLength(value: unknown): value is PauseLength {
+  return PAUSE_LENGTHS.some((length) => length === value);
+}
 
 /** The one way a run can be spelled out: a character at a time. */
 export const SAY_AS_CHARACTERS = "characters";
+
+/** How the words a run covers are said. It holds exactly one of these. */
+export type SpeechHint =
+  | { ipa: string }
+  | { alias: string }
+  | { sayAs: typeof SAY_AS_CHARACTERS };
 
 const IPA_LIMIT = 200;
 const ALIAS_LIMIT = 500;
@@ -135,10 +160,8 @@ const ALIAS_LIMIT = 500;
  * Exactly one of `ipa`, `alias` and `sayAs` survives, in that order of
  * preference. IPA is often copied with the slashes or brackets dictionaries
  * put around it, which are not sounds, so they are dropped.
- * @param {unknown} attrs
- * @returns {{ ipa: string }|{ alias: string }|{ sayAs: "characters" }|null}
  */
-export function normalizeSpeechHint(attrs) {
+export function normalizeSpeechHint(attrs: unknown): SpeechHint | null {
   if (!isObject(attrs)) return null;
   const ipa = oneLine(attrs.ipa, IPA_LIMIT)
     .replace(/^[/[]+|[/\]]+$/g, "")
@@ -151,37 +174,45 @@ export function normalizeSpeechHint(attrs) {
 }
 
 /** The notations a formula can be written in, as the format names them. */
-export const FORMULA_FORMATS = ["asciimath", "tex"];
+export const FORMULA_FORMATS = ["asciimath", "tex"] as const;
 
 const FORMULA_LIMIT = 2000;
 const SPOKEN_LIMIT = 1000;
+
+/** A run of spoken text: words, words with one speech hint, or a pause. */
+export type SpokenTextRun =
+  | string
+  | ({ text: string } & SpeechHint)
+  | { pause: PauseLength };
+
+/** Spoken text in its stored shape: a plain string, or a list of runs. */
+export type SpokenText = string | SpokenTextRun[];
 
 /**
  * Spoken text (what read-aloud says for something) in its stored shape: a
  * plain string, or a list of runs that are strings, text runs with one speech
  * hint, and pauses. A run object with none of those is said as its text, as
  * the format asks, and dropped without any. Returns null for nothing to say.
- * @param {unknown} value
- * @returns {string | Array<string | object> | null}
  */
-export function normalizeSpokenText(value) {
-  const runs = [];
-  const pushWords = (text) => {
+export function normalizeSpokenText(value: unknown): SpokenText | null {
+  const runs: SpokenTextRun[] = [];
+  const pushWords = (text: string) => {
     if (!text) return;
-    if (typeof runs[runs.length - 1] === "string")
-      runs[runs.length - 1] += text;
+    const last = runs[runs.length - 1];
+    if (typeof last === "string") runs[runs.length - 1] = last + text;
     else runs.push(text);
   };
   // Spaces are kept, even at a run's edges: they are what keep the words of
   // neighboring runs apart. Only a line break has no place in spoken text.
-  const spokenLine = (text) =>
+  const spokenLine = (text: unknown) =>
     typeof text === "string"
       ? text.replace(/[\r\n]+/g, " ").slice(0, SPOKEN_LIMIT)
       : "";
-  for (const run of Array.isArray(value) ? value : [value]) {
+  const list: unknown[] = Array.isArray(value) ? value : [value];
+  for (const run of list) {
     if (typeof run === "string") {
       pushWords(spokenLine(run));
-    } else if (isObject(run) && PAUSE_LENGTHS.includes(run.pause)) {
+    } else if (isObject(run) && isPauseLength(run.pause)) {
       runs.push({ pause: run.pause });
     } else if (isObject(run) && typeof run.text === "string") {
       const text = spokenLine(run.text);
@@ -192,17 +223,27 @@ export function normalizeSpokenText(value) {
     }
   }
   if (!runs.length) return null;
-  return runs.length === 1 && typeof runs[0] === "string" ? runs[0] : runs;
+  const [first] = runs;
+  return runs.length === 1 && typeof first === "string" ? first : runs;
 }
+
+/**
+ * A formula's attributes in their stored shape. `format` is one of
+ * FORMULA_FORMATS, or a notation this version doesn't know.
+ */
+export type Formula = {
+  format: string;
+  source: string;
+  display: boolean;
+  spoken: SpokenText | null;
+};
 
 /**
  * A formula's attributes in their exact stored shape, or null when there is
  * no formula (no source). A format this version doesn't know is kept, as the
  * format asks, so the formula survives a save; renderers show its source.
- * @param {unknown} attrs
- * @returns {{ format: string, source: string, display: boolean, spoken: string | object[] | null }|null}
  */
-export function normalizeFormula(attrs) {
+export function normalizeFormula(attrs: unknown): Formula | null {
   if (!isObject(attrs)) return null;
   const source = oneLine(attrs.source, FORMULA_LIMIT);
   if (!source) return null;
@@ -220,32 +261,89 @@ export function normalizeFormula(attrs) {
   };
 }
 
-function marksOf(node) {
+/** A text run in a stored document. Marks are omitted when it has none. */
+export interface TextNode {
+  type: "text";
+  text: string;
+  marks?: Array<{ type: TextMark } | { type: "speech"; attrs: SpeechHint }>;
+}
+
+export interface FootnoteNode {
+  type: "footnote";
+  attrs: Footnote;
+}
+
+export interface PauseNode {
+  type: "pause";
+  attrs: { length: PauseLength };
+}
+
+export interface MathNode {
+  type: "math";
+  attrs: Formula;
+}
+
+/** The inline nodes a stored document's paragraphs hold. */
+export type InlineNode = TextNode | FootnoteNode | PauseNode | MathNode;
+
+/** A stored paragraph. An empty one has no `content`. */
+export interface ParagraphNode {
+  type: "paragraph";
+  content?: InlineNode[];
+}
+
+/** Text block content in its stored shape, as normalizeTextContent makes it. */
+export interface TextContent {
+  type: "doc";
+  content: ParagraphNode[];
+}
+
+// A text run the way the helpers below work with it: its formatting marks as
+// an array of names, and its speech hint (or null) as `speech`.
+interface FlatText {
+  type: "text";
+  text: string;
+  marks: TextMark[];
+  speech: SpeechHint | null;
+}
+
+type FlatNode = FlatText | FootnoteNode | PauseNode | MathNode;
+
+interface FlatParagraph {
+  type: "paragraph";
+  content?: FlatNode[];
+}
+
+function marksOf(node: { marks?: unknown }) {
   if (!Array.isArray(node?.marks)) return [];
+  const marks: unknown[] = node.marks;
   const present = new Set(
-    node.marks.map((mark) => (typeof mark === "string" ? mark : mark?.type)),
+    marks.map((mark) =>
+      typeof mark === "string" ? mark : isObject(mark) ? mark.type : undefined,
+    ),
   );
   return TEXT_MARKS.filter((mark) => present.has(mark));
 }
 
 // The speech hint a text node's marks carry, or null.
-function speechOf(node) {
+function speechOf(node: { marks?: unknown }) {
   if (!Array.isArray(node?.marks)) return null;
-  const mark = node.marks.find((m) => isObject(m) && m.type === "speech");
-  return mark ? normalizeSpeechHint(mark.attrs) : null;
+  const marks: unknown[] = node.marks;
+  const mark = marks.find((m) => isObject(m) && m.type === "speech");
+  return isObject(mark) ? normalizeSpeechHint(mark.attrs) : null;
 }
 
-function sameMarks(a, b) {
+function sameMarks(a: TextMark[], b: TextMark[]) {
   return a.length === b.length && a.every((mark, i) => mark === b[i]);
 }
 
-function sameSpeech(a, b) {
+function sameSpeech(a: SpeechHint | null, b: SpeechHint | null) {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
 // Flatten an inline node (or an unknown wrapper around some) into the inline
 // nodes this schema has, appending to `out`.
-function collectInline(node, out, depth = 0) {
+function collectInline(node: unknown, out: FlatNode[], depth = 0) {
   if (!isObject(node) || depth > 20) return;
   if (node.type === "text") {
     const text =
@@ -272,9 +370,10 @@ function collectInline(node, out, depth = 0) {
     return;
   }
   if (node.type === "pause") {
-    const length = PAUSE_LENGTHS.includes(node.attrs?.length)
-      ? node.attrs.length
-      : "short";
+    const length =
+      isObject(node.attrs) && isPauseLength(node.attrs.length)
+        ? node.attrs.length
+        : "short";
     out.push({ type: "pause", attrs: { length } });
     return;
   }
@@ -292,7 +391,7 @@ function collectInline(node, out, depth = 0) {
   }
 }
 
-const INLINE_TYPES = new Set([
+const INLINE_TYPES = new Set<unknown>([
   "text",
   "footnote",
   "pause",
@@ -302,14 +401,14 @@ const INLINE_TYPES = new Set([
 
 // Every paragraph inside a block-level node. A heading or a list item pasted in
 // from somewhere else becomes the paragraph its words were in.
-function collectParagraphs(node, out, depth = 0) {
+function collectParagraphs(node: unknown, out: FlatParagraph[], depth = 0) {
   if (!isObject(node) || depth > 20) return;
-  const children = Array.isArray(node.content) ? node.content : [];
+  const children: unknown[] = Array.isArray(node.content) ? node.content : [];
   if (
     node.type === "paragraph" ||
-    children.some((child) => INLINE_TYPES.has(child?.type))
+    children.some((child) => isObject(child) && INLINE_TYPES.has(child.type))
   ) {
-    const inline = [];
+    const inline: FlatNode[] = [];
     for (const child of children) collectInline(child, inline);
     out.push(inline.length ? { type: "paragraph", content: inline } : P());
     return;
@@ -317,7 +416,7 @@ function collectParagraphs(node, out, depth = 0) {
   for (const child of children) collectParagraphs(child, out, depth + 1);
 }
 
-function P() {
+function P(): { type: "paragraph" } {
   return { type: "paragraph" };
 }
 
@@ -330,13 +429,17 @@ function P() {
  * in a fixed order. That last part matters for version history: a block's git
  * blob is a hash of its JSON, so two spellings of the same formatting must
  * normalize to the same bytes or every save would look like an edit.
- * @param {unknown} value
- * @returns {object|null}
  */
-export function normalizeTextContent(value) {
+export function normalizeTextContent(value: unknown): TextContent | null {
   if (!isObject(value) || value.type !== "doc") return null;
-  const paragraphs = [];
-  for (const child of Array.isArray(value.content) ? value.content : []) {
+  return storedDocument(value.content);
+}
+
+// The stored document holding a document's block-level children.
+function storedDocument(children: unknown): TextContent {
+  const paragraphs: FlatParagraph[] = [];
+  const list: unknown[] = Array.isArray(children) ? children : [];
+  for (const child of list) {
     collectParagraphs(child, paragraphs);
   }
   return {
@@ -347,13 +450,15 @@ export function normalizeTextContent(value) {
 
 // Marks are omitted from a run that has none, the way tiptap writes them. The
 // speech mark comes after the formatting marks.
-function storedParagraph(paragraph) {
-  if (!paragraph.content) return paragraph;
+function storedParagraph(paragraph: FlatParagraph): ParagraphNode {
+  if (!paragraph.content) return P();
   return {
     type: "paragraph",
     content: paragraph.content.map((node) => {
       if (node.type !== "text") return node;
-      const marks = node.marks.map((type) => ({ type }));
+      const marks: NonNullable<TextNode["marks"]> = node.marks.map((type) => ({
+        type,
+      }));
       if (node.speech) marks.push({ type: "speech", attrs: node.speech });
       return marks.length
         ? { type: "text", text: node.text, marks }
@@ -362,12 +467,8 @@ function storedParagraph(paragraph) {
   };
 }
 
-/**
- * Plain text as a content document: one paragraph per line.
- * @param {string} text
- * @returns {object}
- */
-export function textToContent(text) {
+/** Plain text as a content document: one paragraph per line. */
+export function textToContent(text: string | null | undefined): TextContent {
   const lines = String(text ?? "")
     .replace(/\r\n?/g, "\n")
     .split("\n");
@@ -382,18 +483,27 @@ export function textToContent(text) {
 }
 
 /**
- * A text block's content, whichever of the two shapes it is stored in.
- * @param {object} block
- * @returns {object}
+ * The fields of a text block that the helpers below look at. A whole block
+ * will do, and so will just its content, which is how inline text
+ * (inlineText.ts) borrows the readers. A `content` that isn't a document is
+ * ignored, and the writers keep `id` and `type` as they are.
  */
-export function textBlockContent(block) {
+export interface TextBlockFields {
+  id?: string;
+  type?: string;
+  text?: string;
+  content?: unknown;
+}
+
+/** A text block's content, whichever of the two shapes it is stored in. */
+export function textBlockContent(block: TextBlockFields): TextContent {
   return normalizeTextContent(block?.content) ?? textToContent(block?.text);
 }
 
 // The paragraphs of a document as arrays of normalized inline nodes, with each
 // text run's formatting marks as an array of names and its speech hint (or
 // null) as `speech`.
-function inlineParagraphs(content) {
+function inlineParagraphs(content: unknown): FlatNode[][] {
   const doc = normalizeTextContent(content) ?? textToContent("");
   return doc.content.map((paragraph) =>
     (paragraph.content || []).map((node) =>
@@ -406,7 +516,7 @@ function inlineParagraphs(content) {
 
 // A formula reads as its source in plain text: what the format says to show
 // where it can't be rendered, and what a check or a search can match.
-function paragraphPlain(inline) {
+function paragraphPlain(inline: FlatNode[]) {
   return inline
     .map((node) =>
       node.type === "text"
@@ -421,10 +531,8 @@ function paragraphPlain(inline) {
 /**
  * A text block as plain lines, one per paragraph, without formatting or
  * footnote markers. The same lines `text` would have held.
- * @param {object} block
- * @returns {string[]}
  */
-export function textBlockLines(block) {
+export function textBlockLines(block: TextBlockFields): string[] {
   return inlineParagraphs(textBlockContent(block)).map(paragraphPlain);
 }
 
@@ -432,24 +540,39 @@ export function textBlockLines(block) {
  * A text block as plain text, paragraphs joined by newlines. This is what every
  * plain-text reader of a lesson wants: summaries, search, spelling-word
  * extraction, the read-aloud voice, the MCP server's grounding checks.
- * @param {object} block
- * @returns {string}
  */
-export function textBlockPlain(block) {
+export function textBlockPlain(block: TextBlockFields): string {
   return textBlockLines(block).join("\n");
 }
 
-/**
- * Whether a text block has any words in it.
- * @param {object} block
- * @returns {boolean}
- */
-export function textBlockHasContent(block) {
+/** Whether a text block has any words in it. */
+export function textBlockHasContent(block: TextBlockFields): boolean {
   return (
     Boolean(textBlockPlain(block).trim()) ||
     textBlockFootnotes(block).length > 0
   );
 }
+
+export interface TextRun {
+  type: "text";
+  text: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  speech?: SpeechHint;
+}
+
+export type FootnoteRun = { type: "footnote"; index: number } & Footnote;
+
+export interface PauseRun {
+  type: "pause";
+  length: PauseLength;
+}
+
+export type MathRun = { type: "math" } & Formula;
+
+/** A run of a text block's paragraph, as textBlockParagraphs gives it. */
+export type TextBlockRun = TextRun | FootnoteRun | PauseRun | MathRun;
 
 /**
  * A text block's paragraphs as runs a renderer can draw directly:
@@ -462,13 +585,11 @@ export function textBlockHasContent(block) {
  * normalizeSpeechHint). Renderers that show or print
  * the lesson draw the text and ignore `speech` and pauses, which only
  * read-aloud uses, and draw a formula with MathJax (or as its source).
- * @param {object} block
- * @returns {Array<Array<object>>}
  */
-export function textBlockParagraphs(block) {
+export function textBlockParagraphs(block: TextBlockFields): TextBlockRun[][] {
   let index = 0;
   return inlineParagraphs(textBlockContent(block)).map((inline) =>
-    inline.map((node) => {
+    inline.map((node): TextBlockRun => {
       if (node.type === "text") {
         return {
           type: "text",
@@ -490,26 +611,20 @@ export function textBlockParagraphs(block) {
   );
 }
 
-/**
- * A text block's footnotes, in reading order.
- * @param {object} block
- * @returns {Array<{ sourceId: string|null, locator: string, note: string }>}
- */
-export function textBlockFootnotes(block) {
+/** A text block's footnotes, in reading order. */
+export function textBlockFootnotes(block: TextBlockFields): Footnote[] {
   return inlineParagraphs(textBlockContent(block))
     .flat()
-    .filter((node) => node.type === "footnote")
+    .filter((node): node is FootnoteNode => node.type === "footnote")
     .map((node) => node.attrs);
 }
 
 /**
  * How many footnotes come before each text block, keyed by block id. A
  * footnote's number is its block's start plus its own index plus one.
- * @param {object} doc
- * @returns {Map<string, number>}
  */
-export function footnoteStarts(doc) {
-  const starts = new Map();
+export function footnoteStarts(doc: LessonDoc): Map<string, number> {
+  const starts = new Map<string, number>();
   let count = 0;
   for (const section of doc?.sections || []) {
     for (const block of section.blocks || []) {
@@ -521,14 +636,18 @@ export function footnoteStarts(doc) {
   return starts;
 }
 
-/**
- * Every footnote in the lesson, numbered in reading order, with where it sits.
- * @param {object} doc
- * @returns {Array<{ number: number, blockId: string, si: number, bi: number,
- *   index: number, sourceId: string|null, locator: string, note: string }>}
- */
-export function lessonFootnotes(doc) {
-  const out = [];
+/** A footnote of the lesson, with its number and where it sits. */
+export type LessonFootnote = Footnote & {
+  number: number;
+  blockId: string;
+  si: number;
+  bi: number;
+  index: number;
+};
+
+/** Every footnote in the lesson, numbered in reading order, with where it sits. */
+export function lessonFootnotes(doc: LessonDoc): LessonFootnote[] {
+  const out: LessonFootnote[] = [];
   (doc?.sections || []).forEach((section, si) => {
     (section.blocks || []).forEach((block, bi) => {
       if (block?.type !== "text") return;
@@ -551,15 +670,17 @@ export function lessonFootnotes(doc) {
  * What a footnote prints, in runs: the citation (when it cites a source that
  * exists), then the note. `note` can be overridden, which is how a translated
  * note is laid in without translating the citation in front of it.
- * @param {{ sourceId: string|null, locator: string, note: string }} footnote
- * @param {Map<string, object>} sources  From sourcesById().
- * @param {{ note?: string }} [options]
- * @returns {Array<{ text: string, italic?: boolean, url?: string, role?: string }>}
- *   The note's run is tagged `role: "note"` and a locator's `role: "locator"`,
- *   which the Word export turns into styles the importer reads back.
+ * @param sources  From sourcesById().
+ * @returns The note's run is tagged `role: "note"` and a locator's
+ *   `role: "locator"`, which the Word export turns into styles the importer
+ *   reads back.
  */
-export function footnoteParts(footnote, sources, { note } = {}) {
-  const parts = [];
+export function footnoteParts(
+  footnote: Footnote,
+  sources: ReadonlyMap<string, Source>,
+  { note }: { note?: string } = {},
+): CitationPart[] {
+  const parts: CitationPart[] = [];
   const source = footnote?.sourceId ? sources?.get(footnote.sourceId) : null;
   if (source) {
     parts.push(
@@ -578,7 +699,10 @@ export function footnoteParts(footnote, sources, { note } = {}) {
 }
 
 /** A footnote as plain text. */
-export function footnoteText(footnote, sources) {
+export function footnoteText(
+  footnote: Footnote,
+  sources: ReadonlyMap<string, Source>,
+): string {
   return partsText(footnoteParts(footnote, sources));
 }
 
@@ -588,16 +712,15 @@ export function footnoteText(footnote, sources) {
  * replace a block whole (importers, the MCP server).
  *
  * Not for the editor: see withTextBlockDocument.
- * @param {object} block    The block being replaced (its id and type are kept).
- * @param {object} content
- * @returns {object}
+ * @param block The block being replaced (its id and type are kept).
  */
-export function withTextBlockContent(block, content) {
+export function withTextBlockContent<B extends TextBlockFields>(
+  block: B,
+  content: unknown,
+): Omit<B, "text" | "content"> & { text?: string; content?: TextContent } {
   const normalized = normalizeTextContent(content) ?? textToContent("");
   // Dropping both fields first, so a block never carries a stale copy of one.
-  const rest = { ...block };
-  delete rest.text;
-  delete rest.content;
+  const { text: _text, content: _content, ...rest } = block;
   if (isPlainContent(normalized)) {
     return {
       ...rest,
@@ -612,31 +735,25 @@ export function withTextBlockContent(block, content) {
  * nothing in it is formatted.
  *
  * This is what the editor writes, and the reason is live collaboration. The
- * collaboration document (ydoc.js) merges a block key by key, so if one person's
+ * collaboration document (ydoc.ts) merges a block key by key, so if one person's
  * edit wrote `content` while another's wrote `text`, both keys would survive the
  * merge and `content` would silently hide the other edit. Once the editor has
  * touched a block it only ever writes `content`, so two people editing one block
  * write the same key, and the usual last-write-wins applies to the whole text.
- * @param {object} block
- * @param {object} content
- * @returns {object}
  */
-export function withTextBlockDocument(block, content) {
-  const rest = { ...block };
-  delete rest.text;
-  delete rest.content;
+export function withTextBlockDocument<B extends TextBlockFields>(
+  block: B,
+  content: unknown,
+): Omit<B, "text" | "content"> & { text?: undefined; content: TextContent } {
+  const { text: _text, content: _content, ...rest } = block;
   return {
     ...rest,
     content: normalizeTextContent(content) ?? textToContent(""),
   };
 }
 
-/**
- * Whether content has nothing a plain string couldn't hold.
- * @param {object} content
- * @returns {boolean}
- */
-export function isPlainContent(content) {
+/** Whether content has nothing a plain string couldn't hold. */
+export function isPlainContent(content: unknown): boolean {
   return inlineParagraphs(content).every((inline) =>
     inline.every(
       (node) => node.type === "text" && node.marks.length === 0 && !node.speech,
@@ -649,11 +766,11 @@ export function isPlainContent(content) {
  * A footnote that also carries a note keeps the note; one that only cited the
  * source goes. Blocks with nothing to change are returned as they were, so
  * memoized cards stay memoized.
- * @param {object} doc
- * @param {string} sourceId
- * @returns {object}
  */
-export function removeSourceCitations(doc, sourceId) {
+export function removeSourceCitations(
+  doc: LessonDoc,
+  sourceId: string,
+): LessonDoc {
   return {
     ...doc,
     sections: (doc?.sections || []).map((section) => {
@@ -684,14 +801,17 @@ export function removeSourceCitations(doc, sourceId) {
 }
 
 // Rewrite every footnote in a document; returning null removes it.
-function mapFootnotes(content, fn) {
+function mapFootnotes(
+  content: TextContent,
+  fn: (attrs: Footnote) => Footnote | null,
+): TextContent {
   return {
     ...content,
     content: content.content.map((paragraph) =>
       paragraph.content
         ? {
             ...paragraph,
-            content: paragraph.content.flatMap((node) => {
+            content: paragraph.content.flatMap((node): InlineNode[] => {
               if (node.type !== "footnote") return [node];
               const attrs = fn(node.attrs);
               return attrs ? [{ ...node, attrs }] : [];
@@ -702,24 +822,32 @@ function mapFootnotes(content, fn) {
   };
 }
 
+/** A run of formatted text, as textBlockFormattedSpans finds it. */
+export interface FormattedSpan {
+  text: string;
+  marks: TextMark[];
+}
+
 /**
  * The formatted spans of a text block, for the MCP server's check that an
  * assistant hasn't scattered bold and italics through a passage. A span is a
  * run of formatted text with nothing plain inside it: "**bold *and italic***"
  * is one span carrying both marks, because it reads as one formatted phrase.
- * @param {object} block
- * @returns {{ spans: Array<{ text: string, marks: string[] }>, totalChars: number }}
  */
-export function textBlockFormattedSpans(block) {
-  const spans = [];
+export function textBlockFormattedSpans(block: TextBlockFields): {
+  spans: FormattedSpan[];
+  totalChars: number;
+} {
+  const spans: FormattedSpan[] = [];
   let totalChars = 0;
   for (const inline of inlineParagraphs(textBlockContent(block))) {
-    let current = null;
+    let current: { text: string; marks: Set<TextMark> } | null = null;
     const finish = () => {
-      if (current && current.text.trim()) {
+      const span = current;
+      if (span && span.text.trim()) {
         spans.push({
-          text: current.text.trim(),
-          marks: TEXT_MARKS.filter((mark) => current.marks.has(mark)),
+          text: span.text.trim(),
+          marks: TEXT_MARKS.filter((mark) => span.marks.has(mark)),
         });
       }
       current = null;
@@ -776,17 +904,13 @@ export function textBlockFormattedSpans(block) {
 // \* is an asterisk. contentToMarkup escapes whatever needs it, so text read
 // out of a lesson can be written straight back.
 
-/**
- * A content document as markup.
- * @param {object} content
- * @returns {string}
- */
-export function contentToMarkup(content) {
+/** A content document as markup. */
+export function contentToMarkup(content: unknown): string {
   return inlineParagraphs(content).map(paragraphToMarkup).join("\n");
 }
 
 /** A text block as markup, whichever shape it is stored in. */
-export function textBlockMarkup(block) {
+export function textBlockMarkup(block: TextBlockFields): string {
   return contentToMarkup(textBlockContent(block));
 }
 
@@ -794,12 +918,12 @@ const MARK_SYNTAX = {
   bold: ["**", "**"],
   italic: ["*", "*"],
   underline: ["<u>", "</u>"],
-};
+} satisfies Record<TextMark, [string, string]>;
 
-function paragraphToMarkup(inline) {
+function paragraphToMarkup(inline: FlatNode[]) {
   let out = "";
-  let open = [];
-  const close = (keep) => {
+  let open: TextMark[] = [];
+  const close = (keep: TextMark[]) => {
     // Closed innermost first, so the output nests the way Markdown reads.
     for (const mark of [...open].reverse()) {
       if (!keep.includes(mark)) out += MARK_SYNTAX[mark][1];
@@ -837,7 +961,7 @@ function paragraphToMarkup(inline) {
   return out;
 }
 
-function escapeText(text) {
+function escapeText(text: string) {
   return text
     .replace(/\\/g, "\\\\")
     .replace(/\*/g, "\\*")
@@ -846,14 +970,15 @@ function escapeText(text) {
     .replace(/<(\/?u>)/gi, "\\<$1");
 }
 
-function speechToMarkup(text, speech) {
+function speechToMarkup(text: string, speech: SpeechHint) {
   const words = text.replace(/[\\\]]/g, (ch) => `\\${ch}`);
-  const value = (v) => v.replace(/[\\}]/g, (ch) => `\\${ch}`);
-  const body = speech.ipa
-    ? `ipa: ${value(speech.ipa)}`
-    : speech.alias
-      ? `say: ${value(speech.alias)}`
-      : "spell";
+  const value = (v: string) => v.replace(/[\\}]/g, (ch) => `\\${ch}`);
+  const body =
+    "ipa" in speech
+      ? `ipa: ${value(speech.ipa)}`
+      : "alias" in speech
+        ? `say: ${value(speech.alias)}`
+        : "spell";
   return `[${words}]{${body}}`;
 }
 
@@ -862,7 +987,7 @@ function speechToMarkup(text, speech) {
 // `escaped` after the notation and a backslash before each brace and
 // backslash. Its spoken words, if any, follow in their own braces, flattened
 // to words.
-function formulaToMarkup({ format, source, display, spoken }) {
+function formulaToMarkup({ format, source, display, spoken }: Formula) {
   const escaped = balancingBrace(`${source}}`, 0) !== source.length;
   const flags = `${display ? " display" : ""}${escaped ? " escaped" : ""}`;
   const body = escaped ? source.replace(/[\\{}]/g, (ch) => `\\${ch}`) : source;
@@ -872,24 +997,22 @@ function formulaToMarkup({ format, source, display, spoken }) {
   return out;
 }
 
-/**
- * Spoken text as it reads: its words, each run's text, nothing for a pause.
- * @param {string | Array<string | object> | null | undefined} spoken
- * @returns {string}
- */
-export function spokenWordsOf(spoken) {
+/** Spoken text as it reads: its words, each run's text, nothing for a pause. */
+export function spokenWordsOf(spoken: SpokenText | null | undefined): string {
   if (typeof spoken === "string") return spoken;
   if (!Array.isArray(spoken)) return "";
   return spoken
-    .map((run) => (typeof run === "string" ? run : run?.text || ""))
+    .map((run) =>
+      typeof run === "string" ? run : (run && "text" in run && run.text) || "",
+    )
     .join("");
 }
 
-function escapeNote(text) {
+function escapeNote(text: string) {
   return text.replace(/[\\[\]|]/g, (ch) => `\\${ch}`);
 }
 
-function footnoteToMarkup({ sourceId, locator, note }) {
+function footnoteToMarkup({ sourceId, locator, note }: Footnote) {
   if (!sourceId) {
     const body = escapeNote(note);
     return `^[${body.startsWith("@") ? `\\${body}` : body}]`;
@@ -908,24 +1031,27 @@ function footnoteToMarkup({ sourceId, locator, note }) {
  * contain an asterisk survives. A citation of an id that isn't a valid source
  * id becomes a note holding what was written; whether the id names a source in
  * the lesson is for the caller to check (see markupSourceIds).
- * @param {string} markup
- * @returns {object}
  */
-export function markupToContent(markup) {
+export function markupToContent(markup: string): TextContent {
   const lines = String(markup ?? "")
     .replace(/\r\n?/g, "\n")
     .split("\n");
-  return normalizeTextContent({
-    type: "doc",
-    content: lines.map(parseParagraph),
-  });
+  return storedDocument(lines.map(parseParagraph));
 }
 
-function parseParagraph(line) {
+type Token =
+  | { kind: "text"; text: string }
+  | { kind: "footnote"; attrs: Footnote; raw: string }
+  | { kind: "speech"; text: string; speech: SpeechHint }
+  | { kind: "pause"; length: PauseLength }
+  | { kind: "formula"; attrs: Formula }
+  | { kind: "bold" | "italic" | "u-open" | "u-close"; raw: string };
+
+function parseParagraph(line: string) {
   const tokens = tokenize(line);
   resolveUnpaired(tokens);
-  const marks = new Set();
-  const content = [];
+  const marks = new Set<TextMark>();
+  const content: InlineNode[] = [];
   for (const token of tokens) {
     if (token.kind === "text") {
       content.push({
@@ -961,8 +1087,8 @@ function parseParagraph(line) {
   return { type: "paragraph", content };
 }
 
-function tokenize(line) {
-  const tokens = [];
+function tokenize(line: string) {
+  const tokens: Token[] = [];
   let text = "";
   const flush = () => {
     if (text) tokens.push({ kind: "text", text });
@@ -1053,7 +1179,7 @@ function tokenize(line) {
 
 // The index of the `]` closing a bracket opened just before `from`, allowing
 // balanced brackets and escapes inside it, or -1.
-function closingBracket(line, from) {
+function closingBracket(line: string, from: number) {
   let depth = 0;
   for (let i = from; i < line.length; i++) {
     const ch = line[i];
@@ -1070,7 +1196,7 @@ function closingBracket(line, from) {
 }
 
 // The index of the `}` closing a brace opened just before `from`, or -1.
-function closingBrace(line, from) {
+function closingBrace(line: string, from: number) {
   for (let i = from; i < line.length; i++) {
     if (line[i] === "\\") i += 1;
     else if (line[i] === "}") return i;
@@ -1080,7 +1206,7 @@ function closingBrace(line, from) {
 
 // What follows a bracketed span: `ipa: ...`, `say: ...` or `spell`. Anything
 // else means the brackets and braces were just text.
-function parseSpeechBody(body) {
+function parseSpeechBody(body: string): SpeechHint | null {
   const match = /^\s*(ipa|say|spell)\s*(?::(.*))?$/is.exec(body);
   if (!match) return null;
   const key = match[1].toLowerCase();
@@ -1093,7 +1219,7 @@ function parseSpeechBody(body) {
 
 // The index of the `}` that balances a brace opened just before `from`, with
 // no escapes (TeX inside), or -1.
-function balancingBrace(line, from) {
+function balancingBrace(line: string, from: number) {
   let depth = 0;
   for (let i = from; i < line.length; i++) {
     if (line[i] === "{") depth += 1;
@@ -1110,7 +1236,10 @@ const FORMULA_HEAD = /^\s*(asciimath|tex)((?:\s+(?:display|escaped))*)\s*:/i;
 // A formula span starting at the `{` at `at`, with its spoken words if a
 // `{spoken: ...}` follows it straight away: { attrs, end } where `end` is the
 // index after the last brace, or null when this isn't a formula.
-function readFormula(line, at) {
+function readFormula(
+  line: string,
+  at: number,
+): { attrs: Formula; end: number } | null {
   const head = FORMULA_HEAD.exec(line.slice(at + 1, at + 40));
   if (!head) return null;
   const flags = head[2].toLowerCase().split(/\s+/);
@@ -1122,7 +1251,7 @@ function readFormula(line, at) {
   const raw = line.slice(at + 1 + head[0].length, close);
   const source = (escaped ? unescape(raw) : raw).trim();
   if (!source) return null;
-  const attrs = {
+  const attrs: Formula = {
     format: head[1].toLowerCase(),
     source,
     display: flags.includes("display"),
@@ -1144,30 +1273,36 @@ function readFormula(line, at) {
 }
 
 // `pause`, `pause: short` or `pause: long`, as a length, or null.
-function parsePauseBody(body) {
+function parsePauseBody(body: string) {
   const match = /^\s*pause\s*(?::\s*(short|long)\s*)?$/i.exec(body);
   if (!match) return null;
-  return (match[1] || "short").toLowerCase();
+  const length = (match[1] || "short").toLowerCase();
+  return isPauseLength(length) ? length : null;
+}
+
+// A marker token as the characters it was written as.
+function literal(token: Token): Token {
+  return { kind: "text", text: "raw" in token ? token.raw : "" };
 }
 
 // Turn markers that have no partner back into the characters they were written
 // as. Bold and italic pair by count (the last of an odd number is literal);
 // underline pairs an opening tag with the next closing one.
-function resolveUnpaired(tokens) {
+function resolveUnpaired(tokens: Token[]) {
   for (const kind of ["bold", "italic"]) {
     const at = tokens
       .map((token, i) => (token.kind === kind ? i : -1))
       .filter((i) => i !== -1);
     if (at.length % 2 === 1) {
       const last = at[at.length - 1];
-      tokens[last] = { kind: "text", text: tokens[last].raw };
+      tokens[last] = literal(tokens[last]);
     }
   }
   let pending = -1;
   tokens.forEach((token, i) => {
     if (token.kind === "u-open") {
       if (pending !== -1) {
-        tokens[pending] = { kind: "text", text: tokens[pending].raw };
+        tokens[pending] = literal(tokens[pending]);
       }
       pending = i;
     } else if (token.kind === "u-close") {
@@ -1176,12 +1311,12 @@ function resolveUnpaired(tokens) {
     }
   });
   if (pending !== -1) {
-    tokens[pending] = { kind: "text", text: tokens[pending].raw };
+    tokens[pending] = literal(tokens[pending]);
   }
 }
 
 // Split at the first unescaped `ch`: [before, after], or [whole, null].
-function splitUnescaped(text, ch) {
+function splitUnescaped(text: string, ch: string): [string, string | null] {
   for (let i = 0; i < text.length; i++) {
     if (text[i] === "\\") {
       i += 1;
@@ -1192,11 +1327,11 @@ function splitUnescaped(text, ch) {
   return [text, null];
 }
 
-function unescape(text) {
+function unescape(text: string) {
   return text.replace(/\\(.)/g, "$1");
 }
 
-function parseFootnoteBody(body) {
+function parseFootnoteBody(body: string): Footnote {
   const trimmed = body.trim();
   if (trimmed.startsWith("@")) {
     const [head, note] = splitUnescaped(trimmed.slice(1), "|");
@@ -1213,13 +1348,9 @@ function parseFootnoteBody(body) {
   return { sourceId: null, locator: "", note: unescape(trimmed) };
 }
 
-/**
- * The source ids a piece of markup cites, in order of first appearance.
- * @param {string} markup
- * @returns {string[]}
- */
-export function markupSourceIds(markup) {
-  const ids = [];
+/** The source ids a piece of markup cites, in order of first appearance. */
+export function markupSourceIds(markup: string): string[] {
+  const ids: string[] = [];
   for (const paragraph of inlineParagraphs(markupToContent(markup))) {
     for (const node of paragraph) {
       if (node.type === "footnote" && node.attrs.sourceId) {

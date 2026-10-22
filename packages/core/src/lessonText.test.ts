@@ -23,16 +23,19 @@ import {
   withTextBlockDocument,
   UNTITLED_SOURCE_TEXT,
   MISSING_SOURCE_TEXT,
+  type Footnote,
+  type MathNode,
 } from "./lessonText.ts";
 import { sourcesById } from "./sources.ts";
+import type { LessonDoc, RichNode, TextBlock } from "./types.ts";
 
-const text = (t, marks = []) =>
+const text = (t: string, marks: string[] = []) =>
   marks.length
     ? { type: "text", text: t, marks: marks.map((type) => ({ type })) }
     : { type: "text", text: t };
-const para = (...content) => ({ type: "paragraph", content });
-const doc = (...content) => ({ type: "doc", content });
-const note = (attrs) => ({
+const para = (...content: RichNode[]) => ({ type: "paragraph", content });
+const doc = (...content: RichNode[]) => ({ type: "doc", content });
+const note = (attrs: Record<string, unknown>) => ({
   type: "footnote",
   attrs: { sourceId: null, locator: "", note: "", ...attrs },
 });
@@ -151,7 +154,7 @@ describe("normalizeTextContent", () => {
         ),
       ),
     );
-    expect(out.content[0].content).toEqual([
+    expect(out?.content[0].content).toEqual([
       note({ note: "spaced out" }),
       note({ sourceId: "s1", locator: "p. 3" }),
       note({ note: "n" }),
@@ -244,7 +247,7 @@ describe("runs and footnotes", () => {
           ],
         },
       ],
-    };
+    } as unknown as LessonDoc;
     expect([...footnoteStarts(lesson)]).toEqual([
       ["b1", 0],
       ["b2", 2],
@@ -282,14 +285,16 @@ describe("runs and footnotes", () => {
   });
 
   it("lets a translated note replace the written one", () => {
-    const parts = footnoteParts({ sourceId: null, note: "Hello" }, new Map(), {
+    const footnote = { sourceId: null, locator: "", note: "Hello" };
+    const parts = footnoteParts(footnote, new Map(), {
       note: "Bonjour",
     });
     expect(parts).toEqual([{ text: "Bonjour", role: "note" }]);
   });
 
   it("says so when a cited source is gone and there is no note", () => {
-    expect(footnoteParts({ sourceId: "gone", note: "" }, new Map())).toEqual([
+    const footnote = { sourceId: "gone", locator: "", note: "" };
+    expect(footnoteParts(footnote, new Map())).toEqual([
       { text: MISSING_SOURCE_TEXT },
     ]);
   });
@@ -320,9 +325,9 @@ describe("removeSourceCitations", () => {
         },
         { id: "other", blocks: [untouched] },
       ],
-    };
+    } as unknown as LessonDoc;
     const out = removeSourceCitations(lesson, "s1");
-    expect(textBlockFootnotes(out.sections[0].blocks[0])).toEqual([
+    expect(textBlockFootnotes(out.sections[0].blocks[0] as TextBlock)).toEqual([
       { sourceId: null, locator: "", note: "kept" },
       { sourceId: "s2", locator: "", note: "" },
     ]);
@@ -472,12 +477,12 @@ describe("footnote parts for the Word export", () => {
       { sourceId: "s1", locator: "fol.", note: "A note." },
       sources,
     );
-    expect(parts.find((p) => p.role === "locator").text).toBe(", fol.");
-    expect(parts.find((p) => p.role === "note").text).toBe(" A note.");
+    expect(parts.find((p) => p.role === "locator")?.text).toBe(", fol.");
+    expect(parts.find((p) => p.role === "note")?.text).toBe(" A note.");
   });
 
   it("names a cited source that is still empty, rather than calling it missing", () => {
-    const text = (footnote) =>
+    const text = (footnote: Footnote) =>
       footnoteParts(footnote, sources)
         .map((p) => p.text)
         .join("");
@@ -491,12 +496,16 @@ describe("footnote parts for the Word export", () => {
 });
 
 describe("speech hints and pauses", () => {
-  const speech = (t, attrs, marks = []) => ({
+  const speech = (
+    t: string,
+    attrs: Record<string, unknown>,
+    marks: string[] = [],
+  ) => ({
     type: "text",
     text: t,
     marks: [...marks.map((type) => ({ type })), { type: "speech", attrs }],
   });
-  const pause = (length) => ({ type: "pause", attrs: { length } });
+  const pause = (length: string) => ({ type: "pause", attrs: { length } });
 
   it("keeps one hint per run, cleans it, and stores it after the formatting", () => {
     const content = normalizeTextContent(
@@ -511,7 +520,7 @@ describe("speech hints and pauses", () => {
         ),
       ),
     );
-    expect(content.content[0].content).toEqual([
+    expect(content?.content[0].content).toEqual([
       {
         type: "text",
         text: "Fresnel",
@@ -546,7 +555,8 @@ describe("speech hints and pauses", () => {
         ),
       ),
     );
-    expect(content.content[0].content.map((n) => n.text)).toEqual([
+    const runs = content?.content[0].content ?? [];
+    expect(runs.map((n) => n.type === "text" && n.text)).toEqual([
       "Fresnel",
       "lens",
     ]);
@@ -556,7 +566,7 @@ describe("speech hints and pauses", () => {
     const content = normalizeTextContent(
       doc(para(text("One"), pause("long"), text("two"), pause("forever"))),
     );
-    expect(content.content[0].content).toEqual([
+    expect(content?.content[0].content).toEqual([
       { type: "text", text: "One" },
       pause("long"),
       { type: "text", text: "two" },
@@ -700,7 +710,7 @@ describe("speech markup", () => {
 });
 
 describe("formulas", () => {
-  const math = (attrs) => ({ type: "math", attrs });
+  const math = (attrs: Record<string, unknown>) => ({ type: "math", attrs });
 
   it("cleans a formula, keeps a notation it doesn't know, and drops one with no source", () => {
     const content = normalizeTextContent(
@@ -725,7 +735,7 @@ describe("formulas", () => {
         ),
       ),
     );
-    expect(content.content[0].content).toEqual([
+    expect(content?.content[0].content).toEqual([
       math({ format: "tex", source: "x^2", display: true, spoken: null }),
       math({
         format: "mathml",
@@ -776,7 +786,7 @@ describe("formulas", () => {
     expect(normalizeSpokenText([{ emphasis: "strong" }])).toBe(null);
     expect(normalizeSpokenText("a\nb")).toBe("a b");
     expect(
-      normalizeFormula({ source: "x", spoken: [{ pause: "long" }] }).spoken,
+      normalizeFormula({ source: "x", spoken: [{ pause: "long" }] })?.spoken,
     ).toEqual([{ pause: "long" }]);
   });
 });
@@ -855,8 +865,11 @@ describe("formula markup", () => {
     );
     const back = markupToContent(markup);
     // The spoken words come back as words: the markup holds no hints.
-    expect(back.content[0].content[2].attrs.spoken).toBe("three quarters");
-    expect(back.content[0].content[0]).toEqual(content.content[0].content[0]);
+    const formula = back.content[0].content?.[2] as MathNode;
+    expect(formula.attrs.spoken).toBe("three quarters");
+    expect(back.content[0].content?.[0]).toEqual(
+      content?.content[0].content?.[0],
+    );
     expect(textBlockPlain({ content: back })).toBe(textBlockPlain({ content }));
   });
 });

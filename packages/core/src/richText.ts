@@ -80,11 +80,10 @@ export const SAFE_LINK_PROTOCOLS = /^(?:https?:|mailto:)/i;
 const URL_IGNORED_CHARS = /[\u0000-\u0020]/g;
 
 /**
- * Whether a link target is safe to store or render.
- * @param {string} href
- * @returns {boolean}
+ * Whether a link target is safe to store or render. Anything that isn't a
+ * string is not.
  */
-export function isSafeLink(href) {
+export function isSafeLink(href: unknown): boolean {
   const value = typeof href === "string" ? href.trim() : "";
   if (!value) return false;
   return SAFE_LINK_PROTOCOLS.test(value.replace(URL_IGNORED_CHARS, ""));
@@ -98,11 +97,12 @@ export function isSafeLink(href) {
  * protocol prefixed — so a scheme-less value is judged as the URL it will
  * become. Protocol-relative values stay rejected: "//evil.com" would never
  * be stored as an http URL, only as itself.
- * @param {string} value
- * @param {string} [defaultProtocol] tiptap's `defaultProtocol` option.
- * @returns {boolean}
+ * @param defaultProtocol tiptap's `defaultProtocol` option.
  */
-export function isSafeLinkCandidate(value, defaultProtocol = "http") {
+export function isSafeLinkCandidate(
+  value: unknown,
+  defaultProtocol = "http",
+): boolean {
   const cleaned =
     typeof value === "string"
       ? value.trim().replace(URL_IGNORED_CHARS, "")
@@ -121,7 +121,7 @@ export const LINK_TARGET = "_blank";
 export const LINK_REL = "nofollow ugc noopener noreferrer";
 
 // Named entities that survive sanitizing and matter once we flatten to text.
-const ENTITIES = {
+const ENTITIES: Record<string, string> = {
   "&amp;": "&",
   "&lt;": "<",
   "&gt;": ">",
@@ -141,10 +141,9 @@ const ENTITIES = {
  * Safe to run on legacy plain-text values — every comment and bio written before
  * rich text is a bare string, and one with no tags passes through unchanged.
  *
- * @param {string} html
- * @returns {string} Plain text, with block boundaries collapsed to newlines.
+ * @returns Plain text, with block boundaries collapsed to newlines.
  */
-export function richTextToPlain(html) {
+export function richTextToPlain(html: string): string {
   const input = typeof html === "string" ? html : "";
   if (!input) return "";
 
@@ -154,8 +153,10 @@ export function richTextToPlain(html) {
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(?:p|div|li|blockquote|pre|h[1-6]|tr)\s*>/gi, "\n")
       .replace(/<[^>]*>/g, "")
-      .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-      .replace(/&#x([0-9a-f]+);/gi, (_, code) =>
+      .replace(/&#(\d+);/g, (_, code: string) =>
+        String.fromCodePoint(Number(code)),
+      )
+      .replace(/&#x([0-9a-f]+);/gi, (_, code: string) =>
         String.fromCodePoint(parseInt(code, 16)),
       )
       .replace(/&[a-z]+;/gi, (entity) => ENTITIES[entity.toLowerCase()] ?? " ")
@@ -171,10 +172,8 @@ export function richTextToPlain(html) {
 /**
  * How many characters the user actually wrote, ignoring the markup they wrote
  * them in. This is what both the editor's counter and the server's limit measure.
- * @param {string} html
- * @returns {number}
  */
-export function richTextLength(html) {
+export function richTextLength(html: string): number {
   return richTextToPlain(html).length;
 }
 
@@ -182,21 +181,17 @@ export function richTextLength(html) {
  * Whether a rich-text value carries no actual words. An "empty" editor still
  * emits markup (`<p></p>`), so a plain `!html` check would happily store a blank
  * comment.
- * @param {string} html
- * @returns {boolean}
  */
-export function isRichTextEmpty(html) {
+export function isRichTextEmpty(html: string): boolean {
   return richTextToPlain(html) === "";
 }
 
 /**
  * Collapse rich text to a single line, for the places that show a bio or comment
  * where markup can't go: a meta/OG description, a one-line list subtitle.
- * @param {string} html
- * @param {number} [max] Truncate beyond this many characters.
- * @returns {string}
+ * @param max Truncate beyond this many characters.
  */
-export function richTextToLine(html, max = 160) {
+export function richTextToLine(html: string, max = 160): string {
   const text = richTextToPlain(html).replace(/\s*\n\s*/g, " ");
   if (text.length <= max) return text;
   return `${text.slice(0, max - 3).trimEnd()}...`;
@@ -211,9 +206,7 @@ export function richTextToLine(html, max = 160) {
  * rendered as preformatted text (so their newlines survive) instead of being
  * parsed as markup, which is both what their authors meant and what they have
  * always looked like.
- * @param {string} value
- * @returns {boolean}
  */
-export function isRichTextHtml(value) {
+export function isRichTextHtml(value: unknown): boolean {
   return typeof value === "string" && /^\s*<[a-z]/i.test(value);
 }

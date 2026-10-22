@@ -60,13 +60,25 @@ export const T = {
   ADMIT: 8,
   REMOVE: 9,
   EDITED: 10,
-};
+} as const;
+
+/** One of the type bytes in T. */
+export type FrameType = (typeof T)[keyof typeof T];
+
+/** Which part of a frame to read, for the readers below. */
+export interface FrameReadOptions {
+  /** The frame is one the room relays, so a sender's slot follows the type byte. */
+  withSlot?: boolean;
+}
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 /** A type byte followed by raw payload bytes. */
-export function frameBytes(type, payload) {
+export function frameBytes(
+  type: FrameType,
+  payload?: Uint8Array | null,
+): Uint8Array {
   const body = payload || new Uint8Array(0);
   const b = new Uint8Array(1 + body.length);
   b[0] = type;
@@ -75,12 +87,16 @@ export function frameBytes(type, payload) {
 }
 
 /** A type byte followed by a UTF-8 JSON payload. */
-export function frameJson(type, obj) {
+export function frameJson(type: FrameType, obj: unknown): Uint8Array {
   return frameBytes(type, encoder.encode(JSON.stringify(obj)));
 }
 
 /** A type byte, a u16 slot, then payload bytes — the room's relayed frames. */
-export function frameWithSlot(type, slot, payload) {
+export function frameWithSlot(
+  type: FrameType,
+  slot: number,
+  payload?: Uint8Array | null,
+): Uint8Array {
   const body = payload || new Uint8Array(0);
   const b = new Uint8Array(3 + body.length);
   b[0] = type;
@@ -91,17 +107,17 @@ export function frameWithSlot(type, slot, payload) {
 }
 
 /** A type byte and a u16 slot, with no payload — the host's admit/remove. */
-export function slotFrame(type, slot) {
+export function slotFrame(type: FrameType, slot: number): Uint8Array {
   return frameWithSlot(type, slot, null);
 }
 
 /** The frame's type byte, or null if there isn't one. */
-export function frameType(view) {
+export function frameType(view: Uint8Array): number | null {
   return view.length >= 1 ? view[0] : null;
 }
 
 /** The u16 slot a relayed frame carries at offset 1. */
-export function readSlot(view) {
+export function readSlot(view: Uint8Array): number {
   return (view[1] << 8) | view[2];
 }
 
@@ -109,7 +125,10 @@ export function readSlot(view) {
  * A frame's payload bytes, skipping the type byte and — when the frame is one
  * the room relays — the sender's slot.
  */
-export function framePayload(view, { withSlot = false } = {}) {
+export function framePayload(
+  view: Uint8Array,
+  { withSlot = false }: FrameReadOptions = {},
+): Uint8Array {
   return view.subarray(withSlot ? 3 : 1);
 }
 
@@ -119,7 +138,10 @@ export function framePayload(view, { withSlot = false } = {}) {
  * Never throws: every one of these arrives from the network, and one malformed
  * cursor must not take down a session that is otherwise working.
  */
-export function readJson(view, { withSlot = false } = {}) {
+export function readJson(
+  view: Uint8Array,
+  { withSlot = false }: FrameReadOptions = {},
+): unknown {
   try {
     return JSON.parse(decoder.decode(framePayload(view, { withSlot })));
   } catch {
@@ -128,6 +150,9 @@ export function readJson(view, { withSlot = false } = {}) {
 }
 
 /** A frame's UTF-8 text payload (REMOVED and ERROR carry a bare string). */
-export function readText(view, { withSlot = false } = {}) {
+export function readText(
+  view: Uint8Array,
+  { withSlot = false }: FrameReadOptions = {},
+): string {
   return decoder.decode(framePayload(view, { withSlot }));
 }

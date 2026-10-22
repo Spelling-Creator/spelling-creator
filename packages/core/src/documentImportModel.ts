@@ -10,6 +10,8 @@
 // (scripts/extract-eval) import these same definitions, so the prompt the app
 // sends cannot drift from the one the model learned.
 
+import type { QuestionType } from "./types.ts";
+
 // In the order the training prompt listed them, which is not QUESTION_TYPES'
 // order; the enum is part of the prompt the model learned, so it stays put.
 export const QUESTION_TYPE_KEYS = [
@@ -21,7 +23,40 @@ export const QUESTION_TYPE_KEYS = [
   "open",
   "wyr",
   "paraphrase",
-];
+] as const satisfies readonly QuestionType[];
+
+/** A question type the model was trained to name. */
+export type ModelQuestionType = (typeof QUESTION_TYPE_KEYS)[number];
+
+/** A section's text, before the model reads it. */
+export interface PromptSection {
+  heading?: string;
+  lines: string[];
+}
+
+/** One turn of the chat the model is sent. */
+export interface ModelMessage {
+  role: "system" | "user";
+  content: string;
+}
+
+/** A question the model read, as documentImport's parseSection returns one. */
+export interface ParsedQuestion {
+  prompt: string;
+  /** The model's own type when it named a real one, otherwise "". */
+  type: ModelQuestionType | "";
+  answers: string[];
+  steps: string[];
+}
+
+/** A section the model read, in the shape documentImport's parseSection returns. */
+export interface ParsedSection {
+  name: string;
+  paragraphs: string[];
+  spellingWords: string[];
+  questions: ParsedQuestion[];
+  vakt: string[];
+}
 
 export const SCHEMA = JSON.stringify(
   {
@@ -89,7 +124,7 @@ export const TYPE_GUIDE = `Question types:
 - open: any other question with no answer.`;
 
 /** The system prompt the model was trained with. */
-export function systemPrompt() {
+export function systemPrompt(): string {
   return `Return data as a JSON object with the following schema:\n${SCHEMA}\n\n${TYPE_GUIDE}`;
 }
 
@@ -97,15 +132,16 @@ export function systemPrompt() {
  * A section as the model expects to see it: the heading on its own line, then
  * the lines with a blank line between them, which is also how the training
  * documents were laid out.
- * @param {{heading?: string, lines: string[]}} section
- * @returns {string}
  */
-export function sectionPromptText({ heading = "", lines }) {
+export function sectionPromptText({
+  heading = "",
+  lines,
+}: PromptSection): string {
   return (heading ? [heading, ""] : []).concat(lines.join("\n\n")).join("\n");
 }
 
 /** The messages for one section. */
-export function sectionMessages(section) {
+export function sectionMessages(section: PromptSection): ModelMessage[] {
   return [
     { role: "system", content: systemPrompt() },
     { role: "user", content: sectionPromptText(section) },
@@ -125,15 +161,22 @@ const KEY_ALIASES = {
   paragraphs: ["paragraphs", "passage", "text", "paragraph"],
   spellingWords: ["spellingwords", "spelling_words", "spelling", "words"],
   questions: ["questions"],
-};
+} satisfies Record<string, string[]>;
 const QUESTION_ALIASES = {
   prompt: ["prompt", "question", "text"],
   type: ["type", "questiontype", "question_type", "kind"],
   answers: ["answers", "answer", "value", "values"],
   steps: ["steps", "working", "workings"],
-};
+} satisfies Record<string, string[]>;
 
-function pick(obj, aliases) {
+// Anything typeof calls an object, arrays included, as a reply's JSON has it.
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  Boolean(v) && typeof v === "object";
+
+const isModelType = (type: string): type is ModelQuestionType =>
+  (QUESTION_TYPE_KEYS as readonly string[]).includes(type);
+
+function pick(obj: Record<string, unknown>, aliases: string[]): unknown {
   const keys = Object.keys(obj);
   for (const alias of aliases) {
     const key = keys.find((k) => k.toLowerCase() === alias);
@@ -142,18 +185,19 @@ function pick(obj, aliases) {
   return undefined;
 }
 
-const asList = (v) => (v == null || v === "" ? [] : Array.isArray(v) ? v : [v]);
-const asText = (v) =>
+const asList = (v: unknown): unknown[] =>
+  v == null || v === "" ? [] : Array.isArray(v) ? v : [v];
+const asText = (v: unknown): string =>
   typeof v === "string"
     ? v
-    : v && typeof v === "object" && typeof v.text === "string"
+    : v && typeof v === "object" && "text" in v && typeof v.text === "string"
       ? v.text
       : String(v ?? "");
 
 // Close a reply that was cut off at the token cap: finish an open string,
 // drop a trailing comma, then close every open bracket.
-function closeJson(s) {
-  const stack = [];
+function closeJson(s: string): Record<string, unknown> | null {
+  const stack: string[] = [];
   let inString = false;
   let escaped = false;
   for (const ch of s) {
@@ -182,10 +226,12 @@ function closeJson(s) {
 /**
  * The object in a reply, or null. A reply cut off mid-way is closed up as far
  * as it goes, which keeps the sections and questions it did finish.
- * @param {string} raw
- * @returns {object|null}
+ *
+ * What it parses always starts at a "{", so a result is always an object.
  */
-export function parseModelJson(raw) {
+export function parseModelJson(
+  raw: string | null | undefined,
+): Record<string, unknown> | null {
   let s = String(raw ?? "")
     .replace(/```(?:json)?/g, "")
     .trim();
@@ -212,19 +258,19 @@ export function parseModelJson(raw) {
  * A reply as a parsed section, the same shape documentImport's parseSection
  * returns, plus the model's own `type` on each question, which is kept when
  * it names a real type. Null when the reply holds no section at all.
- * @param {string} raw
- * @returns {{name: string, paragraphs: string[], spellingWords: string[], questions: Array<{prompt: string, type: string, answers: string[], steps: string[]}>, vakt: string[]}|null}
  */
-export function parseModelReply(raw) {
+export function parseModelReply(
+  raw: string | null | undefined,
+): ParsedSection | null {
   const json = parseModelJson(raw);
-  if (!json || typeof json !== "object") return null;
+  if (!isObject(json)) return null;
   const questions = asList(pick(json, KEY_ALIASES.questions))
-    .filter((q) => q && typeof q === "object")
-    .map((q) => {
+    .filter(isObject)
+    .map((q): ParsedQuestion => {
       const type = String(pick(q, QUESTION_ALIASES.type) ?? "");
       return {
         prompt: asText(pick(q, QUESTION_ALIASES.prompt)).trim(),
-        type: QUESTION_TYPE_KEYS.includes(type) ? type : "",
+        type: isModelType(type) ? type : "",
         answers: asList(pick(q, QUESTION_ALIASES.answers))
           .map(asText)
           .map((a) => a.trim())

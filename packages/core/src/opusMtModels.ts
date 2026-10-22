@@ -7,7 +7,7 @@
 // direction on the hub and the one the 2020-era Opus-MT models are reliably
 // good at; out of English and between other languages their coverage is
 // patchy and their quality varies too much, so those pairs stay on NLLB.
-// Keys are canonical table tags from translationLanguages.js, which is why
+// Keys are canonical table tags from translationLanguages.ts, which is why
 // "zh" (Simplified) is here but "zh-Hant" is not: opus-mt-zh-en was trained
 // mostly on Simplified text, while NLLB models zho_Hant in its own right.
 //
@@ -35,7 +35,7 @@
 
 import { languageForTag } from "./translationLanguages.ts";
 
-export const OPUS_MT_TO_ENGLISH = {
+export const OPUS_MT_TO_ENGLISH: Readonly<Partial<Record<string, string>>> = {
   ar: "Xenova/opus-mt-ar-en",
   de: "Xenova/opus-mt-de-en",
   es: "Xenova/opus-mt-es-en",
@@ -64,11 +64,13 @@ export const OPUS_MT_TO_ENGLISH = {
  * "zh-TW" resolves to the zh-Hant row and correctly misses the
  * Simplified-trained zh model.
  *
- * @param {string} sourceLanguage  BCP-47.
- * @param {string} targetLanguage  BCP-47.
- * @returns {string|null}
+ * @param sourceLanguage  BCP-47.
+ * @param targetLanguage  BCP-47.
  */
-export function opusMtModelFor(sourceLanguage, targetLanguage) {
+export function opusMtModelFor(
+  sourceLanguage: string,
+  targetLanguage: string,
+): string | null {
   if (languageForTag(targetLanguage)?.tag !== "en") return null;
   const source = languageForTag(sourceLanguage);
   return (source && OPUS_MT_TO_ENGLISH[source.tag]) || null;

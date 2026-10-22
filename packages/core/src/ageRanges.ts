@@ -10,4 +10,7 @@ export const AGE_RANGES = [
   "11-14 years",
   "14-16 years",
   "16+ years",
-];
+] as const;
+
+/** One of AGE_RANGES. */
+export type AgeRange = (typeof AGE_RANGES)[number];

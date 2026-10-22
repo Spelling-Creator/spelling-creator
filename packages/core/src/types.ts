@@ -33,7 +33,7 @@ export interface TextItem {
 /**
  * Inline text: a question's prompt or a working-out step. A plain string, or
  * a one-paragraph tiptap document once it carries formatting, a read-aloud
- * hint or a formula (see inlineText.js).
+ * hint or a formula (see inlineText.ts).
  */
 export type InlineText = string | RichNode;
 
@@ -111,9 +111,9 @@ export interface VaktBlock extends Picture {
 export interface ImageBlock extends Picture {
   id: string;
   type: "image";
-  /** A key of IMAGE_SIZES in image.js. */
+  /** A key of IMAGE_SIZES in image.ts. */
   size: string;
-  /** One of IMAGE_ALIGNS in image.js. */
+  /** One of IMAGE_ALIGNS in image.ts. */
   align: string;
 }
 
@@ -138,7 +138,7 @@ export interface Section {
   blocks: Block[];
 }
 
-/** One of a lesson's sources (see sources.js). Every field may be empty. */
+/** One of a lesson's sources (see sources.ts). Every field may be empty. */
 export interface Source {
   id: string;
   title: string;
@@ -150,13 +150,13 @@ export interface Source {
 
 export interface LessonDoc {
   title: string;
-  /** One of AGE_RANGES in ageRanges.js. */
+  /** One of AGE_RANGES in ageRanges.ts. */
   ageRange?: string;
   sources?: Source[];
   sections: Section[];
 }
 
-/** The importable .json envelope (see lessonFile.js). */
+/** The importable .json envelope (see lessonFile.ts). */
 export interface LessonFile {
   format: string;
   version: number;

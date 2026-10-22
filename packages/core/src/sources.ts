@@ -2,7 +2,7 @@
 //
 // Sources belong to the lesson, not to a block. They live in `doc.sources` as
 // a list of { id, title, author, publisher, year, url } rows, and text blocks
-// cite them through footnotes that carry a `sourceId` (see lessonText.js).
+// cite them through footnotes that carry a `sourceId` (see lessonText.ts).
 // Keeping one list means a source cited in five places is written once, edited
 // once, and printed once in the Sources list at the end of the lesson.
 //
@@ -23,9 +23,29 @@
 //                        it with a style the importer reads back exactly.
 
 import { isSafeLink } from "./richText.ts";
+import type { Source } from "./types.ts";
 
 /** The fields a source carries, in the order the editor shows them. */
-export const SOURCE_FIELDS = ["title", "author", "publisher", "year", "url"];
+export const SOURCE_FIELDS = [
+  "title",
+  "author",
+  "publisher",
+  "year",
+  "url",
+] as const;
+
+export type SourceField = (typeof SOURCE_FIELDS)[number];
+
+/**
+ * A run of printed text. The renderer sets an `italic` run in italics and
+ * links a `url` run; `role` tags the runs the Word export styles.
+ */
+export interface CitationPart {
+  text: string;
+  italic?: boolean;
+  url?: string;
+  role?: "locator" | "note";
+}
 
 // Generous ceilings, so a pasted paragraph can't pass itself off as a title.
 const FIELD_LIMITS = {
@@ -34,26 +54,24 @@ const FIELD_LIMITS = {
   publisher: 300,
   year: 40,
   url: 2000,
-};
+} satisfies Record<SourceField, number>;
 
 // What a source id may look like. The editor makes uuids; the MCP server lets
 // an assistant pick readable keys ("smith2020") that its markup refers to.
 const SOURCE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-/**
- * Whether a value is usable as a source id.
- * @param {unknown} id
- * @returns {boolean}
- */
-export function isSourceId(id) {
+// Anything with fields to read: an object, or an array.
+function hasFields(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+/** Whether a value is usable as a source id. */
+export function isSourceId(id: unknown): id is string {
   return typeof id === "string" && SOURCE_ID.test(id);
 }
 
-/**
- * A fresh, empty source for the editor to fill in.
- * @param {() => string} newId
- */
-export function createSource(newId) {
+/** A fresh, empty source for the editor to fill in. */
+export function createSource(newId: () => string): Source {
   return {
     id: newId(),
     title: "",
@@ -69,26 +87,30 @@ export function createSource(newId) {
  *
  * A url that isn't a safe http/https/mailto address is dropped rather than
  * stored: renderers link it, and `javascript:` in an href executes.
- * @param {unknown} raw
- * @returns {object|null}
  */
-export function normalizeSource(raw) {
-  if (!raw || typeof raw !== "object" || !isSourceId(raw.id)) return null;
-  const source = { id: raw.id };
+export function normalizeSource(raw: unknown): Source | null {
+  if (!hasFields(raw) || !isSourceId(raw.id)) return null;
+  const source: Source = {
+    id: raw.id,
+    title: "",
+    author: "",
+    publisher: "",
+    year: "",
+    url: "",
+  };
   for (const field of SOURCE_FIELDS) {
-    const value = typeof raw[field] === "string" ? raw[field].trim() : "";
+    const given = raw[field];
+    const value = typeof given === "string" ? given.trim() : "";
     source[field] = value.slice(0, FIELD_LIMITS[field]);
   }
   if (source.url && !isSafeLink(source.url)) source.url = "";
   return source;
 }
 
-/**
- * Whether a source has enough in it to print.
- * @param {object} source
- * @returns {boolean}
- */
-export function sourceHasContent(source) {
+/** Whether a source has enough in it to print. */
+export function sourceHasContent(
+  source: Partial<Source> | null | undefined,
+): boolean {
   return Boolean(
     source &&
     ((source.title || "").trim() ||
@@ -101,14 +123,14 @@ export function sourceHasContent(source) {
  * A lesson's source list, normalised: malformed rows and repeated ids are
  * dropped, and so (with `dropEmpty`) are rows with nothing worth printing. The
  * editor keeps empty rows while someone is filling one in; importers don't.
- * @param {unknown} list
- * @param {{ dropEmpty?: boolean }} [options]
- * @returns {object[]}
  */
-export function normalizeSources(list, { dropEmpty = false } = {}) {
+export function normalizeSources(
+  list: unknown,
+  { dropEmpty = false }: { dropEmpty?: boolean } = {},
+): Source[] {
   if (!Array.isArray(list)) return [];
-  const seen = new Set();
-  const out = [];
+  const seen = new Set<string>();
+  const out: Source[] = [];
   for (const raw of list) {
     const source = normalizeSource(raw);
     if (!source || seen.has(source.id)) continue;
@@ -122,10 +144,8 @@ export function normalizeSources(list, { dropEmpty = false } = {}) {
 /**
  * The sources a renderer should list: the document's own, in the order the
  * author put them, without empty rows.
- * @param {object} doc
- * @returns {object[]}
  */
-export function lessonSources(doc) {
+export function lessonSources(doc: { sources?: unknown }): Source[] {
   return normalizeSources(doc?.sources, { dropEmpty: true });
 }
 
@@ -133,11 +153,9 @@ export function lessonSources(doc) {
  * The lesson's sources keyed by id, for resolving a footnote's `sourceId`.
  * Empty rows are kept here: a footnote may cite a source someone is still
  * filling in, and it should keep its place rather than vanish.
- * @param {object} doc
- * @returns {Map<string, object>}
  */
-export function sourcesById(doc) {
-  const map = new Map();
+export function sourcesById(doc: { sources?: unknown }): Map<string, Source> {
+  const map = new Map<string, Source>();
   for (const source of normalizeSources(doc?.sources)) {
     map.set(source.id, source);
   }
@@ -145,25 +163,23 @@ export function sourcesById(doc) {
 }
 
 // Ends a run of text with a full stop unless it already ends in punctuation.
-function withStop(text) {
+function withStop(text: string) {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 // "Penguin, 2020", or whichever half is known.
-function imprint(source) {
+function imprint(source: Partial<Source>) {
   return [source.publisher, source.year]
     .map((part) => (part || "").trim())
     .filter(Boolean)
     .join(", ");
 }
 
-/**
- * A source as its Sources list entry, in runs.
- * @param {object} source
- * @returns {Array<{ text: string, italic?: boolean, url?: string }>}
- */
-export function sourceEntryParts(source) {
-  const parts = [];
+/** A source as its Sources list entry, in runs. */
+export function sourceEntryParts(
+  source: Partial<Source> | null | undefined,
+): CitationPart[] {
+  const parts: CitationPart[] = [];
   const author = (source?.author || "").trim();
   const title = (source?.title || "").trim();
   const details = imprint(source || {});
@@ -183,12 +199,12 @@ export function sourceEntryParts(source) {
 /**
  * A source as a footnote cites it, in runs, with the locator ("p. 12") added
  * before the closing full stop.
- * @param {object} source
- * @param {string} [locator]
- * @returns {Array<{ text: string, italic?: boolean, url?: string, role?: string }>}
  */
-export function sourceCitationParts(source, locator = "") {
-  const parts = [];
+export function sourceCitationParts(
+  source: Partial<Source> | null | undefined,
+  locator = "",
+): CitationPart[] {
+  const parts: CitationPart[] = [];
   const author = (source?.author || "").trim();
   const title = (source?.title || "").trim();
   const details = imprint(source || {});
@@ -219,22 +235,20 @@ export function sourceCitationParts(source, locator = "") {
   return trimmed;
 }
 
-/**
- * Runs flattened to a plain string.
- * @param {Array<{ text: string }>} parts
- * @returns {string}
- */
-export function partsText(parts) {
+/** Runs flattened to a plain string. */
+export function partsText(parts: ReadonlyArray<{ text: string }>): string {
   return parts.map((part) => part.text).join("");
 }
 
 /** A source's Sources list entry as plain text. */
-export function sourceEntryText(source) {
+export function sourceEntryText(
+  source: Partial<Source> | null | undefined,
+): string {
   return partsText(sourceEntryParts(source));
 }
 
 // Drop the trailing space the builders above leave after the last piece.
-function trimParts(parts) {
+function trimParts(parts: CitationPart[]) {
   const out = parts.filter((part) => part.text);
   if (out.length) {
     const last = out[out.length - 1];

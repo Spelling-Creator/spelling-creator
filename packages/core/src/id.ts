@@ -1,5 +1,5 @@
 // Small stable-id helper. Uses crypto.randomUUID where available.
-export function newId() {
+export function newId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }

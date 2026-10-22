@@ -19,7 +19,39 @@
 
 import { DEFAULT_USERNAME_DOMAIN } from "./username.ts";
 
-const config = {
+/**
+ * What the host tells core. Every key is optional, and one left unset (or set
+ * to an env var that turned out undefined) reads as its default.
+ */
+export interface CoreConfig {
+  /** Base URL of the Worker API, trailing slash optional. */
+  apiUrl?: string;
+  /** Supabase project URL (browser auth only). */
+  supabaseUrl?: string;
+  /** Supabase anon key. */
+  supabaseAnonKey?: string;
+  /** OAuth 2.0 Web client id, for "save to Google Docs". */
+  googleClientId?: string;
+  /** Public Cloudflare Turnstile site key. */
+  turnstileSiteKey?: string;
+  /**
+   * 'turnstile' (default), 'altcha', or 'none'. Read loosely (see aiChallenge),
+   * since it usually comes straight from an env var.
+   */
+  aiChallenge?: string;
+  /** 'magic-link' (default), 'password', or 'both'. Read loosely, like aiChallenge. */
+  authMode?: string;
+  /** The domain usernames become addresses under (see usernameDomain). */
+  usernameDomain?: string;
+}
+
+/** The check in front of the AI and image-search features. */
+export type AiChallenge = "turnstile" | "altcha" | "none";
+
+/** How people sign in to an instance. */
+export type AuthMode = "magic-link" | "password" | "both";
+
+const config: CoreConfig = {
   apiUrl: "",
   supabaseUrl: "",
   supabaseAnonKey: "",
@@ -33,16 +65,8 @@ const config = {
 /**
  * Set the host's configuration. Call once, as early as possible. Merges, so a
  * later call can add a key without clearing the others.
- * @param {object} next
- * @param {string} [next.apiUrl]           Base URL of the Worker API, trailing slash optional.
- * @param {string} [next.supabaseUrl]      Supabase project URL (browser auth only).
- * @param {string} [next.supabaseAnonKey]  Supabase anon key.
- * @param {string} [next.googleClientId]   OAuth 2.0 Web client id, for "save to Google Docs".
- * @param {string} [next.turnstileSiteKey] Public Cloudflare Turnstile site key.
- * @param {string} [next.aiChallenge]      'turnstile' (default), 'altcha', or 'none'.
- * @param {string} [next.authMode]         'magic-link' (default), 'password', or 'both'.
  */
-export function configureCore(next) {
+export function configureCore(next: CoreConfig): void {
   Object.assign(config, next);
 }
 
@@ -54,10 +78,8 @@ export function configureCore(next) {
  * against no backend at all (the homepage's word animation and the offline
  * editor both degrade gracefully), and that was the behaviour when each module
  * read a possibly-undefined env var itself.
- *
- * @returns {string}
  */
-export function apiUrl() {
+export function apiUrl(): string {
   return (config.apiUrl || "").replace(/\/$/, "");
 }
 
@@ -68,10 +90,8 @@ export function apiUrl() {
  * the same host.
  *
  * Returns "" when no API is configured, like `apiUrl`.
- *
- * @returns {string}
  */
-export function apiWsUrl() {
+export function apiWsUrl(): string {
   const base = apiUrl();
   if (base.startsWith("https://")) return `wss://${base.slice(8)}`;
   // The socket keeps the API's own scheme. A plain http API is a local one in
@@ -87,18 +107,16 @@ export function apiWsUrl() {
 /**
  * Whether a backend is configured at all. Callers that cannot degrade use this
  * to fail early with a clear message instead of fetching from "/…".
- * @returns {boolean}
  */
-export function hasApi() {
+export function hasApi(): boolean {
   return apiUrl() !== "";
 }
 
 /**
  * Supabase's browser credentials, or null when auth isn't configured. Returned
  * together because neither half is usable alone.
- * @returns {{url: string, anonKey: string} | null}
  */
-export function supabaseConfig() {
+export function supabaseConfig(): { url: string; anonKey: string } | null {
   const { supabaseUrl, supabaseAnonKey } = config;
   if (!supabaseUrl || !supabaseAnonKey) return null;
   return { url: supabaseUrl, anonKey: supabaseAnonKey };
@@ -107,36 +125,33 @@ export function supabaseConfig() {
 /**
  * Whether sign-in is available. When false the login page and "Publish to hub"
  * explain that accounts are unavailable, but browsing the hub still works.
- * @returns {boolean}
  */
-export function hasSupabase() {
+export function hasSupabase(): boolean {
   return supabaseConfig() !== null;
 }
 
 /**
  * OAuth 2.0 Web client id for the Google Docs export. "" when unconfigured.
- * @returns {string}
  */
-export function googleClientId() {
+export function googleClientId(): string {
   return config.googleClientId || "";
 }
 
-/** @returns {boolean} Whether "save to Google Docs" is available. */
-export function hasGoogleDrive() {
+/** Whether "save to Google Docs" is available. */
+export function hasGoogleDrive(): boolean {
   return googleClientId() !== "";
 }
 
 /**
  * Public Turnstile site key for rendering the widget. "" when unconfigured, in
  * which case the AI and image-search dialogs explain they're unavailable.
- * @returns {string}
  */
-export function turnstileSiteKey() {
+export function turnstileSiteKey(): string {
   return config.turnstileSiteKey || "";
 }
 
-/** @returns {boolean} Whether a Turnstile site key is configured. */
-export function hasTurnstile() {
+/** Whether a Turnstile site key is configured. */
+export function hasTurnstile(): boolean {
   return turnstileSiteKey() !== "";
 }
 
@@ -151,10 +166,8 @@ export function hasTurnstile() {
  *                limiter.
  *
  * Anything unrecognized reads as 'turnstile', the same way the server reads it.
- *
- * @returns {'turnstile' | 'altcha' | 'none'}
  */
-export function aiChallenge() {
+export function aiChallenge(): AiChallenge {
   const mode = (config.aiChallenge || "").trim().toLowerCase();
   return mode === "altcha" || mode === "none" ? mode : "turnstile";
 }
@@ -163,9 +176,8 @@ export function aiChallenge() {
  * Whether the challenge-gated features (the AI dialogs, AI fixes, fact checks
  * and Pixabay search) can work here: there is an API to send them to, and the
  * instance's check is one the browser can pass.
- * @returns {boolean}
  */
-export function hasAiChallenge() {
+export function hasAiChallenge(): boolean {
   if (!hasApi()) return false;
   return aiChallenge() === "turnstile" ? hasTurnstile() : true;
 }
@@ -184,21 +196,19 @@ export function hasAiChallenge() {
  *
  * Anything unrecognized reads as 'magic-link', so a typo degrades to the
  * default rather than to an instance nobody can get into.
- *
- * @returns {'magic-link' | 'password' | 'both'}
  */
-export function authMode() {
+export function authMode(): AuthMode {
   const mode = (config.authMode || "").trim();
   return mode === "password" || mode === "both" ? mode : "magic-link";
 }
 
-/** @returns {boolean} Whether this instance offers email + password sign-in. */
-export function hasPasswordAuth() {
+/** Whether this instance offers email + password sign-in. */
+export function hasPasswordAuth(): boolean {
   return authMode() !== "magic-link";
 }
 
-/** @returns {boolean} Whether this instance offers magic-link sign-in. */
-export function hasMagicLinkAuth() {
+/** Whether this instance offers magic-link sign-in. */
+export function hasMagicLinkAuth(): boolean {
   return authMode() !== "password";
 }
 
@@ -217,9 +227,7 @@ export const PASSWORD_MIN_LENGTH = 8;
  * only needs to set this if the default collides with something it actually
  * sends mail to, which — the default being a reserved `.invalid` domain — it
  * cannot.
- *
- * @returns {string}
  */
-export function usernameDomain() {
+export function usernameDomain(): string {
   return (config.usernameDomain || "").trim() || DEFAULT_USERNAME_DOMAIN;
 }

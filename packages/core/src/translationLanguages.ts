@@ -11,7 +11,17 @@
 // covers the table, the fallback detector classifies twenty of these languages
 // (see fallbackTranslator.js).
 
-export const TRANSLATION_LANGUAGES = [
+/** A row of the table: one language under both of its names. */
+export interface TranslationLanguage {
+  /** The canonical BCP-47 tag. */
+  tag: string;
+  /** The FLORES-200 code NLLB knows it by. */
+  flores: string;
+  /** Other lowercase tags that resolve to this row. */
+  aliases?: string[];
+}
+
+export const TRANSLATION_LANGUAGES: readonly TranslationLanguage[] = [
   { tag: "ar", flores: "arb_Arab" },
   { tag: "bg", flores: "bul_Cyrl" },
   { tag: "bn", flores: "ben_Beng" },
@@ -60,7 +70,7 @@ export const TRANSLATION_LANGUAGES = [
   { tag: "zh", flores: "zho_Hans" },
 ];
 
-const byTag = new Map();
+const byTag = new Map<string, TranslationLanguage>();
 for (const language of TRANSLATION_LANGUAGES) {
   byTag.set(language.tag.toLowerCase(), language);
   for (const alias of language.aliases || []) byTag.set(alias, language);
@@ -69,11 +79,8 @@ for (const language of TRANSLATION_LANGUAGES) {
 /**
  * The bare language subtag of a BCP-47 tag, lowercased: "es-MX" and "es_MX"
  * are both "es". Empty for a missing tag.
- *
- * @param {string} tag
- * @returns {string}
  */
-export function baseLanguageTag(tag) {
+export function baseLanguageTag(tag: string | null | undefined): string {
   return (tag || "").trim().toLowerCase().split(/[-_]/)[0];
 }
 
@@ -81,10 +88,10 @@ export function baseLanguageTag(tag) {
  * The table row for a BCP-47 tag, or null if translation doesn't cover it.
  * Tries the whole tag first ("zh-TW" is its own row), then the bare language
  * subtag, so "pt-BR" lands on "pt".
- *
- * @param {string} tag
  */
-export function languageForTag(tag) {
+export function languageForTag(
+  tag: string | null | undefined,
+): TranslationLanguage | null {
   const lower = (tag || "").trim().toLowerCase().replace(/_/g, "-");
   if (!lower) return null;
   return byTag.get(lower) || byTag.get(baseLanguageTag(lower)) || null;
@@ -95,7 +102,10 @@ export function languageForTag(tag) {
  * "en-GB" and "en-US" are the same (translating between them is a no-op), but
  * "zh" and "zh-TW" are not, because they resolve to different rows (scripts).
  */
-export function sameTranslationLanguage(a, b) {
+export function sameTranslationLanguage(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
   const langA = languageForTag(a);
   const langB = languageForTag(b);
   if (langA && langB) return langA === langB;
@@ -112,10 +122,9 @@ export function sameTranslationLanguage(a, b) {
  * language, since translating into itself does nothing. As BCP-47 tags, in
  * table order; the UI sorts them by display name.
  *
- * @param {string} targetLanguage  BCP-47, the reader's language.
- * @returns {string[]}
+ * @param targetLanguage  BCP-47, the reader's language.
  */
-export function sourceLanguageChoices(targetLanguage) {
+export function sourceLanguageChoices(targetLanguage: string): string[] {
   return TRANSLATION_LANGUAGES.map((language) => language.tag).filter(
     (tag) => !sameTranslationLanguage(tag, targetLanguage),
   );
@@ -126,11 +135,13 @@ export function sourceLanguageChoices(targetLanguage) {
  * names, so no locale file is involved; the bare tag is the fallback when
  * Intl doesn't know the tag or the platform lacks DisplayNames.
  *
- * @param {string} tag  BCP-47, the language to name.
- * @param {string} displayLanguage  BCP-47, the language to name it in.
- * @returns {string}
+ * @param tag  BCP-47, the language to name.
+ * @param displayLanguage  BCP-47, the language to name it in.
  */
-export function languageDisplayName(tag, displayLanguage) {
+export function languageDisplayName(
+  tag: string,
+  displayLanguage: string,
+): string {
   try {
     return (
       new Intl.DisplayNames([displayLanguage], { type: "language" }).of(tag) ||

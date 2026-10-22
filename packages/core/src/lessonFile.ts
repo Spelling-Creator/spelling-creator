@@ -6,6 +6,8 @@
 // MCP server's `create_lesson_file` tool. Keeping the envelope here means they
 // agree by construction rather than by comment.
 
+import type { LessonDoc, LessonFile } from "./types.ts";
+
 export const LESSON_FILE_FORMAT = "spelling-creator-lesson";
 export const LESSON_FILE_VERSION = 1;
 
@@ -15,10 +17,8 @@ export const LESSON_FILE_VERSION = 1;
  * Only the lesson itself goes in the file. `trustedCollaborators` is left out
  * on purpose: it is a list of email addresses, and a file is something people
  * hand to each other.
- * @param {object} doc
- * @returns {{format: string, version: number, doc: object}}
  */
-export function buildLessonFile(doc) {
+export function buildLessonFile(doc: LessonDoc): LessonFile {
   return {
     format: LESSON_FILE_FORMAT,
     version: LESSON_FILE_VERSION,
@@ -36,10 +36,8 @@ export function buildLessonFile(doc) {
  * extension: "lesson" when nothing usable remains. Every file a lesson is
  * saved as (the app's own `.json`, an `.oslf.json`) builds on this, so they
  * all name a lesson the same way.
- * @param {string} [title]
- * @returns {string}
  */
-export function lessonFileBase(title) {
+export function lessonFileBase(title?: string): string {
   const base = (title || "lesson")
     .trim()
     .replace(/[^a-z0-9\-_ ]/gi, "")
@@ -49,9 +47,7 @@ export function lessonFileBase(title) {
 
 /**
  * A filesystem-safe `.json` name derived from the lesson title.
- * @param {string} [title]
- * @returns {string}
  */
-export function lessonFileName(title) {
+export function lessonFileName(title?: string): string {
   return `${lessonFileBase(title)}.json`;
 }

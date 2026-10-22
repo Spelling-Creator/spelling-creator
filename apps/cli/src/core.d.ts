@@ -86,12 +86,6 @@ declare module "@spelling-creator/core/jsonImport" {
   export function normalizeLessonFile(parsed: unknown): LessonDoc;
 }
 
-declare module "@spelling-creator/core/lessonFile" {
-  import type { LessonDoc, LessonFile } from "@spelling-creator/core/types";
-
-  export function buildLessonFile(doc: LessonDoc): LessonFile;
-}
-
 declare module "@spelling-creator/core/oslf" {
   import type { LessonDoc } from "@spelling-creator/core/types";
 

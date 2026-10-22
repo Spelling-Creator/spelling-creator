@@ -16,6 +16,30 @@
 // Units come back as the keys of factCheck's FACT_UNITS ("km2", "celsius"),
 // and a plain number with no unit as "".
 
+/** A figure a sentence states. A range is its middle, with its two ends. */
+export interface TextQuantity {
+  value: number;
+  lower?: number;
+  upper?: number;
+  /** A key of factCheck's FACT_UNITS, or "" for a plain number. */
+  unit: string;
+}
+
+/** A date a sentence states. A month or day it leaves out is 0. */
+export interface TextDate {
+  /** Historical, negative for BC. */
+  year: number;
+  month: number;
+  day: number;
+}
+
+/** A paragraph of an article, as its sentences. */
+export interface ArticleParagraph {
+  /** Before the first heading: the article's summary of its subject. */
+  lead: boolean;
+  sentences: string[];
+}
+
 // Each unit's spellings in running text. Case matters, so that "K" (kelvin)
 // and "L" (liters) aren't read into every "k" and "l". Short spellings that
 // are also common words ("in", "t", "h", "s") are left out; Wikipedia gives a
@@ -69,15 +93,15 @@ const UNIT_WORDS = {
   week: ["weeks", "week"],
   month: ["months", "month"],
   year: ["years", "year", "yrs", "yr"],
-};
+} satisfies Record<string, string[]>;
 
 const UNIT_BY_WORD = new Map(
   Object.entries(UNIT_WORDS).flatMap(([unit, spellings]) =>
-    spellings.map((word) => [word, unit]),
+    spellings.map((word): [string, string] => [word, unit]),
   ),
 );
 
-const escape = (s) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
 // Longest first, so "km/h" wins over "km" and "nautical miles" over "miles".
 const UNIT_PATTERN = [...UNIT_BY_WORD.keys()]
@@ -85,7 +109,7 @@ const UNIT_PATTERN = [...UNIT_BY_WORD.keys()]
   .map(escape)
   .join("|");
 
-const SCALES = {
+const SCALES: Record<string, number> = {
   thousand: 1e3,
   million: 1e6,
   billion: 1e9,
@@ -108,7 +132,7 @@ const QUANTITY = new RegExp(
   "gu",
 );
 
-const toNumber = (text) =>
+const toNumber = (text: string) =>
   Number(String(text).replace(/,/g, "").replace("−", "-"));
 
 /**
@@ -117,17 +141,16 @@ const toNumber = (text) =>
  *
  * A plain number that is part of a date ("in 2011", "18 May 1980") isn't a
  * count, so "In the 2011 census it had 812 people" gives only 812.
- * @param {string} sentence
- * @returns {{ value: number, lower?: number, upper?: number, unit: string }[]}
  */
-export function quantitiesIn(sentence) {
+export function quantitiesIn(sentence: string): TextQuantity[] {
   const text = String(sentence || "");
-  const out = [];
-  let dates;
+  const out: TextQuantity[] = [];
+  let dates: DateMatch[] | undefined;
   for (const match of text.matchAll(QUANTITY)) {
     const [, first, second, scaleWord, unitWord] = match;
     const scale = SCALES[scaleWord] || 1;
-    const unit = unitWord ? UNIT_BY_WORD.get(unitWord) : "";
+    // UNIT_PATTERN is made of UNIT_BY_WORD's keys, so a matched word is one.
+    const unit = unitWord ? UNIT_BY_WORD.get(unitWord)! : "";
     if (!unit) {
       dates ??= dateMatches(text);
       if (dates.some(({ from, to }) => match.index >= from && match.index < to))
@@ -164,7 +187,7 @@ const MONTHS = [
 const MONTH_PATTERN =
   "(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\\.?";
 
-const monthNumber = (word) =>
+const monthNumber = (word: string) =>
   MONTHS.findIndex((m) => m.startsWith(word.toLowerCase().slice(0, 3))) + 1;
 
 const ERA = `(?:${SP}*(BCE|BC|CE|AD))?`;
@@ -206,28 +229,32 @@ const YEARS_AGO = new RegExp(
   "gu",
 );
 
-const signed = (year, era) =>
+const signed = (year: string, era: string | undefined) =>
   era === "BC" || era === "BCE" ? -Number(year) : Number(year);
 
 /**
  * The dates a sentence states, as precisely as it states them. Years are
  * historical, negative for BC, as in a claim.
- * @param {string} sentence
- * @returns {{ year: number, month: number, day: number }[]}
  */
-export function datesIn(sentence) {
+export function datesIn(sentence: string): TextDate[] {
   return dateMatches(String(sentence || "")).map(({ date }) => date);
 }
 
+interface DateMatch {
+  date: TextDate;
+  from: number;
+  to: number;
+}
+
 // The dates in a text, each with where it is.
-function dateMatches(text) {
-  const out = [];
-  const free = (match) =>
+function dateMatches(text: string): DateMatch[] {
+  const out: DateMatch[] = [];
+  const free = (match: RegExpExecArray) =>
     !out.some(
       ({ from, to }) =>
         match.index < to && match.index + match[0].length > from,
     );
-  const take = (match, date) => {
+  const take = (match: RegExpExecArray, date: TextDate) => {
     out.push({ date, from: match.index, to: match.index + match[0].length });
   };
   for (const m of text.matchAll(DAY_MONTH_YEAR)) {
@@ -271,11 +298,9 @@ const HEADING = /^\s*=+.*=+\s*$/;
  * An article's text as paragraphs of sentences, headings left out. `lead` is
  * true for the paragraphs before the first heading, the article's summary of
  * what its subject is.
- * @param {string} text
- * @returns {{ lead: boolean, sentences: string[] }[]}
  */
-export function paragraphsOf(text) {
-  const out = [];
+export function paragraphsOf(text: string): ArticleParagraph[] {
+  const out: ArticleParagraph[] = [];
   let lead = true;
   for (const line of String(text || "").split(/\n+/)) {
     if (HEADING.test(line)) {
@@ -301,10 +326,8 @@ const CLAUSE_BREAK =
  * A sentence's clauses, so that a figure is read with the words of its own
  * clause: in "it is 100 m high and its crater is 200 m wide", 200 m is a
  * width.
- * @param {string} sentence
- * @returns {string[]}
  */
-export function clausesOf(sentence) {
+export function clausesOf(sentence: string): string[] {
   return String(sentence || "")
     .split(CLAUSE_BREAK)
     .filter(Boolean);
@@ -313,23 +336,21 @@ export function clausesOf(sentence) {
 /**
  * A text with its figures taken out, so that the unit in "15 years" isn't
  * read as the word "year".
- * @param {string} text
- * @returns {string}
  */
-export function withoutFigures(text) {
+export function withoutFigures(text: string): string {
   return String(text || "").replace(QUANTITY, " ");
 }
 
-const lower = (s) => String(s || "").toLowerCase();
+const lower = (s: string) => String(s || "").toLowerCase();
 
 /**
  * A test for a word starting with one of `stems` ("weigh" for "weighs" and
  * "weight"). A stem may be several words ("above sea level"). Built once and
  * run on every sentence of an article.
- * @param {string[]} stems
- * @returns {(sentence: string) => boolean}
  */
-export function stemTest(stems) {
+export function stemTest(
+  stems: readonly string[] | null | undefined,
+): (sentence: string) => boolean {
   if (!stems?.length) return () => true;
   const pattern = new RegExp(
     `(?<![\\p{L}\\p{N}])(?:${stems.map((s) => escape(lower(s))).join("|")})`,
@@ -343,7 +364,7 @@ export function stemTest(stems) {
  * order, as whole words. Case doesn't matter, and a plural "s" is allowed
  * ("cats" names a cat).
  */
-export function mentions(sentence, name) {
+export function mentions(sentence: string, name: string): boolean {
   const words = lower(name)
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);

@@ -14,12 +14,20 @@ export const IMAGE_SIZES = [
   { key: "medium", label: "Medium", scale: 0.65 },
   { key: "large", label: "Large", scale: 0.85 },
   { key: "full", label: "Full", scale: 1 },
-];
+] as const satisfies ReadonlyArray<{
+  key: string;
+  label: string;
+  scale: number;
+}>;
+
+export type ImageSize = (typeof IMAGE_SIZES)[number]["key"];
 
 // Where an image sits across the width it doesn't fill. One list, so the editor
 // toggles, the importers and the MCP server all agree on what a valid alignment
 // is instead of each spelling out its own three strings.
-export const IMAGE_ALIGNS = ["left", "center", "right"];
+export const IMAGE_ALIGNS = ["left", "center", "right"] as const;
+
+export type ImageAlign = (typeof IMAGE_ALIGNS)[number];
 
 /**
  * The short extension an image block stores for a mime type. The one copy of
@@ -30,10 +38,8 @@ export const IMAGE_ALIGNS = ["left", "center", "right"];
  * The exts are the ones the docx export's ImageRun accepts (png, jpg, gif,
  * bmp). webp, svg and anything unknown map to png: the export transcodes webp
  * bytes to PNG to match (see getImageBytes in browser/imageRef.js).
- * @param {string} mime
- * @returns {string}
  */
-export function extFromMime(mime) {
+export function extFromMime(mime: string | null | undefined): string {
   const raw = (mime || "").toLowerCase().replace(/^image\//, "");
   if (raw === "jpeg") return "jpg";
   if (["png", "jpg", "gif", "bmp"].includes(raw)) return raw;
@@ -47,16 +53,20 @@ export function extFromMime(mime) {
  */
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-export const DEFAULT_IMAGE_SIZE = "full";
-export const DEFAULT_IMAGE_ALIGN = "center";
+export const DEFAULT_IMAGE_SIZE = "full" satisfies ImageSize;
+export const DEFAULT_IMAGE_ALIGN = "center" satisfies ImageAlign;
 
-export function imageSizeScale(size) {
+export function imageSizeScale(size: unknown): number {
   const found = IMAGE_SIZES.find((s) => s.key === size);
   return found ? found.scale : 1; // unknown / missing → full width
 }
 
 // Fit an image inside a max width (in px) while preserving aspect ratio.
-export function fitWithin(width, height, maxWidth) {
+export function fitWithin(
+  width: number | null | undefined,
+  height: number | null | undefined,
+  maxWidth: number,
+): { width: number; height: number } {
   if (!width || !height) return { width: maxWidth, height: maxWidth };
   if (width <= maxWidth) return { width, height };
   const scale = maxWidth / width;

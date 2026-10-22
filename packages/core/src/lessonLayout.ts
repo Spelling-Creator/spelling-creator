@@ -12,6 +12,8 @@
 // `core/browser/*` tier needs a DOM and is unreachable from the Worker by
 // design (see .oxlintrc.json), and `/hub/:id` is server-rendered.
 
+import type { LessonDoc } from "./types.ts";
+
 // Max image width inside the docx page (in px; docx maps px→EMU internally). The
 // PDF and viewer paths both reuse this number so an image is the identical size
 // everywhere.
@@ -31,6 +33,19 @@ export const DOCX_MAX_IMAGE_WIDTH = 480;
 // in: a lesson with no author and no publication date simply prints without
 // those lines.
 // ---------------------------------------------------------------------------
+
+/** What the lesson record knows about a lesson beyond the document itself. */
+export interface LessonMeta {
+  author?: string | null;
+  /** An ISO string, a timestamp, or a Date. */
+  published?: string | number | Date | null;
+}
+
+/** One centered line under the lesson title. */
+export interface TitleLine {
+  text: string;
+  bold: boolean;
+}
 
 const MONTHS = [
   "January",
@@ -59,7 +74,7 @@ const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 // New Year's Day anywhere west of Greenwich. A calendar day carries no zone, so
 // it's built as that day in local time and comes back out as the day it says.
 // Anything with a time in it is a real instant and keeps the standard parse.
-function toDate(value) {
+function toDate(value: LessonMeta["published"]): Date | null {
   if (!value) return null;
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : value;
@@ -83,12 +98,13 @@ function toDate(value) {
  * The centred lines under the lesson title, in order. The first is the by-line;
  * the rest are the lesson's age range and release month when it has them.
  *
- * @param {object} doc  the lesson document ({ title, ageRange, sections })
- * @param {{author?: string, published?: string|number|Date}} [meta]
- * @returns {Array<{text: string, bold: boolean}>}
+ * @param doc  the lesson document ({ title, ageRange, sections })
  */
-export function lessonTitleLines(doc, meta = {}) {
-  const lines = [];
+export function lessonTitleLines(
+  doc: Pick<LessonDoc, "ageRange"> | null | undefined,
+  meta: LessonMeta = {},
+): TitleLine[] {
+  const lines: TitleLine[] = [];
   const author = (meta.author || "").trim();
   if (author) lines.push({ text: `By ${author}`, bold: true });
 
@@ -109,11 +125,8 @@ export function lessonTitleLines(doc, meta = {}) {
 /**
  * The copyright line printed at the foot of every page, or "" when the lesson
  * has no author to attribute it to.
- *
- * @param {{author?: string, published?: string|number|Date}} [meta]
- * @returns {string}
  */
-export function lessonCopyright(meta = {}) {
+export function lessonCopyright(meta: LessonMeta = {}): string {
   const author = (meta.author || "").trim();
   if (!author) return "";
   const year = (toDate(meta.published) || new Date()).getFullYear();

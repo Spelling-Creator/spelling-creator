@@ -16,6 +16,7 @@ import {
   authMode,
   supabaseConfig,
   turnstileSiteKey,
+  type CoreConfig,
 } from "./config.ts";
 import { imagePublicUrl } from "./browser/imageRef.js";
 
@@ -61,7 +62,7 @@ describe("configureCore", () => {
 
   it("merges, so one key can be set without clearing another", () => {
     configureCore({ apiUrl: "https://a.test" });
-    configureCore({ somethingElse: true });
+    configureCore({ somethingElse: true } as CoreConfig);
     expect(apiUrl()).toBe("https://a.test");
   });
 

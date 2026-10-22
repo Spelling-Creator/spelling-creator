@@ -10,13 +10,13 @@
 //   a string      the plain words, which is every field written before this
 //                 existed, and any field nobody has formatted
 //   a document    a tiptap document of exactly one paragraph, in the text
-//                 block's schema (see lessonText.js): the three marks, the
+//                 block's schema (see lessonText.ts): the three marks, the
 //                 speech mark, pauses and formulas. No footnotes: the Notes
 //                 list numbers them through the text blocks, and a prompt
 //                 has nothing to cite.
 //
 // One key rather than the text block's two (`text` and `content`), because the
-// collaboration document (ydoc.js) merges a block key by key: with one key a
+// collaboration document (ydoc.ts) merges a block key by key: with one key a
 // field is simply last write wins, as a plain prompt always was. (A document
 // is stored there as a nested map whose `content` list has no keyed items, so
 // it is replaced whole too.) Whoever writes a field writes the smaller shape
@@ -37,17 +37,20 @@ import {
   textBlockParagraphs,
   textBlockPlain,
   textToContent,
+  type InlineNode,
+  type TextBlockRun,
+  type TextContent,
 } from "./lessonText.ts";
 
-function isObject(value) {
+function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 // A document's paragraphs folded into one, with a space where each break was,
 // footnotes left out and every formula in the line. A second pass through the
 // normalizer merges the runs the fold put next to each other.
-function oneParagraph(doc) {
-  const inline = [];
+function oneParagraph(doc: TextContent): TextContent {
+  const inline: InlineNode[] = [];
   for (const paragraph of doc.content) {
     const nodes = (paragraph.content || []).filter(
       (node) => node.type !== "footnote",
@@ -62,19 +65,18 @@ function oneParagraph(doc) {
       );
     }
   }
+  // A document, so the normalizer never turns it down.
   return normalizeTextContent({
     type: "doc",
     content: [{ type: "paragraph", content: inline }],
-  });
+  })!;
 }
 
 /**
  * Inline text as a document of one paragraph, whichever shape it is stored
  * in. This is what the editor shows.
- * @param {unknown} value
- * @returns {object}
  */
-export function inlineTextContent(value) {
+export function inlineTextContent(value: unknown): TextContent {
   const doc = isObject(value)
     ? normalizeTextContent(value)
     : textToContent(typeof value === "string" ? value : "");
@@ -85,10 +87,9 @@ export function inlineTextContent(value) {
  * Inline text in its stored shape: the plain string when nothing in it needs
  * more than a string, the one-paragraph document otherwise. For every writer
  * (the editor, the importers, the MCP server).
- * @param {unknown} value  A string, a document, or nothing.
- * @returns {string | object}
+ * @param value  A string, a document, or nothing.
  */
-export function normalizeInlineText(value) {
+export function normalizeInlineText(value: unknown): string | TextContent {
   if (typeof value === "string") return value;
   if (!isObject(value)) return "";
   const content = inlineTextContent(value);
@@ -98,10 +99,8 @@ export function normalizeInlineText(value) {
 /**
  * Inline text as plain words: a formula reads as its source, a pause as
  * nothing, a hinted run as its text. A plain string comes back as it is.
- * @param {unknown} value
- * @returns {string}
  */
-export function inlineTextPlain(value) {
+export function inlineTextPlain(value: unknown): string {
   if (typeof value === "string") return value;
   if (!isObject(value)) return "";
   return textBlockPlain({ content: inlineTextContent(value) });
@@ -110,38 +109,28 @@ export function inlineTextPlain(value) {
 /**
  * Inline text as runs a renderer can draw, the shape of one paragraph of
  * textBlockParagraphs (no footnotes among them).
- * @param {unknown} value
- * @returns {Array<object>}
  */
-export function inlineTextRuns(value) {
+export function inlineTextRuns(value: unknown): TextBlockRun[] {
   return textBlockParagraphs({ content: inlineTextContent(value) })[0] || [];
 }
 
-/**
- * Whether inline text has anything a plain string couldn't hold.
- * @param {unknown} value
- * @returns {boolean}
- */
-export function isPlainInlineText(value) {
+/** Whether inline text has anything a plain string couldn't hold. */
+export function isPlainInlineText(value: unknown): boolean {
   return typeof normalizeInlineText(value) === "string";
 }
 
 /**
- * Inline text as the markup the MCP server speaks (see lessonText.js), one
+ * Inline text as the markup the MCP server speaks (see lessonText.ts), one
  * line.
- * @param {unknown} value
- * @returns {string}
  */
-export function inlineTextMarkup(value) {
+export function inlineTextMarkup(value: unknown): string {
   return contentToMarkup(inlineTextContent(value));
 }
 
 /**
  * Markup as inline text in its stored shape. A line break in the markup
  * becomes a space: the field is one line.
- * @param {string} markup
- * @returns {string | object}
  */
-export function markupToInlineText(markup) {
+export function markupToInlineText(markup: string): string | TextContent {
   return normalizeInlineText(markupToContent(markup));
 }

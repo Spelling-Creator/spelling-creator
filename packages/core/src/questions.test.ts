@@ -27,6 +27,7 @@ import {
   questionStyleClass,
   questionStyleMap,
   questionStyleName,
+  type QuestionFields,
 } from "./questions.ts";
 import { normalizeLessonFile } from "./jsonImport.js";
 
@@ -91,7 +92,7 @@ describe("questionAnswerText", () => {
   // which is never rewritten on load; its wording decides which kind the
   // checks and the file export read it as.
   it("sorts a legacy open question by its wording", () => {
-    const open = (prompt) => ({ questionType: "open", prompt });
+    const open = (prompt: string) => ({ questionType: "open", prompt });
     expect(resolveOpenType(open("Name something found in a kitchen."))).toBe(
       "tight_open",
     );
@@ -123,7 +124,7 @@ describe("questionAnswerText", () => {
   // A retelling of the passage is the paraphrase, which the old lessons asked
   // as `open` too, unless the prompt opens with a tight stem.
   it("reads a legacy open as the paraphrase when it asks for a retelling", () => {
-    const open = (prompt) => ({ questionType: "open", prompt });
+    const open = (prompt: string) => ({ questionType: "open", prompt });
     expect(resolveOpenType(open("In your own words, explain why."))).toBe(
       "paraphrase",
     );
@@ -224,15 +225,14 @@ describe("questionAnswerPlain", () => {
         },
       ],
     });
-    expect(file.sections[0].blocks.map((b) => b.answer)).toEqual([
-      "1884 or 3/4",
-      "1884 or 3/4",
-    ]);
+    expect(
+      file.sections[0].blocks.map((b: { answer?: unknown }) => b.answer),
+    ).toEqual(["1884 or 3/4", "1884 or 3/4"]);
   });
 });
 
 describe("three-board questions", () => {
-  const block = (fields) => ({
+  const block = (fields: QuestionFields) => ({
     questionType: "multiple",
     answers: [{ text: "ROCKS" }, { text: "REEFS" }, { text: "SANDBARS" }],
     ...fields,
@@ -392,7 +392,10 @@ describe("the footer legend", () => {
   // the lesson asks and nothing else, in the legend's own order rather than the
   // order the lesson happened to ask them in.
   it("lists only the types a lesson uses, in legend order", () => {
-    const question = (questionType) => ({ type: "question", questionType });
+    const question = (questionType: string) => ({
+      type: "question",
+      questionType,
+    });
     const doc = {
       sections: [
         { blocks: [question("open"), { type: "text", text: "" }] },

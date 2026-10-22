@@ -10,6 +10,7 @@ import {
   systemPrompt,
 } from "./documentImportModel.ts";
 import { lessonFromSections } from "./documentImport.js";
+import type { LessonDoc } from "./types.ts";
 
 describe("the prompt", () => {
   it("lists the types in the order the model was trained on", () => {
@@ -47,7 +48,10 @@ describe("parseModelJson", () => {
   it("closes a reply cut off mid-way and keeps what was finished", () => {
     const cut =
       '{"name":"","paragraphs":["one","two"],"spellingWords":["A"],"questions":[{"prompt":"Q1?","type":"single","answers":["X"]},{"prompt":"Q2';
-    const json = parseModelJson(cut);
+    const json = parseModelJson(cut) as {
+      paragraphs: string[];
+      questions: { prompt: string }[];
+    };
     expect(json.paragraphs).toEqual(["one", "two"]);
     expect(json.questions[0].prompt).toBe("Q1?");
   });
@@ -88,8 +92,8 @@ describe("parseModelReply", () => {
       spellingWords: [],
       questions: [{ prompt: "Q?", type: "single", answers: [{ text: "A" }] }],
     });
-    expect(parseModelReply(reply).paragraphs).toEqual(["P"]);
-    expect(parseModelReply(reply).questions[0].answers).toEqual(["A"]);
+    expect(parseModelReply(reply)?.paragraphs).toEqual(["P"]);
+    expect(parseModelReply(reply)?.questions[0].answers).toEqual(["A"]);
   });
 
   it("is null for an empty section", () => {
@@ -123,7 +127,7 @@ describe("lessonFromSections with model output", () => {
           },
         ],
       },
-    ]);
+    ]) as LessonDoc;
     const questions = doc.sections[0].blocks.filter(
       (b) => b.type === "question",
     );

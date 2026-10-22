@@ -26,6 +26,8 @@
 
 import * as Y from "yjs";
 
+import type { LessonDoc } from "./types.ts";
+
 // The Y.Doc's root map, holding the whole lesson document.
 export const ROOT = "lesson";
 
@@ -35,11 +37,11 @@ export const ROOT = "lesson";
 export const LOCAL = "local";
 export const REMOTE = "remote";
 
-function isPlainObject(v) {
+function isPlainObject(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-function isYType(v) {
+function isYType(v: unknown): v is Y.Map<unknown> | Y.Array<unknown> | Y.Text {
   return v instanceof Y.Map || v instanceof Y.Array || v instanceof Y.Text;
 }
 
@@ -55,7 +57,7 @@ function isYType(v) {
  * to everyone the host admits, so lib/collab.js strips the field before
  * reconciling. See stripLocalFields in git/doc.js.)
  */
-export function keyOf(item) {
+export function keyOf(item: unknown): string | null {
   if (!isPlainObject(item)) return null;
   if (typeof item.id === "string" && item.id) return item.id;
   if (typeof item.email === "string" && item.email.trim()) {
@@ -66,7 +68,7 @@ export function keyOf(item) {
 
 // The same identity, read from a Y.Map without materialising the whole subtree
 // (keyOf(ymap.toJSON()) would deep-convert an entire block just to read its id).
-function yKeyOf(v) {
+function yKeyOf(v: unknown): string | null {
   if (!(v instanceof Y.Map)) return null;
   const id = v.get("id");
   if (typeof id === "string" && id) return id;
@@ -82,20 +84,20 @@ function yKeyOf(v) {
 // Y.Array so the first item added merges rather than replacing the whole list).
 // Anything else — a list of bare strings, say — is treated as an opaque value
 // and replaced wholesale.
-function isKeyedList(arr) {
+function isKeyedList(arr: unknown[]): boolean {
   return arr.every((item) => keyOf(item) !== null);
 }
 
 // Deep-convert a plain value into the Y type that represents it.
-function toY(value) {
+function toY(value: unknown): unknown {
   if (Array.isArray(value)) {
     if (!isKeyedList(value)) return value; // opaque: last-write-wins
-    const yarr = new Y.Array();
+    const yarr = new Y.Array<unknown>();
     yarr.push(value.map(toY));
     return yarr;
   }
   if (isPlainObject(value)) {
-    const ymap = new Y.Map();
+    const ymap = new Y.Map<unknown>();
     for (const [k, v] of Object.entries(value)) ymap.set(k, toY(v));
     return ymap;
   }
@@ -105,7 +107,7 @@ function toY(value) {
 // Structural equality for the values we store opaquely (primitives, and lists
 // with no stable keys). Order matters for those lists, so a JSON comparison is
 // both correct and cheap enough at this size.
-function sameOpaque(a, b) {
+function sameOpaque(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (isYType(a)) return false;
   return JSON.stringify(a) === JSON.stringify(b);
@@ -114,14 +116,14 @@ function sameOpaque(a, b) {
 /**
  * Make `ymap` match `obj`, touching only what actually differs.
  */
-function reconcileMap(ymap, obj) {
+function reconcileMap(ymap: Y.Map<unknown>, obj: Record<string, unknown>) {
   for (const k of [...ymap.keys()]) {
     if (!Object.prototype.hasOwnProperty.call(obj, k)) ymap.delete(k);
   }
   for (const [k, v] of Object.entries(obj)) reconcileKey(ymap, k, v);
 }
 
-function reconcileKey(ymap, key, value) {
+function reconcileKey(ymap: Y.Map<unknown>, key: string, value: unknown) {
   const cur = ymap.get(key);
 
   if (Array.isArray(value) && isKeyedList(value)) {
@@ -146,7 +148,7 @@ function reconcileKey(ymap, key, value) {
  * Make the Y.Array `yarr` match the plain list `items`, matching entries by
  * their stable key so an edit to one item never disturbs its neighbours.
  */
-function reconcileArray(yarr, items) {
+function reconcileArray(yarr: Y.Array<unknown>, items: unknown[]) {
   const targetKeys = items.map(keyOf);
   const wanted = new Set(targetKeys);
 
@@ -157,8 +159,8 @@ function reconcileArray(yarr, items) {
   // concurrently, both inserts survive the merge and the item appears twice.
   // Healing that here (and in docFromY, for a peer that never edits) is what
   // keeps drag-and-drop safe under collaboration.
-  const seen = new Set();
-  const doomed = [];
+  const seen = new Set<string>();
+  const doomed: number[] = [];
   for (let i = 0; i < yarr.length; i++) {
     const k = yKeyOf(yarr.get(i));
     if (k === null || !wanted.has(k) || seen.has(k)) doomed.push(i);
@@ -179,7 +181,8 @@ function reconcileArray(yarr, items) {
       }
     }
     if (at >= 0) {
-      const moved = yarr.get(at).toJSON();
+      // yKeyOf found a key on it, and only a Y.Map has one.
+      const moved = (yarr.get(at) as Y.Map<unknown>).toJSON();
       yarr.delete(at, 1);
       yarr.insert(i, [toY(moved)]);
     } else {
@@ -191,8 +194,9 @@ function reconcileArray(yarr, items) {
   // its counterpart.
   for (let i = 0; i < items.length; i++) {
     const cur = yarr.get(i);
-    if (cur instanceof Y.Map && isPlainObject(items[i])) {
-      reconcileMap(cur, items[i]);
+    const item = items[i];
+    if (cur instanceof Y.Map && isPlainObject(item)) {
+      reconcileMap(cur, item);
     }
   }
 }
@@ -204,11 +208,16 @@ function reconcileArray(yarr, items) {
  * rather than one per field. Emits no update at all when `doc` already matches
  * what the Y.Doc holds — see the note on idempotency at the top of this file.
  *
- * @param {Y.Doc}  ydoc
- * @param {object} doc     The editor document ({ title, sections, ... }).
- * @param {string} [origin] Transaction origin; LOCAL edits are the ones we broadcast.
+ * @param doc     The editor document ({ title, sections, ... }), a LessonDoc
+ *                in practice. Any plain object will do, since nothing here
+ *                knows the lesson's schema.
+ * @param origin  Transaction origin; LOCAL edits are the ones we broadcast.
  */
-export function reconcile(ydoc, doc, origin = LOCAL) {
+export function reconcile(
+  ydoc: Y.Doc,
+  doc: object,
+  origin: string = LOCAL,
+): void {
   ydoc.transact(() => {
     reconcileMap(ydoc.getMap(ROOT), isPlainObject(doc) ? doc : {});
   }, origin);
@@ -218,10 +227,10 @@ export function reconcile(ydoc, doc, origin = LOCAL) {
 // them in the Y.Doc, but a peer that only *receives* edits never reconciles, so
 // the read path has to heal them too or a concurrent reorder would show them a
 // doubled block.
-function dedupe(value) {
+function dedupe(value: unknown): unknown {
   if (Array.isArray(value)) {
-    const seen = new Set();
-    const out = [];
+    const seen = new Set<string>();
+    const out: unknown[] = [];
     for (const item of value) {
       const k = keyOf(item);
       if (k !== null) {
@@ -233,7 +242,7 @@ function dedupe(value) {
     return out;
   }
   if (isPlainObject(value)) {
-    const out = {};
+    const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) out[k] = dedupe(v);
     return out;
   }
@@ -242,16 +251,19 @@ function dedupe(value) {
 
 /**
  * Read the Y.Doc back out as the plain document the editor renders.
+ *
+ * Typed as the lesson because that is what every caller reconciles in. The
+ * bridge itself checks nothing: a Y.Doc nobody has reconciled reads as `{}`.
  */
-export function docFromY(ydoc) {
-  return dedupe(ydoc.getMap(ROOT).toJSON());
+export function docFromY(ydoc: Y.Doc): LessonDoc {
+  return dedupe(ydoc.getMap(ROOT).toJSON()) as LessonDoc;
 }
 
 /**
  * The whole Y.Doc as one update — used to seed a room and to hand the current
  * lesson to someone the host has just admitted.
  */
-export function encodeState(ydoc) {
+export function encodeState(ydoc: Y.Doc): Uint8Array {
   return Y.encodeStateAsUpdate(ydoc);
 }
 
@@ -259,6 +271,6 @@ export function encodeState(ydoc) {
  * Merge an update received from the room. Tagged REMOTE so the update handler
  * knows not to echo it back to the sender.
  */
-export function applyRemote(ydoc, update) {
+export function applyRemote(ydoc: Y.Doc, update: Uint8Array): void {
   Y.applyUpdate(ydoc, update, REMOTE);
 }

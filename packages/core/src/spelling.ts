@@ -4,9 +4,10 @@
 
 import { ANSWER_GAP } from "./questions.ts";
 import { textBlockPlain } from "./lessonText.ts";
+import type { Block, SpellingBlock, TextBlock } from "./types.ts";
 
 // Accent colour for the spelling-words block (chip + docx label + left border).
-// Teal, distinct from every question-type colour in questions.js.
+// Teal, distinct from every question-type colour in questions.ts.
 export const SPELLING_COLOR = "#0c8599";
 
 // The label a printed lesson puts in front of the words. They print as one
@@ -22,7 +23,7 @@ export const SPELLING_WORD_SEPARATOR = ANSWER_GAP;
 // the id helper (same convention as createQuestionBlock). Words are stored as
 // { id, text } objects — like the multiple-choice answers — so each row has a
 // stable key for React and for the collaboration field tracking.
-export function createSpellingBlock(newId) {
+export function createSpellingBlock(newId: () => string): SpellingBlock {
   return { id: newId(), type: "spelling", words: [{ id: newId(), text: "" }] };
 }
 
@@ -31,10 +32,15 @@ export function createSpellingBlock(newId) {
 // uppercase (so "DOG" qualifies but "Dog" and "dog" do not). Used by the
 // spelling block's fill button to populate the list from the words already
 // written into the passage.
-export function extractCapitalizedWords(doc) {
+export function extractCapitalizedWords(
+  doc:
+    | { sections?: ReadonlyArray<{ blocks?: readonly Block[] }> }
+    | null
+    | undefined,
+): string[] {
   const text = (doc?.sections || [])
     .flatMap((s) => s.blocks || [])
-    .filter((b) => b.type === "text")
+    .filter((b): b is TextBlock => b.type === "text")
     .map(textBlockPlain)
     .join("\n");
 

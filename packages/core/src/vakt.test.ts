@@ -162,7 +162,8 @@ describe("a VAKT block in the walkthrough", () => {
   it("appears with the section's material, not as a step of its own", () => {
     const steps = buildInteractiveSteps(doc);
     expect(steps.map((s) => s.kind)).toEqual(["content", "question"]);
-    expect(steps[0].blocks.map((b) => b.id)).toEqual(["b1", "b3"]);
+    const content = steps[0] as { blocks: Array<{ id: string }> };
+    expect(content.blocks.map((b) => b.id)).toEqual(["b1", "b3"]);
   });
 
   it("is never counted as a question", () => {
@@ -208,7 +209,7 @@ describe("importing a VAKT block from a lesson file", () => {
     const [block] = sections[0].blocks;
     expect(block.type).toBe("vakt");
     expect(block.text).toBe("Do 3 wall pushes");
-    expect(block.links.map((l) => l.url)).toEqual([
+    expect(block.links.map((l: { url: string }) => l.url)).toEqual([
       "https://example.org",
       "https://example.org/two",
     ]);

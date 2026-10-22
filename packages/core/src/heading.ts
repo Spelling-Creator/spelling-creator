@@ -11,31 +11,27 @@
 // the exporters and the importers, so the label and the block shape stay in
 // sync everywhere.
 
-/**
- * Whether a block is a heading.
- * @param {object} block
- * @returns {boolean}
- */
-export function isHeadingBlock(block) {
-  return Boolean(block) && block.type === "heading";
+import type { HeadingBlock } from "./types.ts";
+
+/** Whether a block is a heading. */
+export function isHeadingBlock(
+  block: { type?: unknown } | null | undefined,
+): boolean {
+  return Boolean(block) && block?.type === "heading";
 }
 
 /**
  * Build a fresh, empty heading block. `newId` is injected so this stays
  * decoupled from the id helper (same convention as createVaktBlock).
- * @param {() => string} newId
- * @returns {{ id: string, type: "heading", text: string }}
  */
-export function createHeadingBlock(newId) {
+export function createHeadingBlock(newId: () => string): HeadingBlock {
   return { id: newId(), type: "heading", text: "" };
 }
 
-/**
- * The heading's text, trimmed, or "" for a block with none.
- * @param {object} block
- * @returns {string}
- */
-export function headingText(block) {
+/** The heading's text, trimmed, or "" for a block with none. */
+export function headingText(
+  block: { text?: unknown } | null | undefined,
+): string {
   return String(block?.text ?? "").trim();
 }
 

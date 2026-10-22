@@ -19,6 +19,17 @@
 // Nothing in this module may touch the DOM: the MCP server and the Worker
 // import it too.
 
+export interface CaptionParts {
+  caption: string;
+  credit: string;
+}
+
+/** The fields this module reads off a block that may carry a picture. */
+interface CaptionFields {
+  caption?: unknown;
+  credit?: unknown;
+}
+
 // One pair of parentheses, which may hold one more pair inside it ("(by John
 // Smith (NASA), Public domain)"). Balanced rather than greedy, so a caption
 // that opens with "Image (cute) of a dog." isn't swallowed up to a credit
@@ -49,10 +60,8 @@ const TRAILING_SEPARATOR = /[\s,;:|([-]+$/;
  * Split a caption written before credits had their own field into the author's
  * caption and the credit line this app appended or wrote for them. A caption
  * with no recognized credit comes back whole, with an empty credit.
- * @param {string} caption
- * @returns {{ caption: string, credit: string }}
  */
-export function splitLegacyCredit(caption) {
+export function splitLegacyCredit(caption: unknown): CaptionParts {
   const text = typeof caption === "string" ? caption.trim() : "";
   const match = LEGACY_CREDIT.exec(text);
   if (!match) return { caption: text, credit: "" };
@@ -70,10 +79,10 @@ export function splitLegacyCredit(caption) {
  * removed it on purpose and must not be re-derived from the caption. A block
  * without one is from before the split, and its caption is read with
  * splitLegacyCredit.
- * @param {{ caption?: string, credit?: string } | null | undefined} block
- * @returns {{ caption: string, credit: string }}
  */
-export function imageCaptionParts(block) {
+export function imageCaptionParts(
+  block: CaptionFields | null | undefined,
+): CaptionParts {
   if (typeof block?.credit === "string") {
     return {
       caption: typeof block.caption === "string" ? block.caption.trim() : "",
@@ -86,12 +95,11 @@ export function imageCaptionParts(block) {
 /**
  * The block with its caption and credit written out as separate fields, so it
  * no longer relies on the legacy split. Used when either field is edited.
- * @template T
- * @param {T & { caption?: string, credit?: string }} block
- * @param {{ caption?: string, credit?: string }} [changes]
- * @returns {T & { caption: string, credit: string }}
  */
-export function withImageCaptionParts(block, changes = {}) {
+export function withImageCaptionParts<T extends CaptionFields>(
+  block: T,
+  changes: Partial<CaptionParts> = {},
+): Omit<T, keyof CaptionParts> & CaptionParts {
   const parts = imageCaptionParts(block);
   return {
     ...block,
@@ -103,10 +111,10 @@ export function withImageCaptionParts(block, changes = {}) {
 /**
  * Whether a block carries a picture, and so a caption and credit: every image
  * block, and a VAKT block that has one.
- * @param {any} block
- * @returns {boolean}
  */
-export function hasPicture(block) {
+export function hasPicture(
+  block: { type?: unknown; image?: unknown; src?: unknown } | null | undefined,
+): boolean {
   if (block?.type === "image") return true;
   return block?.type === "vakt" && Boolean(block.image || block.src);
 }
@@ -122,10 +130,11 @@ export function hasPicture(block) {
  * picture in the stored lesson the moment it was opened, which version
  * history would record as an edit by whoever opened it and a live session
  * would broadcast to everyone in it.
- * @template T
- * @param {T} block
- * @returns {T}
  */
-export function withSeparateCredit(block) {
-  return hasPicture(block) ? withImageCaptionParts(block) : block;
+export function withSeparateCredit<
+  T extends CaptionFields & { type?: unknown; image?: unknown; src?: unknown },
+>(block: T): T {
+  // A picture's caption and credit come back as strings, which a block that
+  // carries one already holds them as (see Picture in types.ts).
+  return hasPicture(block) ? (withImageCaptionParts(block) as T) : block;
 }

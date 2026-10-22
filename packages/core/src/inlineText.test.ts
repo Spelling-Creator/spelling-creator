@@ -11,13 +11,13 @@ import {
 } from "./inlineText.ts";
 import { inlineTextSpeech } from "./speech.ts";
 
-const text = (t, marks = []) =>
+const text = (t: string, marks: string[] = []) =>
   marks.length
     ? { type: "text", text: t, marks: marks.map((type) => ({ type })) }
     : { type: "text", text: t };
-const para = (...content) => ({ type: "paragraph", content });
-const doc = (...content) => ({ type: "doc", content });
-const math = (source, extra = {}) => ({
+const para = (...content: object[]) => ({ type: "paragraph", content });
+const doc = (...content: object[]) => ({ type: "doc", content });
+const math = (source: string, extra: Record<string, unknown> = {}) => ({
   type: "math",
   attrs: { format: "tex", source, display: false, spoken: null, ...extra },
 });
@@ -88,7 +88,7 @@ describe("reading", () => {
   const value = doc(
     para(
       text("The "),
-      text("Fresnel", [], undefined),
+      text("Fresnel"),
       text(" lens: "),
       math("\\frac{60}{5} = 12"),
       { type: "pause", attrs: { length: "short" } },

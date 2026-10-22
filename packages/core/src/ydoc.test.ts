@@ -20,11 +20,37 @@ import {
   encodeState,
   reconcile,
 } from "./ydoc.ts";
+import type { TextItem } from "./types.ts";
+
+// The fixture as the tests reach into it: any field a test edits, on any block.
+interface TestBlock {
+  id: string;
+  type: string;
+  text?: string;
+  questionType?: string;
+  prompt?: string;
+  answer?: string;
+  words?: TextItem[];
+}
+
+interface TestDoc {
+  title: string;
+  sections: { id: string; name: string; blocks: TestBlock[] }[];
+  trustedCollaborators: { email: string; name: string }[];
+}
+
+// docFromY's LessonDoc, read as the fixture it was reconciled from.
+const read = (ydoc: Y.Doc) => docFromY(ydoc) as unknown as TestDoc;
+
+interface Peer {
+  ydoc: Y.Doc;
+  outbox: Uint8Array[];
+}
 
 // A peer: a Y.Doc plus the updates it has emitted for broadcast.
-function peer() {
+function peer(): Peer {
   const ydoc = new Y.Doc();
-  const outbox = [];
+  const outbox: Uint8Array[] = [];
   ydoc.on("update", (update, origin) => {
     if (origin === LOCAL) outbox.push(update);
   });
@@ -32,20 +58,20 @@ function peer() {
 }
 
 // Everything a peer has queued, delivered to another peer.
-function flush(from, to) {
+function flush(from: Peer, to: Peer) {
   for (const update of from.outbox) applyRemote(to.ydoc, update);
   from.outbox.length = 0;
 }
 
 // A second peer joining a room: seeded from the host's current state, exactly as
 // an admitted guest is.
-function join(host) {
+function join(host: Peer) {
   const guest = peer();
   applyRemote(guest.ydoc, encodeState(host.ydoc));
   return guest;
 }
 
-const lesson = () => ({
+const lesson = (): TestDoc => ({
   title: "Week 1",
   sections: [
     {
@@ -169,7 +195,7 @@ describe("convergence", () => {
     flush(host, guest);
     flush(guest, host);
 
-    const merged = docFromY(host.ydoc);
+    const merged = read(host.ydoc);
     expect(docFromY(guest.ydoc)).toEqual(merged);
     expect(merged.sections[0].blocks[0].text).toBe("Host edited this");
     expect(merged.sections[1].blocks[0].prompt).toBe("Guest edited this");
@@ -191,7 +217,7 @@ describe("convergence", () => {
     flush(host, guest);
     flush(guest, host);
 
-    const merged = docFromY(host.ydoc);
+    const merged = read(host.ydoc);
     expect(docFromY(guest.ydoc)).toEqual(merged);
     expect(merged.sections[1].blocks[0].prompt).toBe("New prompt");
     expect(merged.sections[1].blocks[0].answer).toBe("kitten");
@@ -245,7 +271,7 @@ describe("convergence", () => {
     flush(host, guest);
     flush(guest, host);
 
-    const merged = docFromY(host.ydoc);
+    const merged = read(host.ydoc);
     expect(docFromY(guest.ydoc)).toEqual(merged);
     expect(merged.sections[0].blocks.map((b) => b.id)).toEqual(["b1"]);
     expect(merged.sections[0].blocks[0].text).toBe("still here");
@@ -257,21 +283,21 @@ describe("convergence", () => {
     const guest = join(host);
 
     const hostDoc = lesson();
-    hostDoc.sections[0].blocks[1].words.push({ id: "w2", text: "dog" });
+    hostDoc.sections[0].blocks[1].words!.push({ id: "w2", text: "dog" });
     reconcile(host.ydoc, hostDoc);
 
     const guestDoc = lesson();
-    guestDoc.sections[0].blocks[1].words[0].text = "cats";
+    guestDoc.sections[0].blocks[1].words![0].text = "cats";
     reconcile(guest.ydoc, guestDoc);
 
     flush(host, guest);
     flush(guest, host);
 
-    const words = docFromY(host.ydoc).sections[0].blocks[1].words;
+    const words = read(host.ydoc).sections[0].blocks[1].words;
     expect(docFromY(guest.ydoc)).toEqual(docFromY(host.ydoc));
     expect(words).toHaveLength(2);
-    expect(words.find((w) => w.id === "w1").text).toBe("cats");
-    expect(words.find((w) => w.id === "w2").text).toBe("dog");
+    expect(words?.find((w) => w.id === "w1")?.text).toBe("cats");
+    expect(words?.find((w) => w.id === "w2")?.text).toBe("dog");
   });
 
   it("keys trusted collaborators by email, not position", () => {
@@ -290,10 +316,12 @@ describe("convergence", () => {
     flush(host, guest);
     flush(guest, host);
 
-    const list = docFromY(host.ydoc).trustedCollaborators;
+    const list = read(host.ydoc).trustedCollaborators;
     expect(docFromY(guest.ydoc)).toEqual(docFromY(host.ydoc));
     expect(list).toHaveLength(2);
-    expect(list.find((t) => t.email === "co@school.org").name).toBe("Samantha");
+    expect(list.find((t) => t.email === "co@school.org")?.name).toBe(
+      "Samantha",
+    );
   });
 });
 
@@ -356,9 +384,9 @@ describe("reordering", () => {
     flush(host, guest);
     flush(guest, host);
 
-    const merged = docFromY(host.ydoc);
+    const merged = read(host.ydoc);
     expect(docFromY(guest.ydoc)).toEqual(merged);
-    expect(merged.sections[0].blocks.find((b) => b.id === "b1").text).toBe(
+    expect(merged.sections[0].blocks.find((b) => b.id === "b1")?.text).toBe(
       "edited while moving",
     );
   });
@@ -384,7 +412,7 @@ describe("known limits", () => {
     flush(host, guest);
     flush(guest, host);
 
-    const merged = docFromY(host.ydoc);
+    const merged = read(host.ydoc);
     expect(docFromY(guest.ydoc)).toEqual(merged);
     // One of the two wins outright — but both peers agree on which.
     expect(["host version", "guest version"]).toContain(

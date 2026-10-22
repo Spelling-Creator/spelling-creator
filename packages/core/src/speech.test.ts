@@ -12,15 +12,16 @@ import {
   textBlockSpeech,
   withFormulaSpeech,
 } from "./speech.ts";
+import type { RichNode } from "./types.ts";
 
-const block = (...paragraphs) => ({
-  type: "text",
+const block = (...paragraphs: RichNode[][]) => ({
+  type: "text" as const,
   content: {
     type: "doc",
     content: paragraphs.map((content) => ({ type: "paragraph", content })),
   },
 });
-const text = (t, speech) =>
+const text = (t: string, speech?: Record<string, string>) =>
   speech
     ? { type: "text", text: t, marks: [{ type: "speech", attrs: speech }] }
     : { type: "text", text: t };
@@ -142,7 +143,12 @@ describe("chunkSpeech", () => {
     expect(said.every((s) => s.length <= 100)).toBe(true);
     expect(said.join(" ")).toBe(`${sentence}. Fresnel ${sentence}.`);
     expect(
-      chunks.some((chunk) => chunk.runs.some((run) => run.ipa === "freɪˈnɛl")),
+      chunks.some((chunk) =>
+        chunk.runs.some(
+          (run) =>
+            typeof run === "object" && "ipa" in run && run.ipa === "freɪˈnɛl",
+        ),
+      ),
     ).toBe(true);
   });
 
@@ -161,8 +167,8 @@ describe("chunkSpeech", () => {
 
 describe("formulas in spoken text", () => {
   const formula = { format: "asciimath", source: "3/4" };
-  const block = (spoken) => ({
-    type: "text",
+  const block = (spoken: string | null) => ({
+    type: "text" as const,
     content: {
       type: "doc",
       content: [
@@ -204,7 +210,7 @@ describe("formulas in spoken text", () => {
       [{ text: "x^2", formula: { format: "tex", source: "x^2" } }],
     ]);
     expect(hasFormulaSpeech(chunks)).toBe(true);
-    const asked = [];
+    const asked: string[] = [];
     const said = await withFormulaSpeech(chunks, async ({ source }) => {
       asked.push(source);
       if (source === "x^2") throw new Error("no");

@@ -38,8 +38,11 @@ const USERNAME_RE = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 // address from a username, which is all it is used for.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** What someone typed, or a stored address, which may be missing. */
+type MaybeText = string | null | undefined;
+
 /** Whether this is an email address rather than a username. */
-export function isEmailAddress(value) {
+export function isEmailAddress(value: MaybeText): boolean {
   return EMAIL_RE.test(String(value || "").trim());
 }
 
@@ -49,14 +52,14 @@ export function isEmailAddress(value) {
  * Case-folded because it becomes an email local part, and somebody who
  * registered as `Oliver` will later type `oliver` and expect to get in.
  */
-export function normalizeUsername(value) {
+export function normalizeUsername(value: MaybeText): string {
   return String(value || "")
     .trim()
     .toLowerCase();
 }
 
 /** Whether `value` is usable as a username, once normalized. */
-export function isUsername(value) {
+export function isUsername(value: MaybeText): boolean {
   const name = normalizeUsername(value);
   return (
     name.length >= USERNAME_MIN_LENGTH &&
@@ -67,12 +70,11 @@ export function isUsername(value) {
 
 /**
  * The address a username signs in as.
- *
- * @param {string} username
- * @param {string} [domain]
- * @returns {string}
  */
-export function usernameToEmail(username, domain = DEFAULT_USERNAME_DOMAIN) {
+export function usernameToEmail(
+  username: MaybeText,
+  domain: MaybeText = DEFAULT_USERNAME_DOMAIN,
+): string {
   return `${normalizeUsername(username)}@${String(
     domain || DEFAULT_USERNAME_DOMAIN,
   )
@@ -87,7 +89,10 @@ export function usernameToEmail(username, domain = DEFAULT_USERNAME_DOMAIN) {
  * into, which is an implementation detail they never chose and should not have
  * to look at.
  */
-export function usernameFromEmail(email, domain = DEFAULT_USERNAME_DOMAIN) {
+export function usernameFromEmail(
+  email: MaybeText,
+  domain: MaybeText = DEFAULT_USERNAME_DOMAIN,
+): string {
   const suffix = `@${String(domain || DEFAULT_USERNAME_DOMAIN)
     .trim()
     .toLowerCase()}`;
@@ -107,9 +112,12 @@ export function usernameFromEmail(email, domain = DEFAULT_USERNAME_DOMAIN) {
  * same field accepts both, and which one it is is decided by the value rather
  * than by a toggle the person has to find.
  *
- * @returns {{ email: string, kind: 'email' | 'username' } | null} null when it is neither.
+ * @returns null when it is neither.
  */
-export function identifierToEmail(input, domain = DEFAULT_USERNAME_DOMAIN) {
+export function identifierToEmail(
+  input: MaybeText,
+  domain: MaybeText = DEFAULT_USERNAME_DOMAIN,
+): { email: string; kind: "email" | "username" } | null {
   const value = String(input || "").trim();
   if (value.includes("@")) {
     return isEmailAddress(value)

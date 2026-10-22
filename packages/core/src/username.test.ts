@@ -96,8 +96,8 @@ describe("identifierToEmail", () => {
 
   it("decides by the value, not by a toggle", () => {
     // This is what lets one field accept either on an instance that has both.
-    expect(identifierToEmail("oliver").kind).toBe("username");
-    expect(identifierToEmail("oliver@example.com").kind).toBe("email");
+    expect(identifierToEmail("oliver")?.kind).toBe("username");
+    expect(identifierToEmail("oliver@example.com")?.kind).toBe("email");
   });
 
   it("returns null for something that is neither", () => {

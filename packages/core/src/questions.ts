@@ -23,8 +23,44 @@
 // mapped too or it imports as plain text.
 
 import { inlineTextPlain } from "./inlineText.ts";
+import type {
+  QuestionBlock,
+  QuestionType,
+  StepItem,
+  TextItem,
+} from "./types.ts";
 
-export const QUESTION_TYPES = {
+export interface QuestionTypeMeta {
+  key: QuestionType;
+  label: string;
+  short: string;
+  tag: string;
+  description: string;
+  color: string;
+  /** The labels the type shipped with before it took the format's name. */
+  styleAliases?: string[];
+  italic?: boolean;
+  legacy?: boolean;
+  /** A shorter name for the printed footer legend than `label`. */
+  legend?: string;
+}
+
+/**
+ * A question block as the readers here take it: possibly mid-edit, or not yet
+ * through the importer, so every field may be missing.
+ */
+export interface QuestionFields {
+  questionType?: string;
+  prompt?: unknown;
+  threeBoard?: unknown;
+  besides?: unknown;
+  answer?: unknown;
+  answers?: ReadonlyArray<{ text?: string }>;
+}
+
+export const QUESTION_TYPES: {
+  readonly [K in QuestionType]: QuestionTypeMeta & { key: K };
+} = {
   number: {
     key: "number",
     label: "Math",
@@ -114,7 +150,7 @@ export const QUESTION_TYPES = {
     color: "#e64980", // pink
     // Lessons stored before the split carry this type, and the app never
     // rewrites a stored block on load (that would show up as an edit in
-    // version history and broadcast to a live session; see imageCredit.js). So
+    // version history and broadcast to a live session; see imageCredit.ts). So
     // it stays a type every reader understands, printed and checked as the
     // kind its wording suggests (resolveOpenType), but the menus no longer
     // offer it: a new question is tight or broad.
@@ -132,7 +168,7 @@ export const QUESTION_TYPES = {
     description: "Choose between options; no right answer",
     // Grape: a red-violet, sitting between `number`'s blue-violet and `open`'s
     // pink but readable against both. Teal was the obvious free hue, but the
-    // spelling block already prints teal (see spelling.js). If the colour is
+    // spelling block already prints teal (see spelling.ts). If the colour is
     // ever in doubt on paper, the prompt itself disambiguates: every question
     // of this type starts "Would you rather".
     color: "#9c36b5",
@@ -148,7 +184,8 @@ export const QUESTION_TYPES = {
   },
 };
 
-export const QUESTION_TYPE_LIST = Object.values(QUESTION_TYPES);
+export const QUESTION_TYPE_LIST: QuestionTypeMeta[] =
+  Object.values(QUESTION_TYPES);
 
 /** The types a menu offers for a new question: every type but the legacy one. */
 export const QUESTION_TYPE_MENU = QUESTION_TYPE_LIST.filter((q) => !q.legacy);
@@ -157,11 +194,17 @@ export const QUESTION_TYPE_MENU = QUESTION_TYPE_LIST.filter((q) => !q.legacy);
 // lessons were saved with. All print pink, carry no answer key (a tight open
 // may carry examples), and are the questions a speller answers from their own
 // world rather than from the passage.
-export const OPEN_TYPE_KEYS = ["tight_open", "broad_open", "open"];
+export const OPEN_TYPE_KEYS = [
+  "tight_open",
+  "broad_open",
+  "open",
+] as const satisfies readonly QuestionType[];
 
 /** Is this one of the open (pink) types, the legacy one included? */
-export function isOpenType(questionType) {
-  return OPEN_TYPE_KEYS.includes(questionType);
+export function isOpenType(
+  questionType: unknown,
+): questionType is (typeof OPEN_TYPE_KEYS)[number] {
+  return OPEN_TYPE_KEYS.some((key) => key === questionType);
 }
 
 // Sorting a legacy `open` question, which never said what kind it was, by its
@@ -198,10 +241,10 @@ const TIGHT_OPEN_MAX_WORDS = 12;
  * The type a question reads as: its own type for anything but a legacy
  * `open` block, and for one of those the type its wording reads as (a tight
  * open, the paraphrase or a broad open).
- * @param {{ questionType?: string, prompt?: string }} block
- * @returns {string}
  */
-export function resolveOpenType(block) {
+export function resolveOpenType(
+  block: Pick<QuestionFields, "questionType" | "prompt"> | null | undefined,
+): string | undefined {
   if (block?.questionType !== "open") return block?.questionType;
   const prompt = inlineTextPlain(block.prompt);
   if (TIGHT_STEM.test(prompt)) return "tight_open";
@@ -232,7 +275,9 @@ export const THREE_BOARD_MARK = "(3B)";
 export const BESIDES_LABEL = "Besides";
 
 /** Whether a block carries the three-board mark. Only a `multiple` can. */
-export function isThreeBoard(block) {
+export function isThreeBoard(
+  block: Pick<QuestionFields, "questionType" | "threeBoard"> | null | undefined,
+): boolean {
   return block?.questionType === "multiple" && block.threeBoard === true;
 }
 
@@ -241,10 +286,10 @@ export function isThreeBoard(block) {
  * null when the block has no Besides line or names an answer that is no
  * longer in the list (an answer edited or removed after the line was set).
  * Matched without regard to case, as the format compares answers.
- * @param {object} block
- * @returns {string|null}
  */
-export function questionBesides(block) {
+export function questionBesides(
+  block: QuestionFields | null | undefined,
+): string | null {
   if (block?.questionType !== "multiple") return null;
   const wanted = String(block.besides ?? "")
     .trim()
@@ -260,10 +305,10 @@ export function questionBesides(block) {
 /**
  * What a Besides line asks for: every accepted answer but the one it names.
  * Empty when the block has no usable Besides line.
- * @param {object} block
- * @returns {string[]}
  */
-export function besidesAnswers(block) {
+export function besidesAnswers(
+  block: QuestionFields | null | undefined,
+): string[] {
   const named = questionBesides(block);
   if (named == null) return [];
   return questionAnswerItems(block).filter(
@@ -279,7 +324,7 @@ export const BESIDES_LINE_STYLE_NAME = "S2C Besides Line";
 export const BESIDES_LINE_CLASS = "s2c-besides-line";
 
 /** The mammoth style-map entry turning the Besides style back into a class. */
-export function besidesStyleMap() {
+export function besidesStyleMap(): string[] {
   return [
     `p[style-name='${BESIDES_LINE_STYLE_NAME}'] => p.${BESIDES_LINE_CLASS}:fresh`,
   ];
@@ -292,11 +337,16 @@ export function besidesStyleMap() {
 // that isn't among them can still be right. Consumers that care about the shape
 // of the block (the editor's answer rows, the exporters) treat them alike;
 // consumers that care about the contract (validation, the answer reveal) don't.
-export const ORANGE_TYPE_KEYS = ["multiple", "multiple_open"];
+export const ORANGE_TYPE_KEYS = [
+  "multiple",
+  "multiple_open",
+] as const satisfies readonly QuestionType[];
 
 /** Is this one of the two semi-open (orange) types? */
-export function isOrangeType(questionType) {
-  return ORANGE_TYPE_KEYS.includes(questionType);
+export function isOrangeType(
+  questionType: unknown,
+): questionType is (typeof ORANGE_TYPE_KEYS)[number] {
+  return ORANGE_TYPE_KEYS.some((key) => key === questionType);
 }
 
 // The order the printed footer legend lists the types in: the order a section
@@ -305,7 +355,7 @@ export function isOrangeType(questionType) {
 // asks a legend to keep. This is a reading order for the legend only; the editor's type
 // picker keeps QUESTION_TYPES' own order. The legacy open type comes last,
 // since it only appears under lessons saved before the split.
-export const QUESTION_LEGEND = [
+export const QUESTION_LEGEND: QuestionTypeMeta[] = [
   QUESTION_TYPES.single,
   QUESTION_TYPES.background,
   QUESTION_TYPES.number,
@@ -322,7 +372,9 @@ export const QUESTION_LEGEND = [
  * unless the type carries a shorter legend name of its own (only `wyr` does
  * today). The tag comes first because the legend is where a reader looks up
  * the mark in front of a prompt. */
-export function questionLegendText(type) {
+export function questionLegendText(
+  type: Pick<QuestionTypeMeta, "tag" | "label" | "legend">,
+): string {
   return `${type.tag} ${(type.legend || type.label).toUpperCase()}`;
 }
 
@@ -348,10 +400,11 @@ export const QUESTION_TAG_PREFIX = new RegExp(
  * the three-board mark. The mark is part of the marking, not the wording, so
  * a reader taking a printed lesson back in puts it on the block rather than
  * leaving "(3B)" at the front of the prompt.
- * @param {string} line
- * @returns {{ text: string, threeBoard: boolean }}
  */
-export function readQuestionTag(line) {
+export function readQuestionTag(line: string): {
+  text: string;
+  threeBoard: boolean;
+} {
   const match = QUESTION_TAG_PREFIX.exec(line);
   if (!match) return { text: line, threeBoard: false };
   return {
@@ -368,11 +421,21 @@ export function readQuestionTag(line) {
  *
  * Unknown types count as `open`, the same fallback questionMeta applies when
  * colouring the prompt, so the legend always names the colour that was printed.
- * @param {{ sections?: Array<{ blocks?: any[] }> }} doc
- * @returns {typeof QUESTION_LEGEND}
  */
-export function questionLegendFor(doc) {
-  const used = new Set();
+export function questionLegendFor(
+  doc:
+    | {
+        sections?: ReadonlyArray<{
+          blocks?: ReadonlyArray<{
+            type?: string;
+            questionType?: string;
+          } | null> | null;
+        } | null>;
+      }
+    | null
+    | undefined,
+): QuestionTypeMeta[] {
+  const used = new Set<QuestionType>();
   for (const section of doc?.sections || []) {
     for (const block of section?.blocks || []) {
       if (block?.type === "question")
@@ -396,17 +459,17 @@ export function questionLegendFor(doc) {
 // ---------------------------------------------------------------------------
 
 /** The Word style id for a question type's prompt run. */
-export function questionStyleId(key) {
+export function questionStyleId(key: string): string {
   return `s2cQuestion${key.charAt(0).toUpperCase()}${key.slice(1)}`;
 }
 
 /** The Word style *name* — what mammoth matches on in a style map. */
-export function questionStyleName(key) {
+export function questionStyleName(key: string): string {
   return `S2C Question ${questionMeta(key).label}`;
 }
 
 /** The HTML class mammoth is told to emit for that style. */
-export function questionStyleClass(key) {
+export function questionStyleClass(key: string): string {
   return `s2c-q-${key}`;
 }
 
@@ -414,9 +477,8 @@ export function questionStyleClass(key) {
  * The mammoth style map that turns each question style back into a tagged span.
  * Shared by the PDF exporter (which colours the spans) and the DOCX importer
  * (which reads the type off them).
- * @returns {string[]}
  */
-export function questionStyleMap() {
+export function questionStyleMap(): string[] {
   return QUESTION_TYPE_LIST.flatMap((q) =>
     [questionStyleName(q.key), ...questionStyleAliases(q.key)].map(
       (name) => `r[style-name='${name}'] => span.${questionStyleClass(q.key)}`,
@@ -427,10 +489,8 @@ export function questionStyleMap() {
 /**
  * The style names a type's prompt run carried in documents exported before
  * its label changed, so those documents still import with their types.
- * @param {string} key
- * @returns {string[]}
  */
-export function questionStyleAliases(key) {
+export function questionStyleAliases(key: string): string[] {
   return (questionMeta(key).styleAliases || []).map(
     (label) => `S2C Question ${label}`,
   );
@@ -445,28 +505,30 @@ export const QUESTION_TAG_STYLE_NAME = "S2C Question Tag";
 export const QUESTION_TAG_STYLE_CLASS = "s2c-q-tag";
 
 /** The mammoth style-map entry turning the tag style back into a tagged span. */
-export function questionTagStyleMap() {
+export function questionTagStyleMap(): string[] {
   return [
     `r[style-name='${QUESTION_TAG_STYLE_NAME}'] => span.${QUESTION_TAG_STYLE_CLASS}`,
   ];
 }
 
 // Types whose answer is a single value held on `block.answer`.
-const SINGLE_ANSWER_TYPES = new Set(["number", "single", "background"]);
+const SINGLE_ANSWER_TYPES: ReadonlySet<unknown> = new Set<QuestionType>([
+  "number",
+  "single",
+  "background",
+]);
 
 /**
  * A single answer (`block.answer`) as plain words. An answer is a plain
  * string, and a number question's may have been stored as a number. But a
  * lesson can also arrive with an answer in the prompt's rich inline-text
- * shape (a one-paragraph document; see inlineText.js), written by a client
+ * shape (a one-paragraph document; see inlineText.ts), written by a client
  * that gave the answer field the same editor as the prompt. Read as a
  * string that would be "[object Object]", which the number field then tries
  * to parse. So every reader of a single answer, and the importer, takes the
  * words of whatever shape is there.
- * @param {unknown} value
- * @returns {string}
  */
-export function questionAnswerPlain(value) {
+export function questionAnswerPlain(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "object") return inlineTextPlain(value);
   return String(value);
@@ -481,7 +543,11 @@ export const ANSWER_GAP = " \u00A0 ";
 
 // Types that hold a list of answers in `answers`: the two semi-open types, and
 // a tight open, whose list (when it has one) is examples of what would count.
-const LIST_ANSWER_TYPES = new Set(["multiple", "multiple_open", "tight_open"]);
+const LIST_ANSWER_TYPES: ReadonlySet<unknown> = new Set<QuestionType>([
+  "multiple",
+  "multiple_open",
+  "tight_open",
+]);
 
 // What a printed lesson writes in front of a tight open's examples, so whoever
 // is scoring reads them as examples rather than as the answer key. The DOCX
@@ -492,9 +558,10 @@ export const EXAMPLE_ANSWER_PREFIX = "e.g. ";
  * Whether a block's answers are examples rather than an answer key. True for
  * a tight open with examples; the suggested-answers type marks its key as
  * advisory with the italic on its prompt instead, and prints its list plain.
- * @param {object} block
  */
-export function questionAnswersAreExamples(block) {
+export function questionAnswersAreExamples(
+  block: Pick<QuestionFields, "questionType"> | null | undefined,
+): boolean {
   return block?.questionType === "tight_open";
 }
 
@@ -508,7 +575,9 @@ export function questionAnswersAreExamples(block) {
 // string where that matters: lesson translation translates them one at a
 // time, since a model fed the joined line would fold the non-breaking gaps
 // between answers into ordinary spaces and blur the list into one phrase.
-export function questionAnswerItems(block) {
+export function questionAnswerItems(
+  block: QuestionFields | null | undefined,
+): string[] {
   if (!block) return [];
   if (SINGLE_ANSWER_TYPES.has(block.questionType)) {
     const answer = questionAnswerPlain(block.answer).trim();
@@ -528,21 +597,34 @@ export function questionAnswerItems(block) {
 // open's examples come after "e.g.".
 //
 // Returns "" when there is nothing to show (see questionAnswerItems).
-export function questionAnswerText(block) {
+export function questionAnswerText(
+  block: QuestionFields | null | undefined,
+): string {
   const items = questionAnswerItems(block);
   if (!items.length) return "";
   const prefix = questionAnswersAreExamples(block) ? EXAMPLE_ANSWER_PREFIX : "";
   return prefix + items.join(ANSWER_GAP);
 }
 
-export function questionMeta(questionType) {
-  return QUESTION_TYPES[questionType] || QUESTION_TYPES.open;
+export function questionMeta(
+  questionType: string | null | undefined,
+): QuestionTypeMeta {
+  const byKey: Partial<Record<string, QuestionTypeMeta>> = QUESTION_TYPES;
+  return (questionType != null && byKey[questionType]) || QUESTION_TYPES.open;
 }
 
 // Build a fresh question block of the given type. `newId` is injected so this
 // stays decoupled from the id helper.
-export function createQuestionBlock(newId, questionType) {
-  const base = { id: newId(), type: "question", questionType, prompt: "" };
+export function createQuestionBlock(
+  newId: () => string,
+  questionType: QuestionType,
+): QuestionBlock {
+  const base: QuestionBlock = {
+    id: newId(),
+    type: "question",
+    questionType,
+    prompt: "",
+  };
   switch (questionType) {
     case "number":
       return { ...base, answer: "", steps: [] };
@@ -573,9 +655,23 @@ export function createQuestionBlock(newId, questionType) {
 // block shape `createQuestionBlock` produces. Anything missing falls back to
 // sensible blanks so the resulting block is always editable, even if the model
 // returns a partial answer.
-export function buildQuestionBlock(newId, questionType, data = {}) {
+export function buildQuestionBlock(
+  newId: () => string,
+  questionType: QuestionType,
+  data: {
+    prompt?: unknown;
+    answer?: unknown;
+    answers?: unknown;
+    steps?: unknown;
+  } = {},
+): QuestionBlock {
   const prompt = typeof data.prompt === "string" ? data.prompt : "";
-  const base = { id: newId(), type: "question", questionType, prompt };
+  const base: QuestionBlock = {
+    id: newId(),
+    type: "question",
+    questionType,
+    prompt,
+  };
   switch (questionType) {
     case "number":
       return {
@@ -614,10 +710,12 @@ export function buildQuestionBlock(newId, questionType, data = {}) {
 // Turn an array of answer strings into answer objects, guaranteeing at least
 // one editable row so an AI-suggested block matches a hand-made one. A tight
 // open's examples are optional, so it asks for no padding.
-function toAnswers(newId, raw, { pad = true } = {}) {
-  const list = Array.isArray(raw)
-    ? raw.filter((t) => typeof t === "string")
-    : [];
+function toAnswers(
+  newId: () => string,
+  raw: unknown,
+  { pad = true }: { pad?: boolean } = {},
+): TextItem[] {
+  const list = Array.isArray(raw) ? raw.filter(isString) : [];
   const answers = list.map((text) => ({ id: newId(), text }));
   if (pad && answers.length === 0) answers.push({ id: newId(), text: "" });
   return answers;
@@ -626,9 +724,11 @@ function toAnswers(newId, raw, { pad = true } = {}) {
 // Turn an array of step strings into step rows. Unlike answers, steps are
 // optional working-out lines, so an empty list is left empty rather than
 // padded with a blank row.
-function toSteps(newId, raw) {
-  const list = Array.isArray(raw)
-    ? raw.filter((t) => typeof t === "string")
-    : [];
+function toSteps(newId: () => string, raw: unknown): StepItem[] {
+  const list = Array.isArray(raw) ? raw.filter(isString) : [];
   return list.map((text) => ({ id: newId(), text }));
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
 }
