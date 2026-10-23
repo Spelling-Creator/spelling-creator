@@ -200,8 +200,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0(supports-color@10.2.2)
       '@cloudflare/workers-oauth-provider':
-        specifier: ^0.10.3
-        version: 0.10.3
+        specifier: ^1.2.3
+        version: 1.2.3
       '@fedify/cfworkers':
         specifier: ^2.4.4
         version: 2.4.4(@cloudflare/workers-types@5.20260929.1)(@fedify/fedify@2.4.4)
@@ -482,7 +482,7 @@ importers:
         version: 2.0.0(supports-color@10.2.2)(vite@8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))(workbox-build@7.4.1(supports-color@10.2.2))(workbox-window@7.4.1)
       vitest:
         specifier: ~4.1.11
-        version: 4.1.11(@types/node@26.2.0)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))
       workbox-window:
         specifier: ^7.4.1
         version: 7.4.1
@@ -506,7 +506,7 @@ importers:
         version: 0.2.1
       '@supabase/supabase-js':
         specifier: ^2.112.3
-        version: 2.112.3
+        version: 2.112.3(@opentelemetry/api@1.9.1)
       '@xmldom/xmldom':
         specifier: ^0.9.12
         version: 0.9.12
@@ -1296,8 +1296,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-oauth-provider@0.10.3':
-    resolution: {integrity: sha512-25ufMONJir9PllqVpK4GwOOoSFgpYm3+bM6NBedj7ufMCIfNf5jk4OI0LPuTJBaJgLl2lGCLqFqEPJXcSuPopQ==}
+  '@cloudflare/workers-oauth-provider@1.2.3':
+    resolution: {integrity: sha512-40eGeA3DnTOEl2ijHYY5Z9yNIf0fdjgomoaA6GHPo4FyKQw0oXPuy4GVjTE/uNfS/MoFAvzsuVBRwTPKUki4hA==}
 
   '@cloudflare/workers-types@5.20260929.1':
     resolution: {integrity: sha512-VlkFyzSqv2LeMK92eyyfnNvSTW4Nu37cR8T8OM4FF2xcNCsGy8/BxcNk9Jr4ZV0PlmKsCKvS49CfRZTVKBseUw==}
@@ -8669,7 +8669,7 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20261001.1':
     optional: true
 
-  '@cloudflare/workers-oauth-provider@0.10.3': {}
+  '@cloudflare/workers-oauth-provider@1.2.3': {}
 
   '@cloudflare/workers-types@5.20260929.1': {}
 
@@ -10577,13 +10577,15 @@ snapshots:
       iceberg-js: 0.8.1
       tslib: 2.8.1
 
-  '@supabase/supabase-js@2.112.3':
+  '@supabase/supabase-js@2.112.3(@opentelemetry/api@1.9.1)':
     dependencies:
       '@supabase/auth-js': 2.112.3
       '@supabase/functions-js': 2.112.3
       '@supabase/postgrest-js': 2.112.3
       '@supabase/realtime-js': 2.112.3
       '@supabase/storage-js': 2.112.3
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
 
   '@tailwindcss/node@4.3.3':
     dependencies:
@@ -14997,7 +14999,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.1.11(@types/node@26.2.0)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0)):
+  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(happy-dom@20.14.5)(vite@8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.11
       '@vitest/mocker': 4.1.11(vite@8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))
@@ -15020,6 +15022,7 @@ snapshots:
       vite: 8.3.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@opentelemetry/api': 1.9.1
       '@types/node': 26.2.0
       happy-dom: 20.14.5
     transitivePeerDependencies:
