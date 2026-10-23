@@ -83,7 +83,7 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 
 function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
+  const opening = new Promise<IDBDatabase>((resolve, reject) => {
     let req: IDBOpenDBRequest;
     try {
       req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -109,7 +109,14 @@ function openDb(): Promise<IDBDatabase> {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
-  return dbPromise;
+  // An open that failed (storage refused, another tab mid-upgrade) isn't kept:
+  // the caller still sees it fail, and the next call tries again rather than
+  // every read and write failing for the rest of the page's life.
+  dbPromise = opening;
+  opening.catch(() => {
+    if (dbPromise === opening) dbPromise = null;
+  });
+  return opening;
 }
 
 function store(db: IDBDatabase, name: string, mode: IDBTransactionMode) {
