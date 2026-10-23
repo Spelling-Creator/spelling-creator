@@ -5,7 +5,7 @@
 import { hasApi } from "../config.ts";
 import { MAX_IMAGE_BYTES } from "../image.ts";
 import type { ImageRef, LessonDoc } from "../types.ts";
-import { getImageBlob } from "./imageStore.ts";
+import { findImageBlob } from "./imageStore.ts";
 import { imagePublicUrl, storeImageBytes } from "./imageRef.ts";
 
 // Hashes already confirmed present in R2 this session (uploaded, or known to be
@@ -71,7 +71,17 @@ export async function ensureImagesUploaded(
   if (!accessToken) throw new Error("Please sign in before saving.");
   for (const hash of collectImageHashes(doc)) {
     if (known.has(hash)) continue;
-    const blob = await getImageBlob(hash);
+    // A store that can't be read is not the same as a picture this device
+    // doesn't hold: taking it for one would save the lesson pointing at a
+    // picture that never reached R2, and remember it as uploaded.
+    let blob: Blob | null;
+    try {
+      blob = await findImageBlob(hash);
+    } catch {
+      throw new Error(
+        "This device's copy of the lesson's pictures couldn't be read. Please try again.",
+      );
+    }
     // No local blob means the image came from the cloud already (an existing
     // lesson's image) — it's in R2, nothing to upload.
     if (!blob) {

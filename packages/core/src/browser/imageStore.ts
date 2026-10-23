@@ -185,14 +185,23 @@ export async function getImageBlob(
 ): Promise<Blob | null> {
   if (!hash) return null;
   try {
-    const db = await openDb();
-    const rec = await reqToPromise<ImageRecord | undefined>(
-      store(db, IMAGE_STORE, "readonly").get(hash),
-    );
-    return rec ? rec.blob : null;
+    return await findImageBlob(hash);
   } catch {
     return null;
   }
+}
+
+/**
+ * The bytes this device holds for `hash`, or null when it holds none. Unlike
+ * getImageBlob, a store that can't be read rejects instead of answering null,
+ * for a caller that has to tell "not on this device" from "couldn't look".
+ */
+export async function findImageBlob(hash: string): Promise<Blob | null> {
+  const db = await openDb();
+  const rec = await reqToPromise<ImageRecord | undefined>(
+    store(db, IMAGE_STORE, "readonly").get(hash),
+  );
+  return rec ? rec.blob : null;
 }
 
 export async function hasImageBlob(

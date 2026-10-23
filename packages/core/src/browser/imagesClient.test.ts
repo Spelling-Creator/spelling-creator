@@ -18,12 +18,12 @@ vi.mock("./imageRef.ts", () => ({
   })),
 }));
 vi.mock("./imageStore.ts", () => ({
-  getImageBlob: vi.fn(async (): Promise<Blob | null> => null),
+  findImageBlob: vi.fn(async (): Promise<Blob | null> => null),
 }));
 
 const { copyRemoteImages, ensureImagesUploaded } =
   await import("./imagesClient.ts");
-const { getImageBlob } = await import("./imageStore.ts");
+const { findImageBlob } = await import("./imageStore.ts");
 const { MAX_IMAGE_BYTES } = await import("../image.ts");
 const { configureCore } = await import("../config.ts");
 
@@ -71,7 +71,7 @@ const picture =
 describe("ensureImagesUploaded", () => {
   it("refuses a picture over the limit before sending any of it", async () => {
     configureCore({ apiUrl: "https://here.test" });
-    vi.mocked(getImageBlob).mockResolvedValueOnce(
+    vi.mocked(findImageBlob).mockResolvedValueOnce(
       new Blob([new Uint8Array(MAX_IMAGE_BYTES + 1)], { type: "image/png" }),
     );
     const sent = vi.fn();
@@ -80,6 +80,28 @@ describe("ensureImagesUploaded", () => {
       ensureImagesUploaded(docWith(image("big")), "token"),
     ).rejects.toThrow("Image is too large (max 8 MB).");
     expect(sent).not.toHaveBeenCalled();
+  });
+
+  // Taking an unreadable store for "this picture is in the cloud already"
+  // would save the lesson without it, and skip it on every later save.
+  it("stops on a picture it couldn't read, and looks again next time", async () => {
+    configureCore({ apiUrl: "https://here.test" });
+    vi.mocked(findImageBlob)
+      .mockRejectedValueOnce(new Error("blocked"))
+      .mockResolvedValueOnce(
+        new Blob([new Uint8Array(10)], { type: "image/png" }),
+      );
+    const sent = vi.fn(async () => new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", sent);
+    const doc = docWith(image("local-only"));
+
+    await expect(ensureImagesUploaded(doc, "token")).rejects.toThrow(
+      "couldn't be read",
+    );
+    expect(sent).not.toHaveBeenCalled();
+
+    await ensureImagesUploaded(doc, "token");
+    expect(sent).toHaveBeenCalledTimes(1);
   });
 });
 

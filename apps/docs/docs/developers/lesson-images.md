@@ -134,8 +134,10 @@ class-B (read) ops/month. The design keeps usage well inside these:
   Images are content-addressed, so `PUT /images/:hash` first does a `head()`
   (class B) and only `put()`s when the object is missing; the client also caches
   which hashes it has uploaded this session (`imagesClient.ts`), so re-saving a
-  lesson uploads nothing new. Identical images (across all users/lessons) share
-  one object.
+  lesson uploads nothing new. A picture this device doesn't hold is taken to be
+  in R2 already, and cached the same way; one it can't read because IndexedDB
+  failed stops the save instead, and isn't cached, so the next save looks again.
+  Identical images (across all users/lessons) share one object.
 - **Class B (reads)** stays low because `GET /images/:hash` responses are cached
   at Cloudflare's edge (the bytes are immutable, so they're safe to cache
   forever). Repeat views of a popular lesson (and the og-image/prerender
