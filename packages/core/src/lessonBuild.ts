@@ -434,14 +434,14 @@ export function buildSources(
       '"sources" must be an array of { id, title, author, publisher, year, url }.',
     );
   }
-  const list: unknown[] = input;
   const stored = new Map(
     (Array.isArray(existing) ? existing : [])
       .filter((s) => s && typeof s === "object" && isSourceId(s.id))
       .map((s) => [s.id, s]),
   );
   const seen = new Set<string>();
-  return list.map((raw, i) => {
+  // Array.isArray narrows `unknown` to any[]; each entry is unchecked.
+  return (input as unknown[]).map((raw, i) => {
     const where = `Source ${i + 1}`;
     if (!isObjectLike(raw)) {
       throw new Error(`${where} must be an object.`);
@@ -523,20 +523,21 @@ type PresentedQuestion = Omit<QuestionBlock, "prompt" | "steps"> & {
  */
 export function presentDoc(doc: unknown): unknown {
   if (!isObjectLike(doc) || !Array.isArray(doc.sections)) return doc;
-  const sections: Array<Partial<Section> | null | undefined> = doc.sections;
   return {
     ...doc,
-    sections: sections.map((section) => ({
-      ...section,
-      blocks: (Array.isArray(section?.blocks) ? section.blocks : []).map(
-        (block) =>
-          block?.type === "text"
-            ? { id: block.id, type: "text", text: textBlockMarkup(block) }
-            : block?.type === "question"
-              ? presentQuestion(block)
-              : withSeparateCredit(block),
-      ),
-    })),
+    sections: (doc.sections as Array<Partial<Section> | null | undefined>).map(
+      (section) => ({
+        ...section,
+        blocks: (Array.isArray(section?.blocks) ? section.blocks : []).map(
+          (block) =>
+            block?.type === "text"
+              ? { id: block.id, type: "text", text: textBlockMarkup(block) }
+              : block?.type === "question"
+                ? presentQuestion(block)
+                : withSeparateCredit(block),
+        ),
+      }),
+    ),
   };
 }
 

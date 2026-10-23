@@ -83,6 +83,7 @@ import {
   stemTest,
   withoutFigures,
 } from "./factText.ts";
+import { isObjectLike } from "./guards.ts";
 import { textBlockPlain } from "./lessonText.ts";
 import {
   type Eruption,
@@ -746,17 +747,16 @@ export interface DroppedClaim {
  *                 thing for the property (a height in kilograms)
  */
 export function claimProblem(input: unknown): ClaimProblem | null {
-  if (!input || typeof input !== "object") return "value";
-  const raw: RawClaim = input;
-  if (!isFactProperty(raw.property)) return "property";
-  const spec = FACT_PROPERTIES[raw.property];
-  if (!cleanString(raw.subject, 200)) return "subject";
+  if (!isObjectLike(input)) return "value";
+  if (!isFactProperty(input.property)) return "property";
+  const spec = FACT_PROPERTIES[input.property];
+  if (!cleanString(input.subject, 200)) return "subject";
   if (spec.kind === "item") {
-    return cleanString(raw.stated, 200) ? null : "stated";
+    return cleanString(input.stated, 200) ? null : "stated";
   }
-  if (!Number.isFinite(Number(raw.value))) return "value";
+  if (!Number.isFinite(Number(input.value))) return "value";
   if (spec.kind === "quantity" && spec.dimension !== "count") {
-    const unit = cleanString(raw.unit, 20);
+    const unit = cleanString(input.unit, 20);
     if (!unit) return "unit-missing";
     if (UNITS[unit]?.dimension !== spec.dimension) return "unit-wrong";
   }

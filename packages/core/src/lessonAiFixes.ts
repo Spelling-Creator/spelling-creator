@@ -368,8 +368,7 @@ function isReplaceBlock(op: unknown): op is FixOperation {
 // fields are left to applyPatch, which checks them as it makes them.
 function fixOperations(operations: unknown): FixOperation[] {
   if (!Array.isArray(operations)) throw new Error("A fix needs operations.");
-  const list: unknown[] = operations;
-  return list.map((op) => {
+  return (operations as unknown[]).map((op) => {
     if (!isReplaceBlock(op)) {
       const name = isObjectLike(op) ? op.op : undefined;
       throw new Error(`A fix can only replace blocks, not "${name}".`);

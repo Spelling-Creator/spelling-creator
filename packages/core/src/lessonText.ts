@@ -313,9 +313,8 @@ interface FlatParagraph {
 
 function marksOf(node: { marks?: unknown }) {
   if (!Array.isArray(node?.marks)) return [];
-  const marks: unknown[] = node.marks;
   const present = new Set(
-    marks.map((mark) =>
+    (node.marks as unknown[]).map((mark) =>
       typeof mark === "string" ? mark : isRecord(mark) ? mark.type : undefined,
     ),
   );
@@ -325,8 +324,9 @@ function marksOf(node: { marks?: unknown }) {
 // The speech hint a text node's marks carry, or null.
 function speechOf(node: { marks?: unknown }) {
   if (!Array.isArray(node?.marks)) return null;
-  const marks: unknown[] = node.marks;
-  const mark = marks.find((m) => isRecord(m) && m.type === "speech");
+  const mark = (node.marks as unknown[]).find(
+    (m) => isRecord(m) && m.type === "speech",
+  );
   return isRecord(mark) ? normalizeSpeechHint(mark.attrs) : null;
 }
 
