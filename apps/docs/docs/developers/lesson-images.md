@@ -141,9 +141,11 @@ class-B (read) ops/month. The design keeps usage well inside these:
   forever). Repeat views of a popular lesson (and the og-image/prerender
   browser) are served from cache and don't hit R2.
 - **Storage** is bounded by global content-hash dedup plus an 8 MB-per-image cap
-  (`MAX_IMAGE_BYTES` in `apps/api/src/lib/images.js`, enforced by the Worker; the
-  editor has no size check of its own, though the MCP server checks the same
-  8 MB before it uploads a Commons picture, in `apps/mcp/src/wikimedia.js`).
+  (`MAX_IMAGE_BYTES` in `packages/core/src/image.ts`, enforced by the Worker).
+  The editor checks the same 8 MB when it saves, before sending a picture
+  (`ensureImagesUploaded` in `packages/core/src/browser/imagesClient.ts`), and
+  the MCP server checks it before it uploads a Commons picture, in
+  `apps/mcp/src/wikimedia.js`.
   This is the one limit without a hard code guard, so set an R2 storage alert in
   the Cloudflare dashboard (Notifications) if you want a heads-up as the bucket
   grows. Cloudflare does not offer a hard spend cap, so monitoring is the safety

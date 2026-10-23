@@ -18,11 +18,14 @@ vi.mock("./imageRef.ts", () => ({
   })),
 }));
 vi.mock("./imageStore.ts", () => ({
-  getImageBlob: async () => null,
+  getImageBlob: vi.fn(async (): Promise<Blob | null> => null),
 }));
 
-const { copyRemoteImages } = await import("./imagesClient.ts");
+const { copyRemoteImages, ensureImagesUploaded } =
+  await import("./imagesClient.ts");
+const { getImageBlob } = await import("./imageStore.ts");
 const { MAX_IMAGE_BYTES } = await import("../image.ts");
+const { configureCore } = await import("../config.ts");
 
 const ORIGIN = "https://there.test";
 const image = (hash: string): ImageBlock => ({
@@ -64,6 +67,21 @@ const picture =
   (type: string, size = 10) =>
   () =>
     new Response(new Uint8Array(size), { headers: { "content-type": type } });
+
+describe("ensureImagesUploaded", () => {
+  it("refuses a picture over the limit before sending any of it", async () => {
+    configureCore({ apiUrl: "https://here.test" });
+    vi.mocked(getImageBlob).mockResolvedValueOnce(
+      new Blob([new Uint8Array(MAX_IMAGE_BYTES + 1)], { type: "image/png" }),
+    );
+    const sent = vi.fn();
+    vi.stubGlobal("fetch", sent);
+    await expect(
+      ensureImagesUploaded(docWith(image("big")), "token"),
+    ).rejects.toThrow("Image is too large (max 8 MB).");
+    expect(sent).not.toHaveBeenCalled();
+  });
+});
 
 describe("copyRemoteImages", () => {
   it("keeps a picture and points the block at the copy", async () => {

@@ -78,6 +78,13 @@ export async function ensureImagesUploaded(
       known.add(hash);
       continue;
     }
+    // The Worker refuses a picture over the limit, so say so before sending
+    // it all (one stored before the limit was enforced, say).
+    if (blob.size > MAX_IMAGE_BYTES) {
+      throw new Error(
+        `Image is too large (max ${MAX_IMAGE_BYTES / 1024 / 1024} MB).`,
+      );
+    }
     await uploadImage(hash, blob, accessToken);
     known.add(hash);
   }
