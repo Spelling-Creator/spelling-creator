@@ -63,19 +63,29 @@ Core's own dependencies are not installed: most of them (`docx`, `mammoth`,
 Supabase, transformers.js) are for its browser modules and have no place in
 the bundle. The few packages the copied modules do import (`yjs` and
 `isomorphic-git`, for the live document and version history) have to be in
-`apps/mcp/package.json`'s dependencies instead, where npm installs them. `pack`
-walks the imports out from each core subpath the server uses, core's imports of
-itself by name included, and **fails the build** if a copied module reaches a
-package that isn't there, naming the package and the file:
+`apps/mcp/package.json`'s dependencies instead, at the same range as in
+`packages/core/package.json`, where npm installs them. `pack` walks the imports
+out from each core subpath the server uses, core's imports of itself by name
+included, and **fails the build** if a copied module reaches a package that
+isn't there, or that is there at a different range (npm would install this
+server's range, and the copies were written against core's). It names the
+package and the file:
 
 ```
-The @spelling-creator/core modules this server imports reach packages it does not depend on:
-  isomorphic-git (from src/git/pack.js)
+The @spelling-creator/core modules this server imports reach packages npm won't install as core expects:
+  isomorphic-git (from src/git/pack.js): not a dependency
 ```
 
-If that fires, add the package to `apps/mcp/package.json` at the version core
-asks for. The walk reads the compiled code, so a type-only import of a package
-and an import written inside a comment don't count.
+If that fires, give `apps/mcp/package.json` the package at core's range. The
+walk reads the compiled code, so a type-only import of a package and an import
+written inside a comment don't count. A relative import has to name a file,
+extension included, since that is the only way Node loads an ES module, so one
+that doesn't fails the build too, naming the module that has it.
+
+The staged `package.json` leaves out `engines`. That field says what running
+the server from the workspace takes (Node 24, which strips core's types as it
+loads them); the bundle runs plain JavaScript, and the Node it needs is the one
+`manifest.json` declares under `compatibility.runtimes`.
 
 ## Publishing a release
 

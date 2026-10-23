@@ -16,10 +16,12 @@
 // Most of core's dependency list (docx, mammoth, supabase, transformers…) is
 // for its browser modules and has no business in this bundle, so core's own
 // dependencies are not installed. The few packages the copied modules do import
-// (yjs, isomorphic-git) have to be in this package's dependencies instead, where
-// npm installs them. That is checked below, and the build fails loudly if a
-// copied module reaches a package npm won't install: better than shipping a
-// bundle that throws MODULE_NOT_FOUND on someone's machine.
+// (yjs, isomorphic-git) have to be in this package's dependencies instead, at
+// the same range core asks for, where npm installs them. That is checked below,
+// and the build fails loudly if a copied module reaches a package npm won't
+// install, or would install at another range: better than shipping a bundle
+// that throws MODULE_NOT_FOUND, or calls an API its copy lacks, on someone's
+// machine.
 //
 // Core is TypeScript, and the copies can't stay that way: Node strips types
 // only outside node_modules, and the bundle may run on a Node too old to strip
@@ -39,6 +41,7 @@ import {
   readdirSync,
   rmSync,
   existsSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -117,14 +120,31 @@ const coreSubpath = (spec) =>
     ? `.${spec.slice(CORE_NAME.length)}`
     : null;
 
+// The file a relative import names. runtimeSource has already pointed a .ts
+// import at .js, so the file on disk may be the .ts one. Anything else (a
+// specifier with no extension, a directory) is a build failure here rather
+// than in the bundle, since Node only loads an ES module by its full name.
+function resolveRelative(file, spec) {
+  const target = resolve(dirname(file), spec);
+  const ts = target.replace(/\.js$/, ".ts");
+  for (const path of [target, ts]) {
+    if (existsSync(path) && statSync(path).isFile()) return path;
+  }
+  throw new Error(
+    `${relative(coreRoot, file)} imports "${spec}", which is not a file. ` +
+      "Node loads an ES module only by its full file name, extension included.",
+  );
+}
+
 // Walk out from the core subpaths the server imports, following relative
 // imports and core's imports of itself by name, and report every file reached
-// plus any package found along the way that npm won't install for this server.
+// plus any package found along the way that npm won't install for this server,
+// or would install at a different version from the one core asks for.
 function collectCoreModules() {
-  const exportsMap = readJson(join(coreRoot, "package.json")).exports || {};
-  const installed = new Set(
-    Object.keys(readJson(join(pkgRoot, "package.json")).dependencies || {}),
-  );
+  const coreManifest = readJson(join(coreRoot, "package.json"));
+  const exportsMap = coreManifest.exports || {};
+  const coreDeps = coreManifest.dependencies || {};
+  const ownDeps = readJson(join(pkgRoot, "package.json")).dependencies || {};
 
   const subpaths = new Set();
   const queue = [];
@@ -149,38 +169,41 @@ function collectCoreModules() {
   }
 
   const files = new Set();
-  const missing = new Map();
+  // Package name -> the line that explains what is wrong with it.
+  const problems = new Map();
   while (queue.length) {
     const file = queue.pop();
     if (files.has(file)) continue;
     files.add(file);
     for (const spec of importSpecifiers(runtimeSource(file))) {
       if (spec.startsWith(".")) {
-        // runtimeSource has already pointed a .ts import at .js, so the file
-        // on disk may be the .ts one.
-        const target = resolve(dirname(file), spec);
-        const ts = target.replace(/\.js$/, ".ts");
-        queue.push(!existsSync(target) && existsSync(ts) ? ts : target);
+        queue.push(resolveRelative(file, spec));
       } else if (coreSubpath(spec)) {
         enqueueSubpath(coreSubpath(spec), relative(coreRoot, file));
-      } else if (
-        !spec.startsWith("node:") &&
-        !installed.has(packageName(spec))
-      ) {
-        missing.set(spec, file);
+      } else if (!spec.startsWith("node:")) {
+        const name = packageName(spec);
+        const from = relative(coreRoot, file);
+        if (!ownDeps[name]) {
+          problems.set(name, `  ${spec} (from ${from}): not a dependency`);
+        } else if (coreDeps[name] && ownDeps[name] !== coreDeps[name]) {
+          // npm would install this server's range, and the copied modules
+          // were written against core's.
+          problems.set(
+            name,
+            `  ${spec} (from ${from}): this server asks for ${ownDeps[name]}, core for ${coreDeps[name]}`,
+          );
+        }
       }
     }
   }
 
-  if (missing.size) {
-    const detail = [...missing]
-      .map(([spec, file]) => `  ${spec} (from ${relative(coreRoot, file)})`)
-      .join("\n");
+  if (problems.size) {
     throw new Error(
-      `The ${CORE_NAME} modules this server imports reach packages it does not depend on:\n` +
-        `${detail}\n\n` +
-        "Add them to apps/mcp/package.json's dependencies (at the version core " +
-        "asks for) so npm installs them into the bundle.",
+      `The ${CORE_NAME} modules this server imports reach packages npm won't install as core expects:\n` +
+        `${[...problems.values()].join("\n")}\n\n` +
+        "Add each to apps/mcp/package.json's dependencies at the same range as " +
+        "packages/core/package.json, so npm installs into the bundle what core " +
+        "was written against.",
     );
   }
 
@@ -236,6 +259,10 @@ const workspaceDeps = Object.entries(manifest.dependencies || {}).filter(
   ([, range]) => range.startsWith(WORKSPACE_PROTOCOL),
 );
 for (const [name] of workspaceDeps) delete manifest.dependencies[name];
+// `engines` says what running the server from the workspace takes (Node 24,
+// to strip core's types). The bundle runs plain JavaScript, and the Node it
+// needs is manifest.json's compatibility.runtimes.node.
+delete manifest.engines;
 writeJson(stagedManifest, manifest);
 
 console.log("• Vendoring production dependencies (npm install --omit=dev)…");
