@@ -41,6 +41,7 @@ import {
   type Text,
   DOMParser,
 } from "@xmldom/xmldom";
+import { isRecord } from "./guards.ts";
 import { lessonFileBase } from "./lessonFile.ts";
 import {
   type OslfBlock,
@@ -111,10 +112,6 @@ function element(name: string, pairs: Pairs, content?: string): string {
   return content ? `${open}>${content}</${name}>` : `${open}/>`;
 }
 
-function isObject(value: unknown): value is object {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function runsOf<T>(
   value: string | readonly T[] | undefined,
 ): Array<string | T> {
@@ -156,7 +153,7 @@ function spokenXml(value: OslfSpokenText): string {
   return runsOf(value)
     .map((run) => {
       if (typeof run === "string") return escapeText(run);
-      if (!isObject(run)) return "";
+      if (!isRecord(run)) return "";
       if ("pause" in run && run.pause) return pauseXml(run.pause);
       if ("text" in run && typeof run.text === "string") return textRunXml(run);
       return "";
@@ -187,8 +184,8 @@ export function richTextXml(value: OslfRichText): string {
   return runsOf(value)
     .map((run) => {
       if (typeof run === "string") return escapeText(run);
-      if (!isObject(run)) return "";
-      if ("note" in run && isObject(run.note)) {
+      if (!isRecord(run)) return "";
+      if ("note" in run && isRecord(run.note)) {
         return element(
           "note",
           [
@@ -198,7 +195,7 @@ export function richTextXml(value: OslfRichText): string {
           escapeText(run.note.text ?? ""),
         );
       }
-      if ("math" in run && isObject(run.math)) return mathXml(run.math);
+      if ("math" in run && isRecord(run.math)) return mathXml(run.math);
       if ("pause" in run && run.pause) return pauseXml(run.pause);
       if ("text" in run && typeof run.text === "string") return textRunXml(run);
       return "";
@@ -235,7 +232,7 @@ function imageXml(image: OslfImage & { id?: string }, name = "image"): Tree {
   if (image.caption !== undefined) {
     children.push(richElement("caption", image.caption));
   }
-  if (isObject(image.credit)) {
+  if (isRecord(image.credit)) {
     const credit = image.credit;
     children.push(
       element(
@@ -308,7 +305,7 @@ function blockTree(block: OslfBlock): Tree | null {
           ...(block.links || []).map((link) =>
             element("link", [["url", link.url]], escapeText(link.label ?? "")),
           ),
-          ...(isObject(block.image) ? [imageXml(block.image)] : []),
+          ...(isRecord(block.image) ? [imageXml(block.image)] : []),
         ],
       };
     case "heading":

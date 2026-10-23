@@ -10,6 +10,7 @@
 // (scripts/extract-eval) import these same definitions, so the prompt the app
 // sends cannot drift from the one the model learned.
 
+import { isObjectLike } from "./guards.ts";
 import type { QuestionType } from "./types.ts";
 
 // In the order the training prompt listed them, which is not QUESTION_TYPES'
@@ -169,10 +170,6 @@ const QUESTION_ALIASES = {
   steps: ["steps", "working", "workings"],
 } satisfies Record<string, string[]>;
 
-// Anything typeof calls an object, arrays included, as a reply's JSON has it.
-const isObject = (v: unknown): v is Record<string, unknown> =>
-  Boolean(v) && typeof v === "object";
-
 const isModelType = (type: string): type is ModelQuestionType =>
   (QUESTION_TYPE_KEYS as readonly string[]).includes(type);
 
@@ -263,9 +260,9 @@ export function parseModelReply(
   raw: string | null | undefined,
 ): ParsedSection | null {
   const json = parseModelJson(raw);
-  if (!isObject(json)) return null;
+  if (!isObjectLike(json)) return null;
   const questions = asList(pick(json, KEY_ALIASES.questions))
-    .filter(isObject)
+    .filter(isObjectLike)
     .map((q): ParsedQuestion => {
       const type = String(pick(q, QUESTION_ALIASES.type) ?? "");
       return {

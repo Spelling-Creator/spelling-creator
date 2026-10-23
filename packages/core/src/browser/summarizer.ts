@@ -25,6 +25,7 @@
 //
 // Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
 
+import { errorName } from "../guards.ts";
 import { imageCaptionParts } from "../imageCredit.ts";
 import { inlineTextPlain } from "../inlineText.ts";
 import { textBlockPlain } from "../lessonText.ts";
@@ -130,13 +131,6 @@ interface SummarizerApi {
       monitor?(monitor: CreateMonitor): void;
     },
   ): Promise<BuiltInSummarizer>;
-}
-
-// The `name` of whatever was thrown, read as `err?.name` would.
-function errorName(err: unknown): unknown {
-  return typeof err === "object" && err !== null && "name" in err
-    ? err.name
-    : undefined;
 }
 
 // Steers the model: without it, a lesson full of question prompts and word lists

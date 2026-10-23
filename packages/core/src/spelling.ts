@@ -47,7 +47,7 @@ export function extractCapitalizedWords(
   // A "word" is a run of letters, optionally with internal apostrophes or
   // hyphens (so "don't" and "well-being" stay intact).
   const tokens = text.match(/\p{L}[\p{L}'’-]*/gu) || [];
-  const seen = new Set();
+  const seen = new Set<string>();
   const words = [];
   for (const word of tokens) {
     // Keep only words that are entirely upper-case. Uppercasing must not change

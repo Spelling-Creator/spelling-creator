@@ -26,6 +26,7 @@
 
 import * as Y from "yjs";
 
+import { isRecord } from "./guards.ts";
 import type { LessonDoc } from "./types.ts";
 
 // The Y.Doc's root map, holding the whole lesson document.
@@ -36,10 +37,6 @@ export const ROOT = "lesson";
 // just received (don't echo them back).
 export const LOCAL = "local";
 export const REMOTE = "remote";
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
 
 function isYType(v: unknown): v is Y.Map<unknown> | Y.Array<unknown> | Y.Text {
   return v instanceof Y.Map || v instanceof Y.Array || v instanceof Y.Text;
@@ -58,7 +55,7 @@ function isYType(v: unknown): v is Y.Map<unknown> | Y.Array<unknown> | Y.Text {
  * reconciling. See stripLocalFields in git/doc.ts.)
  */
 export function keyOf(item: unknown): string | null {
-  if (!isPlainObject(item)) return null;
+  if (!isRecord(item)) return null;
   if (typeof item.id === "string" && item.id) return item.id;
   if (typeof item.email === "string" && item.email.trim()) {
     return item.email.trim().toLowerCase();
@@ -96,7 +93,7 @@ function toY(value: unknown): unknown {
     yarr.push(value.map(toY));
     return yarr;
   }
-  if (isPlainObject(value)) {
+  if (isRecord(value)) {
     const ymap = new Y.Map<unknown>();
     for (const [k, v] of Object.entries(value)) ymap.set(k, toY(v));
     return ymap;
@@ -132,7 +129,7 @@ function reconcileKey(ymap: Y.Map<unknown>, key: string, value: unknown) {
     return;
   }
 
-  if (isPlainObject(value)) {
+  if (isRecord(value)) {
     if (cur instanceof Y.Map) reconcileMap(cur, value);
     else ymap.set(key, toY(value));
     return;
@@ -195,7 +192,7 @@ function reconcileArray(yarr: Y.Array<unknown>, items: unknown[]) {
   for (let i = 0; i < items.length; i++) {
     const cur = yarr.get(i);
     const item = items[i];
-    if (cur instanceof Y.Map && isPlainObject(item)) {
+    if (cur instanceof Y.Map && isRecord(item)) {
       reconcileMap(cur, item);
     }
   }
@@ -219,7 +216,7 @@ export function reconcile(
   origin: string = LOCAL,
 ): void {
   ydoc.transact(() => {
-    reconcileMap(ydoc.getMap(ROOT), isPlainObject(doc) ? doc : {});
+    reconcileMap(ydoc.getMap(ROOT), isRecord(doc) ? doc : {});
   }, origin);
 }
 
@@ -241,7 +238,7 @@ function dedupe(value: unknown): unknown {
     }
     return out;
   }
-  if (isPlainObject(value)) {
+  if (isRecord(value)) {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) out[k] = dedupe(v);
     return out;

@@ -35,6 +35,7 @@
 // before speaking. A voice that gets a formula run anyway says its `text`, the
 // source, as it would any run it doesn't know.
 
+import { isRecord } from "./guards.ts";
 import { inlineTextRuns } from "./inlineText.ts";
 import {
   SAY_AS_CHARACTERS,
@@ -63,10 +64,6 @@ export type SpeechScript = string | ReadonlyArray<string | SpokenRun[]>;
 export interface SpeechChunk {
   runs: SpokenRun[];
   pauseAfter: boolean;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function oneLine(value: unknown): string {
@@ -115,9 +112,9 @@ function isFormulaRun(
   run: unknown,
 ): run is { text: string; formula: { format?: unknown; source: string } } {
   return (
-    isObject(run) &&
+    isRecord(run) &&
     typeof run.text === "string" &&
-    isObject(run.formula) &&
+    isRecord(run.formula) &&
     typeof run.formula.source === "string"
   );
 }

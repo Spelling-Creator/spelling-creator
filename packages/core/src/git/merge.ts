@@ -681,10 +681,12 @@ function withFields(
   conflict: EditConflict,
   side: MergeSide,
 ): Block {
-  const block = { ...merged };
-  // The same object, by field name.
-  const fields: Fields = block;
-  for (const field of conflict.fields) fields[field.field] = field[side];
+  const block: Block = Object.assign(
+    { ...merged },
+    Object.fromEntries(
+      conflict.fields.map((field) => [field.field, field[side]]),
+    ),
+  );
   // A contested text block was merged with its words in `content`; store it
   // back in whichever shape fits what was chosen.
   if (

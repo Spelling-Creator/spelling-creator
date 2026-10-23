@@ -90,24 +90,23 @@ export function getCaretCoordinates(
   index: number,
 ): CaretRect {
   const isInput = element.nodeName.toLowerCase() === "input";
-  const computed = window.getComputedStyle(element);
+  const computed = window.getComputedStyle(element) as CSSStyleDeclaration &
+    StyleProps;
 
   const div = document.createElement("div");
-  const style = div.style;
+  const style = div.style as CSSStyleDeclaration & StyleProps;
   style.position = "absolute";
   style.visibility = "hidden";
   style.whiteSpace = "pre-wrap";
   if (!isInput) style.wordWrap = "break-word";
 
-  const from = computed as unknown as StyleProps;
-  const to = style as unknown as StyleProps;
   for (const prop of MIRROR_PROPS) {
     if (isInput && prop === "lineHeight") {
       // Single-line inputs render text vertically centred; approximate that by
       // letting the line fill the element's height.
       style.lineHeight = computed.height;
     } else {
-      to[prop] = from[prop];
+      style[prop] = computed[prop];
     }
   }
   // Inputs never wrap and we don't want the mirror to scroll.

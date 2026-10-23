@@ -41,10 +41,7 @@ import {
   type TextBlockRun,
   type TextContent,
 } from "./lessonText.ts";
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+import { isRecord } from "./guards.ts";
 
 // A document's paragraphs folded into one, with a space where each break was,
 // footnotes left out and every formula in the line. A second pass through the
@@ -77,7 +74,7 @@ function oneParagraph(doc: TextContent): TextContent {
  * in. This is what the editor shows.
  */
 export function inlineTextContent(value: unknown): TextContent {
-  const doc = isObject(value)
+  const doc = isRecord(value)
     ? normalizeTextContent(value)
     : textToContent(typeof value === "string" ? value : "");
   return oneParagraph(doc ?? textToContent(""));
@@ -91,7 +88,7 @@ export function inlineTextContent(value: unknown): TextContent {
  */
 export function normalizeInlineText(value: unknown): string | TextContent {
   if (typeof value === "string") return value;
-  if (!isObject(value)) return "";
+  if (!isRecord(value)) return "";
   const content = inlineTextContent(value);
   return isPlainContent(content) ? textBlockPlain({ content }) : content;
 }
@@ -102,7 +99,7 @@ export function normalizeInlineText(value: unknown): string | TextContent {
  */
 export function inlineTextPlain(value: unknown): string {
   if (typeof value === "string") return value;
-  if (!isObject(value)) return "";
+  if (!isRecord(value)) return "";
   return textBlockPlain({ content: inlineTextContent(value) });
 }
 

@@ -11,6 +11,7 @@
 // first. The XML reader is only loaded when an XML file arrives.
 
 import { AGE_RANGES } from "./ageRanges.ts";
+import { isObjectLike } from "./guards.ts";
 import { headingText } from "./heading.ts";
 import { newId } from "./id.ts";
 import {
@@ -72,11 +73,6 @@ interface DocLike {
   sources?: unknown;
   sections?: unknown;
 }
-
-// Anything typeof calls an object, arrays included, the way the checks below
-// have always tested for one.
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object";
 
 const QUESTION_KEYS: ReadonlySet<unknown> = new Set(
   Object.keys(QUESTION_TYPES),
@@ -140,7 +136,7 @@ export async function importOslfXml(text: string): Promise<LessonDoc> {
 // { title, sections }, or an Open Spelling Lesson Format file (oslf.ts),
 // then normalise and validate it.
 export function normalizeLessonFile(parsed: unknown): LessonDoc {
-  if (!isRecord(parsed)) {
+  if (!isObjectLike(parsed)) {
     throw new JsonImportError(
       "This file isn't a lesson: expected a JSON object.",
     );
@@ -160,7 +156,7 @@ export function normalizeLessonFile(parsed: unknown): LessonDoc {
       `This JSON file is "${String(parsed.format)}", not a Spelling Creator lesson.`,
     );
   }
-  const docLike = isRecord(parsed.doc) ? parsed.doc : parsed;
+  const docLike = isObjectLike(parsed.doc) ? parsed.doc : parsed;
   return normalizeDoc(docLike);
 }
 
@@ -175,7 +171,7 @@ function normalizeDoc(docLike: DocLike): LessonDoc {
   }
 
   const sections = rawSections
-    .filter(isRecord)
+    .filter(isObjectLike)
     .map(normalizeSection)
     .filter((s) => s.blocks.length > 0);
 
@@ -245,7 +241,7 @@ function normalizeSection(section: Record<string, unknown>): Section {
 
 // Normalise one block to the exact editor shape, or return null to drop it.
 function normalizeBlock(block: unknown): Block | null {
-  if (!isRecord(block)) return null;
+  if (!isObjectLike(block)) return null;
   switch (block.type) {
     case "text": {
       // Formatted blocks carry a tiptap document in `content`; plain ones a
@@ -344,7 +340,7 @@ function normalizeVakt(block: Record<string, unknown>): VaktBlock | null {
 // isn't a real, safe link are dropped rather than imported unusable.
 function normalizeVaktLink(link: unknown): VaktLink | null {
   const raw = typeof link === "string" ? { url: link } : link;
-  if (!isRecord(raw)) return null;
+  if (!isObjectLike(raw)) return null;
   const url = typeof raw.url === "string" ? raw.url.trim() : "";
   if (!isSafeLink(url)) return null;
   return {
@@ -423,7 +419,7 @@ function normalizeTextItem(item: unknown): TextItem | null {
     const text = item.trim();
     return text ? { id: newId(), text } : null;
   }
-  if (isRecord(item) && typeof item.text === "string") {
+  if (isObjectLike(item) && typeof item.text === "string") {
     const text = item.text.trim();
     return text ? { id: keepId(item.id), text } : null;
   }
@@ -434,7 +430,7 @@ function normalizeTextItem(item: unknown): TextItem | null {
 // be a document as well as a string (see inlineText.ts).
 function normalizeStepItem(item: unknown): StepItem | null {
   if (typeof item === "string") return normalizeTextItem(item);
-  if (!isRecord(item)) return null;
+  if (!isObjectLike(item)) return null;
   const text = normalizeInlineText(item.text);
   if (typeof text === "string") return normalizeTextItem({ ...item, text });
   return { id: keepId(item.id), text };

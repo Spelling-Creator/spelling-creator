@@ -157,6 +157,7 @@ only through another module.
 ```
 @spelling-creator/core/
   types                 the lesson document's TypeScript types (types only, nothing at runtime)
+  guards                (internal) the type guards every module reads untrusted values with: isRecord, isObjectLike, errorName
   config                the seam the host app passes its configuration through
   questions             question type definitions, colors, block factories
   spelling              helpers for the explicit "spelling words" block

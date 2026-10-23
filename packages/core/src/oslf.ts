@@ -26,6 +26,7 @@
 // from the 0.1 draft so the tests can hold toOslf's output to it. Nothing at
 // runtime reads it.
 
+import { isRecord } from "./guards.ts";
 import { headingText } from "./heading.ts";
 import { imageCaptionParts } from "./imageCredit.ts";
 import {
@@ -301,13 +302,9 @@ const IMAGE_ALIGNS: readonly OslfImageAlign[] = ["left", "center", "right"];
 
 type Fields = Record<string, unknown>;
 
-function isObject(value: unknown): value is Fields {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 // The fields of a value read from a file, or none for anything else.
 function fieldsOf(value: unknown): Fields {
-  return isObject(value) ? value : {};
+  return isRecord(value) ? value : {};
 }
 
 function listOf(value: unknown): unknown[] {
@@ -767,7 +764,7 @@ export function fromOslf(file: unknown): OslfImportDoc {
     doc.sources = listOf(file.sources)
       .filter(
         (s): s is Fields & { id: string } =>
-          isObject(s) && typeof s.id === "string",
+          isRecord(s) && typeof s.id === "string",
       )
       .map((s) => {
         const out: Partial<Source> & { id: string } = { id: s.id };
@@ -786,7 +783,7 @@ function idOf(block: Fields): { id?: string } {
 }
 
 function blockFromOslf(block: unknown): OslfImportBlock | null {
-  if (!isObject(block)) return null;
+  if (!isRecord(block)) return null;
   switch (block.type) {
     case "passage": {
       const paragraphs = listOf(block.paragraphs);
@@ -816,7 +813,7 @@ function blockFromOslf(block: unknown): OslfImportBlock | null {
         links: listOf(block.links)
           .filter(
             (link): link is Fields & { url: string } =>
-              isObject(link) && typeof link.url === "string",
+              isRecord(link) && typeof link.url === "string",
           )
           .map((link) => ({
             url: link.url,
@@ -845,7 +842,7 @@ function paragraphFromOslf(paragraph: unknown): RichNode {
   for (const run of listOf(runs)) {
     if (typeof run === "string") {
       if (run) content.push({ type: "text", text: run });
-    } else if (isObject(run) && typeof run.text === "string") {
+    } else if (isRecord(run) && typeof run.text === "string") {
       const marks: NonNullable<RichNode["marks"]> = [];
       if (run.bold) marks.push({ type: "bold" });
       if (run.italic) marks.push({ type: "italic" });
@@ -856,16 +853,16 @@ function paragraphFromOslf(paragraph: unknown): RichNode {
         marks.push({ type: "speech", attrs: { ipa, alias, sayAs } });
       }
       if (run.text) content.push({ type: "text", text: run.text, marks });
-    } else if (isObject(run) && run.pause) {
+    } else if (isRecord(run) && run.pause) {
       content.push({ type: "pause", attrs: { length: run.pause } });
-    } else if (isObject(run) && run.math) {
+    } else if (isRecord(run) && run.math) {
       // normalizeTextContent cleans the formula (normalizeFormula).
       const { format, source, display, spoken } = fieldsOf(run.math);
       content.push({
         type: "math",
         attrs: { format, source, display, spoken: spoken ?? null },
       });
-    } else if (isObject(run) && run.note) {
+    } else if (isRecord(run) && run.note) {
       const note = fieldsOf(run.note);
       content.push({
         type: "footnote",
@@ -918,7 +915,7 @@ function imageFromOslf(value: unknown): ImportedPicture | null {
 }
 
 function creditText(credit: unknown): string {
-  if (!isObject(credit)) return "";
+  if (!isRecord(credit)) return "";
   if (typeof credit.text === "string" && credit.text.trim()) {
     return credit.text.trim();
   }

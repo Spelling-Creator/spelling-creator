@@ -36,6 +36,7 @@ import {
   newFindings,
   validateLesson,
 } from "./lessonChecks.ts";
+import { isObjectLike } from "./guards.ts";
 import { inlineTextMarkup } from "./inlineText.ts";
 import { questionAnswerPlain } from "./questions.ts";
 import {
@@ -98,17 +99,13 @@ export function hasAiFix(finding: {
 // The blocks a fix may change. Images and VAKT activities are left alone.
 const EDITABLE: ReadonlySet<string> = new Set(["text", "question", "spelling"]);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object";
-}
-
 // The text of each item in a list of strings or `{ text }` items, trimmed,
 // with the empty ones left out.
 const texts = (items: unknown): string[] =>
   (Array.isArray(items) ? items : [])
     .map((item: unknown) => {
       const text =
-        typeof item === "string" ? item : isRecord(item) ? item.text : "";
+        typeof item === "string" ? item : isObjectLike(item) ? item.text : "";
       return typeof text === "string" ? text.trim() : "";
     })
     .filter(Boolean);
@@ -265,7 +262,9 @@ export function aiEditsToOperations(
   const operations: ReplaceBlockOperation[] = [];
   const list: unknown[] = Array.isArray(edits) ? edits : [];
   for (const [i, raw] of list.entries()) {
-    const edit: { [K in keyof AiEdit]?: unknown } = isRecord(raw) ? raw : {};
+    const edit: { [K in keyof AiEdit]?: unknown } = isObjectLike(raw)
+      ? raw
+      : {};
     const block = (section.blocks || []).find((b) => b.id === edit.blockId);
     if (!block) {
       throw new Error(
@@ -349,21 +348,20 @@ type ItemLists = { type: string } & {
   [K in "answers" | "steps" | "words"]?: Array<{ id: string; text: unknown }>;
 };
 
-function settle(before: Block | undefined, after: Block): Block {
+function settle(before: ItemLists | undefined, after: Block): Block {
   if (after.type === "text") {
     return withTextBlockDocument(after, textBlockContent(after));
   }
-  const out = { ...after };
-  const lists: ItemLists = out;
-  const was: ItemLists | undefined = before;
+  const out: Block & ItemLists = { ...after };
   for (const field of ["answers", "steps", "words"] as const) {
-    if (lists[field]) lists[field] = keepItemIds(was?.[field], lists[field]);
+    const items = out[field];
+    if (items) out[field] = keepItemIds(before?.[field], items);
   }
   return out;
 }
 
 function isReplaceBlock(op: unknown): op is FixOperation {
-  return isRecord(op) && op.op === "replace_block";
+  return isObjectLike(op) && op.op === "replace_block";
 }
 
 // A fix's operations, checked to be replace_block operations alone. Their
@@ -373,7 +371,7 @@ function fixOperations(operations: unknown): FixOperation[] {
   const list: unknown[] = operations;
   return list.map((op) => {
     if (!isReplaceBlock(op)) {
-      const name = isRecord(op) ? op.op : undefined;
+      const name = isObjectLike(op) ? op.op : undefined;
       throw new Error(`A fix can only replace blocks, not "${name}".`);
     }
     return op;

@@ -23,6 +23,7 @@
 // assistant driving them) never have to. Input is intentionally simpler than the
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
+import { isObjectLike } from "./guards.ts";
 import { IMAGE_ALIGNS, type ImageAlign, extFromMime } from "./image.ts";
 import { withSeparateCredit } from "./imageCredit.ts";
 import { inlineTextMarkup, markupToInlineText } from "./inlineText.ts";
@@ -76,10 +77,6 @@ function isQuestionType(value: unknown): value is QuestionType {
 
 function isImageAlign(value: unknown): value is ImageAlign {
   return (IMAGE_ALIGNS as readonly unknown[]).includes(value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object";
 }
 
 /**
@@ -446,7 +443,7 @@ export function buildSources(
   const seen = new Set<string>();
   return list.map((raw, i) => {
     const where = `Source ${i + 1}`;
-    if (!isRecord(raw)) {
+    if (!isObjectLike(raw)) {
       throw new Error(`${where} must be an object.`);
     }
     if (!isSourceId(raw.id)) {
@@ -525,7 +522,7 @@ type PresentedQuestion = Omit<QuestionBlock, "prompt" | "steps"> & {
  * Anything that isn't a lesson comes back as it was.
  */
 export function presentDoc(doc: unknown): unknown {
-  if (!isRecord(doc) || !Array.isArray(doc.sections)) return doc;
+  if (!isObjectLike(doc) || !Array.isArray(doc.sections)) return doc;
   const sections: Array<Partial<Section> | null | undefined> = doc.sections;
   return {
     ...doc,

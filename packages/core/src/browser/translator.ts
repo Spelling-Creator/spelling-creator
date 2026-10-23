@@ -27,6 +27,7 @@
 //
 // Specs: https://developer.mozilla.org/en-US/docs/Web/API/Translator_API
 
+import { errorName } from "../guards.ts";
 import { isRichTextHtml } from "../richText.ts";
 import {
   languageForTag,
@@ -135,13 +136,6 @@ function translatorApi() {
 
 function detectorApi() {
   return aiGlobals.LanguageDetector;
-}
-
-// The `name` of whatever was thrown, read as `err?.name` would.
-function errorName(err: unknown): unknown {
-  return typeof err === "object" && err !== null && "name" in err
-    ? err.name
-    : undefined;
 }
 
 // The fallback chunk, fetched once on first use. Only a successful load is
@@ -312,6 +306,13 @@ function isReaderError(error: unknown): error is ReaderError {
   );
 }
 
+// Both engines need the source language; detection can come back without one.
+function hasSourceLanguage(
+  options: TranslateOptions,
+): options is TranslateOptions & { sourceLanguage: string } {
+  return Boolean(options.sourceLanguage);
+}
+
 /**
  * Translate text blocks into `targetLanguage`, on this device.
  *
@@ -327,13 +328,13 @@ export async function translateBlocks(
   blocks: string[],
   options: TranslateOptions,
 ): Promise<TranslationResult> {
-  const { sourceLanguage, targetLanguage } = options;
-  if (!sourceLanguage) {
+  if (!hasSourceLanguage(options)) {
     throw readerError(
       "Couldn't tell what language this is in.",
       SOURCE_LANGUAGE_ERROR,
     );
   }
+  const { sourceLanguage, targetLanguage } = options;
 
   const availability = await browserPairAvailability(
     sourceLanguage,
@@ -342,10 +343,7 @@ export async function translateBlocks(
   if (availability !== "unavailable") {
     try {
       return {
-        blocks: await translateWithBrowser(blocks, {
-          ...options,
-          sourceLanguage,
-        }),
+        blocks: await translateWithBrowser(blocks, options),
         engine: "browser",
       };
     } catch (err) {
@@ -368,7 +366,7 @@ export async function translateBlocks(
   }
 
   const fallback = await loadFallback();
-  return fallback.translateBlocks(blocks, { ...options, sourceLanguage });
+  return fallback.translateBlocks(blocks, options);
 }
 
 /**

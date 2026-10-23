@@ -493,8 +493,8 @@ export function validateResponses(responses: unknown): string | null {
   if (responses.length > MAX_RESPONSES) {
     return `A lesson run-through can hold at most ${MAX_RESPONSES} answers.`;
   }
-  const list: readonly unknown[] = responses;
-  for (const response of list) {
+  // Array.isArray narrows `unknown` to any[]; each entry is unchecked.
+  for (const response of responses as readonly unknown[]) {
     if (!response || typeof response !== "object") {
       return "Each answer must be an object.";
     }

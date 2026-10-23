@@ -76,6 +76,7 @@ import {
   sourceCitationParts,
   sourceHasContent,
 } from "./sources.ts";
+import { isRecord } from "./guards.ts";
 import type { LessonDoc, Source } from "./types.ts";
 
 /** The marks a text run may carry, in the canonical order they are stored in. */
@@ -110,10 +111,6 @@ export type Footnote = {
   note: string;
 };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 // One line of text: footnote fields and text runs never hold line breaks, since
 // a line break is what separates two paragraphs.
 function oneLine(value: unknown, limit: number) {
@@ -126,7 +123,7 @@ function oneLine(value: unknown, limit: number) {
  * footnote says nothing (no source and no note).
  */
 export function normalizeFootnote(attrs: unknown): Footnote | null {
-  const fields: Record<string, unknown> = isObject(attrs) ? attrs : {};
+  const fields: Record<string, unknown> = isRecord(attrs) ? attrs : {};
   const sourceId = isSourceId(fields.sourceId) ? fields.sourceId : null;
   const locator = sourceId ? oneLine(fields.locator, LOCATOR_LIMIT) : "";
   const note = oneLine(fields.note, NOTE_LIMIT);
@@ -162,7 +159,7 @@ const ALIAS_LIMIT = 500;
  * put around it, which are not sounds, so they are dropped.
  */
 export function normalizeSpeechHint(attrs: unknown): SpeechHint | null {
-  if (!isObject(attrs)) return null;
+  if (!isRecord(attrs)) return null;
   const ipa = oneLine(attrs.ipa, IPA_LIMIT)
     .replace(/^[/[]+|[/\]]+$/g, "")
     .trim();
@@ -212,9 +209,9 @@ export function normalizeSpokenText(value: unknown): SpokenText | null {
   for (const run of list) {
     if (typeof run === "string") {
       pushWords(spokenLine(run));
-    } else if (isObject(run) && isPauseLength(run.pause)) {
+    } else if (isRecord(run) && isPauseLength(run.pause)) {
       runs.push({ pause: run.pause });
-    } else if (isObject(run) && typeof run.text === "string") {
+    } else if (isRecord(run) && typeof run.text === "string") {
       const text = spokenLine(run.text);
       if (!text) continue;
       const hint = normalizeSpeechHint(run);
@@ -244,7 +241,7 @@ export type Formula = {
  * format asks, so the formula survives a save; renderers show its source.
  */
 export function normalizeFormula(attrs: unknown): Formula | null {
-  if (!isObject(attrs)) return null;
+  if (!isRecord(attrs)) return null;
   const source = oneLine(attrs.source, FORMULA_LIMIT);
   if (!source) return null;
   const format =
@@ -319,7 +316,7 @@ function marksOf(node: { marks?: unknown }) {
   const marks: unknown[] = node.marks;
   const present = new Set(
     marks.map((mark) =>
-      typeof mark === "string" ? mark : isObject(mark) ? mark.type : undefined,
+      typeof mark === "string" ? mark : isRecord(mark) ? mark.type : undefined,
     ),
   );
   return TEXT_MARKS.filter((mark) => present.has(mark));
@@ -329,8 +326,8 @@ function marksOf(node: { marks?: unknown }) {
 function speechOf(node: { marks?: unknown }) {
   if (!Array.isArray(node?.marks)) return null;
   const marks: unknown[] = node.marks;
-  const mark = marks.find((m) => isObject(m) && m.type === "speech");
-  return isObject(mark) ? normalizeSpeechHint(mark.attrs) : null;
+  const mark = marks.find((m) => isRecord(m) && m.type === "speech");
+  return isRecord(mark) ? normalizeSpeechHint(mark.attrs) : null;
 }
 
 function sameMarks(a: TextMark[], b: TextMark[]) {
@@ -344,7 +341,7 @@ function sameSpeech(a: SpeechHint | null, b: SpeechHint | null) {
 // Flatten an inline node (or an unknown wrapper around some) into the inline
 // nodes this schema has, appending to `out`.
 function collectInline(node: unknown, out: FlatNode[], depth = 0) {
-  if (!isObject(node) || depth > 20) return;
+  if (!isRecord(node) || depth > 20) return;
   if (node.type === "text") {
     const text =
       typeof node.text === "string" ? node.text.replace(/[\r\n]+/g, " ") : "";
@@ -371,7 +368,7 @@ function collectInline(node: unknown, out: FlatNode[], depth = 0) {
   }
   if (node.type === "pause") {
     const length =
-      isObject(node.attrs) && isPauseLength(node.attrs.length)
+      isRecord(node.attrs) && isPauseLength(node.attrs.length)
         ? node.attrs.length
         : "short";
     out.push({ type: "pause", attrs: { length } });
@@ -402,11 +399,11 @@ const INLINE_TYPES = new Set<unknown>([
 // Every paragraph inside a block-level node. A heading or a list item pasted in
 // from somewhere else becomes the paragraph its words were in.
 function collectParagraphs(node: unknown, out: FlatParagraph[], depth = 0) {
-  if (!isObject(node) || depth > 20) return;
+  if (!isRecord(node) || depth > 20) return;
   const children: unknown[] = Array.isArray(node.content) ? node.content : [];
   if (
     node.type === "paragraph" ||
-    children.some((child) => isObject(child) && INLINE_TYPES.has(child.type))
+    children.some((child) => isRecord(child) && INLINE_TYPES.has(child.type))
   ) {
     const inline: FlatNode[] = [];
     for (const child of children) collectInline(child, inline);
@@ -431,7 +428,7 @@ function P(): { type: "paragraph" } {
  * normalize to the same bytes or every save would look like an edit.
  */
 export function normalizeTextContent(value: unknown): TextContent | null {
-  if (!isObject(value) || value.type !== "doc") return null;
+  if (!isRecord(value) || value.type !== "doc") return null;
   return storedDocument(value.content);
 }
 

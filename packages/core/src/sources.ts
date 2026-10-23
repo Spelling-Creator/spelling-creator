@@ -22,6 +22,7 @@
 //                        tagged `role: "locator"`, so the Word export can mark
 //                        it with a style the importer reads back exactly.
 
+import { isObjectLike } from "./guards.ts";
 import { isSafeLink } from "./richText.ts";
 import type { Source } from "./types.ts";
 
@@ -60,11 +61,6 @@ const FIELD_LIMITS = {
 // an assistant pick readable keys ("smith2020") that its markup refers to.
 const SOURCE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-// Anything with fields to read: an object, or an array.
-function hasFields(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object";
-}
-
 /** Whether a value is usable as a source id. */
 export function isSourceId(id: unknown): id is string {
   return typeof id === "string" && SOURCE_ID.test(id);
@@ -89,7 +85,7 @@ export function createSource(newId: () => string): Source {
  * stored: renderers link it, and `javascript:` in an href executes.
  */
 export function normalizeSource(raw: unknown): Source | null {
-  if (!hasFields(raw) || !isSourceId(raw.id)) return null;
+  if (!isObjectLike(raw) || !isSourceId(raw.id)) return null;
   const source: Source = {
     id: raw.id,
     title: "",
