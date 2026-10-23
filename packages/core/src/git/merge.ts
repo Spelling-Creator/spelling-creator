@@ -464,7 +464,7 @@ function assemble(
 
   // Blocks are placed in the first merged section that claims them, so a block
   // moved between sections on one side can't end up duplicated.
-  const placed = new Set();
+  const placed = new Set<string>();
   /** sectionId -> its merged block ids, in order. */
   const layout = new Map<string, string[]>();
 
