@@ -117,6 +117,17 @@ describe("preparing claims", () => {
     expect(problem({ subject: "X", property: "colour", value: 1 })).toBe(
       "property",
     );
+    // Names every object inherits are not properties either, so they can't
+    // reach the checks that would read a spec off them.
+    expect(problem({ subject: "X", property: "constructor", value: 1 })).toBe(
+      "property",
+    );
+    expect(problem({ subject: "X", property: "toString", value: 1 })).toBe(
+      "property",
+    );
+    expect(
+      problem({ subject: "X", property: "height", value: 3, unit: "valueOf" }),
+    ).toBe("unit-wrong");
     expect(problem({ subject: " ", property: "height", value: 1 })).toBe(
       "subject",
     );

@@ -24,6 +24,7 @@
 
 // From doc.ts, not layout.ts: these are pure, so the diff (and the history UI
 // that renders it) never pulls the git engine into the main bundle.
+import { ownValue } from "../guards.ts";
 import { canonicalJson, docBlocks, type DocLike } from "./doc.ts";
 import type { Block, Section, Source } from "../types.ts";
 
@@ -327,7 +328,7 @@ const TYPE_LABEL: Partial<Record<BlockType, readonly [string, string]>> = {
 };
 
 function label(type: BlockType, count: number) {
-  const pair = TYPE_LABEL[type] || ["block", "blocks"];
+  const pair = ownValue(TYPE_LABEL, type) ?? ["block", "blocks"];
   return count === 1 ? pair[0] : pair[1];
 }
 

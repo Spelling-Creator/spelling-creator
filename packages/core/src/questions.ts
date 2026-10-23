@@ -22,6 +22,7 @@
 // so every document exported under the old labels needs its old style name
 // mapped too or it imports as plain text.
 
+import { ownValue } from "./guards.ts";
 import { inlineTextPlain } from "./inlineText.ts";
 import type {
   QuestionBlock,
@@ -609,8 +610,7 @@ export function questionAnswerText(
 export function questionMeta(
   questionType: string | null | undefined,
 ): QuestionTypeMeta {
-  const byKey: Partial<Record<string, QuestionTypeMeta>> = QUESTION_TYPES;
-  return (questionType != null && byKey[questionType]) || QUESTION_TYPES.open;
+  return ownValue(QUESTION_TYPES, questionType) ?? QUESTION_TYPES.open;
 }
 
 // Build a fresh question block of the given type. `newId` is injected so this

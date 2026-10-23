@@ -453,6 +453,21 @@ describe("fromOslf", () => {
     );
   });
 
+  it("reads a type named like an object's own property as an open question", () => {
+    const back = fromOslf({
+      oslf: "0.1",
+      title: "T",
+      sections: [
+        {
+          blocks: [
+            { type: "question", questionType: "constructor", prompt: "Why?" },
+          ],
+        },
+      ],
+    });
+    expect(back.sections[0].blocks[0]).toMatchObject({ questionType: "open" });
+  });
+
   it("keeps a rich prompt, and keeps an unknown type as an open question", () => {
     const back = fromOslf({
       oslf: "0.1",

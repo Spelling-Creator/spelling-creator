@@ -26,7 +26,7 @@
 // from the 0.1 draft so the tests can hold toOslf's output to it. Nothing at
 // runtime reads it.
 
-import { isRecord } from "./guards.ts";
+import { isRecord, ownValue } from "./guards.ts";
 import { headingText } from "./heading.ts";
 import { imageCaptionParts } from "./imageCredit.ts";
 import {
@@ -618,8 +618,7 @@ function imageToOslf(
 
 function questionToOslf(block: QuestionBlock): OslfQuestion {
   const type = resolveOpenType(block);
-  const toOslfType: Partial<Record<string, OslfQuestionType>> = TYPE_TO_OSLF;
-  const questionType = toOslfType[String(type)] || "broad-open";
+  const questionType = ownValue(TYPE_TO_OSLF, type) ?? "broad-open";
   const out: OslfQuestion = {
     type: "question",
     questionType,
@@ -940,8 +939,7 @@ function questionFromOslf(block: Fields): ImportedQuestion {
   const suggested = block.answerKey === "suggested";
   // A type this app doesn't know is kept rather than dropped, as the format
   // asks: it becomes an untyped (legacy open) question with its prompt.
-  const fromOslfType: Partial<Record<string, QuestionType>> = OSLF_TO_TYPE;
-  const type = fromOslfType[String(block.questionType)] || "open";
+  const type = ownValue(OSLF_TO_TYPE, block.questionType) ?? "open";
   const base = { type: "question" as const, prompt };
   switch (type) {
     case "single":

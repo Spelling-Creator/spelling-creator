@@ -34,6 +34,7 @@ import "@mathjax/src/mjs/input/tex/noerrors/NoErrorsConfiguration.js";
 import type { DOMAdaptor } from "@mathjax/src/mjs/core/DOMAdaptor.js";
 import type { MathDocument } from "@mathjax/src/mjs/core/MathDocument.js";
 import type { MmlNode } from "@mathjax/src/mjs/core/MmlTree/MmlNode.js";
+import { ownValue } from "../guards.ts";
 
 /** A formula to render: its notation, its source and its placement. */
 export interface FormulaInput {
@@ -112,7 +113,7 @@ export function createFormulaRenderer<N, T, D>(
 
   return {
     async render({ format, source, display = false }) {
-      const jax = INPUT_JAX[format];
+      const jax = ownValue(INPUT_JAX, format);
       if (!jax) return null;
       const options = { format: jax, display: Boolean(display) };
       // Parsed twice: once stopping at the MathML tree, once all the way to

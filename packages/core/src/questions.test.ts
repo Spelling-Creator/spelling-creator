@@ -525,4 +525,9 @@ describe("questionMeta", () => {
   it("falls back to open for a type it doesn't know", () => {
     expect(questionMeta("nonsense")).toBe(QUESTION_TYPES.open);
   });
+
+  it("doesn't take what every object inherits for a type", () => {
+    expect(questionMeta("constructor")).toBe(QUESTION_TYPES.open);
+    expect(questionMeta("toString")).toBe(QUESTION_TYPES.open);
+  });
 });

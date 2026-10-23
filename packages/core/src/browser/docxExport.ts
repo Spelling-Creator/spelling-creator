@@ -57,6 +57,7 @@ import { formulaToDocx } from "./formulaDocx.ts";
 import { formulaKey, renderLessonFormulas } from "./formulas.ts";
 import { lessonSources, sourceEntryParts, sourcesById } from "../sources.ts";
 import { fitWithin, imageSizeScale } from "../image.ts";
+import { ownValue } from "../guards.ts";
 import { imageCaptionParts } from "../imageCredit.ts";
 import { getImageBytes } from "./imageRef.ts";
 import {
@@ -207,7 +208,7 @@ const ALIGNMENT_MAP: Partial<Record<string, Alignment>> = {
 };
 
 function imageAlignment(block: { align?: string }): Alignment {
-  return ALIGNMENT_MAP[block.align ?? ""] || AlignmentType.CENTER;
+  return ownValue(ALIGNMENT_MAP, block.align) ?? AlignmentType.CENTER;
 }
 
 // `docx` wants colours as bare hex, without the leading '#'.

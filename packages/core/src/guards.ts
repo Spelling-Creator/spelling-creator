@@ -26,6 +26,21 @@ export function isObjectLike<T>(value: T): value is ObjectPart<T> & T {
   return Boolean(value) && typeof value === "object";
 }
 
+/**
+ * `map[key]`, for one of the map's own keys only. A plain lookup with a key
+ * from a file, a stored lesson or a model's reply also finds what every object
+ * inherits ("constructor", "toString"), and hands back a function where the
+ * caller expected one of its entries.
+ */
+export function ownValue<V>(
+  map: Readonly<Partial<Record<string, V>>>,
+  key: unknown,
+): V | undefined {
+  return typeof key === "string" && Object.hasOwn(map, key)
+    ? map[key]
+    : undefined;
+}
+
 /** An error's `name` ("AbortError" and the like), if it has one. */
 export function errorName(err: unknown): unknown {
   return isObjectLike(err) ? err.name : undefined;

@@ -83,7 +83,7 @@ import {
   stemTest,
   withoutFigures,
 } from "./factText.ts";
-import { isObjectLike } from "./guards.ts";
+import { isObjectLike, ownValue } from "./guards.ts";
 import { textBlockPlain } from "./lessonText.ts";
 import {
   type Eruption,
@@ -490,12 +490,9 @@ export const FACT_PROPERTIES: Readonly<Record<FactProperty, FactPropertySpec>> =
 
 export const FACT_PROPERTY_KEYS = Object.keys(PROPERTY_SPECS) as FactProperty[];
 
-// FACT_PROPERTIES as looked up by whatever a model wrote for a property.
-const PROPERTY_BY_KEY: Partial<Record<string, FactPropertySpec>> =
-  FACT_PROPERTIES;
-
+// Whatever a model wrote for a property, held to FACT_PROPERTIES' own keys.
 const isFactProperty = (value: unknown): value is FactProperty =>
-  typeof value === "string" && Boolean(PROPERTY_BY_KEY[value]);
+  ownValue(FACT_PROPERTIES, value) !== undefined;
 
 // Read along with the values, for what they say about the item: a scientific
 // name, or being one of KIND_CLASSES, makes it a kind of living thing (see the
@@ -622,10 +619,6 @@ export type FactUnit = keyof typeof UNIT_DEFS;
 export const FACT_UNITS: Readonly<Record<FactUnit, FactUnitDef>> = UNIT_DEFS;
 export const FACT_UNIT_KEYS = Object.keys(UNIT_DEFS) as FactUnit[];
 
-// The units as looked up by whatever a claim or an article says, which may be
-// no unit this knows.
-const UNITS: Partial<Record<string, FactUnitDef>> = FACT_UNITS;
-
 const UNIT_BY_QID = new Map(
   Object.entries(FACT_UNITS).flatMap(([key, def]) =>
     [def.qid, ...(def.aliases || [])].map((qid) => [qid, key] as const),
@@ -641,8 +634,8 @@ export function convertUnit(
   from: string,
   to: string,
 ): number | null {
-  const a = UNITS[from];
-  const b = UNITS[to];
+  const a = ownValue(FACT_UNITS, from);
+  const b = ownValue(FACT_UNITS, to);
   if (!a || !b || a.dimension !== b.dimension) return null;
   const base = a.toBase ? a.toBase(value) : value * a.factor;
   return b.fromBase ? b.fromBase(base) : base / b.factor;
@@ -758,7 +751,8 @@ export function claimProblem(input: unknown): ClaimProblem | null {
   if (spec.kind === "quantity" && spec.dimension !== "count") {
     const unit = cleanString(input.unit, 20);
     if (!unit) return "unit-missing";
-    if (UNITS[unit]?.dimension !== spec.dimension) return "unit-wrong";
+    if (ownValue(FACT_UNITS, unit)?.dimension !== spec.dimension)
+      return "unit-wrong";
   }
   return null;
 }
@@ -1792,7 +1786,8 @@ function sentenceStates(
   }
   const { about, rival } = wordTestsFor(claim.property);
   const states = (q: TextQuantity) => {
-    if (UNITS[q.unit]?.dimension !== spec.dimension) return false;
+    if (ownValue(FACT_UNITS, q.unit)?.dimension !== spec.dimension)
+      return false;
     const to = (n?: number) =>
       n == null ? undefined : convertUnit(n, q.unit, claim.unit);
     const value = to(q.value);
