@@ -16,13 +16,13 @@
 // merged state, and relays the update to the other admitted peers. Two people
 // editing different blocks therefore both keep their work, where the old
 // whole-document last-write-wins model silently dropped one of them. See
-// packages/core/src/ydoc.js for the document model and the plain-JSON bridge.
+// packages/core/src/ydoc.ts for the document model and the plain-JSON bridge.
 //
 // Every relayed update is preceded by an EDITED frame naming its sender's slot,
 // which is how version history knows whom to credit for a session's edits.
 //
 // Wire protocol — binary frames for speed, defined once in
-// packages/core/src/collabFrames.js and spoken by the room and the browser
+// packages/core/src/collabFrames.ts and spoken by the room and the browser
 // (apps/web/src/lib/collab.js). Read that file for the frame shapes; a sender is
 // identified there by a server-assigned u16 "slot" rather than by name or email,
 // which makes packets smaller and identities unspoofable.

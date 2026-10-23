@@ -6,7 +6,7 @@
 // here, and loaded on demand via load.js when the editor mounts.
 //
 // The pure parts of the version-control layer are NOT here: the document diff
-// (ops.js), the merge (merge.js) and the doc helpers (doc.js) have no git
+// (ops.ts), the merge (merge.ts) and the doc helpers (doc.ts) have no git
 // dependency, so the history and merge dialogs can import them directly and
 // still render without the engine present.
 

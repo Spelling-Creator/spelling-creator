@@ -7,7 +7,7 @@
 import { Packer } from "docx";
 import mammoth from "mammoth";
 
-import { buildDocument } from "../../src/browser/docxExport.js";
+import { buildDocument } from "../../src/browser/docxExport.ts";
 
 // Pictures need an image store or the API; the text is what we're after.
 export function withoutPictures(doc) {

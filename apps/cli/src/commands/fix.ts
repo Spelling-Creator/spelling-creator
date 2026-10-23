@@ -1,6 +1,6 @@
 // `fix`: make the quick fixes and write the lesson back.
 //
-// Only core's quick fixes (lessonFixes.js) are made: the ones that follow from
+// Only core's quick fixes (lessonFixes.ts) are made: the ones that follow from
 // the finding alone, with no judgement, such as taking bold off a passage or
 // moving a VAKT activity to the end of its section. Everything else is left
 // for the report, the same as `check` would show it.
@@ -24,6 +24,7 @@ import {
   type Finding,
 } from "@spelling-creator/core/lessonChecks";
 import { applyQuickFix, hasQuickFix } from "@spelling-creator/core/lessonFixes";
+import type { LessonDoc } from "@spelling-creator/core/types";
 
 import {
   defaultOutputPath,
@@ -40,7 +41,6 @@ import {
   printReports,
   type FileReport,
 } from "../report.ts";
-import type { LessonDoc } from "../types.ts";
 
 interface FixArgs {
   file: string;

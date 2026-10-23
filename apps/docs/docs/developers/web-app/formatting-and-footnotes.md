@@ -8,7 +8,7 @@ For how to use this, see
 [Formatting, footnotes & sources](../../guide/formatting-and-footnotes.md).
 
 Lesson text blocks can carry a little formatting (bold, italic, underline, the
-`TEXT_MARKS` in `lessonText.js`), footnotes, citations of the lesson's sources,
+`TEXT_MARKS` in `lessonText.ts`), footnotes, citations of the lesson's sources,
 read-aloud hints and pauses (see [Read-aloud hints](#read-aloud-hints)), and
 formulas (see [Formulas](#formulas)). A source is written once, in the lesson's Sources list, and a footnote
 anywhere in the text can cite it. Every footnote is numbered in reading order
@@ -18,7 +18,7 @@ list.
 The text block's tiptap editor turns off headings, lists, code, links, line
 breaks and strikethrough (`LessonTextInput.jsx`), and pasted line breaks become
 spaces. A source prints only when it has a title, an author or a link
-(`sourceHasContent` in `sources.js`). Removing a cited source goes through
+(`sourceHasContent` in `sources.ts`). Removing a cited source goes through
 `removeSourceCitations`, which drops a footnote that only cited it and keeps
 one that also had a note, as a plain note.
 
@@ -156,7 +156,7 @@ formula as its source), `inlineTextSpeech` in `core/speech` the spoken runs,
 and `inlineTextMarkup` and `markupToInlineText` the MCP server's markup. The
 checks, translation, search, the summaries, the AI helpers and the response
 snapshot interactive mode saves all take the plain words. In OSLF a prompt is
-written as rich text and read back as inline text (`oslf.js`), so a formula
+written as rich text and read back as inline text (`oslf.ts`), so a formula
 or a hint in a prompt survives the round trip; a note in one is read as
 nothing.
 
@@ -243,11 +243,11 @@ package (`@mathjax/src`) rather than a prebuilt bundle, so the app loads
 exactly the TeX and AsciiMath parsers and the SVG output it uses, as one lazy
 chunk. It is heavy (about half a megabyte compressed with its font), so:
 
-- `core/browser/formulas.js` is the light door: `lessonFormulas(doc)`,
-  `loadFormulas()` (one dynamic `import()` of `formulaBrowser.js` per page),
+- `core/browser/formulas.ts` is the light door: `lessonFormulas(doc)`,
+  `loadFormulas()` (one dynamic `import()` of `formulaBrowser.ts` per page),
   `renderLessonFormulas(doc)` for the exports and `formulaWords(formula)` for
   speech. A lesson without a formula never loads MathJax.
-- `core/browser/formulaEngine.js` makes a renderer for a MathJax DOM adaptor
+- `core/browser/formulaEngine.ts` makes a renderer for a MathJax DOM adaptor
   (the browser's, or the lite one in tests): `render({ format, source,
 display })` gives the MathML tree and string and the typeset SVG as a node,
   and `error` when the source didn't parse (MathJax's `noerrors` and
@@ -262,7 +262,7 @@ display })` gives the MathML tree and string and the typeset SVG as a node,
   few lines to name the functions instead; the patch applies on install
   (`patchedDependencies` in `pnpm-workspace.yaml`) and has to be carried
   forward when MathJax is updated.
-- `core/browser/formulaBrowser.js` is the browser wiring: the page's own
+- `core/browser/formulaBrowser.ts` is the browser wiring: the page's own
   document, MathJax's stylesheet appended once, the font's dynamic glyph files
   (double-struck, script and so on) as chunks of the build found by
   `import.meta.glob`, and `formulaImage(node)`, a formula as a PNG for the
@@ -279,24 +279,24 @@ display })` gives the MathML tree and string and the typeset SVG as a node,
 
 The speech rule engine (`speech-rule-engine`, the engine behind MathJax's own
 accessibility tools) turns MathML into words: "60 over 5 equals 12", "x
-squared", "the square root of 81". `core/browser/formulaSpeech.js` loads it
+squared", "the square root of 81". `core/browser/formulaSpeech.ts` loads it
 with ClearSpeak rules fed from the app's own assets (the engine's `base` and
 `en` rule files, about 100 KB compressed), never its default CDN. In spoken
-text (`core/speech.js`) a formula is its author's `spoken` words, or a
+text (`core/speech.ts`) a formula is its author's `spoken` words, or a
 `{ text: source, formula }` run that `withFormulaSpeech` replaces with the
 engine's words just before a step is spoken (`useSpeech.js`); a formula that
 can't be parsed is read as its source.
 
 ### Word and PDF
 
-`formulaDocx.js` turns the MathML tree into the `docx` library's math
+`formulaDocx.ts` turns the MathML tree into the `docx` library's math
 components (fraction, superscript, subscript, radical, runs), which Word
 writes as a native equation. The exports render every formula first
 (`renderLessonFormulas`) and hand the map to `buildDocument`; without it a
 formula prints as its source. The PDF path's docx goes through mammoth, which
 drops equations, so that path asks for formulas as pictures
 (`formulasAs: "image"`): each is an `ImageRun` of the PNG `formulaImage`
-made, with alt text that names the formula so `pdfExport.js` can give the
+made, with alt text that names the formula so `pdfExport.ts` can give the
 `<img>` mammoth makes its size. A display formula is a centered paragraph of
 its own, and in the PDF counts as a picture in the `embedded` list, since it
 sits alone in its paragraph the way a lesson picture does.
@@ -336,10 +336,10 @@ document on each keystroke.
   the PDF can style it and the importer can recognize it (`S2C Sources
 Heading` and `S2C Source Entry`; the footnote locator and note are the
   character styles `S2C Footnote Locator` and `S2C Footnote Note`, all defined in
-  `lessonLayout.js`; the `S2C` prefix is a historical name kept so Word round
+  `lessonLayout.ts`; the `S2C` prefix is a historical name kept so Word round
   trips keep working). The PDF goes through
   mammoth, which turns the footnotes into a list at the end; `layoutNotes` in
-  `pdfExport.js` moves that list above the Sources list and heads it "Notes".
+  `pdfExport.ts` moves that list above the Sources list and heads it "Notes".
 - **Word import.** Bold, italics and underlining come back. Word footnotes and
   endnotes come back as footnotes. A Sources list this app exported is read back
   into the lesson's sources. Inside each footnote the exporter gives the locator
@@ -387,7 +387,7 @@ way.)
 In [version history](../version-history.md), the sources are stored in
 `lesson.json` next to the title, and show up as their own operations ("add
 source", "edit source", "remove source", "reorder sources"; see
-`packages/core/src/git/ops.js`). When merging, a text block's words are treated as one
+`packages/core/src/git/ops.ts`). When merging, a text block's words are treated as one
 field whichever shape they're in. So one side formatting a word while the other
 fixes a typo is a conflict the user sees, rather than two edits to different
 fields that merge "cleanly" and hide the typo fix. Sources merge without asking:
@@ -408,5 +408,5 @@ is full of braces and backslashes), so its braces have to balance; one whose
 braces don't is written with `escaped` after the notation and a backslash
 before each brace and backslash, which `contentToMarkup` does itself. A `{` in
 plain text is escaped as `\{`, so text read out of a lesson can be written
-straight back (`contentToMarkup` and `markupToContent` in `lessonText.js`). See
+straight back (`contentToMarkup` and `markupToContent` in `lessonText.ts`). See
 [Lesson validation](../mcp-server/lesson-validation.md) and [Tools](../mcp-server/tools.md).

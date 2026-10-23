@@ -149,7 +149,7 @@ export default function LessonLayout() {
   const [answersSaved, setAnswersSaved] = useState(0);
 
   // Whether this browser is holding an unfinished run-through of this lesson
-  // (see core/browser/interactiveProgress.js), which turns "Start lesson" into
+  // (see core/browser/interactiveProgress.ts), which turns "Start lesson" into
   // "Continue lesson". Read in an effect rather than during render: the server
   // has no localStorage, and a label that only exists on the client would be a
   // hydration mismatch. Re-read on every move between the lesson's tabs, since
@@ -348,7 +348,7 @@ export default function LessonLayout() {
 
   // Whether interactive mode has anything to walk through. Every lesson the hub
   // holds is compatible with it — the walkthrough is derived from the document
-  // itself (see core/interactive.js) — so this is only false for the degenerate
+  // itself (see core/interactive.ts) — so this is only false for the degenerate
   // case of a lesson whose sections are all empty.
   const playable = isInteractivePlayable(lesson?.doc);
 

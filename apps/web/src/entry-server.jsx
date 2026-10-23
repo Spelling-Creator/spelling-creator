@@ -71,7 +71,7 @@ const HOISTED_HEAD =
 export async function render({ url, config, data, signal }) {
   // Same seam the browser uses — core reads its configuration through this
   // rather than touching import.meta.env, which is exactly what makes it
-  // callable from here at all. See packages/core/src/config.js.
+  // callable from here at all. See packages/core/src/config.ts.
   configureCore(config);
 
   const { origin, pathname } = new URL(url);

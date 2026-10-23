@@ -3,7 +3,7 @@
 // and the Worker).
 //
 // An image block references its bytes by content hash, exactly like the web app
-// (see apps/web/src/lib/imageRef.js):  image: { hash, mime, ext }. The hash is the
+// (see packages/core/src/browser/imageRef.ts):  image: { hash, mime, ext }. The hash is the
 // lowercase-hex SHA-256 of the raw bytes, which is also the R2 object key the
 // Worker stores them under and recomputes on upload (PUT /images/:hash).
 
@@ -17,5 +17,5 @@ export async function sha256Hex(bytes) {
 }
 
 // The short extension the editor stores on the block. It lives in core because
-// the doc builder (core's lessonBuild.js) needs it too.
+// the doc builder (core's lessonBuild.ts) needs it too.
 export { extFromMime } from "@spelling-creator/core/image";

@@ -10,7 +10,7 @@
 // summary. Two strategies:
 //
 //   model    the model reads the whole section and writes the JSON (extract.mjs)
-//   rules    the import's own rule-based parser (core/documentImport.js, via
+//   rules    the import's own rule-based parser (core/documentImport.ts, via
 //            parse.mjs) reads the section; no model is loaded. "hybrid" is
 //            accepted as an older name for the same thing.
 //

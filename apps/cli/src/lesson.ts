@@ -3,22 +3,22 @@
 // Three kinds of file come in. A .json lesson file is the app's own lossless
 // format and goes through core's jsonImport. A .docx or a text file (.txt,
 // .md, or anything else) is a document that was never a lesson file: its
-// text goes through core's rules parser (documentImport.js), the same one the
+// text goes through core's rules parser (documentImport.ts), the same one the
 // web app's "Import from text" uses. That parser works out question types and
 // answers from the wording, so a lesson read that way comes with notes saying
 // so, and naming anything it could not place, for the report to show.
 //
 // A Word file is read as plain text here, even one this app exported. The
 // styled import that reads question types back from the exporter's character
-// styles (core's browser/docxImport.js) needs a DOM and the browser's image
+// styles (core's browser/docxImport.ts) needs a DOM and the browser's image
 // store, so it stays in the browser for now; the rules read an exported file
 // well enough, since its "Spell:" line and answer gaps are shapes they know.
 //
 // Everything written out is a .json lesson file, so a converted or fixed
 // lesson opens in the editor and round-trips from there, unless the output
 // path ends in .oslf.json, which writes the Open Spelling Lesson Format
-// (core's oslf.js) for tools that aren't this app, or .oslf.xml, which writes
-// the format's XML form (core's oslfXml.js). An .oslf.json file reads through
+// (core's oslf.ts) for tools that aren't this app, or .oslf.xml, which writes
+// the format's XML form (core's oslfXml.ts). An .oslf.json file reads through
 // the same door as a .json one, since core's jsonImport knows both; an .xml
 // file is read as the XML form into the same OSLF file first.
 
@@ -45,14 +45,14 @@ import {
   OslfImportError,
   isOslfFile,
   toOslf,
+  type OslfFile,
 } from "@spelling-creator/core/oslf";
 import {
   OSLF_XML_EXTENSION,
   fromOslfXml,
   toOslfXml,
 } from "@spelling-creator/core/oslfXml";
-
-import type { LessonDoc } from "./types.ts";
+import type { LessonDoc } from "@spelling-creator/core/types";
 
 /** Whether a path names an Open Spelling Lesson Format file, as JSON or XML. */
 export function isOslfPath(path: string): boolean {
@@ -360,7 +360,7 @@ export interface WriteOptions {
 // lesson refers to by hash alone is left out; one carrying a data URL is
 // kept. A lesson the format can't hold (a question it requires an answer for
 // is blank) is a write that fails, reported like any other.
-function oslfFile(path: string, doc: LessonDoc): unknown {
+function oslfFile(path: string, doc: LessonDoc): OslfFile {
   try {
     return toOslf(doc);
   } catch (err) {
@@ -386,10 +386,11 @@ export async function writeLesson(
   doc: LessonDoc,
   { force = false, unchangedSince }: WriteOptions = {},
 ): Promise<void> {
-  const file = isOslfPath(path) ? oslfFile(path, doc) : buildLessonFile(doc);
-  const contents = isOslfXmlPath(path)
-    ? toOslfXml(file)
-    : `${JSON.stringify(file, null, 2)}\n`;
+  const file = isOslfPath(path) ? oslfFile(path, doc) : null;
+  const contents =
+    file && isOslfXmlPath(path)
+      ? toOslfXml(file)
+      : `${JSON.stringify(file ?? buildLessonFile(doc), null, 2)}\n`;
   try {
     if (force) {
       await replaceFile(path, contents, unchangedSince);

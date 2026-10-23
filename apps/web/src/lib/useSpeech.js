@@ -6,7 +6,7 @@
 //   and the fallback.
 //
 //   A natural voice: Kokoro, a small voice model running in the page (see
-//   core/browser/readAloudEngine.js). Offered only where the device can run it
+//   core/browser/readAloudEngine.ts). Offered only where the device can run it
 //   (lib/speechPrefs.js useNaturalVoices), and chosen in the same voice picker.
 //
 // Everything here runs on the reader's own device. Like the on-device lesson
@@ -15,7 +15,7 @@
 // where it's missing the hook reports `supported: false` and the UI hides the
 // controls entirely instead of offering a button that can't work.
 //
-// What to say arrives as spoken text (see core/speech.js): lines of words that
+// What to say arrives as spoken text (see core/speech.ts): lines of words that
 // can carry a pronunciation, a substitution, a spell-out or a pause. The
 // natural voice follows all of them; the browser's voice is given plain words
 // (spokenForBrowser), so it says an alias and spells a word out but reads a
@@ -23,7 +23,7 @@
 //
 // A formula is spoken from the MathML MathJax parses it into, by a speech
 // rule engine. Both load the first time a formula is about to be read (see
-// core/browser/formulas.js), so a step with math in it starts a moment later
+// core/browser/formulas.ts), so a step with math in it starts a moment later
 // the first time, and a lesson without math never loads them. The words are
 // worked out before the step is spoken (withFormulaSpeech), for both voices.
 //
@@ -160,7 +160,7 @@ function createProgress() {
  * useSyncExternalStore, so that ticking doesn't re-render whatever holds this
  * object.
  *
- * What `speak` and `prepare` take is what speechLines in core/speech.js does:
+ * What `speak` and `prepare` take is what speechLines in core/speech.ts does:
  * a string, one idea per line, or a list of lines that are each a string or
  * spoken runs.
  *

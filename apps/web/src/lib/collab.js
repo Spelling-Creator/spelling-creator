@@ -15,7 +15,7 @@
 // Sync model — a CRDT (Yjs). Each participant keeps a Y.Doc mirroring the editor's
 // plain document; the room merges and relays the updates. Two people editing
 // different blocks both keep their work, where the previous whole-document
-// last-write-wins model silently dropped one of them. lib/ydoc.js owns the
+// last-write-wins model silently dropped one of them. Core's ydoc.ts owns the
 // document model and the plain-JSON <-> Yjs bridge; this file owns the socket.
 //
 // The loop, and why it settles:
@@ -30,7 +30,7 @@
 // stringifying the document and comparing it against the last one we sent.
 //
 // Wire protocol — binary frames for speed, defined once in
-// packages/core/src/collabFrames.js (see it for the frame shapes). This file owns
+// packages/core/src/collabFrames.ts (see it for the frame shapes). This file owns
 // the socket and the React state around it. A peer is identified by a
 // server-assigned numeric "slot"; we map slot -> identity from the presence
 // roster so cursors and chat can be labelled without shipping a name in every

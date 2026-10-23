@@ -2,7 +2,7 @@
 //
 // The sources are stubbed at the global fetch, which is what the shared
 // checker uses when it isn't handed one. The checking itself is tested in core
-// (packages/core/src/factCheck.test.js); this covers the tool's contract: that
+// (packages/core/src/factCheck.test.ts); this covers the tool's contract: that
 // it reaches the sources politely, sorts the verdicts, says where each came
 // from, and says why it dropped a claim.
 

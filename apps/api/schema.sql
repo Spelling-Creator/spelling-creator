@@ -146,7 +146,7 @@ create policy "ratings are public to read"
 -- kind of thing that should not end up on somebody else's dashboard by
 -- accident.
 --
--- `answers` is the array the browser builds in core/src/interactive.js: one entry
+-- `answers` is the array the browser builds in core/src/interactive.ts: one entry
 -- per question, each carrying { blockId, sectionId, sectionName, questionType,
 -- prompt, answer }. The prompt is snapshotted deliberately — the lesson may be
 -- edited or re-ordered later, and a saved run-through has to stay readable.

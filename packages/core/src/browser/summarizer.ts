@@ -1,0 +1,625 @@
+// On-device lesson summaries, in two layers (the same shape as translator.ts).
+//
+// Unlike the other AI helpers in this app (aiSuggest.ts), nothing here talks to
+// the Worker: no Turnstile, no API key, no network round-trip. A local model
+// runs on the reader's device, so a summary costs us nothing and the lesson
+// text never leaves the machine.
+//
+// The first choice is the browser's built-in Summarizer API. The trade-off is
+// that the API barely exists yet: it's Chromium-only, desktop-only, and gated
+// behind hardware minimums (free disk space, VRAM, an unmetered connection for
+// the one-time model download). For everyone else there is a second layer:
+// LFM2.5 running in the page with transformers.js (fallbackSummarizer.ts),
+// offered only on hardware whose WebGPU can run it, because its one-time model
+// download is about 760 MB. The fallback is reached ONLY through a dynamic
+// import() from inside a click handler, and nothing here may static-import it.
+// That keeps transformers.js out of every bundle a visitor loads to read a
+// lesson, and out of the Worker's server build entirely (vite.config.js stubs
+// the chunk out of the SSR graph).
+//
+// With neither engine possible, every entry point here still FAILS CLOSED: we
+// report "unavailable" rather than surfacing an error. The UI
+// (LessonSummary.jsx) then renders nothing at all, and a browser that can't
+// summarise simply never sees the feature instead of seeing a button that
+// breaks.
+//
+// Spec: https://developer.mozilla.org/en-US/docs/Web/API/Summarizer_API
+
+import { errorName } from "../guards.ts";
+import { imageCaptionParts } from "../imageCredit.ts";
+import { inlineTextPlain } from "../inlineText.ts";
+import { textBlockPlain } from "../lessonText.ts";
+import { baseLanguageTag } from "../translationLanguages.ts";
+import { headingText } from "../heading.ts";
+import { VAKT_LABEL, vaktText } from "../vakt.ts";
+import type { LessonDoc } from "../types.ts";
+import {
+  holdsLargeModel,
+  meteredConnection,
+  webGpuAdapter,
+} from "./deviceCheck.ts";
+import type {
+  BuiltInAvailability,
+  CreateMonitor,
+  LanguageDetectorApi,
+} from "./translator.ts";
+
+interface SummaryOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * The summary shapes the spec defines, in the order the UI offers them.
+ * "key-points" (a bulleted list) is the default: it's the most useful read for
+ * someone scanning a lesson, and it's what the API itself defaults to.
+ */
+export const SUMMARY_TYPES = [
+  { value: "key-points", label: "Key points" },
+  { value: "tldr", label: "TL;DR" },
+  { value: "teaser", label: "Teaser" },
+  { value: "headline", label: "Headline" },
+] as const satisfies readonly SummaryOption[];
+
+/** The spec's `length` values — relative, not a word count. */
+export const SUMMARY_LENGTHS = [
+  { value: "short", label: "Short" },
+  { value: "medium", label: "Medium" },
+  { value: "long", label: "Long" },
+] as const satisfies readonly SummaryOption[];
+
+export type SummaryType = (typeof SUMMARY_TYPES)[number]["value"];
+export type SummaryLength = (typeof SUMMARY_LENGTHS)[number]["value"];
+
+export const DEFAULT_SUMMARY_TYPE = "key-points" satisfies SummaryType;
+export const DEFAULT_SUMMARY_LENGTH = "short" satisfies SummaryLength;
+
+/** The options a summary is asked for with. Each falls back to its default. */
+export interface SummaryOptions {
+  type?: SummaryType;
+  length?: SummaryLength;
+}
+
+/** Which engine summarizes: the built-in API or LFM2.5 in the page. */
+export type SummarizerEngine = "browser" | "lfm";
+
+/**
+ * A summarizer session, from either engine: the parts of a built-in
+ * Summarizer session that this module and the summary card use, which the
+ * fallback session copies.
+ */
+export interface SummarizerSession {
+  /** "lfm" on a fallback session; a built-in one has no engine property. */
+  readonly engine?: "lfm";
+  readonly inputQuota?: number;
+  measureInputUsage?(input: string): Promise<number>;
+  // The built-in engine's ReadableStream is async iterable in every browser
+  // that ships the API.
+  summarizeStreaming(
+    input: string,
+    options?: { signal?: AbortSignal },
+  ): AsyncIterable<string>;
+  destroy(): void;
+}
+
+export interface SummarizerHooks {
+  signal?: AbortSignal;
+  onDownloadProgress?: (loaded: number) => void;
+  onEngine?: (engine: SummarizerEngine) => void;
+}
+
+// The DOM lib doesn't describe the Summarizer API yet, so the parts used here
+// are described below. translator.ts has the types the built-in AI APIs share.
+interface BuiltInSummarizerOptions {
+  type: SummaryType;
+  length: SummaryLength;
+  format: "markdown" | "plain-text";
+  outputLanguage: string;
+  sharedContext: string;
+}
+
+interface BuiltInSummarizer extends SummarizerSession {
+  readonly inputQuota: number;
+  measureInputUsage(input: string): Promise<number>;
+}
+
+interface SummarizerApi {
+  availability(options: BuiltInSummarizerOptions): Promise<BuiltInAvailability>;
+  create(
+    options: BuiltInSummarizerOptions & {
+      signal?: AbortSignal;
+      monitor?(monitor: CreateMonitor): void;
+    },
+  ): Promise<BuiltInSummarizer>;
+}
+
+// Steers the model: without it, a lesson full of question prompts and word lists
+// reads like a worksheet to summarise rather than a lesson to describe. The
+// fallback engine bakes the same instruction into its prompt
+// (fallbackSummarizer.ts), so both engines summarise for the same reader.
+const SHARED_CONTEXT =
+  "A Spelling lesson for nonspeaking spellers, who answer by pointing to " +
+  "letters on a letterboard. It contains lesson text, questions and spelling " +
+  "word lists. Summarize it for a practitioner or communication partner " +
+  "deciding whether the lesson suits the speller they work with.";
+
+// Below this, a lesson has less text than the summary would, so we don't offer
+// one — the feature is hidden rather than producing a summary longer than the
+// thing it summarises.
+export const MIN_SUMMARY_CHARS = 400;
+
+// The API is exposed as a `Summarizer` global. Reach it through `globalThis` so
+// this module is safe to import anywhere (and so a bare undeclared global never
+// throws a ReferenceError on browsers that don't ship it).
+const aiGlobals = globalThis as typeof globalThis & {
+  Summarizer?: SummarizerApi;
+  LanguageDetector?: LanguageDetectorApi;
+};
+
+function summarizerApi() {
+  return aiGlobals.Summarizer;
+}
+
+/** Does this browser expose the Summarizer API at all? */
+export function summarizerSupported(): boolean {
+  return Boolean(summarizerApi());
+}
+
+// The fallback chunk, fetched once on first use. Only a successful load is
+// memoised: caching a rejected promise would turn one flaky network moment
+// into "summaries are broken until you reload" (same reasoning as
+// translator.ts).
+let fallbackPromise: Promise<typeof import("./fallbackSummarizer.ts")> | null =
+  null;
+
+function loadFallback() {
+  if (!fallbackPromise) {
+    fallbackPromise = import("./fallbackSummarizer.ts").catch((err) => {
+      fallbackPromise = null;
+      throw err;
+    });
+  }
+  return fallbackPromise;
+}
+
+// Can this machine run the LFM fallback? The built-in engine's hardware bar
+// (disk, VRAM, an unmetered connection) is applied by the browser; this probe
+// is the fallback's equivalent, so a device is never offered a 760 MB model it
+// can't run or shouldn't fetch. It needs WebGPU with f16 shader support (the
+// quantisation fallbackSummarizer.ts loads is q4f16) on an adapter whose
+// limits can hold the weights, and an unmetered connection; deviceCheck.ts
+// has both, shared with the other in-page models. Cheap, and answerable
+// without loading the heavy chunk. Fails closed, like the built-in probe
+// above.
+async function fallbackPossible(): Promise<boolean> {
+  if (meteredConnection()) return false;
+  return holdsLargeModel(await webGpuAdapter());
+}
+
+// Chrome warns on every request that leaves outputLanguage unset, so one is
+// always named. English is the language every build of the model writes, which
+// makes it the safe answer for the availability probe and the fallback when a
+// lesson's own language can't be used.
+const DEFAULT_OUTPUT_LANGUAGE = "en";
+
+// The options passed to both availability() and create(). expectedInputLanguages
+// stays unset: a lesson doesn't record its language, and the summary's language
+// is chosen separately (outputLanguageFor below).
+function summarizerOptions(
+  { type, length }: SummaryOptions,
+  outputLanguage = DEFAULT_OUTPUT_LANGUAGE,
+): BuiltInSummarizerOptions {
+  return {
+    type: type || DEFAULT_SUMMARY_TYPE,
+    length: length || DEFAULT_SUMMARY_LENGTH,
+    format: "markdown",
+    outputLanguage,
+    sharedContext: SHARED_CONTEXT,
+  };
+}
+
+// How long the built-in engine gets to show that its model download has
+// started. availability() can say "downloadable" on a machine where the
+// download will never start: Chrome needs about 20 GB of free disk to install
+// the model and checks that only once create() is waiting, without rejecting
+// it. Left alone, create() never settles and the card waits forever. A real
+// download reported its first progress 3.1 seconds after the click on a fresh
+// Chrome 154 profile, so 15 seconds leaves room for a slow connection without
+// leaving the reader watching a dead card. Only the start is timed: once bytes
+// are arriving, a slow connection or the long unpacking step at the end is
+// left to run, and the reader can still cancel.
+const BUILT_IN_DOWNLOAD_START_MS = 15_000;
+
+// Set when the built-in engine's download failed to start and the fallback
+// took over, so later runs go straight to the fallback instead of waiting out
+// the same stall again. Kept in sessionStorage so a reload in the same tab
+// remembers it too, and in memory for when storage is blocked. A new tab
+// tries the built-in engine again, which is how freeing up disk space gets
+// noticed.
+const STALLED_KEY = "summarizer:builtInDownloadStalled";
+let builtInDownloadStalledHere = false;
+
+function builtInDownloadStalled() {
+  if (builtInDownloadStalledHere) return true;
+  try {
+    return globalThis.sessionStorage?.getItem(STALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markBuiltInDownloadStalled() {
+  builtInDownloadStalledHere = true;
+  try {
+    globalThis.sessionStorage?.setItem(STALLED_KEY, "1");
+  } catch {
+    // Storage blocked: the in-memory flag still covers this page.
+  }
+}
+
+// What the built-in API says about these options, failing closed: a missing
+// API, unsupported options or a probe that throws all collapse to
+// "unavailable", which hands the decision to the fallback probe.
+async function builtInAvailability(
+  options: SummaryOptions,
+  outputLanguage?: string,
+): Promise<BuiltInAvailability> {
+  const api = summarizerApi();
+  if (!api || builtInDownloadStalled()) return "unavailable";
+  try {
+    return (
+      (await api.availability(summarizerOptions(options, outputLanguage))) ||
+      "unavailable"
+    );
+  } catch {
+    return "unavailable";
+  }
+}
+
+// The lesson's language as a bare tag ("es"), or null when it can't be told.
+// Uses only the browser's LanguageDetector, which ships alongside the built-in
+// Summarizer, and only when its model is already on the device: create() runs
+// inside the click's user activation, and a detector download would spend that
+// window before the Summarizer gets to use it. translator.ts has a heavier
+// fallback detector, but it isn't worth a second model download here: with no
+// detected language, both engines write English.
+async function detectLessonLanguage(
+  text: string | undefined,
+  signal: AbortSignal | undefined,
+): Promise<string | null> {
+  const api = aiGlobals.LanguageDetector;
+  if (!api || !text) return null;
+  try {
+    if ((await api.availability()) !== "available") return null;
+    const detector = await api.create({ signal });
+    try {
+      const [best] = await detector.detect(text);
+      const tag = baseLanguageTag(best?.detectedLanguage);
+      return tag && tag !== "und" ? tag : null;
+    } finally {
+      detector.destroy?.();
+    }
+  } catch (err) {
+    if (errorName(err) === "AbortError") throw err;
+    return null;
+  }
+}
+
+// The output languages Chrome lists for the model (its own console message
+// names them). Asking availability() about any other language doesn't just
+// return "unavailable": Chrome also logs a console error, so a Danish lesson
+// is never asked about.
+const BUILT_IN_OUTPUT_LANGUAGES = ["de", "en", "es", "fr", "ja"];
+
+// The language the built-in engine should write in: the lesson's own when the
+// model can write it, so a Spanish lesson gets a Spanish summary, and English
+// otherwise. A listed language is still checked with availability(), because
+// older builds of the model write fewer of them.
+async function outputLanguageFor(
+  options: SummaryOptions,
+  detected: string | null,
+): Promise<string> {
+  if (
+    !detected ||
+    detected === DEFAULT_OUTPUT_LANGUAGE ||
+    !BUILT_IN_OUTPUT_LANGUAGES.includes(detected)
+  ) {
+    return DEFAULT_OUTPUT_LANGUAGE;
+  }
+  return (await builtInAvailability(options, detected)) === "unavailable"
+    ? DEFAULT_OUTPUT_LANGUAGE
+    : detected;
+}
+
+// Open a built-in session. When the model still has to be downloaded, the
+// download must report progress within BUILT_IN_DOWNLOAD_START_MS, or the
+// create is aborted and this throws a TimeoutError. The caller's own abort
+// still comes through as an AbortError.
+async function createBuiltIn(
+  options: SummaryOptions,
+  outputLanguage: string,
+  needsDownload: boolean,
+  hooks: SummarizerHooks,
+): Promise<BuiltInSummarizer> {
+  const stall = new AbortController();
+  const signal = hooks.signal
+    ? AbortSignal.any([hooks.signal, stall.signal])
+    : stall.signal;
+  const timer = needsDownload
+    ? setTimeout(() => stall.abort(), BUILT_IN_DOWNLOAD_START_MS)
+    : undefined;
+  try {
+    // Only called once builtInAvailability found the API.
+    return await summarizerApi()!.create({
+      ...summarizerOptions(options, outputLanguage),
+      signal,
+      monitor(monitor) {
+        monitor.addEventListener("downloadprogress", (event) => {
+          // Chrome sends a 0 when the create starts, before any bytes, so
+          // only real progress counts as the download having started.
+          if (event.loaded > 0) clearTimeout(timer);
+          hooks.onDownloadProgress?.(event.loaded);
+        });
+      },
+    });
+  } catch (err) {
+    if (stall.signal.aborted && !hooks.signal?.aborted) {
+      throw new DOMException(
+        "The on-device model download didn't start.",
+        "TimeoutError",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Can this device summarise with these options, with which engine, and is the
+ * model ready?
+ *
+ * The built-in engine is probed with English output, which every build of its
+ * model writes: this is a question about the browser and its hardware, and the
+ * lesson's own language is only settled at create().
+ *
+ * @returns availability is one of:
+ *   "available":    ready to run now.
+ *   "downloadable": supported, but the first run downloads the model.
+ *   "downloading":  supported, and a download is already in flight.
+ *   "unavailable":  neither engine can run here.
+ *   engine is "browser" for the built-in Summarizer API, "lfm" for the
+ *   transformers.js fallback, null when unavailable. The fallback always
+ *   reports "downloadable": the first run's 760 MB download is the state worth
+ *   warning about, and we can't cheaply tell whether the browser still has it
+ *   cached (a cached model just makes that phase instant).
+ */
+export async function summarizerAvailability(
+  options: SummaryOptions = {},
+): Promise<{
+  availability: BuiltInAvailability;
+  engine: SummarizerEngine | null;
+}> {
+  const builtIn = await builtInAvailability(options);
+  if (builtIn !== "unavailable") {
+    return { availability: builtIn, engine: "browser" };
+  }
+  if (await fallbackPossible()) {
+    return { availability: "downloadable", engine: "lfm" };
+  }
+  return { availability: "unavailable", engine: null };
+}
+
+/**
+ * Create a summariser session: the browser's built-in Summarizer when it can
+ * take these options, otherwise LFM2.5 in the page via the fallback chunk.
+ *
+ * Must be called from a user gesture (a click): the built-in API requires
+ * transient activation, and the fallback's download is far too heavy to start
+ * uninvited.
+ *
+ * @param options  text is the lesson as it will be summarised
+ *   (lessonSummaryText). The lesson's language is detected from it, and each
+ *   engine writes in that language when its model supports it, and in English
+ *   otherwise.
+ * @param hooks.signal  Aborts creation. The built-in engine
+ *   also aborts its model download; the fallback's download can't be
+ *   interrupted once it has started, so there the signal is checked before
+ *   the download begins (an aborted run never starts a 760 MB fetch) and again
+ *   when it ends.
+ * @param hooks.onDownloadProgress  Download fraction, 0-1.
+ *   A built-in download that reports no progress for 15 seconds is given up on
+ *   (see BUILT_IN_DOWNLOAD_START_MS): the run moves to the fallback where this
+ *   machine can run it, and otherwise rejects with a TimeoutError.
+ * @param hooks.onEngine  Called with
+ *   the engine actually being opened, before that engine does any heavy
+ *   work. The built-in engine can pass the availability probe and still
+ *   refuse create(), in which case this fires again with "lfm" BEFORE the
+ *   fallback's 760 MB download starts: the caller's chance to switch its
+ *   wording, or to abort and wait for an informed click (what
+ *   LessonSummary.jsx does when the reader was never warned about the
+ *   download).
+ * @returns The session. Call `.destroy()` when done. A fallback session
+ *   carries `engine: "lfm"`; a built-in one has no engine property.
+ */
+export async function createSummarizer(
+  options: SummaryOptions & { text?: string } = {},
+  hooks: SummarizerHooks = {},
+): Promise<SummarizerSession> {
+  // Detected once, for whichever engine ends up answering.
+  const lessonLanguage = await detectLessonLanguage(options.text, hooks.signal);
+
+  const builtIn = await builtInAvailability(options);
+  if (builtIn !== "unavailable") {
+    hooks.onEngine?.("browser");
+    try {
+      const outputLanguage = await outputLanguageFor(options, lessonLanguage);
+      return await createBuiltIn(
+        options,
+        outputLanguage,
+        builtIn !== "available",
+        hooks,
+      );
+    } catch (err) {
+      if (errorName(err) === "AbortError") throw err;
+      // The probe said yes but create() said no (a download that failed or
+      // never started, an option combination the model turned down): the
+      // fallback gets its chance below, if this machine can run it.
+      if (!(await fallbackPossible())) throw err;
+      if (errorName(err) === "TimeoutError") markBuiltInDownloadStalled();
+    }
+  }
+
+  if (!(await fallbackPossible())) {
+    throw new Error("This browser can't summarize on-device.");
+  }
+  // The engine is decided now: say so before any heavy work, so the caller
+  // can re-warn (or abort, which the next check honours) ahead of the
+  // fallback's download rather than find out when the session arrives.
+  hooks.onEngine?.("lfm");
+  if (hooks.signal?.aborted) {
+    throw new DOMException("Summary aborted.", "AbortError");
+  }
+  const fallback = await loadFallback();
+  return fallback.createFallbackSummarizer(
+    { ...options, language: lessonLanguage },
+    hooks,
+  );
+}
+
+/**
+ * Stream a summary of `text`, yielding each chunk as the model produces it, so
+ * the UI can render the summary as it's written instead of after it's finished.
+ * Works on either engine's session: the built-in API returns a ReadableStream
+ * and the fallback an async generator, and both are async iterables.
+ *
+ * @param summarizer  A session from createSummarizer().
+ * @returns Successive chunks, to be concatenated.
+ */
+export function summarizeStream(
+  summarizer: SummarizerSession,
+  text: string,
+  options: { signal?: AbortSignal } = {},
+): AsyncIterable<string> {
+  return summarizer.summarizeStreaming(text, { signal: options.signal });
+}
+
+/**
+ * Trim `text` to the session's input budget.
+ *
+ * The model can only take so much input (`inputQuota`, in the same opaque units
+ * measureInputUsage() reports); a long lesson can exceed it, and summarize() then
+ * throws QuotaExceededError. Usage tracks length closely enough that scaling the
+ * text down by the overshoot ratio (with headroom) converges in a couple of
+ * passes, so we cut the tail rather than fail — a summary of most of the lesson
+ * beats no summary. The caller tells the reader when we've had to cut.
+ */
+export async function fitToQuota(
+  summarizer: SummarizerSession,
+  text: string,
+): Promise<{ text: string; truncated: boolean }> {
+  const quota = summarizer.inputQuota;
+  if (
+    typeof summarizer.measureInputUsage !== "function" ||
+    typeof quota !== "number" ||
+    !Number.isFinite(quota)
+  ) {
+    return { text, truncated: false };
+  }
+
+  let candidate = text;
+  // Bounded: each pass shrinks the text, and in practice one or two suffice.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    let usage;
+    try {
+      usage = await summarizer.measureInputUsage(candidate);
+    } catch {
+      // Can't measure — hand it over as-is and let summarize() decide.
+      return { text: candidate, truncated: candidate.length < text.length };
+    }
+    if (!(usage > quota) || !usage) {
+      return { text: candidate, truncated: candidate.length < text.length };
+    }
+    const ratio = (quota / usage) * 0.9; // 10% headroom
+    const cut = Math.max(1, Math.floor(candidate.length * ratio));
+    candidate = candidate.slice(0, cut);
+  }
+  return { text: candidate, truncated: true };
+}
+
+/**
+ * The lesson document as the text we hand the model.
+ *
+ * This is deliberately NOT `lessonPlainText()` (LessonView.jsx), which flattens a
+ * lesson into prose for a meta description. Here the structure is the point: the
+ * title and section headings tell the model how the lesson is organised, and
+ * labelling the questions and word lists stops a bare list of words reading as
+ * body text. An image's caption goes in, labelled as one, since it says what
+ * the picture shows; its credit line stays out, being a name and a license.
+ *
+ * @param doc  The lesson body: { title, sections: [{ name, blocks }] }.
+ * @returns Markdown-ish plain text in reading order.
+ */
+export function lessonSummaryText(
+  doc: Partial<Pick<LessonDoc, "title" | "sections">> | null | undefined,
+): string {
+  const parts: string[] = [];
+  if (doc?.title) parts.push(`# ${doc.title}`);
+
+  for (const section of doc?.sections || []) {
+    if (section.name) parts.push(`## ${section.name}`);
+    for (const block of section.blocks || []) {
+      if (block.type === "text" && textBlockPlain(block).trim()) {
+        parts.push(textBlockPlain(block));
+      } else if (
+        block.type === "question" &&
+        inlineTextPlain(block.prompt).trim()
+      ) {
+        parts.push(`Question: ${inlineTextPlain(block.prompt)}`);
+      } else if (block.type === "spelling") {
+        const words = (block.words || [])
+          .map((word) => (word.text || "").trim())
+          .filter(Boolean);
+        if (words.length) parts.push(`Spelling words: ${words.join(", ")}`);
+      } else if (block.type === "image") {
+        const { caption } = imageCaptionParts(block);
+        if (caption) parts.push(`Picture: ${caption}`);
+      } else if (block.type === "vakt") {
+        // The activity, not its links: a summary wants the prose, and a URL
+        // read by a language model is bulk with no meaning in it.
+        const activity = vaktText(block);
+        if (activity) parts.push(`${VAKT_LABEL} ${activity}`);
+      } else if (block.type === "heading") {
+        const heading = headingText(block);
+        if (heading) parts.push(heading);
+      }
+    }
+  }
+
+  return parts.join("\n\n");
+}
+
+/**
+ * A message worth showing a reader, given whatever create()/summarize() threw.
+ * The spec's DOMException names are the useful signal here; everything else falls
+ * back to a generic line rather than leaking an internal message.
+ */
+export function summarizerErrorMessage(error: unknown): string {
+  switch (errorName(error)) {
+    case "NotAllowedError":
+      return "Summarising is blocked on this page.";
+    case "NotSupportedError":
+      return "The on-device model can't summarise this lesson with these settings.";
+    case "QuotaExceededError":
+      return "This lesson is too long for the on-device model.";
+    case "NetworkError":
+      return "The model download didn't finish. Check your connection and try again.";
+    case "TimeoutError":
+      return "The on-device model download didn't start. Chrome needs about 20 GB of free disk space to install it.";
+    case "UnknownError":
+    case "OperationError":
+      return "The on-device model couldn't summarise this lesson. Try again.";
+    default:
+      return "Couldn't summarise this lesson.";
+  }
+}

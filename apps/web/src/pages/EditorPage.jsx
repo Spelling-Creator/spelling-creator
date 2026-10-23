@@ -131,7 +131,7 @@ import { convertDocImages } from "@spelling-creator/core/browser/imageRef";
 import {
   copyRemoteImages,
   ensureImagesUploaded,
-} from "@spelling-creator/core/imagesClient";
+} from "@spelling-creator/core/browser/imagesClient";
 // exportJson is a Blob and an <a> — no heavy dependency, so it stays static.
 // (exportOslfXml loads its XML writer itself, on first use.)
 // The docx/PDF/import pipeline is not: it loads on demand through
@@ -291,7 +291,7 @@ export default function EditorPage() {
   const jsonInputRef = useRef(null);
 
   // Which of this device's lessons is open. Every lesson in the library
-  // (core/browser/storage.js) has one of these ids, and it is also the name of
+  // (core/browser/storage.ts) has one of these ids, and it is also the name of
   // the lesson's git repository until it is published and takes the hub's id
   // instead — so `localId` is what makes switching lessons switch documents and
   // histories together. The library itself is listed on its own page
@@ -721,7 +721,7 @@ export default function EditorPage() {
 
   // Get the open lesson fully onto disk: the debounced document save, then a
   // version-control checkpoint. Both are skipped when there's nothing new —
-  // committing an unchanged document is already a no-op (see repo.js).
+  // committing an unchanged document is already a no-op (see repo.ts).
   const flushCurrentLesson = useCallback(async () => {
     if (!localId) return;
     pendingSaveRef.current = null;
@@ -1102,7 +1102,7 @@ export default function EditorPage() {
       // against the exact commit the two diverged from.
       //
       // The library record is created first because its id is the name of the
-      // repository the clone lands in (see core/browser/storage.js).
+      // repository the clone lands in (see core/browser/storage.ts).
       //
       // A lesson published before this feature has no repo to clone. The fork
       // still works and still gets history from here on; it just has no common
@@ -1339,7 +1339,7 @@ export default function EditorPage() {
   const setTrustedCollaborators = (next) =>
     setDoc((d) => ({ ...d, trustedCollaborators: next }));
 
-  // The lesson's sources (see core/sources.js). Stable callbacks: addSource
+  // The lesson's sources (see core/sources.ts). Stable callbacks: addSource
   // reaches every text block's footnote form through LessonSourcesProvider, and
   // a new function each render would re-render all of them.
   const addSource = useCallback((fields = {}) => {

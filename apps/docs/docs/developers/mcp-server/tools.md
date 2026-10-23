@@ -186,7 +186,7 @@ Some mechanics worth knowing:
   they have been reading. `updated` in the result says which happened. (The hub allows
   one person at most 5 open proposals on one lesson, `MAX_OPEN_PER_AUTHOR` in
   `apps/api/src/routes/pulls.js`, and at most 20 updates to one proposal,
-  `MAX_PULL_REVISIONS` in `packages/core/src/pulls.js`.)
+  `MAX_PULL_REVISIONS` in `packages/core/src/pulls.ts`.)
 - **Images aren't copied.** Blocks reference them by content hash and the bytes are
   already stored, so forking is cheap.
 - **Forks are private drafts** and count against the draft cap (8 per person,
@@ -422,7 +422,7 @@ The tool's description tells the assistant to read the matched item's descriptio
 acting on a disagreement, and to tell the user rather than "correct" a fact it isn't sure
 about, since the sources can be out of date too. The rules for what counts as agreeing are on
 [Fact checking](../web-app/fact-checking.md), which this shares with the editor (the
-property list and matching live in `packages/core/src/factCheck.js`).
+property list and matching live in `packages/core/src/factCheck.ts`).
 
 ## Lesson shape the assistant fills
 
@@ -576,7 +576,7 @@ that they have actually checked. See
 `"spelling-creator"`, is the app's own lesson file (`buildLessonFile`), which the editor
 imports without loss. `"oslf"` returns the lesson as an
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
-file instead (`toOslf` in `packages/core/src/oslf.js`, see
+file instead (`toOslf` in `packages/core/src/oslf.ts`, see
 [the export pipeline](../web-app/export-pipeline.md#the-open-spelling-lesson-format)),
 with a `filename` ending in `.oslf.json`, for tools that aren't this app. A stored picture
 becomes its public address on the hub (`<apiUrl>/images/<hash>`), the only place its bytes

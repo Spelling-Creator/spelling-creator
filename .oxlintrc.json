@@ -117,17 +117,18 @@
     // Shared core — runtime-neutral by default, so it stays importable from the
     // Worker and the MCP server as well as the browser. `worker` is the narrowest
     // env that covers the Web-standard globals it leans on (crypto, URL, Blob).
+    // packages/core/tsconfig.shared.json holds the types to the same rule.
     {
-      "files": ["packages/core/**/*.js"],
+      "files": ["packages/core/**/*.ts"],
       "env": { "worker": true }
     },
 
     // ...except the tests, which only ever run under vitest on Node. Keeping this
-    // to `*.test.js` means the modules themselves stay held to the runtime-neutral
-    // rule above: a test may reach for `process` (to pin TZ, say), the code it
-    // tests may not.
+    // to the test files means the modules themselves stay held to the
+    // runtime-neutral rule above: a test may reach for `process` (to pin TZ,
+    // say), the code it tests may not.
     {
-      "files": ["packages/core/**/*.test.js"],
+      "files": ["packages/core/**/*.test.ts"],
       "env": { "worker": true, "node": true }
     },
 
@@ -137,7 +138,7 @@
     // MCP server can't reach it by accident, and the split above means a module
     // outside this directory still fails lint the moment it touches the DOM.
     {
-      "files": ["packages/core/src/browser/**/*.js"],
+      "files": ["packages/core/src/browser/**/*.ts"],
       "env": { "browser": true }
     }
   ]

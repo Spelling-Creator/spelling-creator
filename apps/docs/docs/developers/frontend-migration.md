@@ -408,7 +408,7 @@ Two design calls to make before phase 5 rather than during:
 
 - **Keep the lesson document in a plain signal with whole-value replacement.**
   Version history recovers intent by diffing successive whole documents
-  (`diffDocs` in `git/ops.js`). A fine-grained `createStore` is the idiomatic
+  (`diffDocs` in `git/ops.ts`). A fine-grained `createStore` is the idiomatic
   Solid move and would quietly complicate that.
 - **Spend fine-grained reactivity on fields, not the document**: `LiveField`,
   presence, cursors, per-block rendering. That is where React costs the most

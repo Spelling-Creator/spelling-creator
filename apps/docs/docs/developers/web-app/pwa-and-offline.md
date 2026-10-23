@@ -154,7 +154,7 @@ it.
 The **This device** card on the settings page shows the total under
 **Downloaded AI models** and has a **Delete models** button, so that space can
 be had back without clearing the site's data, which would take every lesson on
-the device with it. `packages/core/src/browser/modelCache.js` does the work:
+the device with it. `packages/core/src/browser/modelCache.ts` does the work:
 
 - `modelCacheBytes()` adds up each entry's `Content-Length`, without reading
   the bodies, for entries that arrived uncompressed. That covers the model

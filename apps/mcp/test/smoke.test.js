@@ -1451,7 +1451,7 @@ test("buildDoc builds a VAKT activity, its links and its picture", () => {
     "Image (by A. Photographer, CC BY 4.0) via Wikimedia Commons",
   );
   // Unframed input leaves the framing to the renderers, which default a VAKT
-  // picture to medium and centred (core/vakt.js).
+  // picture to medium and centred (core/vakt.ts).
   assert.equal(block.size, undefined);
   assert.equal(block.align, undefined);
 });

@@ -1,0 +1,53 @@
+// The .json lesson-file envelope — a lossless round-trip of the editor's own
+// document model (unlike the DOCX export, which flattens to prose).
+//
+// Three things produce or consume this shape: the editor's "Export JSON" button
+// (./browser/jsonExport.ts), the "Import JSON" button (./jsonImport.ts), and the
+// MCP server's `create_lesson_file` tool. Keeping the envelope here means they
+// agree by construction rather than by comment.
+
+import type { LessonDoc, LessonFile } from "./types.ts";
+
+export const LESSON_FILE_FORMAT = "spelling-creator-lesson";
+export const LESSON_FILE_VERSION = 1;
+
+/**
+ * Wrap a doc in the importable lesson-file envelope.
+ *
+ * Only the lesson itself goes in the file. `trustedCollaborators` is left out
+ * on purpose: it is a list of email addresses, and a file is something people
+ * hand to each other.
+ */
+export function buildLessonFile(doc: LessonDoc): LessonFile {
+  return {
+    format: LESSON_FILE_FORMAT,
+    version: LESSON_FILE_VERSION,
+    doc: {
+      title: doc.title,
+      ...(doc.ageRange ? { ageRange: doc.ageRange } : {}),
+      ...(doc.sources?.length ? { sources: doc.sources } : {}),
+      sections: doc.sections,
+    },
+  };
+}
+
+/**
+ * A filesystem-safe file name stem derived from the lesson title, with no
+ * extension: "lesson" when nothing usable remains. Every file a lesson is
+ * saved as (the app's own `.json`, an `.oslf.json`) builds on this, so they
+ * all name a lesson the same way.
+ */
+export function lessonFileBase(title?: string): string {
+  const base = (title || "lesson")
+    .trim()
+    .replace(/[^a-z0-9\-_ ]/gi, "")
+    .replace(/\s+/g, "-");
+  return base || "lesson";
+}
+
+/**
+ * A filesystem-safe `.json` name derived from the lesson title.
+ */
+export function lessonFileName(title?: string): string {
+  return `${lessonFileBase(title)}.json`;
+}

@@ -1,0 +1,642 @@
+// Import a lesson from a document that was never a lesson file: text pasted
+// from anywhere, a .txt, or a Word file written by hand rather than exported
+// from this app. The app's own exports have lossless paths of their own
+// (jsonImport.ts, browser/docxImport.ts); this is for everything else.
+//
+// It is rules, not a model. An experiment (docs: "Document import experiment")
+// put small on-device models up against these rules on seven document layouts
+// and the rules won on every column, so the model only gets what the rules
+// cannot read (sectionNeedsModel). The shape it reads:
+//
+//   - A passage: one or more prose paragraphs.
+//   - A spelling line: "Spell:", "Spelling words:", "Words:", and so on.
+//   - Questions, one per line, numbered or bulleted or neither, with an answer
+//     attached in any of the usual ways: after a gap (this app's own export),
+//     "(Answer: ...)", "[...]", "A: ..." on the next line, ": ..." at the end,
+//     or a bare run of CAPITALS.
+//   - Optional working-out under a number question.
+//
+// A new section starts wherever a passage follows questions. A heading line
+// directly before a passage names the section. The question type is never read
+// from the document (nothing in a typed page says it); it is derived from the
+// answers and the wording, the same way a reader would tell them apart.
+
+import type {
+  ParsedQuestion,
+  ParsedSection,
+  PromptSection,
+} from "./documentImportModel.ts";
+import { normalizeLessonFile } from "./jsonImport.ts";
+import {
+  ANSWER_GAP,
+  QUESTION_TAG_PREFIX,
+  readQuestionTag,
+  QUESTION_TYPES,
+  resolveOpenType,
+} from "./questions.ts";
+import type { LessonDoc, QuestionType } from "./types.ts";
+
+/** What one line of a document is, as classifyLine reads it. */
+export type LineKind =
+  | "prose"
+  | "spelling"
+  | "question"
+  | "steps"
+  | "heading"
+  | "vakt"
+  | "source"
+  | "other";
+
+/** A section of a document's text as splitSections cuts it, the text the model is shown. */
+export type SplitSection = Required<PromptSection>;
+
+/**
+ * A question the rules or the model read. The rules never set a `type`, and
+ * only the rules read a printed three-board mark.
+ */
+export interface SectionQuestion extends Omit<ParsedQuestion, "type"> {
+  type?: ParsedQuestion["type"];
+  threeBoard?: boolean;
+}
+
+/** A section the rules or the model read, as lessonFromSections builds from it. */
+export interface LessonSection extends Omit<
+  ParsedSection,
+  "questions" | "vakt"
+> {
+  questions: SectionQuestion[];
+  vakt?: string[];
+}
+
+/** One section's lines as parseSection reads them. */
+export interface RulesSection extends LessonSection {
+  vakt: string[];
+  /** Lines the rules kept but could not place. */
+  unread: string[];
+}
+
+/** A section of readLessonText's reading: its text, and what the rules made of it. */
+export interface ReadSection extends SplitSection {
+  parsed: RulesSection;
+}
+
+/** A parsed section's counts, as a preview lists them. */
+export interface SectionSummary {
+  name: string;
+  paragraphs: number;
+  spellingWords: number;
+  questions: number;
+  answered: number;
+}
+
+// Each split rule's result: the prompt and the answers found after it.
+interface QuestionSplit {
+  prompt: string;
+  answers: string[];
+}
+
+export class DocumentImportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DocumentImportError";
+  }
+}
+
+const GAP = /\u00A0/;
+const QUESTION_OPENERS =
+  /^(Name|Give|List|Would you rather|In your own words|Explain|Describe|Tell|Think|Imagine|Design|Write|Say|Share|Pick|Choose|Which|Who|What|Why|How|Where|When|If|Do you|Does|Is|Are|Should|Could|Can)\b/;
+const NUMBERED = /^(?:q\s*)?\d+\s*[.)]\s/i;
+
+// Several questions run together on one line, as when a list loses its line
+// breaks: a question mark or closing bracket, then the next item's number.
+const RUN_TOGETHER = /[?)]\s+\d{1,2}[.)]\s+\S/;
+
+/**
+ * What one line of a document is: "prose", "spelling", "question", "steps",
+ * "heading", "vakt", "source" or "other".
+ */
+export function classifyLine(line: string): LineKind {
+  // Text copied out of a printed lesson carries the type tag in front of each
+  // question ("K Name the island."). Set aside before the wording is read, or
+  // "K Name a..." would never match an opener anchored at the start.
+  const t = line.trim().replace(QUESTION_TAG_PREFIX, "");
+  if (!t) return "other";
+  if (/^(Spell(?:ing)?(?: words| list| these)?|Words)\s*[:-]/i.test(t)) {
+    return "spelling";
+  }
+  if (/^VAKT:/i.test(t)) return "vakt";
+  if (/^Working(?: out)?\s*:/i.test(t)) return "steps";
+  if (/https?:\/\//.test(t)) return "source";
+  // This app's export puts its answer gap (a space, a no-break space and a
+  // space) after a question whatever its length, and a long multiple question
+  // with its answers runs past the length a passage is judged by. A lone
+  // no-break space is common in pasted prose, so only the export's whole gap
+  // counts before that length.
+  if (t.includes(ANSWER_GAP)) return "question";
+  // A numbered list that lost its line breaks is questions however long.
+  if (NUMBERED.test(t) && RUN_TOGETHER.test(t)) return "question";
+  if (t.length >= 280) return "prose";
+  if (GAP.test(t)) return "question";
+  if (NUMBERED.test(t)) return "question";
+  // "Answer: X" (or "A:", "Answers:") under its question belongs to it.
+  if (/^(?:[-*]\s+|[QA]\s*:\s*|answers?\s*:\s*)/i.test(t)) return "question";
+  if (t.includes("?") || t.includes("___")) return "question";
+  if (/\b(in your own words|defend your|explain)\b/i.test(t)) return "question";
+  if (QUESTION_OPENERS.test(t) && t.length < 260) return "question";
+  // A sentence that ends mid-line with more text after it and no full stop at
+  // the end: a question with its answer tacked on ("Give a synonym. HARSH").
+  if (/[.!?]\s+\S/.test(t) && !/[.!?]$/.test(t)) return "question";
+  if (t.length < 80 && !/[.!?]$/.test(t)) return "heading";
+  // A longer line with no closing punctuation is no paragraph either: most
+  // likely a question typed without its question mark, answer on the end.
+  if (!/[.!?:]["')\]]?$/.test(t)) return "heading";
+  return "prose";
+}
+
+// Lines of a title block that are not section names: the by-line, the age
+// range and the date this app's export prints under the title, and the like.
+const TITLE_BLOCK_LINE =
+  /^(by|ages?|age range|for ages|grade|published|released|updated)\b/i;
+
+// A short line the classifier calls a heading but that did not name a
+// section: a label like "Questions" when it is three words or fewer, and
+// otherwise a line the rules could not read (a question with no question
+// mark, no number and no opener word, say). The second kind is kept and
+// counted, because it is the sign that a section needs the model.
+const isUnreadLine = (line: string) =>
+  classifyLine(line) === "heading" && line.trim().split(/\s+/).length >= 4;
+
+// A section as segment cuts it, counting the lines read as questions.
+interface Chunk extends SplitSection {
+  questions: number;
+}
+
+// Walk the lines once, starting a section at each passage that follows
+// anything other than passage. A short line directly before that passage is
+// the section's heading; any other short line stays in its section, in order,
+// rather than being dropped.
+function segment(lines: string[]): Chunk[] {
+  const sections: Chunk[] = [];
+  let current: Chunk | null = null;
+  let previous: LineKind = "heading";
+  let pending = "";
+  const flush = () => {
+    if (pending && current) current.lines.push(pending);
+    pending = "";
+  };
+  for (const line of lines) {
+    const kind = classifyLine(line);
+    if (kind === "heading") {
+      if (current === null && TITLE_BLOCK_LINE.test(line)) {
+        previous = kind;
+        continue;
+      }
+      flush();
+      pending = line;
+      previous = kind;
+      continue;
+    }
+    const startsSection =
+      kind === "prose" && (previous !== "prose" || current === null);
+    if (startsSection) {
+      // A long unplaced line is the end of the last section, not a name.
+      if (pending.length >= 80) flush();
+      current = { heading: pending, lines: [], questions: 0 };
+      pending = "";
+      sections.push(current);
+    } else if (kind === "source") {
+      // A short line right before a source entry heads the source list
+      // ("Sources"), which is not part of any section.
+      pending = "";
+    } else {
+      flush();
+    }
+    if (current && kind !== "source") {
+      current.lines.push(line);
+      if (kind === "question") current.questions += 1;
+    }
+    previous = kind;
+  }
+  flush();
+  return sections;
+}
+
+const readable = (s: Chunk) => s.questions > 0 || s.lines.some(isUnreadLine);
+
+/**
+ * Cut a document into sections by structure: a passage paragraph that follows
+ * questions (or a spelling line) begins a new section, and a short heading
+ * line directly before a passage goes with it. A chunk that is only passage is
+ * a closing paragraph and stays with its section; anything after the last
+ * real section (sources, footnote bodies) is dropped.
+ *
+ * When no section holds a single line the rules recognise as a question, the
+ * same cut is made without that requirement and the result is marked `loose`:
+ * the rules found no lesson, but the text still falls into section-sized
+ * pieces, which is what the on-device model reads (one section at a time, as
+ * it was trained).
+ */
+export function splitSections(text: string): {
+  title: string;
+  sections: SplitSection[];
+  loose: boolean;
+} {
+  const lines = String(text ?? "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  // The first line is the title unless it is already the passage: a lesson
+  // pasted without a title keeps its opening paragraph.
+  const titled = lines.length > 0 && classifyLine(lines[0]) !== "prose";
+  const title = titled ? lines[0] : "";
+  const sections = segment(titled ? lines.slice(1) : lines);
+  const shape = (list: Chunk[]): SplitSection[] =>
+    list.map(({ heading, lines: ls }) => ({ heading, lines: ls }));
+
+  const strict = [...sections];
+  while (strict.length && !readable(strict[strict.length - 1])) strict.pop();
+  const merged: Chunk[] = [];
+  for (const s of strict) {
+    if (!readable(s) && merged.length) {
+      merged[merged.length - 1].lines.push(...s.lines);
+    } else {
+      merged.push({ ...s, lines: [...s.lines] });
+    }
+  }
+  if (merged.length) return { title, sections: shape(merged), loose: false };
+  return {
+    title,
+    sections: shape(sections.filter((s) => s.lines.length)),
+    loose: sections.length > 0,
+  };
+}
+
+const QUESTION_PREFIX = /^(?:q\s*)?\d+\s*[.):]\s*|^[-*]\s+|^q:\s*/i;
+const ANSWER_LINE = /^a(?:nswers?)?\s*:\s*/i;
+
+// A comma between a digit and exactly three more digits is a thousands
+// separator ("3,000"), not a gap between two answers.
+const LIST_COMMA = /(?<!\d),|,(?!\d{3}(?!\d))/;
+const THOUSANDS_COMMA = /(?<=\d),(?=\d{3}(?!\d))/g;
+
+function listOf(text: string): string[] {
+  const sep = text.includes(";")
+    ? ";"
+    : text.includes(" / ")
+      ? "/"
+      : LIST_COMMA;
+  return text
+    .split(sep)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function spellingWordsOf(line: string): string[] {
+  return line
+    .replace(/^[^:-]*[:-]\s*/, "")
+    .replace(/\u00A0/g, " ")
+    .split(/[\s,]+/)
+    .map((w) => w.trim())
+    .filter(Boolean);
+}
+
+// Each rule returns { prompt, answers } or null when it does not apply.
+const SPLIT_RULES: Array<(line: string) => QuestionSplit | null> = [
+  // This app's own export: prompt, a gap, the answers each after a gap.
+  (line) => {
+    if (!GAP.test(line)) return null;
+    const [prompt, ...answers] = line.split(/\s*\u00A0\s*/);
+    return { prompt: prompt.trim(), answers: answers.filter(Boolean) };
+  },
+  (line) => {
+    const m = /^(.*?)\s*\((?:answers?|ans)\s*:\s*([^)]*)\)\s*$/i.exec(line);
+    return m ? { prompt: m[1], answers: listOf(m[2]) } : null;
+  },
+  (line) => {
+    const m = /^(.*?)\s*\[([^\]]*)\]\s*$/.exec(line);
+    return m ? { prompt: m[1], answers: listOf(m[2]) } : null;
+  },
+];
+
+// A question that ends on its question mark, or on a closing instruction, has
+// no answer glued to it.
+const CLEAN_END =
+  /(\?|defend your (?:answer|choices|thinking)\.|explain (?:your|what|why|in)[^.]*\.|in your own words[^.]*\.)\s*$/i;
+
+// A trailing run of capitals, or a short tail after the last colon.
+function splitByHeuristic(line: string): QuestionSplit {
+  // The sentence before the run may end on any word character or a closing
+  // bracket or quote: "in 1900? MAX PLANCK", "the year ___. 1900", "a synonym
+  // for CRUELTY. HARSHNESS", "(30 minutes)? 350".
+  //
+  // The run is words with a required space or slash between each, so a run
+  // of capitals splits into words exactly one way. With the separator
+  // optional ("AB CD" as "A", "B CD" or "AB", "CD"), a long run of capitals
+  // that failed to match at its last letter took exponential time: two
+  // seconds at 26 words, on every keystroke in the dialog.
+  const capsRun =
+    /^(.*?[\w)\]"'][.!?])\s+([A-Z0-9][A-Z0-9',.-]*(?:(?:\s*\/\s*|\s+)[A-Z0-9][A-Z0-9',.-]*)*)\s*$/.exec(
+      line,
+    );
+  if (capsRun && !/[a-z]/.test(capsRun[2])) {
+    return { prompt: capsRun[1], answers: listOf(capsRun[2]) };
+  }
+  const colon = line.lastIndexOf(": ");
+  if (
+    colon > 0 &&
+    line.length - colon < 60 &&
+    !line.slice(colon).includes("?")
+  ) {
+    return {
+      prompt: line.slice(0, colon),
+      answers: listOf(line.slice(colon + 2)),
+    };
+  }
+  return { prompt: line, answers: [] };
+}
+
+function splitQuestionLine(line: string): QuestionSplit {
+  for (const rule of SPLIT_RULES) {
+    const split = rule(line);
+    if (split) return split;
+  }
+  if (CLEAN_END.test(line)) return { prompt: line, answers: [] };
+  return splitByHeuristic(line);
+}
+
+/**
+ * One section's lines to the lesson shape, with no question types yet.
+ * `unread` lists the lines the rules kept but could not place: short lines
+ * that are neither a label nor anything the classifier recognises.
+ */
+export function parseSection(lines: string[], heading = ""): RulesSection {
+  const out: RulesSection = {
+    name: heading.replace(/^part \d+:\s*/i, ""),
+    paragraphs: [],
+    spellingWords: [],
+    questions: [],
+    vakt: [],
+    unread: lines.filter(isUnreadLine),
+  };
+  const kinds = lines.map(classifyLine);
+  // Numbered lines are questions when the questions are numbered, and a
+  // number question's working-out otherwise (this app's export prints no
+  // question numbers, only numbered steps).
+  const firstQuestion = lines.find((l, i) => kinds[i] === "question") || "";
+  const numberedQuestions = /^(?:q\s*)?\d+\s*[.):]/i.test(firstQuestion);
+  const last = () => out.questions[out.questions.length - 1];
+
+  lines.forEach((line, i) => {
+    const kind = kinds[i];
+    if (kind === "prose") {
+      out.paragraphs.push(line);
+    } else if (kind === "spelling") {
+      out.spellingWords.push(...spellingWordsOf(line));
+    } else if (kind === "vakt") {
+      out.vakt.push(line.replace(/^VAKT:\s*/i, ""));
+    } else if (kind === "steps") {
+      const q = last();
+      if (q) {
+        q.steps = line
+          .replace(/^working(?: out)?\s*:\s*/i, "")
+          .split(/\s+(?=\d+\.\s)/)
+          .map((s) => s.replace(/^\d+\.\s*/, "").trim())
+          .filter(Boolean);
+      }
+    } else if (kind === "question") {
+      if (ANSWER_LINE.test(line)) {
+        const q = last();
+        if (q) q.answers = listOf(line.replace(ANSWER_LINE, ""));
+        return;
+      }
+      if (/^\d+\s*[.)]/.test(line) && !numberedQuestions) {
+        const q = last();
+        if (q) q.steps.push(line.replace(/^\d+\s*[.)]\s*/, ""));
+        return;
+      }
+      // The printed tag comes off the front; its three-board mark, when it
+      // has one, stays with the question for questionBlock to put on the
+      // block.
+      const tag = readQuestionTag(line.trim());
+      const split = splitQuestionLine(tag.text.replace(QUESTION_PREFIX, ""));
+      out.questions.push({
+        prompt: split.prompt.trim(),
+        answers: split.answers.map((a) => a.trim()).filter(Boolean),
+        steps: [],
+        ...(tag.threeBoard ? { threeBoard: true } : {}),
+      });
+    }
+  });
+  return out;
+}
+
+// Case, punctuation and the thousands separator do not count.
+const norm = (s: unknown) =>
+  String(s ?? "")
+    .toLowerCase()
+    .replace(/(\d),(\d)/g, "$1$2")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * The question type, from the wording and the answers: the three answerless
+ * types by their wording, the rest by how many answers there are and whether
+ * they are in the passage. Nothing in a typed document names the type, and in
+ * the experiment a model guessing it did no better than chance.
+ * @param passage the section's passage, plain text
+ * @returns a key of QUESTION_TYPES
+ */
+export function deriveQuestionType(
+  question: { prompt: string; answers?: string[] },
+  passage: string,
+): QuestionType {
+  const prompt = norm(question.prompt);
+  const answers = (question.answers || []).map(norm).filter(Boolean);
+  if (prompt.startsWith("would you rather")) return "wyr";
+  if (/\bin your own words\b/.test(prompt)) return "paraphrase";
+  // No answer makes an open question, and its wording says which kind (an
+  // `open` always resolves to one of the open types).
+  if (!answers.length) {
+    return resolveOpenType({
+      questionType: "open",
+      prompt: question.prompt,
+    }) as QuestionType;
+  }
+  const text = ` ${norm(passage)} `;
+  const inPassage = (a: string) =>
+    text.includes(` ${a} `) ||
+    text.includes(` ${a.replace(/^(a|an|the) /, "")} `);
+  if (answers.length > 1) {
+    return answers.every(inPassage) ? "multiple" : "multiple_open";
+  }
+  if (/^\d[\d\s.,]*$/.test(answers[0])) return "number";
+  return inPassage(answers[0]) ? "single" : "background";
+}
+
+// The type is derived unless the section came from the model, whose own type
+// (when it names a real one) was right more often than the rule in the
+// experiment; the parser never sets one. The model was trained before tight
+// and broad opens were separate types, so its `open` is sorted by wording the
+// way a legacy block is.
+function questionBlock(q: SectionQuestion, passage: string) {
+  const questionType =
+    q.type && QUESTION_TYPES[q.type]
+      ? resolveOpenType({ questionType: q.type, prompt: q.prompt })
+      : deriveQuestionType(q, passage);
+  const base = { type: "question", questionType, prompt: q.prompt };
+  switch (questionType) {
+    case "number":
+      return {
+        ...base,
+        answer: (q.answers[0] ?? "").replace(THOUSANDS_COMMA, ""),
+        steps: q.steps,
+      };
+    case "single":
+    case "background":
+      return { ...base, answer: q.answers[0] ?? "" };
+    // Only a `multiple` can be marked for the three boards; the mark on a
+    // line that reads as anything else is dropped with the rest of the tag.
+    case "multiple":
+      return q.threeBoard
+        ? { ...base, answers: q.answers, threeBoard: true }
+        : { ...base, answers: q.answers };
+    case "multiple_open":
+      return { ...base, answers: q.answers };
+    default:
+      return base;
+  }
+}
+
+/**
+ * The rules' reading of a text: its sections as split, each with what the
+ * parser made of it. The import dialog, previewLessonText and
+ * importLessonText all start here, so what the dialog shows and what an
+ * import builds cannot drift apart. `loose` is splitSections': the rules
+ * found no lesson, and the sections are only pieces for the model.
+ */
+export function readLessonText(text: string): {
+  title: string;
+  loose: boolean;
+  sections: ReadSection[];
+} {
+  const { title, sections, loose } = splitSections(text);
+  return {
+    title,
+    loose,
+    sections: sections.map(({ heading, lines }) => ({
+      heading,
+      lines,
+      parsed: parseSection(lines, heading),
+    })),
+  };
+}
+
+/**
+ * A parsed section's counts, as a preview lists them. `name` is the section's
+ * own, or "" when it has none.
+ */
+export function sectionSummary(
+  parsed: Pick<LessonSection, "name" | "paragraphs" | "spellingWords"> & {
+    questions: ReadonlyArray<Pick<SectionQuestion, "answers">>;
+  },
+): SectionSummary {
+  return {
+    name: parsed.name,
+    paragraphs: parsed.paragraphs.length,
+    spellingWords: parsed.spellingWords.length,
+    questions: parsed.questions.length,
+    answered: parsed.questions.filter((q) => q.answers.length).length,
+  };
+}
+
+/**
+ * How much of a lesson the text holds, for showing before importing.
+ */
+export function previewLessonText(text: string): {
+  title: string;
+  sections: SectionSummary[];
+} {
+  const { title, sections, loose } = readLessonText(text);
+  return {
+    title,
+    sections: (loose ? [] : sections).map(({ parsed }, i) => {
+      const summary = sectionSummary(parsed);
+      return { ...summary, name: summary.name || `Section ${i + 1}` };
+    }),
+  };
+}
+
+// A question the rules read, but whose answer is probably still glued to the
+// prompt: no closing punctuation, no answer found, and a run of capitals at
+// the end ("Species every pet cat descended from THE AFRICAN WILDCAT").
+const GLUED_ANSWER = /\s[A-Z0-9][A-Z0-9 ',./-]*$/;
+const looksGlued = (q: Pick<SectionQuestion, "prompt" | "answers">) =>
+  q.answers.length === 0 &&
+  !/[.!?]$/.test(q.prompt) &&
+  GLUED_ANSWER.test(q.prompt) &&
+  /[a-z]/.test(q.prompt);
+
+/**
+ * A section the parser could not really read, which is the case the on-device
+ * model exists for: it found no questions, it kept lines it could not place,
+ * a question still has its answer glued to it, or several questions came out
+ * as one. A section the rules read cleanly stays with the rules, which beat
+ * the model on every regular layout.
+ */
+export function sectionNeedsModel(parsed: {
+  questions: ReadonlyArray<Pick<SectionQuestion, "prompt" | "answers">>;
+  unread?: string[];
+}): boolean {
+  return (
+    parsed.questions.length === 0 ||
+    (parsed.unread?.length ?? 0) > 0 ||
+    parsed.questions.some((q) => looksGlued(q) || RUN_TOGETHER.test(q.prompt))
+  );
+}
+
+const NO_LESSON_MESSAGE =
+  "No lesson was found in this text. It needs at least one passage followed by its questions, one question per line.";
+
+/**
+ * A lesson in the editor's shape from sections already parsed (by the rules,
+ * by the model, or some of each), or a DocumentImportError when there are
+ * none.
+ */
+export function lessonFromSections(
+  title: string,
+  sections: LessonSection[],
+): LessonDoc {
+  if (!sections.length) throw new DocumentImportError(NO_LESSON_MESSAGE);
+  return normalizeLessonFile({
+    title: title || "Imported lesson",
+    sections: sections.map((s, i) => {
+      const passage = s.paragraphs.join("\n");
+      return {
+        name: s.name || `Section ${i + 1}`,
+        blocks: [
+          ...s.paragraphs.map((t) => ({ type: "text", text: t })),
+          ...(s.spellingWords.length
+            ? [{ type: "spelling", words: s.spellingWords }]
+            : []),
+          ...s.questions.map((q) => questionBlock(q, passage)),
+          ...(s.vakt || []).map((text) => ({ type: "vakt", text, links: [] })),
+        ],
+      };
+    }),
+  });
+}
+
+/**
+ * The text of a document as a lesson in the editor's shape, or a
+ * DocumentImportError when no lesson can be found in it.
+ */
+export function importLessonText(text: string): LessonDoc {
+  const { title, sections, loose } = readLessonText(text);
+  if (loose) throw new DocumentImportError(NO_LESSON_MESSAGE);
+  return lessonFromSections(
+    title,
+    sections.map(({ parsed }) => parsed),
+  );
+}

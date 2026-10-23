@@ -1,0 +1,25 @@
+{
+  // Shared by the three projects tsconfig.json lists. tsc only checks: the
+  // consumers load the .ts sources directly (Vite, wrangler and vitest compile
+  // them, and Node runs them under its type stripping), which is why the syntax
+  // is held to what stripping can erase (no enums, namespaces or parameter
+  // properties).
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // Nothing global by default. Each project names the runtime it runs in.
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    // Lets `tsc -b` check the projects together and cache each one. With
+    // noEmit there is nothing to build, only the .tsbuildinfo files below.
+    "composite": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  }
+}

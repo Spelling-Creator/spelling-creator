@@ -49,7 +49,7 @@ the Sources list, are names (an author, a title, a publisher) and stay as
 written. See [Formatting and footnotes](./formatting-and-footnotes.md).
 
 A question's accepted answers translate one at a time rather than as the
-printed line (`questionAnswerItems` in `core/questions.js`): the wide
+printed line (`questionAnswerItems` in `core/questions.ts`): the wide
 non-breaking gaps that separate several accepted answers would come back from a
 model as ordinary spaces and blur the list into one phrase, so the renderer
 translates the answers separately and joins them back itself. Steps are keyed
@@ -112,7 +112,7 @@ pages/lesson/LessonOverview.jsx       the Lesson tab
    else renders as written. That one rule is what makes the partial state
    (translated down to section 5, original below) and the untranslatable
    spelling words both fall out for free. Segments are plain words, taken
-   from each paragraph by `textBlockLines` (`core/lessonText.js`), and **Show
+   from each paragraph by `textBlockLines` (`core/lessonText.ts`), and **Show
    original** brings the formatting back along with the original words.
 
 Everything stays in component state. Leaving the page aborts any run in
@@ -124,4 +124,4 @@ The engines and their browser requirements are comment translation's; see
 [that page's testing notes](./comment-translation.md#testing-it) for forcing
 the fallback path. The lesson-specific part, what gets segmented and what gets
 skipped, is pure string work tested in Node
-(`packages/core/src/lessonTranslation.test.js`).
+(`packages/core/src/lessonTranslation.test.ts`).

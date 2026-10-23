@@ -31,7 +31,7 @@ After importing, the editor shows `messages.importedText`, and the
 
 ## What it reads
 
-The parser (`packages/core/src/documentImport.js`) is rules, not a model. It
+The parser (`packages/core/src/documentImport.ts`) is rules, not a model. It
 classifies each line, cuts the document into sections, and reads each section:
 
 - **A passage**: one or more prose paragraphs, each its own text block.
@@ -100,7 +100,7 @@ offers **Read with the on-device model**, on devices that can run it:
 LFM2-1.2B-Extract fine-tuned on lesson documents, running in the page with
 transformers.js on WebGPU (`q4f16`), a 643 MB one-time download (the dialog
 rounds it to "about 640 MB"). The model is pinned by id and commit in
-`documentModelEngine.js` (`MODEL_ID`, `MODEL_REVISION`), and a reply is capped
+`documentModelEngine.ts` (`MODEL_ID`, `MODEL_REVISION`), and a reply is capped
 at 2,500 tokens. `sectionNeedsModel`
 decides which sections it is offered for, one of these:
 
@@ -123,7 +123,7 @@ section-sized pieces the same way (a `loose` split, which the preview and
 model. Only a text with no passage at all goes to it as one piece.
 
 The sections are still split by the rules, one call per section, with the
-same prompt the model was trained on (`packages/core/src/documentImportModel.js`,
+same prompt the model was trained on (`packages/core/src/documentImportModel.ts`,
 shared with the training scripts so the two cannot drift). A reply cut off at
 the token cap is closed up and keeps what it finished. Sections the parser
 read keep the parser's result; only the ones it could not are replaced by the
@@ -149,7 +149,7 @@ an import builds cannot drift apart.
 The device bar is the summarizer's: WebGPU with f16 shaders on an adapter
 whose limits can hold the weights, and not on a metered connection. Both use
 the same check, `holdsLargeModel` and `meteredConnection` in
-`packages/core/src/browser/deviceCheck.js`. Without that the button is not
+`packages/core/src/browser/deviceCheck.ts`. Without that the button is not
 shown. There is no CPU path in the browser: the int8
 file that runs well on a CPU is 2.5 GB, and the q4 file is not faithful for
 this checkpoint.
@@ -172,10 +172,10 @@ See the [experiment](../document-import-experiment.md) for the scores.
 
 | File                                                      | Does                                                                                                                                                                                                                                   |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/documentImport.js`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `sectionNeedsModel`, `deriveQuestionType`, `previewLessonText`, `lessonFromSections`, `importLessonText`, `DocumentImportError`. Runtime-neutral. |
-| `packages/core/src/browser/documentText.js`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                                                                                                 |
-| `packages/core/src/documentImportModel.js`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                                                                                   |
-| `packages/core/src/browser/documentModel.js`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                                                                                    |
-| `packages/core/src/browser/documentModelEngine.js`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                                                                                                                      |
+| `packages/core/src/documentImport.ts`                     | `classifyLine`, `splitSections`, `parseSection`, `readLessonText`, `sectionSummary`, `sectionNeedsModel`, `deriveQuestionType`, `previewLessonText`, `lessonFromSections`, `importLessonText`, `DocumentImportError`. Runtime-neutral. |
+| `packages/core/src/browser/documentText.ts`               | `documentFileText`: a `.docx` as raw text through mammoth, anything else as text. In the export chunk.                                                                                                                                 |
+| `packages/core/src/documentImportModel.ts`                | The model's prompt (schema and type guide), a section's text as it sees it, and `parseModelReply`. Shared with the training scripts.                                                                                                   |
+| `packages/core/src/browser/documentModel.ts`              | `documentModelPossible` (the WebGPU probe) and `readSectionsWithModel`, which reaches the engine by dynamic import.                                                                                                                    |
+| `packages/core/src/browser/documentModelEngine.ts`        | The heavy chunk: transformers.js, the model download, one generation per section.                                                                                                                                                      |
 | `apps/web/src/components/editor/DocumentImportDialog.jsx` | The dialog: text box, file picker, live preview, import.                                                                                                                                                                               |
 | `apps/web/src/pages/EditorPage.jsx`                       | The menu items and `handleImportText`, which opens the result as a new lesson.                                                                                                                                                         |

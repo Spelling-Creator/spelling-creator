@@ -49,7 +49,7 @@ instance with no API URL, or one using Turnstile with no site key
 3. Each claim's quote must be in a passage (`placeClaims`). A quote found in a
    different passage than the model said is moved there; one found nowhere is
    dropped.
-4. `checkClaims` in `core/factCheck.js` searches Wikipedia to turn names into
+4. `checkClaims` in `core/factCheck.ts` searches Wikipedia to turn names into
    candidate Wikidata items.
 5. One SPARQL query reads every candidate's values.
 6. It picks the item, converts units and compares.
@@ -148,7 +148,7 @@ Every property can also be confirmed from Wikipedia (see
 
 Units cover metric and imperial length, area, volume, mass and speed, temperature in all
 three scales, durations from seconds to thousands of years, astronomical units,
-light-years and Earth masses. The table is `FACT_UNITS` in `core/factCheck.js`, each entry
+light-years and Earth masses. The table is `FACT_UNITS` in `core/factCheck.ts`, each entry
 keyed to its Wikidata item so a value can be read in whatever unit Wikidata stores it in.
 
 ### What counts as agreeing
@@ -241,7 +241,7 @@ Wikidata names each volcano's GVP number (P1886), and the query in step 5 reads 
 with everything else, so the volcano is found the usual way and GVP is asked by number,
 with nothing left to match by name. GVP answers through a public web feature service (no
 key), and a check asks it twice in all, once for the volcanoes and once for their
-eruptions, however many volcanoes the lesson mentions (`packages/core/src/smithsonian.js`).
+eruptions, however many volcanoes the lesson mentions (`packages/core/src/smithsonian.ts`).
 
 - **`height` and `elevation`** compare with the summit's height, alongside Wikidata's.
 - **`last_eruption`** compares with the latest confirmed eruption, anywhere from its start
@@ -268,8 +268,8 @@ read; an older one has no record, and is left to Wikidata and Wikipedia.
 ### Wikipedia's words
 
 When the structured sources can't settle a fact, the checker reads the subject's English
-Wikipedia article as plain text (`articleText` in `packages/core/src/wikipedia.js`) and
-looks for a sentence that says the same thing (`packages/core/src/factText.js`). That is
+Wikipedia article as plain text (`articleText` in `packages/core/src/wikipedia.ts`) and
+looks for a sentence that says the same thing (`packages/core/src/factText.ts`). That is
 when no source has a value (`no-value`), and also when the value a source had could only
 ever confirm the fact: one that `varies`, or an eruption from `before-record`. A match
 there turns the fact into agrees; no match leaves it as it was.
@@ -320,7 +320,7 @@ property's word and the same figure.
 ### Picking the item
 
 Names are turned into items through **Wikipedia's article search**
-(`packages/core/src/wikipedia.js`), not Wikidata's own. Wikidata's `wbsearchentities`
+(`packages/core/src/wikipedia.ts`), not Wikidata's own. Wikidata's `wbsearchentities`
 matches labels by prefix and ranks them in an order that has little to do with which thing
 a lesson means: for "Hamlet" it puts a kind of village, a 1948 film and two given names
 ahead of the play, and for "Amazon" the river is nowhere in the first eight. Wikipedia's
@@ -420,14 +420,14 @@ is Turnstile, a Turnstile key.
 
 | File                                                  | Does                                                                                                                             |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core/src/factCheck.js`                      | The checker: properties, units, item matching, the SPARQL query, comparing, and asking each source. `checkClaims(claims, opts)`. |
-| `packages/core/src/wikidata.js`                       | The Wikidata requests: name search and SPARQL, shared with the [image search](./images.md).                                      |
-| `packages/core/src/wikipedia.js`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article. `articleText`: an article as plain text.             |
-| `packages/core/src/smithsonian.js`                    | The Global Volcanism Program: a volcano's record, and comparing eruption dates.                                                  |
-| `packages/core/src/factText.js`                       | Reading an article's sentences: the quantities, dates and names in each.                                                         |
+| `packages/core/src/factCheck.ts`                      | The checker: properties, units, item matching, the SPARQL query, comparing, and asking each source. `checkClaims(claims, opts)`. |
+| `packages/core/src/wikidata.ts`                       | The Wikidata requests: name search and SPARQL, shared with the [image search](./images.md).                                      |
+| `packages/core/src/wikipedia.ts`                      | `articleItems`: which Wikidata item a name means, by its Wikipedia article. `articleText`: an article as plain text.             |
+| `packages/core/src/smithsonian.ts`                    | The Global Volcanism Program: a volcano's record, and comparing eruption dates.                                                  |
+| `packages/core/src/factText.ts`                       | Reading an article's sentences: the quantities, dates and names in each.                                                         |
 | `apps/api/src/lib/factCheck.js`                       | The extraction prompt and schema, placing quotes, and calling the checker.                                                       |
 | `apps/api/src/routes/ai.js`                           | The `factCheck` mode: the AI check, rate limit, cache.                                                                           |
-| `packages/core/src/aiSuggest.js`                      | `checkFacts()`, the browser's call to the Worker.                                                                                |
+| `packages/core/src/aiSuggest.ts`                      | `checkFacts()`, the browser's call to the Worker.                                                                                |
 | `apps/web/src/lib/factCheck.js`                       | `useFactCheck()`, and the wording of findings (`describeFact`).                                                                  |
 | `apps/web/src/components/editor/FactCheckSection.jsx` | The Facts section of the Check panel.                                                                                            |
 | `apps/web/src/locales/en/checks.json`                 | Its wording, under `facts`.                                                                                                      |
@@ -435,7 +435,7 @@ is Turnstile, a Turnstile key.
 
 `apps/web/src/lib/factCheck.test.js` fails when core gains a property or unit that
 `checks.json` can't word, the same way the lesson checks' test guards their codes, and
-`packages/core/src/factCheck.test.js` fails when a property has no words for reading
+`packages/core/src/factCheck.test.ts` fails when a property has no words for reading
 Wikipedia.
 
 ## What it doesn't do

@@ -28,7 +28,7 @@ button, and a direct link to `/practice` redirects to the lesson.
 
 There is no "interactive lesson" document type and nothing to switch on when
 authoring. The walkthrough is **derived from the lesson document**
-(`buildInteractiveSteps` in `packages/core/src/interactive.js`), so every lesson
+(`buildInteractiveSteps` in `packages/core/src/interactive.ts`), so every lesson
 ever published works, including ones made before this feature existed and ones
 written by the [MCP server](../mcp-server/overview.md). Nothing is added to a
 lesson to make it playable, and a lesson stays exactly as printable as it was.
@@ -93,7 +93,7 @@ with its formatting and formulas, since a step is inline text), and
 
 The two semi-open types share a color and an `answers` list because the app's
 default treats them as one family (see the comment in
-`packages/core/src/questions.js`). Other Spelling practitioners categorize
+`packages/core/src/questions.ts`). Other Spelling practitioners categorize
 questions differently, and the
 [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format)
 lists the loose end as an open question.
@@ -110,7 +110,7 @@ compares the typed answer with the author's anywhere.
 
 ## Progress on the device
 
-`packages/core/src/browser/interactiveProgress.js` keeps the unfinished
+`packages/core/src/browser/interactiveProgress.ts` keeps the unfinished
 run-through (every answer, plus the current step's key) in `localStorage` under
 `spelling-creator:interactive-progress`.
 
@@ -193,7 +193,7 @@ when there are none.
 - Skipped questions are stored as blank answers rather than dropped, so the set
   still says which questions were asked.
 - Limits (shared between browser and Worker in
-  `packages/core/src/interactive.js`): `MAX_RESPONSE_LENGTH` 5,000 characters per
+  `packages/core/src/interactive.ts`): `MAX_RESPONSE_LENGTH` 5,000 characters per
   answer and `MAX_RESPONSES` 500 answers per submission.
 - You may keep **20 saved run-throughs of any one lesson**
   (`MAX_STORED_RESPONSES`). Past that a `POST` is rejected with `409` and a
@@ -264,7 +264,7 @@ is marked `pauseAfter`. The two kinds of voice then take it differently:
 A formula in a text block is either its author's spoken words or a formula run
 (`{ text: source, formula }`). Before a step with one is spoken, `useSpeech`
 has `withFormulaSpeech` replace each with the words the speech rule engine
-makes from the formula's MathML (`formulaWords` in `core/browser/formulas.js`;
+makes from the formula's MathML (`formulaWords` in `core/browser/formulas.ts`;
 see [Formulas](./formatting-and-footnotes.md#formulas)), for both voices. The
 first such step loads MathJax and the engine, so it starts a moment later;
 `prepare` does the same for the step after. A lesson without formulas never
@@ -282,7 +282,7 @@ Three platform quirks are handled between the two files. `speechPrefs.js` takes
 the one that belongs to the voice list: voices load asynchronously, announced by
 `voiceschanged`. `useSpeech.js` takes the two that belong to speaking: Chromium
 cuts off a single utterance after about 15 seconds (so text is split into chunks
-of at most 180 characters, `MAX_CHUNK` in `core/speech.js`, and queued), and
+of at most 180 characters, `MAX_CHUNK` in `core/speech.ts`, and queued), and
 `cancel()` isn't synchronous (so a new utterance is deferred a tick after one).
 
 ### Natural voices (Kokoro)
@@ -291,7 +291,7 @@ The natural voices are
 [Kokoro](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX), an
 82M-parameter voice model that runs in the page with transformers.js
 (`@huggingface/transformers` 4), like the summary and import models. The model is
-pinned to a commit (`MODEL_REVISION` in `readAloudVoices.js`) and loaded at fp32
+pinned to a commit (`MODEL_REVISION` in `readAloudVoices.ts`) and loaded at fp32
 on WebGPU. Eight of its English voices, the ones graded C+ or better on the model
 card, are listed under **Natural voices** in the voice picker, above the
 browser's own, in both the popover and the settings page
@@ -316,7 +316,7 @@ How it behaves:
 - **Only where it can run.** The list is shown only on a device with a WebGPU
   adapter that isn't a phone or tablet, and isn't on a metered connection unless
   the model is already downloaded, since loading it from the cache uses no data
-  (`readAloudPossible` in `packages/core/src/browser/readAloud.js`). Phones and
+  (`readAloudPossible` in `packages/core/src/browser/readAloud.ts`). Phones and
   tablets are excluded by name, because WebGPU alone doesn't rule them out: an
   iPad has it, and Kokoro froze and then crashed Safari on one. iPadOS calls
   itself a Mac, so it's recognized by having a touch screen. A stored natural
@@ -335,7 +335,7 @@ How it behaves:
   that it's downloading once, not every percent. The natural voice takes over
   from the next thing spoken.
 - **Ready from the first step once downloaded.** When the model is already in the
-  cache (`readAloudCached` in `readAloud.js` looks for its weights), it loads as
+  cache (`readAloudCached` in `readAloud.ts` looks for its weights), it loads as
   soon as practice mode opens with speech on, which takes a couple of seconds. A
   step spoken meanwhile waits for it, up to five seconds from when it was asked
   for (`CACHED_WAIT_MS`), instead of being read in the browser's voice, and the
@@ -371,22 +371,22 @@ How it behaves:
 - **English only.** Like choosing an English browser voice, picking one for a
   lesson in another language reads it with English pronunciation.
 
-Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudText.js`
+Kokoro reads phonemes, not text. `packages/core/src/browser/readAloudText.ts`
 spells out numbers and abbreviations, turns the words into IPA with
 [Spellophone](https://spellophone.spellingcreator.org/) (our WebAssembly build of
 espeak-ng, the phonemizer Kokoro was trained against, installed from npm as
-`@spelling-creator/spellophone`), and `readAloudEngine.js` passes that to the
+`@spelling-creator/spellophone`), and `readAloudEngine.ts` passes that to the
 model. A read-aloud hint changes what goes in: a pronunciation's IPA goes in as
 written (with the ASCII people type for IPA, such as a plain `g` or `:` for
 length, swapped for the symbols in Kokoro's vocabulary by `kokoroIpa`), an
 alias or a spell-out is turned into phonemes in place of its words, and a
-short pause is a comma, which Kokoro pauses at. `readAloudText.js` loads none of
+short pause is a comma, which Kokoro pauses at. `readAloudText.ts` loads none of
 the model, so its tests run against the Node build of Spellophone. The text
 clean-up follows kokoro.js, the reference JavaScript port. That package isn't used itself
 because it pins transformers.js 3, which would put a second ONNX runtime in the
 bundle. Only Spellophone's English data is bundled, as hashed assets of the build
-rather than fetched from a CDN: about 860 KB with the WebAssembly. `readAloudEngine.js` is only ever
-reached through a dynamic `import()` in `readAloud.js`, so none of this weight
+rather than fetched from a CDN: about 860 KB with the WebAssembly. `readAloudEngine.ts` is only ever
+reached through a dynamic `import()` in `readAloud.ts`, so none of this weight
 lands in the main bundle.
 
 ### Timing it
@@ -434,9 +434,9 @@ What the numbers decided:
 
 | File                                               | What it does                                                                                   |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `packages/core/src/interactive.js`                 | Turns a document into steps; speech text; the answers the reveal shows; limits and validation. |
-| `packages/core/src/browser/interactiveProgress.js` | The unfinished run-through kept on the device: resume, expiry, pruning.                        |
-| `packages/core/src/lessonResponses.js`             | Client for the three endpoints above.                                                          |
+| `packages/core/src/interactive.ts`                 | Turns a document into steps; speech text; the answers the reveal shows; limits and validation. |
+| `packages/core/src/browser/interactiveProgress.ts` | The unfinished run-through kept on the device: resume, expiry, pruning.                        |
+| `packages/core/src/lessonResponses.ts`             | Client for the three endpoints above.                                                          |
 | `apps/api/src/routes/lessonResponses.js`           | The endpoints, and the privacy scoping.                                                        |
 | `apps/web/src/components/InteractiveLesson.jsx`    | The full-screen walkthrough, the reveal, speech controls, resume, summary and the letterboard. |
 | `apps/web/src/lib/practiceLink.js`                 | The letterboard session's host side (see [Letterboard sync](./letterboard-sync.md)).           |
@@ -446,9 +446,9 @@ What the numbers decided:
 | `apps/web/src/lib/useSpeech.js`                    | Speaking: the browser's voices or a natural one, the fallback, making ahead.                   |
 | `apps/web/src/lib/speechPrefs.js`                  | The read-aloud preferences and voice lists, shared with the settings page.                     |
 | `apps/web/src/components/SpeechVoiceSelect.jsx`    | The voice picker the popover and the settings page share.                                      |
-| `packages/core/src/browser/readAloud.js`           | The device check for natural voices, the cache check, and the door to their engine.            |
-| `packages/core/src/speech.js`                      | Spoken text: a text block's hints and pauses, chunking, plain text for the browser's voice.    |
-| `packages/core/src/browser/readAloudText.js`       | Kokoro's input: text clean-up, espeak-ng phonemes, read-aloud hints.                           |
-| `packages/core/src/browser/readAloudEngine.js`     | Kokoro: the model, made from the phonemes readAloudText.js gives.                              |
-| `packages/core/src/browser/readAloudVoices.js`     | The model id and pin, and the Kokoro voices on offer, listable without loading the engine.     |
+| `packages/core/src/browser/readAloud.ts`           | The device check for natural voices, the cache check, and the door to their engine.            |
+| `packages/core/src/speech.ts`                      | Spoken text: a text block's hints and pauses, chunking, plain text for the browser's voice.    |
+| `packages/core/src/browser/readAloudText.ts`       | Kokoro's input: text clean-up, espeak-ng phonemes, read-aloud hints.                           |
+| `packages/core/src/browser/readAloudEngine.ts`     | Kokoro: the model, made from the phonemes readAloudText.ts gives.                              |
+| `packages/core/src/browser/readAloudVoices.ts`     | The model id and pin, and the Kokoro voices on offer, listable without loading the engine.     |
 | `apps/web/bench/read-aloud.html`                   | The dev-only timing page for Kokoro.                                                           |

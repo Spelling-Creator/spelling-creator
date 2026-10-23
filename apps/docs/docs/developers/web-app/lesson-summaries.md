@@ -48,8 +48,8 @@ report a few bytes short of 2 GiB however capable the GPU, so a bigger bar
 would shut out the very browsers the fallback exists for), and, where the
 browser can tell (the Network Information API's `saveData`, or a `cellular`
 connection type), not a metered connection. Both checks live in
-`packages/core/src/browser/deviceCheck.js`, shared with the import model
-(`documentModel.js`) and the natural read-aloud voice (`readAloud.js`).
+`packages/core/src/browser/deviceCheck.ts`, shared with the import model
+(`documentModel.ts`) and the natural read-aloud voice (`readAloud.ts`).
 
 So the card is **capability-gated**: on mount it probes
 `summarizerAvailability()`, which asks the built-in API first and, when that
@@ -114,7 +114,7 @@ pages/lesson/LessonOverview.jsx
 3. **Download (first run only).** If the model isn't on the machine yet, the
    card shows a determinate progress bar (the built-in session's `monitor`
    events, or transformers.js's per-file progress summed into one fraction by
-   `core/browser/downloadProgress.js`, the same plumbing the translation
+   `core/browser/downloadProgress.ts`, the same plumbing the translation
    fallback uses). This is a one-time cost per device, not per lesson. The
    built-in engine's download stops when the run is aborted; an LFM download
    can't be interrupted once started, so the abort signal is checked right
@@ -165,7 +165,7 @@ pages/lesson/LessonOverview.jsx
 ## The reader's options
 
 Two dropdowns map onto the Summarizer API's own options (`SUMMARY_TYPES` and
-`SUMMARY_LENGTHS` in `summarizer.js`):
+`SUMMARY_LENGTHS` in `summarizer.ts`):
 
 - **Style** maps to `type`: **Key points** (`key-points`, the default, a
   bulleted list), **TL;DR**, **Teaser**, **Headline**.
@@ -173,7 +173,7 @@ Two dropdowns map onto the Summarizer API's own options (`SUMMARY_TYPES` and
   sizes, not word counts.
 
 The LFM engine honors the same options by prompt (`SUMMARY_SHAPES` in
-`fallbackSummarizer.js`): each type/length pair maps to the shape the built-in
+`fallbackSummarizer.ts`): each type/length pair maps to the shape the built-in
 API would produce (3/5/7 bullet points for key points, 1/3/5 sentences for
 prose, 12/17/22 words for a headline), so the dropdowns mean the same thing
 whichever engine answers.
@@ -242,7 +242,7 @@ LFM gets the same detected language. Its
 [model card](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct) lists eight
 languages it is trained on (English, Arabic, Chinese, French, German, Japanese,
 Korean and Spanish), and it writes badly in anything else, so
-`LFM_LANGUAGES` in `fallbackSummarizer.js` keeps it to those. A Spanish lesson is
+`LFM_LANGUAGES` in `fallbackSummarizer.ts` keeps it to those. A Spanish lesson is
 summarized in Spanish, and a Danish one in English. (Told to answer a Danish
 lesson in the lesson's own language, it wrote garbled German.)
 
@@ -255,7 +255,7 @@ alike.
 
 ## The LFM fallback, in a little more detail
 
-`core/browser/fallbackSummarizer.js` runs Liquid AI's
+`core/browser/fallbackSummarizer.ts` runs Liquid AI's
 [LFM2.5-1.2B-Instruct](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX)
 with transformers.js (`@huggingface/transformers`), at `q4f16` quantization,
 about 760 MB. It's pinned to one commit of the repo in `MODEL_REVISION`, so a
@@ -372,7 +372,7 @@ resolves to `{ features: new Set(["shader-f16"]), limits: { maxBufferSize: 21474
 the limits real desktop browsers report; the adapter is asked for once a page,
 so stub before the page loads), make sure
 `window.Summarizer` is absent, and serve a stub module in place of
-`fallbackSummarizer.js` with your browser driver's network mocking (it only
+`fallbackSummarizer.ts` with your browser driver's network mocking (it only
 needs `createFallbackSummarizer` returning the session shape above plus
 `engine: "lfm"`).
 

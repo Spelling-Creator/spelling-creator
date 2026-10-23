@@ -23,6 +23,12 @@
     "test": {
       "dependsOn": ["transit"]
     },
+    // tsc writes nothing but its .tsbuildinfo cache, so there is no output to
+    // restore. The CLI's check reads core's sources too, hence `transit`.
+    "typecheck": {
+      "dependsOn": ["transit"],
+      "outputs": []
+    },
 
     // Vite bakes the VITE_* values into the bundle, from the environment or from
     // apps/web/.env. That file is gitignored, so it is not a default input.

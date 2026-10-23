@@ -7,7 +7,7 @@
 // views — a proposal that reads differently from the commit it becomes would be
 // worse than no summary at all.
 //
-// Both pieces take ops in the shape ops.js produces, and neither needs git: the
+// Both pieces take ops in the shape ops.ts produces, and neither needs git: the
 // operations are already derived by the time they get here, which is what lets
 // the proposal page draw this without the engine loaded.
 

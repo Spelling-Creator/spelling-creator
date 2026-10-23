@@ -3,7 +3,7 @@
 //
 // The user never sees git. They see "Edit 1 question, add 1 image", a time, and a
 // button to go back to that version. What makes that possible is the repo layout
-// (one file per block, named by its id — see lib/git/layout.js): the change
+// (one file per block, named by its id — see core/git/layout.ts): the change
 // between two commits is recoverable exactly, per block, without guessing.
 
 import { useCallback, useEffect, useState } from "react";
@@ -63,7 +63,7 @@ export function timeAgo(ts) {
 
 /**
  * Who made a version: its author, plus anyone a live session credited on it
- * ("Alex, with Sam and Priya"). See coAuthorTrailers in git/repo.js.
+ * ("Alex, with Sam and Priya"). See coAuthorTrailers in git/repo.ts.
  */
 export function commitAuthors(commit) {
   const others = commit.coAuthors || [];

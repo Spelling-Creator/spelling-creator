@@ -13,7 +13,7 @@
 // no text of its own. It draws as an empty <span> labelled by CSS (see
 // .lesson-pause in styles/globals.css), so its label never counts as text. The
 // collaboration cursors count characters over the block's plain text
-// (core/browser/presence.js), and a pause has none.
+// (core/browser/presence.ts), and a pause has none.
 
 import { Mark, Node, mergeAttributes } from "@tiptap/core";
 

@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.browser.json",
+  "compilerOptions": {
+    // vitest runs every test on Node, browser/ ones included, so a test may
+    // use both Node's APIs (to read a fixture, say) and the DOM's types.
+    "types": ["node"],
+    "tsBuildInfoFile": "node_modules/.cache/tsc/test.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": []
+}

@@ -1,5 +1,5 @@
 // Structured-output schemas for the question suggester, one per question type.
-// They mirror the block shapes the editor builds in src/lib/questions.js:
+// They mirror the block shapes the editor builds in core's questions.ts:
 // buildQuestionBlock maps this JSON onto the editable block (e.g. wrapping each
 // "multiple" answer string in an { id, text } row). Plain JSON Schema — each
 // provider adapter converts it to whatever shape its own API expects.

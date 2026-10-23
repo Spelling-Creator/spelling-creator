@@ -1,7 +1,7 @@
 // search_images opens with the pictures Wikidata lists for the topic.
 //
 // Wikidata and Commons are both stubbed at the global fetch. The lookup itself
-// is tested in core (packages/core/src/wikidataMedia.test.js); this covers what
+// is tested in core (packages/core/src/wikidataMedia.test.ts); this covers what
 // the tool does with it: picks first, labelled, not repeated, and a Wikidata
 // that doesn't answer costing nothing but the picks.
 

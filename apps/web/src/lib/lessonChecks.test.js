@@ -16,7 +16,7 @@ import { QUICK_FIX_CODES } from "@spelling-creator/core/lessonFixes";
 
 // The source as text, through Vite: under happy-dom, import.meta.url isn't a
 // file URL that node:fs can read.
-import coreSource from "../../../../packages/core/src/lessonChecks.js?raw";
+import coreSource from "../../../../packages/core/src/lessonChecks.ts?raw";
 import checks from "../locales/en/checks.json";
 import {
   CONTEXTS,

@@ -36,7 +36,7 @@
 //   • Edits merge. The room is a CRDT, so an assistant writing section 3 while
 //     the host writes section 5 costs neither of them their work. What does
 //     NOT merge is the same *field* — reconcile stores text as a plain string
-//     (see core/ydoc.js), so two writers in one paragraph is still
+//     (see core/ydoc.ts), so two writers in one paragraph is still
 //     last-write-wins. Hence edit_collab_doc refuses a block someone else's
 //     caret is sitting in, which busyBlocks() below reads from the envelope.
 //   • Removal is instant. The host can eject a participant mid-thought, and the

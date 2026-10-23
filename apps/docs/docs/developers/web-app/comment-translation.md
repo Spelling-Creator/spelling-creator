@@ -34,7 +34,7 @@ heavy fallback). The two engines are:
    Which model depends on the pair:
    - **Translating into English** from a language with a verified
      [Opus-MT](https://huggingface.co/Xenova/opus-mt-de-en) conversion (19 of
-     them, `OPUS_MT_TO_ENGLISH` in `core/opusMtModels.js`): that pair's own
+     them, `OPUS_MT_TO_ENGLISH` in `core/opusMtModels.ts`): that pair's own
      small model, a **110 to 140 MB** download.
    - **Everything else**:
      [NLLB-200 (distilled, 600M)](https://huggingface.co/Xenova/nllb-200-distilled-600M),
@@ -54,7 +54,7 @@ components/CommentsSection.jsx         the Translate action, per-comment state, 
   core/browser/translator              blocks from HTML, detection, engine choice (no React)
     core/browser/fallbackTranslator    the fallback: transformers.js, Opus-MT or NLLB, and an XLM-RoBERTa detector
                                        (lazy: dynamic import(), its own chunk, never in the main bundle;
-                                        the Opus-MT pair table itself is core/opusMtModels.js)
+                                        the Opus-MT pair table itself is core/opusMtModels.ts)
 ```
 
 1. **Blocks, not markup.** Comments are stored as sanitized
@@ -113,10 +113,10 @@ codes), while NLLB wants FLORES-200 codes (`spa_Latn`).
 `TRANSLATION_LANGUAGES` in `@spelling-creator/core/translationLanguages` is the
 one table tying the two together, currently 43 widely used languages, a
 deliberate subset of NLLB's two hundred. Adding a language is adding a row;
-`translationLanguages.test.js` checks the table stays consistent and covers
+`translationLanguages.test.ts` checks the table stays consistent and covers
 every label the detector can answer with.
 
-The Opus-MT fast path has a table of its own, `core/opusMtModels.js`: source
+The Opus-MT fast path has a table of its own, `core/opusMtModels.ts`: source
 tag to model id, into English only, keyed by the main table's canonical tags
 (which is why Simplified Chinese is covered and Traditional is not: the zh
 model was trained mostly on Simplified text, so `zh-Hant` stays on NLLB,
@@ -131,7 +131,7 @@ those three stay on NLLB even though their conversions exist. Adding a pair
 therefore means checking the files exist AND comparing the converted
 tokenizer's output against the Python `MarianTokenizer`, then spot-checking
 translations against the upstream model, as the module comment describes.
-`opusMtModels.test.js` keeps the two tables consistent and pins the excluded
+`opusMtModels.test.ts` keeps the two tables consistent and pins the excluded
 pairs.
 
 A language is only a possible _source_ when a detector can name it: the
@@ -148,13 +148,13 @@ for the fallback, and for the "already in your language" check.
 ## Keeping the heavy path out of every bundle
 
 transformers.js and its ONNX runtime are far too big to ride along with the app.
-`fallbackTranslator.js` is therefore reached **only** through a memoized dynamic
-`import()` inside `translator.js` (the same pattern as the
+`fallbackTranslator.ts` is therefore reached **only** through a memoized dynamic
+`import()` inside `translator.ts` (the same pattern as the
 [export pipeline](./export-pipeline.md)'s `lib/exports/load.js`, and with the
 same rule: a failed load isn't cached, so the next click retries). These guards
 keep it contained:
 
-- Nothing may static-import `fallbackTranslator.js`. That would pull the library
+- Nothing may static-import `fallbackTranslator.ts`. That would pull the library
   into the main bundle for every visitor.
 - `vite.config.js` lists it in `SSR_UNREACHABLE`, so the Worker's
   [server-rendering](./server-rendering.md) build ships a stub instead of an

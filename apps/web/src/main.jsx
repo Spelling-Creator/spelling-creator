@@ -6,7 +6,7 @@ import { configureCore } from "@spelling-creator/core/config";
 // Hand the shared package every piece of build-time configuration it needs,
 // before anything reads it. `import.meta.env` is substituted by Vite and
 // exists nowhere else, so core takes these through this seam rather than
-// reaching for the bundler itself — see packages/core/src/config.js.
+// reaching for the bundler itself — see packages/core/src/config.ts.
 //
 // This is now the ONLY place in the app that touches import.meta.env.
 const buildTime = {

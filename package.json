@@ -19,6 +19,7 @@
     "preview": "pnpm --filter @spelling-creator/web preview",
     "deploy": "pnpm build:docs --force && pnpm --filter @spelling-creator/api deploy",
     "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
     "lint": "oxfmt --check . && oxlint",
     "fmt": "oxfmt ."
   },

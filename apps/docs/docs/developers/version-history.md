@@ -327,7 +327,7 @@ A picture's caption and credit get the same treatment the other way round. A
 picture from before credits had their own field keeps its credit inside
 `caption`, so a caption edit on one side and a credit fix on the other would
 both appear to touch `caption`. The merge splits the credit out on every side
-first (`withSeparateCredit`, in `packages/core/src/imageCredit.js`), so those
+first (`withSeparateCredit`, in `packages/core/src/imageCredit.ts`), so those
 two edits merge cleanly and the result keeps the fields split.
 
 The lesson's sources merge quietly, by id and field by field, like structure: a
@@ -523,7 +523,7 @@ everything goes straight through plumbing (`writeBlob`, then `writeTree`, then
 isomorphic-git and LightningFS are about 200 KB that only the editor needs, so they're
 split into their own chunk (`engine.js`) and fetched on demand when the editor
 mounts (`load.js`). Nobody reading the homepage or browsing the hub downloads a
-git implementation. The pure parts (`doc.js`, `ops.js`, `merge.js`) have no git
+git implementation. The pure parts (`doc.ts`, `ops.ts`, `merge.ts`) have no git
 dependency, so the history and merge dialogs render without it.
 
 `engine.js` also installs the `Buffer` polyfill (from the `buffer` package),

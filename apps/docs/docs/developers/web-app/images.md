@@ -97,7 +97,7 @@ Commons ranks highest. They are ordinary Commons files, so everything after the
 search (the download, the credit) is the same code. A picture that is also in
 the search's own results isn't shown twice.
 
-How the item is found (`packages/core/src/wikidataMedia.js`):
+How the item is found (`packages/core/src/wikidataMedia.ts`):
 
 1. **Only an exact name counts.** `wbsearchentities` matches prefixes, so the
    lookup keeps only items whose label or alias _is_ the search. "Volcano
@@ -124,7 +124,7 @@ still shows Commons' own results and says nothing about it. The lookup is three
 small requests (a name search, one query, and a Commons lookup of the files),
 made alongside the Commons search rather than before it, with a budget of four
 seconds for all three (`PICKS_BUDGET_MS` and `wikidataPickPages` in
-`packages/core/src/wikimedia.js`, which both apps use). A query service under
+`packages/core/src/wikimedia.ts`, which both apps use). A query service under
 load costs the picks, never the search.
 
 A file Wikidata names may have been renamed on Commons since, with a redirect
@@ -133,7 +133,7 @@ follow redirects and maps each title through the renames Commons reports, so
 the picture still shows under its current name.
 
 The shared Wikidata plumbing (searching names, running queries, reading Commons
-file names out of query results) is `packages/core/src/wikidata.js`, which the
+file names out of query results) is `packages/core/src/wikidata.ts`, which the
 [fact check](./fact-checking.md) uses too.
 
 ## Image credits
@@ -173,7 +173,7 @@ Older lessons still have the credit at the end of the caption. They aren't
 rewritten in storage: that would show up as an edit to every picture in
 [version history](../version-history.md), and could race collaborators in a
 live session. Instead the split happens when a lesson is read
-(`imageCaptionParts` in `packages/core/src/imageCredit.js`).
+(`imageCaptionParts` in `packages/core/src/imageCredit.ts`).
 
 It only recognizes the credit lines this app wrote itself, at the very end of a
 caption:
@@ -197,11 +197,11 @@ the stored block to something else, and split it first with
 `withSeparateCredit`:
 
 - **The MCP server's view of a lesson** (`presentDoc` in
-  `packages/core/src/lessonBuild.js`, behind `get_lesson` and the live
+  `packages/core/src/lessonBuild.ts`, behind `get_lesson` and the live
   session's reader). An assistant is told to keep the attribution out of the
   caption and pass `credit` through, so shown a combined caption it would drop
   the attribution.
-- **Three-way merges** (`git/merge.js`). Without it, a caption edit on one side
+- **Three-way merges** (`git/merge.ts`). Without it, a caption edit on one side
   and a credit fix on the other would both change `caption`, and both add
   `credit`, and come out as conflicts.
 

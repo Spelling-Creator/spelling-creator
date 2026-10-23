@@ -8,7 +8,7 @@
 //
 // All this collects is the covering note. The changes themselves are the
 // repository, packed and uploaded by the caller (see EditorPage's
-// handleProposeChanges and core/browser/git/sync.js submitPullRequest).
+// handleProposeChanges and core/browser/git/sync.ts submitPullRequest).
 
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";

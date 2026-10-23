@@ -9,7 +9,7 @@ For how to use this, see [VAKT activities](../../guide/vakt-activities.md).
 A **VAKT activity** is a regulation break: a movement or sensory activity a
 speller does partway through a lesson. VAKT stands for **v**isual, **a**uditory,
 **k**inesthetic, **t**actile. Everything about the block (its color, its label,
-and its shape) lives in one place, `packages/core/src/vakt.js`, so the editor,
+and its shape) lives in one place, `packages/core/src/vakt.ts`, so the editor,
 the viewer, both exporters and both importers stay in sync.
 
 ## Not a question
@@ -25,7 +25,7 @@ type. The distinction is load-bearing:
 
 Question blocks carry answers and print in the legend. Making VAKT a question
 type would have given it all of that and then required exceptions for each one.
-(A comment in `vakt.js` still calls the alternative "a seventh question type";
+(A comment in `vakt.ts` still calls the alternative "a seventh question type";
 there are eight question types now.)
 
 ## The color and the label
@@ -55,7 +55,7 @@ Two optional extras, both off by default:
 - **An image.** It's referenced by content hash exactly as an image block's is,
   so it resolves, uploads and exports through the same path, and it's framed by
   the same `size` (small / medium / large / full) and `align` (left / center /
-  right) fields from `packages/core/src/image.js`.
+  right) fields from `packages/core/src/image.ts`.
 
   The **defaults differ**: an image block starts full width, a VAKT picture
   starts **medium (a 0.65 scale) and centered** (`VAKT_DEFAULT_IMAGE_SIZE`,

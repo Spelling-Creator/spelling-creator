@@ -113,7 +113,7 @@ export function naturalVoiceId(voiceURI) {
  * picker lists both the same way: empty until the device check has run, and
  * empty for good where it fails (no WebGPU, a phone or tablet, or a metered
  * connection unless the model is already downloaded). See
- * core/browser/readAloud.js.
+ * core/browser/readAloud.ts.
  *
  * @returns {{ voiceURI: string, name: string, lang: string }[]}
  */

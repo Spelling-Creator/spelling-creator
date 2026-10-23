@@ -84,34 +84,34 @@ const SSR_UNREACHABLE = [
   "src/pages/LoginPage.jsx",
   "src/pages/OAuthAuthorizePage.jsx",
   // transformers.js + the translation fallback (Opus-MT / NLLB). Reached only
-  // through the dynamic import() in core/browser/translator.js, from a click
+  // through the dynamic import() in core/browser/translator.ts, from a click
   // on Translate, and it downloads models of ~110 MB to ~600 MB into browser
   // storage. Nothing about it can run in the Worker, and bundling it would be
   // the export pipeline story again, several times over.
-  "../../packages/core/src/browser/fallbackTranslator.js",
+  "../../packages/core/src/browser/fallbackTranslator.ts",
   // The summarisation fallback (LFM2.5 via transformers.js), same story:
-  // reached only through the dynamic import() in core/browser/summarizer.js,
+  // reached only through the dynamic import() in core/browser/summarizer.ts,
   // from a click on Summarise, and its model download is ~760 MB on WebGPU.
-  "../../packages/core/src/browser/fallbackSummarizer.js",
+  "../../packages/core/src/browser/fallbackSummarizer.ts",
   // The on-device model behind Import from text (LFM2 Extract, fine-tuned),
   // same story: reached only through the dynamic import() in
-  // core/browser/documentModel.js, from a click in the import dialog, and its
+  // core/browser/documentModel.ts, from a click in the import dialog, and its
   // model download is ~640 MB on WebGPU.
-  "../../packages/core/src/browser/documentModelEngine.js",
+  "../../packages/core/src/browser/documentModelEngine.ts",
   // Kokoro read-aloud (transformers.js plus Spellophone's espeak-ng wasm),
   // same story: reached only through the dynamic import() in
-  // core/browser/readAloud.js, and its model download is 92 MB or more.
-  "../../packages/core/src/browser/readAloudEngine.js",
+  // core/browser/readAloud.ts, and its model download is 92 MB or more.
+  "../../packages/core/src/browser/readAloudEngine.ts",
   // Formulas (MathJax, its font and the speech rule engine), same story:
-  // reached only through the dynamic import() in core/browser/formulas.js,
+  // reached only through the dynamic import() in core/browser/formulas.ts,
   // and the server shows a formula as its source.
+  "../../packages/core/src/browser/formulaBrowser.ts",
+  "../../packages/core/src/browser/formulaEngine.ts",
+  "../../packages/core/src/browser/formulaSpeech.ts",
   // The ALTCHA widget (a custom element with its solver workers inlined),
   // reached only through the dynamic import() in src/lib/aiChallenge.jsx, from
   // an open AI dialog on an instance that uses ALTCHA.
   "src/lib/altchaWidget.js",
-  "../../packages/core/src/browser/formulaBrowser.js",
-  "../../packages/core/src/browser/formulaEngine.js",
-  "../../packages/core/src/browser/formulaSpeech.js",
 ];
 
 function stubUnreachableOnServer() {
@@ -264,7 +264,7 @@ function portlessStub(mode) {
 
 // `VITE_`-prefixed env vars from apps/web/.env are exposed to client code as
 // `import.meta.env.VITE_*` natively — no config needed. src/main.jsx is the
-// only place in the app that reads them (see packages/core/src/config.js).
+// only place in the app that reads them (see packages/core/src/config.ts).
 export default defineConfig(({ isSsrBuild, mode }) => ({
   plugins: [
     isSsrBuild && stubUnreachableOnServer(),
@@ -363,7 +363,7 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         runtimeCaching: [
           {
             // Lesson images are addressed by the SHA-256 of their bytes
-            // (packages/core/src/browser/imageRef.js), so a given URL can never
+            // (packages/core/src/browser/imageRef.ts), so a given URL can never
             // change content — cache-first, and never revalidate. Matched by a
             // callback rather than a RegExp because VITE_API_URL may point at a
             // different origin, and Workbox only applies a RegExp route

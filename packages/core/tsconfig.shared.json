@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // `webworker` is the narrowest lib with the Web-standard globals these
+    // modules lean on (fetch, crypto, URL, Blob) and no DOM, so a module
+    // outside browser/ fails here the moment it reaches for `document`.
+    "lib": ["es2024", "webworker"],
+    "tsBuildInfoFile": "node_modules/.cache/tsc/shared.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": ["src/browser", "src/**/*.test.*"]
+}

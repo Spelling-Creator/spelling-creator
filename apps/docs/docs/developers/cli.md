@@ -137,10 +137,10 @@ and the MCP server work from. A file that couldn't be read or written has
 | Extension          | How it is read                                                                                                                                                                                                                        |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.json`            | The app's own lesson file, through core's `jsonImport`. Lossless, and the envelope or a bare `{ title, sections }` doc are both accepted.                                                                                             |
-| `.oslf.json`       | An [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format) file, through the same `jsonImport` (core's `oslf.js` turns it into a lesson first). Pictures given as relative files are left out. |
-| `.oslf.xml`        | The same format in its XML form, read into the format's JSON object by core's `oslfXml.js` and then as an `.oslf.json`. A file with a DOCTYPE is refused, as the format requires.                                                     |
+| `.oslf.json`       | An [Open Spelling Lesson Format](https://github.com/playforge-coding/open-spelling-lesson-format) file, through the same `jsonImport` (core's `oslf.ts` turns it into a lesson first). Pictures given as relative files are left out. |
+| `.oslf.xml`        | The same format in its XML form, read into the format's JSON object by core's `oslfXml.ts` and then as an `.oslf.json`. A file with a DOCTYPE is refused, as the format requires.                                                     |
 | `.docx`            | The document's text, extracted with mammoth, then read by the rules parser below.                                                                                                                                                     |
-| `.txt`, `.md`, any | The file as text, read by the rules parser in `packages/core/src/documentImport.js`, the same one behind [Import from text](../guide/import-from-text.md): headings, passages, a spelling line, one question per line.                |
+| `.txt`, `.md`, any | The file as text, read by the rules parser in `packages/core/src/documentImport.ts`, the same one behind [Import from text](../guide/import-from-text.md): headings, passages, a spelling line, one question per line.                |
 
 A document was never a lesson file, so nothing in it says what a question's
 type is: the parser works that out from the answers and the wording. The report
@@ -151,7 +151,7 @@ result.
 
 A Word document is read as plain text even when this app exported it. The
 styled import that reads question types back from the exporter's character
-styles (`packages/core/src/browser/docxImport.js`) needs a DOM and the
+styles (`packages/core/src/browser/docxImport.ts`) needs a DOM and the
 browser's image store, so for now it only runs in the editor. The rules read
 an exported file well regardless, since its `Spell:` line and answer gaps are
 shapes they know; images are the one thing lost.
@@ -164,16 +164,14 @@ apps/cli/
   src/commands/*.ts     one module per command
   src/lesson.ts         readLesson / writeLesson: file in, lesson out, and back
   src/report.ts         FileReport, the prose and JSON output, the exit code
-  src/types.ts          the lesson document's shape, for TypeScript
-  src/core.d.ts         ambient types for the core modules the CLI calls
   rolldown.config.ts    the build: src/cli.ts and core's modules into dist/cli.js
   test/                 node --test, with the built bin spawned for the commands
 ```
 
 ### TypeScript, and the build
 
-The CLI is the first TypeScript package in the repository. In development it
-needs no build: `pnpm start` and the root's `pnpm cli` run `src/cli.ts`
+The CLI is TypeScript, like `packages/core`. In development it needs no
+build: `pnpm start` and the root's `pnpm cli` run `src/cli.ts`
 directly, with Node stripping the types as it loads them. That takes Node
 22.18 or newer, the first release where it does so without a flag; the
 `engines` field says 22.12 because it describes the published bundle, which is
@@ -187,8 +185,9 @@ What ships is a bundle. `pnpm build` runs [rolldown](https://rolldown.rs)
 with `rolldown.config.ts`, which turns `src/cli.ts` and everything it reaches
 into one ESM file, `dist/cli.js`, that the package's `bin` points at.
 `@spelling-creator/core` is a workspace package that isn't published to npm,
-so the core modules the CLI uses are bundled in; they import nothing from npm
-themselves, so the bundle adds no dependencies. The CLI's own dependencies
+so the core modules the CLI uses are bundled in, along with what they import
+from npm (`@xmldom/xmldom`, for OSLF's XML form), and the bundle adds no
+dependencies. The CLI's own dependencies
 (yargs, mammoth) and Node's builtins stay external. The tests spawn the bundle,
 so what is tested is what is published. `turbo.json` makes the CLI's `test`
 task depend on its `build`, so the root `pnpm test` (or
@@ -200,13 +199,11 @@ Rolldown rather than Vite or tsdown because the job is small and plain: Vite
 brings a dev server and an app's conventions, and tsdown adds declaration
 output and a library's packaging, neither of which a command line tool uses.
 
-`@spelling-creator/core` is JavaScript with JSDoc and publishes no
-declarations, so the CLI carries its own in `src/core.d.ts`: ambient `declare
-module` blocks for the few core subpaths it imports, with signatures written
-against the document types in `src/types.ts`. That is a stopgap. When a second
-TypeScript package needs core, the better move is for core to emit
-declarations from its JSDoc (`tsc --allowJs --declaration --emitDeclarationOnly`)
-and for both to use those.
+The CLI's types for the lesson and for what it calls in core come from core
+itself: the document types from `@spelling-creator/core/types`, and each
+module's own signatures from its `.ts` source. `tsc` reads those sources
+through core's `exports` map, so a change to a core signature the CLI relies
+on fails the CLI's check too.
 
 ## Releasing
 

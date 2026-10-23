@@ -3,7 +3,7 @@
 // The editor used to have exactly one working document, so "open a lesson" and
 // "throw away what you were doing" were the same act, hence the old "Replace
 // your current work?" warning. IndexedDB has no reason to hold one lesson rather
-// than fifty (see core/browser/storage.js), so it holds as many as are made and
+// than fifty (see core/browser/storage.ts), so it holds as many as are made and
 // this is the list of them: open, copy, rename, delete, start another.
 //
 // This was a dialog over the editor (/editor/lessons) until it became a page of

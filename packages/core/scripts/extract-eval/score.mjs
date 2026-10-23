@@ -1,12 +1,12 @@
 // How close an extraction came to the lesson it was rendered from, and whether
 // a lesson rebuilt from it passes the lesson checks.
 
-import { deriveQuestionType } from "../../src/documentImport.js";
-import { inlineTextPlain } from "../../src/inlineText.js";
-import { normalizeLessonFile } from "../../src/jsonImport.js";
-import { validateLesson } from "../../src/lessonChecks.js";
-import { textBlockPlain } from "../../src/lessonText.js";
-import { questionAnswerItems } from "../../src/questions.js";
+import { deriveQuestionType } from "../../src/documentImport.ts";
+import { inlineTextPlain } from "../../src/inlineText.ts";
+import { normalizeLessonFile } from "../../src/jsonImport.ts";
+import { validateLesson } from "../../src/lessonChecks.ts";
+import { textBlockPlain } from "../../src/lessonText.ts";
+import { questionAnswerItems } from "../../src/questions.ts";
 
 export function groundTruthSection(section) {
   const blocks = section.blocks;
@@ -62,7 +62,7 @@ function setF1(a, b) {
 const list = (v) => (Array.isArray(v) ? v.map((x) => String(x ?? "")) : []);
 
 // The question type, worked out from what was extracted rather than asked of
-// the model. The rule is the import's own (core/documentImport.js); a small
+// the model. The rule is the import's own (core/documentImport.ts); a small
 // model guessing the type from a list of names did no better than chance.
 export function deriveType(q, passage) {
   return deriveQuestionType(

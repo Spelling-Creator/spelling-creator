@@ -13,12 +13,21 @@
 // copied in as real files and the dependency is taken out of the staged manifest
 // before npm ever sees it.
 //
-// Those modules happen to be dependency-free, which is what makes vendoring them
-// cheap: core's full dependency list (yjs, docx, isomorphic-git, supabase…) is
-// for its browser modules and has no business in this bundle. That is an
-// assumption rather than a guarantee, so it is checked below and the build fails
-// loudly if it ever stops holding — better than shipping a bundle that throws
-// MODULE_NOT_FOUND on someone's machine.
+// Most of core's dependency list (docx, mammoth, supabase, transformers…) is
+// for its browser modules and has no business in this bundle, so core's own
+// dependencies are not installed. The few packages the copied modules do import
+// (yjs, isomorphic-git) have to be in this package's dependencies instead, at
+// the same range core asks for, where npm installs them. That is checked below,
+// and the build fails loudly if a copied module reaches a package npm won't
+// install, or would install at another range: better than shipping a bundle
+// that throws MODULE_NOT_FOUND, or calls an API its copy lacks, on someone's
+// machine.
+//
+// Core is TypeScript, and the copies can't stay that way: Node strips types
+// only outside node_modules, and the bundle may run on a Node too old to strip
+// them at all. So each module is compiled to plain JavaScript on the way in
+// (esbuild, one file at a time, nothing bundled), and its imports are pointed at
+// the .js files that come out.
 //
 // Run with: pnpm --filter @spelling-creator/mcp run pack
 // (`run` is not optional: pnpm has a built-in `pack` command that would shadow
@@ -32,10 +41,13 @@ import {
   readdirSync,
   rmSync,
   existsSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { transformSync } from "esbuild";
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const staging = join(pkgRoot, "build", "bundle");
@@ -65,10 +77,36 @@ function run(cmd, args, cwd) {
 
 // Every module specifier a file imports, static or dynamic. Deliberately a regex
 // rather than a parser: this only ever reads our own source, where imports are
-// plain top-of-file statements.
+// plain top-of-file statements. It is run over esbuild's output, which has no
+// comments left, so an `import x from "y"` inside a comment is not counted.
 function importSpecifiers(source) {
   const pattern = /(?:\bfrom|\bimport)\s*\(?\s*["']([^"']+)["']/g;
   return [...source.matchAll(pattern)].map((m) => m[1]);
+}
+
+// A core module as it will run in the bundle: plain JavaScript, with a
+// TypeScript module's types stripped. verbatimModuleSyntax matches core's
+// tsconfig, so an import is dropped only when it says `import type`, exactly as
+// Node would drop it. That is also what keeps a type-only import of a package
+// from counting as a dependency below.
+function runtimeSource(file) {
+  return transformSync(readFileSync(file, "utf8"), {
+    loader: file.endsWith(".ts") ? "ts" : "js",
+    sourcefile: file,
+    tsconfigRaw: { compilerOptions: { verbatimModuleSyntax: true } },
+  }).code.replace(
+    /((?:\bfrom|\bimport)\s*\(?\s*["']\.\.?\/[^"']+)\.ts(["'])/g,
+    "$1.js$2",
+  );
+}
+
+const toJs = (path) => path.replace(/\.ts$/, ".js");
+
+// The package a bare specifier names: "yjs" for "yjs", "@scope/pkg" for
+// "@scope/pkg/deep/path.js".
+function packageName(spec) {
+  const parts = spec.split("/");
+  return spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
 }
 
 function jsFilesIn(dir) {
@@ -77,58 +115,95 @@ function jsFilesIn(dir) {
     .map((e) => join(e.parentPath ?? e.path, e.name));
 }
 
-// Walk out from the core subpaths the server imports, following relative imports,
-// and report every file reached plus any bare specifier found along the way — a
-// bare specifier is a real npm dependency the bundle would need to carry.
+const coreSubpath = (spec) =>
+  spec === CORE_NAME || spec.startsWith(`${CORE_NAME}/`)
+    ? `.${spec.slice(CORE_NAME.length)}`
+    : null;
+
+// The file a relative import names. runtimeSource has already pointed a .ts
+// import at .js, so the file on disk may be the .ts one. Anything else (a
+// specifier with no extension, a directory) is a build failure here rather
+// than in the bundle, since Node only loads an ES module by its full name.
+function resolveRelative(file, spec) {
+  const target = resolve(dirname(file), spec);
+  const ts = target.replace(/\.js$/, ".ts");
+  for (const path of [target, ts]) {
+    if (existsSync(path) && statSync(path).isFile()) return path;
+  }
+  throw new Error(
+    `${relative(coreRoot, file)} imports "${spec}", which is not a file. ` +
+      "Node loads an ES module only by its full file name, extension included.",
+  );
+}
+
+// Walk out from the core subpaths the server imports, following relative
+// imports and core's imports of itself by name, and report every file reached
+// plus any package found along the way that npm won't install for this server,
+// or would install at a different version from the one core asks for.
 function collectCoreModules() {
-  const exportsMap = readJson(join(coreRoot, "package.json")).exports || {};
+  const coreManifest = readJson(join(coreRoot, "package.json"));
+  const exportsMap = coreManifest.exports || {};
+  const coreDeps = coreManifest.dependencies || {};
+  const ownDeps = readJson(join(pkgRoot, "package.json")).dependencies || {};
 
   const subpaths = new Set();
-  for (const file of jsFilesIn(join(pkgRoot, "src"))) {
-    for (const spec of importSpecifiers(readFileSync(file, "utf8"))) {
-      if (spec === CORE_NAME || spec.startsWith(`${CORE_NAME}/`)) {
-        subpaths.add(`.${spec.slice(CORE_NAME.length)}`);
-      }
-    }
-  }
-
   const queue = [];
-  for (const subpath of subpaths) {
+  const enqueueSubpath = (subpath, from) => {
+    if (subpaths.has(subpath)) return;
     const target = exportsMap[subpath];
     if (!target) {
       throw new Error(
-        `${CORE_NAME} has no "${subpath}" export, but the server imports it. ` +
+        `${CORE_NAME} has no "${subpath}" export, but ${from} imports it. ` +
           "Add it to packages/core/package.json's exports map.",
       );
     }
+    subpaths.add(subpath);
     queue.push(resolve(coreRoot, target));
+  };
+
+  for (const file of jsFilesIn(join(pkgRoot, "src"))) {
+    for (const spec of importSpecifiers(runtimeSource(file))) {
+      const subpath = coreSubpath(spec);
+      if (subpath) enqueueSubpath(subpath, relative(pkgRoot, file));
+    }
   }
 
   const files = new Set();
-  const bare = new Map();
+  // Package name -> the line that explains what is wrong with it.
+  const problems = new Map();
   while (queue.length) {
     const file = queue.pop();
     if (files.has(file)) continue;
     files.add(file);
-    for (const spec of importSpecifiers(readFileSync(file, "utf8"))) {
+    for (const spec of importSpecifiers(runtimeSource(file))) {
       if (spec.startsWith(".")) {
-        const target = resolve(dirname(file), spec);
-        queue.push(target.endsWith(".js") ? target : `${target}.js`);
+        queue.push(resolveRelative(file, spec));
+      } else if (coreSubpath(spec)) {
+        enqueueSubpath(coreSubpath(spec), relative(coreRoot, file));
       } else if (!spec.startsWith("node:")) {
-        bare.set(spec, file);
+        const name = packageName(spec);
+        const from = relative(coreRoot, file);
+        if (!ownDeps[name]) {
+          problems.set(name, `  ${spec} (from ${from}): not a dependency`);
+        } else if (coreDeps[name] && ownDeps[name] !== coreDeps[name]) {
+          // npm would install this server's range, and the copied modules
+          // were written against core's.
+          problems.set(
+            name,
+            `  ${spec} (from ${from}): this server asks for ${ownDeps[name]}, core for ${coreDeps[name]}`,
+          );
+        }
       }
     }
   }
 
-  if (bare.size) {
-    const detail = [...bare]
-      .map(([spec, file]) => `  ${spec} (from ${relative(coreRoot, file)})`)
-      .join("\n");
+  if (problems.size) {
     throw new Error(
-      `Vendoring ${CORE_NAME} assumes the modules this server imports are dependency-free, ` +
-        `but they now reach real packages:\n${detail}\n\n` +
-        "Either keep those modules dependency-free, or add the packages above to " +
-        "apps/mcp/package.json's dependencies so npm vendors them into the bundle.",
+      `The ${CORE_NAME} modules this server imports reach packages npm won't install as core expects:\n` +
+        `${[...problems.values()].join("\n")}\n\n` +
+        "Add each to apps/mcp/package.json's dependencies at the same range as " +
+        "packages/core/package.json, so npm installs into the bundle what core " +
+        "was written against.",
     );
   }
 
@@ -141,9 +216,9 @@ function collectCoreModules() {
 function vendorCore({ files, subpaths, exportsMap }) {
   const target = join(staging, "node_modules", CORE_NAME);
   for (const file of files) {
-    const dest = join(target, relative(coreRoot, file));
+    const dest = join(target, toJs(relative(coreRoot, file)));
     mkdirSync(dirname(dest), { recursive: true });
-    cpSync(file, dest);
+    writeFileSync(dest, runtimeSource(file));
   }
 
   const source = readJson(join(coreRoot, "package.json"));
@@ -152,7 +227,7 @@ function vendorCore({ files, subpaths, exportsMap }) {
     version: source.version,
     license: source.license,
     type: source.type,
-    exports: Object.fromEntries(subpaths.map((s) => [s, exportsMap[s]])),
+    exports: Object.fromEntries(subpaths.map((s) => [s, toJs(exportsMap[s])])),
   });
 
   return files.length;
@@ -184,6 +259,10 @@ const workspaceDeps = Object.entries(manifest.dependencies || {}).filter(
   ([, range]) => range.startsWith(WORKSPACE_PROTOCOL),
 );
 for (const [name] of workspaceDeps) delete manifest.dependencies[name];
+// `engines` says what running the server from the workspace takes (Node 24,
+// to strip core's types). The bundle runs plain JavaScript, and the Node it
+// needs is manifest.json's compatibility.runtimes.node.
+delete manifest.engines;
 writeJson(stagedManifest, manifest);
 
 console.log("• Vendoring production dependencies (npm install --omit=dev)…");

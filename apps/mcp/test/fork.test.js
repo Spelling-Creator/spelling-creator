@@ -9,7 +9,7 @@
 //
 // Committing an ordinary edit (recordLessonHistory) is tested in history.test.js,
 // and the in-memory filesystem these repositories are built on in
-// packages/core/src/git/memfs.test.js.
+// packages/core/src/git/memfs.test.ts.
 
 import assert from "node:assert/strict";
 import test from "node:test";

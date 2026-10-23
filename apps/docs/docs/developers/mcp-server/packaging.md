@@ -53,29 +53,39 @@ staged `node_modules` as real files, with a trimmed `package.json` exporting
 just those subpaths, and removes the dependency from the staged manifest before
 npm sees it.
 
-That only works if those modules are dependency-free, since anything they
-import from npm would be missing from the bundle. `pack` doesn't assume that
-silently: it walks the imports out from each core subpath the server uses and
-**fails the build** if any of them reaches a real package, naming the package
-and the file, for example:
+The copies are compiled on the way in. Core is TypeScript, and Node only strips
+types from files outside `node_modules` (and the bundle may run on a Node too
+old to strip them at all), so each module goes through esbuild, one file at a
+time with nothing bundled, and comes out as plain JavaScript with its imports
+pointed at the `.js` files. The trimmed `package.json` points at those too.
+
+Core's own dependencies are not installed: most of them (`docx`, `mammoth`,
+Supabase, transformers.js) are for its browser modules and have no place in
+the bundle. The few packages the copied modules do import (`yjs` and
+`isomorphic-git`, for the live document and version history) have to be in
+`apps/mcp/package.json`'s dependencies instead, at the same range as in
+`packages/core/package.json`, where npm installs them. `pack` walks the imports
+out from each core subpath the server uses, core's imports of itself by name
+included, and **fails the build** if a copied module reaches a package that
+isn't there, or that is there at a different range (npm would install this
+server's range, and the copies were written against core's). It names the
+package and the file:
 
 ```
-Vendoring @spelling-creator/core assumes the modules this server imports are
-dependency-free, but they now reach real packages:
-  yjs (from src/ydoc.js)
+The @spelling-creator/core modules this server imports reach packages npm won't install as core expects:
+  isomorphic-git (from src/git/pack.ts): not a dependency
 ```
 
-If that fires, either keep the module dependency-free or add the package to
-`apps/mcp/package.json`'s dependencies so npm vendors it into the bundle.
+If that fires, give `apps/mcp/package.json` the package at core's range. The
+walk reads the compiled code, so a type-only import of a package and an import
+written inside a comment don't count. A relative import has to name a file,
+extension included, since that is the only way Node loads an ES module, so one
+that doesn't fails the build too, naming the module that has it.
 
-::: warning Currently failing
-The server now imports far more of core than when this was written
-(`ydoc`, the `git/*` modules, `lessonChecks`, `factCheck` and others), and those
-reach `yjs` and `isomorphic-git`. The guard reports any bare import it finds,
-even one that is already in `apps/mcp/package.json` (as `yjs` is), and its regex
-also picks up a few strings from comments, so `run pack` stops at this check
-until the script or the imports change.
-:::
+The staged `package.json` leaves out `engines`. That field says what running
+the server from the workspace takes (Node 24, which strips core's types as it
+loads them); the bundle runs plain JavaScript, and the Node it needs is the one
+`manifest.json` declares under `compatibility.runtimes`.
 
 ## Publishing a release
 

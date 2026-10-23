@@ -15,7 +15,7 @@
 // screen far more often than you print it, and a white sheet glaring out of a
 // dark page is the wrong default for reading. The printout still looks like a
 // printout: that's what the Word and PDF exports (and Print) produce
-// (docxExport.js / pdfExport.js), the only two paths that build a Word file.
+// (docxExport.ts / pdfExport.ts), the only two paths that build a Word file.
 
 import { useTranslation } from "react-i18next";
 import { ArrowUpIcon } from "lucide-react";
@@ -427,7 +427,7 @@ function QuestionBlock({ block, si, bi, translation }) {
           style={{
             "--s2c-label": meta.color,
             // The one type that shares its colour with another is set in italic
-            // instead (see questions.js), here as in the export.
+            // instead (see questions.ts), here as in the export.
             fontStyle: meta.italic ? "italic" : undefined,
           }}
         >

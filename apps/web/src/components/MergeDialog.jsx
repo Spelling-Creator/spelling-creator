@@ -18,7 +18,7 @@
 // framing differs — merging a proposal changes the published lesson for
 // everyone, so it says so.
 //
-// See lib/git/merge.js for the merge itself; this component only chooses.
+// See core/git/merge.ts for the merge itself; this component only chooses.
 
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -65,7 +65,7 @@ function ValueText({ value, field }) {
       </p>
     );
   }
-  // A formatted prompt, likewise (see core/inlineText.js).
+  // A formatted prompt, likewise (see core/inlineText.ts).
   if (field === "prompt" && value && typeof value === "object") {
     return <p className="text-sm">{inlineTextPlain(value)}</p>;
   }

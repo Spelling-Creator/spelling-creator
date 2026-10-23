@@ -273,7 +273,7 @@ best `ref`". Both are only what a `tools/call` returns, so neither needs a rende
 
 The proposal view's tests go further, because what its buttons call is not a rendering
 concern at all: they build real packfiles for a lesson and a fork of it (as
-`packages/core/src/git/review.test.js` does), so the ancestry the diff and the merge base
+`packages/core/src/git/review.test.ts` does), so the ancestry the diff and the merge base
 depend on is real ancestry. That's what pins down the things a stub would hide: that the
 diff is taken from the merge base, that a merge pushes, saves and records in that order and
 with a compare-and-swap, that it carries the lesson's saved document forward rather than
