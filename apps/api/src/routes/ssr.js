@@ -133,7 +133,7 @@ async function shell(env, url) {
 // Everything else in <head> (viewport, theme-color, icons, feeds, scripts) is
 // untouched.
 //
-// The defaults are recognised by their data-seo-default marker, not by tag
+// The defaults are recognized by their data-seo-default marker, not by tag
 // names: the crawler prerenderer (routes/render.js) removes the same set from
 // a live DOM where the page's own title and og tags are already present, and
 // matching by name there would take the page's tags with it. One marker, two

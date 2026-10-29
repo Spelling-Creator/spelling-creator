@@ -15,7 +15,7 @@ import puppeteer from "@cloudflare/puppeteer";
 import { textResponse } from "../lib/http.js";
 import { responseCache } from "../platform/index.js";
 import { serverRender, shouldServerRender } from "./ssr.js";
-import { serveApp } from "./spa.js";
+import { isAppRoute, serveApp } from "./spa.js";
 
 // User-Agents of crawlers/scrapers worth prerendering for: search engines and
 // the link-preview bots used by social/chat platforms.
@@ -41,6 +41,11 @@ export function shouldPrerender(request, url) {
   // HTML is already crawler-ready — no need to spin up a browser for it.
   if (url.pathname === "/docs" || url.pathname.startsWith("/docs/"))
     return false;
+  // Only a page the app actually has. A snapshot is always a 200, so
+  // prerendering an unknown path would hand crawlers its not-found page under
+  // a status saying it exists (a soft 404), while a browser asking for the same
+  // URL gets serveApp's real 404. Unknown paths go to serveApp for crawlers too.
+  if (!isAppRoute(url.pathname)) return false;
   const accept = request.headers.get("accept") || "";
   const isDoc =
     accept.includes("text/html") || !/\.[a-z0-9]+$/i.test(url.pathname);
@@ -92,8 +97,8 @@ async function prerender(request, env, ctx, url) {
     });
     // index.html's site-wide title/social defaults are still in this DOM, next
     // to the page's own tags (React hoists <DocumentMeta>'s into <head>), and a
-    // scraper believes the first og:title it finds. Remove the default set —
-    // marked data-seo-default — before the snapshot, exactly as ssr.js strips
+    // scraper believes the first og:title it finds. Remove the default set
+    // (marked data-seo-default) before the snapshot, exactly as ssr.js strips
     // it from the raw shell.
     await page.$$eval("[data-seo-default]", (defaults) => {
       for (const el of defaults) el.remove();
@@ -115,8 +120,8 @@ async function prerender(request, env, ctx, url) {
     // If rendering fails (timeout, quota, etc.) fall back to the ordinary
     // frontend answer so the crawler still receives valid HTML. Through
     // serveApp, not ASSETS directly: a client-side route like /hub has no file
-    // behind it, so the asset layer answers it with an empty 404 — which is
-    // what crawlers were being served whenever the browser pool hiccuped.
+    // behind it, so the asset layer answers it with an empty 404. That is what
+    // crawlers were being served whenever the browser pool hiccuped.
     return serveApp(request, env, url);
   } finally {
     if (browser) await browser.close();
@@ -205,9 +210,10 @@ export async function ogImage(request, env, ctx, url) {
 //
 //   1. Server-render it, for everyone, if it's one of the public read routes
 //      (routes/ssr.js). Returns null if it isn't, or if anything went wrong.
-//   2. Prerender it with headless Chromium, for crawlers only, on the routes
-//      SSR doesn't cover — today that's "/" and nothing else, since the rest
-//      are auth-gated pages no crawler has any business indexing.
+//   2. Prerender it with headless Chromium, for crawlers only, on the app's
+//      routes that SSR doesn't cover, and on an SSR route whose render failed.
+//      The one that matters is "/"; the rest are signed-in pages that ask not
+//      to be indexed. Never an unknown path, which gets step 3's real 404.
 //   3. Hand back the static asset, the SPA shell for a client-side route, or a
 //      real 404 for a path that is neither (routes/spa.js).
 export async function handleFrontend(request, env, ctx, url) {

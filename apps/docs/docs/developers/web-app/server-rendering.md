@@ -143,8 +143,8 @@ schemas (`buildLessonCourseSchema`, `buildLessonListSchema`).
   own tags go in. Otherwise a scraper reading the _first_ `og:title` would get
   the generic one. The default tags carry a `data-seo-default` marker and are
   removed by it, because the Chromium prerenderer removes the same set from a
-  live DOM in which the page's own React-hoisted tags already sit — matching by
-  tag name there would take the page's tags too.
+  live DOM in which the page's own React-hoisted tags already sit, where
+  matching by tag name would take the page's tags too.
 - **The service worker must not answer these navigations.** `navigateFallback`
   would otherwise serve the precached shell and the server would never be asked,
   silently disabling SSR for exactly the returning visitors whose browsers have
