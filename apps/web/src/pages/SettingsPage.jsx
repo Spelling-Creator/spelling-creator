@@ -43,6 +43,7 @@ import {
   modelCacheBytes,
 } from "@spelling-creator/core/browser/modelCache";
 import PageBody from "../components/layout/PageBody.jsx";
+import { DocumentMeta } from "../lib/seo.jsx";
 import { Alert, AlertDescription } from "../components/ui/alert.jsx";
 import { Button, buttonVariants } from "../components/ui/button.jsx";
 import {
@@ -639,6 +640,7 @@ export default function SettingsPage() {
           control each, and at 64rem a row leaves its label stranded a long way
           from the thing it names. */}
       <PageBody width="reading">
+        <DocumentMeta title={t("title")} noindex image={null} />
         <h1 className="text-2xl font-bold md:text-3xl">{t("title")}</h1>
         <p className="mt-1 mb-6 text-sm text-muted-foreground">
           {t("subtitle")}

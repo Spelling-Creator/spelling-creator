@@ -12,6 +12,7 @@ import { createApp, cors, registerFrontend, req, urlOf } from "./app.js";
 
 import { CollabRoom } from "./collab-room.js";
 import { federationFor } from "./lib/federation/index.js";
+import { installSelfFetch, servingSelf } from "./lib/selfFetch.js";
 import { PracticeRoom } from "./practice-room.js";
 import { ogImage, handleFrontend } from "./routes/render.js";
 import { handleCollab, handleCollabAgent } from "./routes/collab.js";
@@ -69,9 +70,22 @@ registerFrontend(app, handleFrontend);
 // HTTP endpoint, and passes every other request through to `app` unchanged —
 // see routes/mcp.js. Built fresh per request so its token-refresh callback can
 // close over this request's env bindings.
+//
+// Requests this Worker makes to its own origin while serving a request, such as
+// server rendering loading a page's data (routes/ssr.js), are answered
+// in-process by the same wrapped handler. Cloudflare does not route a Worker's
+// fetch to its own hostname back into the Worker; it sends it to the zone's
+// origin server, and this site has none, so every such request used to fail
+// with a 522 (see lib/selfFetch.js). Wrapping the whole provider, not just
+// `app`, keeps a self-request indistinguishable from an outside one. The MCP
+// tools make their API calls from the HubMcp Durable Object, outside this
+// context, and register a standing route for that instead (routes/mcp.js).
 export default {
   fetch(request, env, ctx) {
-    return buildOAuthProvider(app, env).fetch(request, env, ctx);
+    installSelfFetch();
+    const provider = buildOAuthProvider(app, env);
+    const serve = servingSelf((request) => provider.fetch(request, env, ctx));
+    return serve(request);
   },
 
   // Outgoing ActivityPub deliveries, when a FEDERATION_QUEUE binding exists (see

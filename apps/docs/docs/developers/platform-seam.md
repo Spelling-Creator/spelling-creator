@@ -1,5 +1,6 @@
 ---
 title: The platform seam
+description: The storage interfaces that keep the API portable between Cloudflare and other hosts, with a conformance suite, an S3 blob store and a PostgREST KV store.
 ---
 
 # The platform seam

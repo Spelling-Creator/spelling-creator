@@ -1,5 +1,6 @@
 ---
 title: Configuration
+description: Environment variables for the stdio MCP server, and the order in which refresh tokens, access tokens and the session file are used.
 ---
 
 # Configuration

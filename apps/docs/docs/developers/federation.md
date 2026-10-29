@@ -1,5 +1,6 @@
 ---
 title: Federation (ActivityPub)
+description: "How an instance joins the fediverse through Fedify: actors, Articles, followers, forking lessons from other instances, and turning it on."
 ---
 
 # Federation (ActivityPub)

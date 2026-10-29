@@ -1,5 +1,6 @@
 ---
 title: Fact checking
+description: How the editor compares a lesson's numbers, dates and names with Wikidata, the Smithsonian and Wikipedia, and what counts as agreeing or disagreeing.
 ---
 
 # Fact checking

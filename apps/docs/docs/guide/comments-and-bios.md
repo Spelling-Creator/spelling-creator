@@ -1,5 +1,6 @@
 ---
 title: Comments & bios
+description: "The formatting available in lesson comments and profile bios: bold, lists, quotes and links, with length limits and how editing a comment works."
 ---
 
 # Comments & bios

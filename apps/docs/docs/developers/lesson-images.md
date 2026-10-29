@@ -1,5 +1,6 @@
 ---
 title: Lesson images (binary, R2 + IndexedDB)
+description: How lesson images are stored as content-hashed binaries in IndexedDB and R2, converted to WEBP, and kept within R2's free tier.
 ---
 
 # Lesson images (binary, R2 + IndexedDB)

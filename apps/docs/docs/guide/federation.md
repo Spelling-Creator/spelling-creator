@@ -1,5 +1,6 @@
 ---
 title: Following from the fediverse
+description: How to follow a lesson author from Mastodon or another fediverse app, what their lesson posts show, and how to copy a lesson from another instance.
 ---
 
 # Following from the fediverse

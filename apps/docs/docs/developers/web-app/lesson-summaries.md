@@ -1,5 +1,6 @@
 ---
 title: Lesson summaries (on-device AI)
+description: How lesson summaries run on the reader's device, with the browser's Summarizer API or LFM2.5 in the page, and why the card hides where neither can run.
 ---
 
 # Lesson summaries (on-device AI)

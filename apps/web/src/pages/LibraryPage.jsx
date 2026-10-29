@@ -46,6 +46,7 @@ import {
 import { repoIdFor } from "@spelling-creator/core/git/doc";
 import { loadGitEngine } from "../lib/git/load.js";
 import PageBody from "../components/layout/PageBody.jsx";
+import { DocumentMeta } from "../lib/seo.jsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -221,6 +222,9 @@ export default function LibraryPage() {
 
   return (
     <PageBody width="reading">
+      {/* The library is this device's lessons: nobody's search result, and not
+          worth a screenshot. */}
+      <DocumentMeta title={t("title")} noindex image={null} />
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
         <div className="min-w-0 sm:flex-1">
           <h1 className="text-2xl font-bold md:text-3xl">{t("title")}</h1>

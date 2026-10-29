@@ -1,5 +1,6 @@
 ---
 title: Variations
+description: "What a variation is: a separate copy of a lesson for trying bigger changes, and how to bring one back into the main lesson block by block."
 ---
 
 # Variations

@@ -89,7 +89,7 @@ import { useAuth } from "../../lib/auth.jsx";
 import {
   DocumentMeta,
   JsonLd,
-  buildLessonCourseSchema,
+  buildLessonSchema,
   htmlToDescription,
 } from "../../lib/seo.jsx";
 import { useServerData, useSiteOrigin } from "../../lib/ssr.jsx";
@@ -423,7 +423,7 @@ export default function LessonLayout() {
     }
   };
 
-  // Description shared by the social/SEO meta tags and the Course JSON-LD below,
+  // Description shared by the social/SEO meta tags and the JSON-LD below,
   // drawn from the lesson's own text with a sensible fallback.
   const description =
     (lesson && htmlToDescription(lessonPlainText(lesson.doc))) ||
@@ -441,15 +441,15 @@ export default function LessonLayout() {
         ? t("lessonPage.lessonNotFound")
         : t("lessonPage.lessonFallback"));
 
-  // schema.org Course structured data so Google can show this lesson as a rich
-  // result. Only emitted once the lesson has loaded successfully — no markup for
-  // the loading or error states. The canonical URL is the overview tab even when
-  // a sub-tab is what's open: the tabs are views of one lesson, not separate
-  // works, and pointing them all at /hub/:id is what keeps them from competing
-  // with each other in search results.
-  const courseSchema =
+  // schema.org LearningResource structured data, so a search engine knows what
+  // this page is. Only emitted once the lesson has loaded successfully, with no
+  // markup for the loading or error states. The canonical URL is the overview
+  // tab even when a sub-tab is what's open: the tabs are views of one lesson,
+  // not separate works, and pointing them all at /hub/:id is what keeps them
+  // from competing with each other in search results.
+  const lessonSchema =
     lesson && !error
-      ? buildLessonCourseSchema({
+      ? buildLessonSchema({
           lesson,
           description,
           url: `${origin}/hub/${id}`,
@@ -484,8 +484,13 @@ export default function LessonLayout() {
         type="article"
         title={metaTitle}
         description={description}
+        // The overview tab is the canonical URL for every tab (see the
+        // lessonSchema comment above); a lesson that failed to load asks to
+        // stay out of the index instead.
+        path={`/hub/${id}`}
+        noindex={!!error}
       />
-      <JsonLd data={courseSchema} />
+      <JsonLd data={lessonSchema} />
 
       <PageBar
         crumbs={[

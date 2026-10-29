@@ -1,5 +1,6 @@
 ---
 title: AI assistants
+description: What connecting an AI assistant such as Claude to your Spelling Creator account makes possible, from drafting lessons to fact checks, and what stays in your hands.
 ---
 
 # Using an AI assistant with Spelling Creator

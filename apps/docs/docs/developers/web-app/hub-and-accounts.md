@@ -1,5 +1,6 @@
 ---
 title: Lesson hub and accounts
+description: "How the lesson hub works: Supabase sign-in, the API's session checks, comments, forking, the endpoint contract and the Postgres schema."
 ---
 
 # Lesson hub and accounts
@@ -286,6 +287,10 @@ create table public.lessons (
   -- original orphans its forks rather than deleting them.
   forked_from   uuid references public.lessons (id) on delete set null,
   created_at    timestamptz not null default now(),
+  -- When the content last changed: written on every save, served as the
+  -- sitemap's <lastmod>. Null means "not edited since the column arrived";
+  -- readers fall back to created_at.
+  updated_at    timestamptz,
   -- Moderation (see the Moderation page).
   shadowbanned  boolean not null default false,
   author_ip     text                        -- only ever returned to mods/admins

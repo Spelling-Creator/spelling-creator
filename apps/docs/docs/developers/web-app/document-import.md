@@ -1,5 +1,6 @@
 ---
 title: Document import
+description: How Import from text reads a pasted or typed document into a lesson with a rule-based parser, and when the on-device model is offered instead.
 ---
 
 # Document import

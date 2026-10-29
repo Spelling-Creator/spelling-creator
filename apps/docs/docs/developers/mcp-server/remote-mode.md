@@ -1,5 +1,6 @@
 ---
 title: Remote (hosted) mode
+description: "The hosted MCP endpoint at /mcp: OAuth 2.1 with a consent page, the Worker-side implementation on Durable Objects, and the dependency patches."
 ---
 
 # Remote (hosted) mode
@@ -123,6 +124,13 @@ existing `SUPABASE_SERVICE_ROLE_KEY` secret), and the server's config
 (`mcpConfig` in `src/routes/mcp.js`) reads the `SUPABASE_URL`,
 `SUPABASE_ANON_KEY` and `SPELLING_CREATOR_API_URL` vars already in
 `wrangler.jsonc`.
+
+`SPELLING_CREATOR_API_URL` is this Worker's own hostname, and Cloudflare does
+not route a Worker's fetch to its own hostname back into the Worker. It sends
+it to the zone's origin server, and this site has none, so the request fails
+with a 522. So `HubMcp.init` registers that origin as a standing route with
+`serveSelfAt` (`src/lib/selfFetch.js`), and every tool call to the API is
+answered in-process by the Worker's own entry, inside the Durable Object.
 
 The remote endpoint ships with the Worker: the deploy workflow
 (`.github/workflows/deploy.yml`) runs on pushes to `main` that touch

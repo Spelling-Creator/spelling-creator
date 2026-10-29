@@ -28,7 +28,7 @@ import { assetServer } from "./assets.js";
 import { withBrowserConfig } from "./browserConfig.js";
 import { withForwardedScheme } from "./forwardedScheme.js";
 import { nodePlatform } from "./platform.js";
-import { installSelfFetch, servingSelf } from "./selfFetch.js";
+import { installSelfFetch, servingSelf } from "../lib/selfFetch.js";
 
 /**
  * The frontend fall-through for this host: server-render the public read routes,

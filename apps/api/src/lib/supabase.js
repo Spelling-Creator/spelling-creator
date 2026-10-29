@@ -27,6 +27,28 @@ export function supabaseHeaders(env) {
 }
 
 /**
+ * Whether a failed PostgREST response is it not knowing `column`: a database
+ * that hasn't had schema.sql's latest `alter`s applied yet. Reading a column
+ * that doesn't exist is Postgres's 42703; writing one is PostgREST's PGRST204
+ * ("Could not find the ... column ... in the schema cache"). Both name the
+ * column in the message, which is how a different missing column is told apart.
+ *
+ * For the few places that write or read a column newer than the deploy that
+ * uses it, so a Worker shipped before the migration degrades instead of
+ * failing. Reads the body, so pass a response that is going to be discarded.
+ *
+ * @param {Response} res
+ * @param {string} column
+ */
+export async function isMissingColumn(res, column) {
+  if (res.ok || res.status !== 400) return false;
+  const error = await res.json().catch(() => null);
+  if (!error || (error.code !== "42703" && error.code !== "PGRST204"))
+    return false;
+  return String(error.message || "").includes(column);
+}
+
+/**
  * Verify a Supabase session JWT by asking Supabase Auth who it belongs to.
  *
  * We call GET /auth/v1/user with the client-supplied token rather than checking
@@ -111,6 +133,28 @@ export async function getAuthUserById(env, id) {
  * expose the email — only the chosen display name and bio.
  */
 export async function fetchPublicUser(env, base, userId) {
+  return (await lookupPublicUser(env, base, userId)).user;
+}
+
+// Supabase user ids are UUIDs. Anything else can't name a user, so it is
+// answered as missing without asking GoTrue (which would reject it as a bad
+// request, indistinguishable from a broken one).
+const USER_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * fetchPublicUser, telling apart the two ways of finding nobody: `missing` is
+ * true when there is no such user, false when the lookup itself failed
+ * (unreachable, 5xx, rate-limited, a bad service key). Callers whose answer is
+ * a status code need the difference: a profile that doesn't exist is a 404,
+ * while one that couldn't be looked up is an outage, and answering that with a
+ * 404 tells crawlers real profiles are gone (the server render repeats an API
+ * 404 as a real one; see routes/ssr.js).
+ *
+ * @returns {Promise<{user: {id: string, displayName: string, bio: string}|null, missing: boolean}>}
+ */
+export async function lookupPublicUser(env, base, userId) {
+  if (!USER_ID_RE.test(userId || "")) return { user: null, missing: true };
   let res;
   try {
     res = await fetch(
@@ -120,15 +164,19 @@ export async function fetchPublicUser(env, base, userId) {
       },
     );
   } catch (e) {
-    return null;
+    return { user: null, missing: false };
   }
-  if (!res.ok) return null;
+  if (res.status === 404) return { user: null, missing: true };
+  if (!res.ok) return { user: null, missing: false };
   const user = await res.json().catch(() => null);
-  if (!user || !user.id) return null;
+  if (!user || !user.id) return { user: null, missing: false };
   const meta = user.user_metadata || {};
   return {
-    id: user.id,
-    displayName: (meta.display_name || "").toString().trim() || "Anonymous",
-    bio: (meta.bio || "").toString().trim(),
+    user: {
+      id: user.id,
+      displayName: (meta.display_name || "").toString().trim() || "Anonymous",
+      bio: (meta.bio || "").toString().trim(),
+    },
+    missing: false,
   };
 }

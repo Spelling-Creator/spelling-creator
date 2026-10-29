@@ -1,5 +1,6 @@
 ---
 title: Stub API (local backend)
+description: A local stand-in for the real API with a populated hub and made-up people, for demos, screenshots and UI work with no backend at all.
 ---
 
 # Stub API (local backend)

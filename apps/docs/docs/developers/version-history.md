@@ -1,5 +1,6 @@
 ---
 title: Version history (git, by content block)
+description: "How every lesson is a real git repository: one file per block, commits as operations, packfile forking, three-way merges, and guarded pushes."
 ---
 
 # Version history (git, by content block)

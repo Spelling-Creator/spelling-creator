@@ -1,5 +1,6 @@
 ---
 title: Design system (surfaces, borders, boxes)
+description: The web app's tokens for surfaces, borders, brand colors, shadows and radii, and the patterns built on them, such as the bordered box.
 ---
 
 # Design system (surfaces, borders, boxes)

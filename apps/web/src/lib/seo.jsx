@@ -15,9 +15,13 @@
 import { useLocation } from "react-router-dom";
 import { useSiteOrigin } from "./ssr.jsx";
 
-const SITE_NAME = "Spelling Lesson Maker";
+// One brand everywhere: the domain, the app header, the docs and the PWA
+// manifest all say "Spelling Creator", so search results must too, since split
+// naming dilutes which name Google shows for the site. The old "Spelling
+// Lesson Maker" survives as the WebSite schema's alternateName below.
+const SITE_NAME = "Spelling Creator";
 const DEFAULT_DESCRIPTION =
-  "Create and print Spelling lessons with sections, text, and images.";
+  "Write, share and run lessons for Spelling: communication by pointing to letters on a letterboard or keyboard. Print them or run them on screen with your speller.";
 
 /**
  * Document title and social/SEO meta tags for the current page. Render it
@@ -27,35 +31,60 @@ const DEFAULT_DESCRIPTION =
  * @param {string} [props.title]        Page title; appended to the site name.
  * @param {string} [props.description]  Meta/OG description (falls back to the site default).
  * @param {string} [props.image]        Absolute URL for the OG/Twitter preview
- *   image. Leave undefined to default to a live screenshot of the current page
+ *   image. Leave undefined to default to a live screenshot of the canonical page
  *   (rendered by the Worker's /og-image endpoint); pass null to opt out entirely.
  * @param {string} [props.type]         OG type: "website" (default) or "article".
+ * @param {string} [props.path]         The canonical path, when it isn't the one
+ *   being viewed: a lesson's tabs are all views of one lesson, and pointing their
+ *   canonical link and og:url at /hub/:id keeps them from competing with each
+ *   other in search results.
+ * @param {boolean} [props.noindex]     Ask crawlers to keep the page out of the
+ *   index. For the signed-in and tool pages, whose content is the visitor's
+ *   own. A noindexed page gets no canonical link and no og:url; either would
+ *   name it as the page's real address, which contradicts noindex.
  */
-export function DocumentMeta({ title, description, image, type = "website" }) {
+export function DocumentMeta({
+  title,
+  description,
+  image,
+  type = "website",
+  path,
+  noindex = false,
+}) {
   const origin = useSiteOrigin();
   const { pathname } = useLocation();
 
   const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
   const desc = description || DEFAULT_DESCRIPTION;
+  // The routes accept a trailing slash (/hub/, /users/:id/), and the sitemap
+  // lists them without one. Dropping it here keeps the two spellings of a page
+  // from each claiming to be canonical.
+  const canonicalPath = (path || pathname).replace(/(.)\/+$/, "$1");
+  const canonical = `${origin}${canonicalPath}`;
 
-  // Default the preview image to a screenshot of this page: the Worker's
-  // /og-image endpoint renders the path with headless Chromium. Pass `null` to
-  // opt out.
+  // Default the preview image to a screenshot of the canonical page: the
+  // Worker's /og-image endpoint renders the path with headless Chromium. Pass
+  // `null` to opt out.
   const ogImage =
     image === undefined
-      ? `${origin}/og-image?path=${encodeURIComponent(pathname)}`
+      ? `${origin}/og-image?path=${encodeURIComponent(canonicalPath)}`
       : image;
 
   return (
     <>
       <title>{fullTitle}</title>
       <meta name="description" content={desc} />
+      {noindex ? (
+        <meta name="robots" content="noindex" />
+      ) : (
+        <link rel="canonical" href={canonical} />
+      )}
 
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:type" content={type} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
-      <meta property="og:url" content={`${origin}${pathname}`} />
+      {!noindex && <meta property="og:url" content={canonical} />}
       {ogImage && (
         <>
           <meta property="og:image" content={ogImage} />
@@ -99,106 +128,122 @@ export function JsonLd({ data }) {
   );
 }
 
-// Build the bare schema.org `Course` object (no top-level @context, so it can
-// either stand alone or be embedded inside an ItemList). `name`, `description`,
-// and `provider` are the properties Google's Course list feature requires; the
-// lessons are free, so we also advertise a zero-price Offer and
-// isAccessibleForFree (accurate). Promotional text, pricing, and discounts are
-// kept out of the name/description per Google's content guidelines.
-function courseObject({ lesson, description, url, origin }) {
-  const course = {
-    "@type": "Course",
+// Build the bare schema.org `LearningResource` object (no top-level @context,
+// so it can either stand alone or be embedded inside an ItemList).
+//
+// LearningResource, not Course: a lesson here is one passage with questions,
+// not a curriculum, and Google's course markup guidelines want actual courses.
+// Markup that misdescribes the page risks a structured-data manual action,
+// while the Course rich results it used to aim for are gone anyway (Course info
+// was retired in September 2025, and the course carousel expects real courses).
+// LearningResource says what the page is; isAccessibleForFree is accurate (and
+// replaces the zero-price Offer the Course markup carried, which only the
+// course guidelines asked for).
+function lessonObject({ lesson, description, url, origin }) {
+  const resource = {
+    "@type": "LearningResource",
+    learningResourceType: "Lesson",
     name: lesson.title || "Untitled Lesson",
     description: description || summaryDescription(lesson),
     inLanguage: "en",
     isAccessibleForFree: true,
-    provider: {
+    publisher: {
       "@type": "Organization",
       name: SITE_NAME,
       url: origin,
     },
-    offers: {
-      "@type": "Offer",
-      category: "Free",
-      price: "0",
-      priceCurrency: "USD",
-    },
   };
-  if (url) course.url = url;
+  if (url) resource.url = url;
   if (lesson.author) {
-    course.author = { "@type": "Person", name: lesson.author };
+    resource.author = { "@type": "Person", name: lesson.author };
   }
   if (lesson.createdAt) {
     // schema.org dateCreated expects ISO 8601; skip an unparseable value.
     const d = new Date(lesson.createdAt);
-    if (!Number.isNaN(d.getTime())) course.dateCreated = d.toISOString();
+    if (!Number.isNaN(d.getTime())) resource.dateCreated = d.toISOString();
   }
-  return course;
+  return resource;
 }
 
-// Fallback Course description from a lesson summary (which carries no body
-// text), used on the hub carousel where the full rendered text isn't available.
+// Fallback description from a lesson summary (which carries no body text),
+// used on the hub list where the full rendered text isn't available.
 function summaryDescription(lesson) {
   const sections =
     typeof lesson.sectionCount === "number"
       ? ` with ${lesson.sectionCount} section${lesson.sectionCount === 1 ? "" : "s"}`
       : "";
-  return `A printable spelling lesson${sections} to practise and learn.`;
+  return `A free lesson for Spelling practice${sections}, to print, copy or run on screen.`;
 }
 
 /**
- * Build standalone schema.org `Course` JSON-LD for a single lesson's page.
- *
- * NOTE: a lone Course corresponds to Google's "Course info" rich result, which
- * Google retired in September 2025 — so this no longer produces a visual rich
- * result on its own. It's kept because it's valid, accurate semantic data that
- * helps Google understand the page, and it's the per-lesson detail markup the
- * hub's Course-list carousel (see buildLessonListSchema) points at. The carousel
- * on the hub is the markup that actually still renders as a rich result.
+ * Build standalone schema.org `LearningResource` JSON-LD for a single lesson's
+ * page: accurate semantic data that helps a search engine understand the page,
+ * and the per-lesson detail markup the hub's ItemList points at.
  *
  * @param {object}  opts
  * @param {object}  opts.lesson       Lesson summary/doc ({ title, author, createdAt }).
- * @param {string} [opts.description] Plain-text course summary (1–500 chars).
+ * @param {string} [opts.description] Plain-text summary (1 to 500 chars).
  * @param {string}  opts.url          Canonical URL of this lesson's page.
- * @param {string}  opts.origin       Site origin, used as the provider URL.
+ * @param {string}  opts.origin       Site origin, used as the publisher URL.
  * @returns {object|null}
  */
-export function buildLessonCourseSchema(opts) {
+export function buildLessonSchema(opts) {
   if (!opts.lesson) return null;
-  return { "@context": "https://schema.org", ...courseObject(opts) };
+  return { "@context": "https://schema.org", ...lessonObject(opts) };
 }
 
 /**
- * Build a schema.org `ItemList` of Courses for the hub — Google's Course list
- * (carousel) rich result, which (unlike the deprecated Course info) is still
- * supported: https://developers.google.com/search/docs/appearance/structured-data/course
- *
- * Each ListItem embeds a FULL named Course (name + description + provider), as
- * the carousel requires — a URL-only list is rejected as "unnamed items".
- * Google needs at least three courses to render the carousel, so this returns
- * null below that threshold rather than emit markup that can never qualify.
+ * Build a schema.org `ItemList` of LearningResources for the hub. Each
+ * ListItem embeds the full named resource rather than a bare URL, so the list
+ * is meaningful on its own.
  *
  * @param {object}        opts
  * @param {Array<object>} opts.lessons  Published lesson summaries, in display order.
- * @param {string}        opts.origin   Site origin, for provider + per-lesson URLs.
+ * @param {string}        opts.origin   Site origin, for publisher + per-lesson URLs.
  * @returns {object|null}
  */
 export function buildLessonListSchema({ lessons, origin }) {
-  // Below Google's three-course minimum the carousel can't appear, so emit
-  // nothing rather than markup that will never qualify.
-  if (!Array.isArray(lessons) || lessons.length < 3) return null;
+  if (!Array.isArray(lessons) || lessons.length === 0) return null;
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
     itemListElement: lessons.map((lesson, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      item: courseObject({
+      item: lessonObject({
         lesson,
         url: `${origin}/hub/${lesson.id}`,
         origin,
       }),
     })),
+  };
+}
+
+/**
+ * Build the homepage's schema.org `WebSite` JSON-LD, the markup Google reads
+ * the site name from. The old name rides along as alternateName so anything
+ * that knew the site by it keeps matching.
+ *
+ * @param {object} opts
+ * @param {string} opts.origin  Site origin.
+ */
+export function buildWebSiteSchema({ origin }) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    alternateName: "Spelling Lesson Maker",
+    url: origin,
+    description: DEFAULT_DESCRIPTION,
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: origin,
+      logo: {
+        "@type": "ImageObject",
+        url: `${origin}/icons/apple-touch-icon.png`,
+      },
+    },
   };
 }
 

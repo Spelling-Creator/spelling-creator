@@ -1,5 +1,6 @@
 ---
 title: Fact checking
+description: How the editor and MCP server check a lesson's numbers, dates and named facts against Wikidata, the Smithsonian's volcano records and Wikipedia.
 ---
 
 # Fact checking

@@ -1,5 +1,6 @@
 ---
 title: Import from text
+description: How Import from text turns a pasted or typed-out lesson into sections, passages, spelling words and questions, and how to lay out the text so it reads well.
 ---
 
 # Import from text

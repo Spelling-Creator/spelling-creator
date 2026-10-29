@@ -1,5 +1,6 @@
 ---
 title: Question blocks
+description: The nine color-coded question types, what each one asks of the speller, how questions print, and extras like Besides lines and worked steps.
 ---
 
 # Question blocks

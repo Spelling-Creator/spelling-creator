@@ -19,6 +19,7 @@ import {
 } from "@spelling-creator/core/config";
 import { Trash2Icon, XIcon, TriangleAlertIcon } from "lucide-react";
 import PageBody from "../components/layout/PageBody.jsx";
+import { DocumentMeta } from "../lib/seo.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Badge } from "../components/ui/badge.jsx";
 import { Field, FieldLabel } from "../components/ui/field.jsx";
@@ -614,6 +615,7 @@ export default function ModerationPage() {
   return (
     <>
       <PageBody width="reading">
+        <DocumentMeta title={t("page.title")} noindex image={null} />
         <h1 className="mb-4 text-2xl font-bold md:text-3xl">
           {t("page.title")}
         </h1>

@@ -1,5 +1,6 @@
 ---
 title: Live collaboration
+description: "Editing a lesson together in real time: starting and joining sessions, trusted collaborators, how edits merge, cursors, chat, and the limits."
 ---
 
 # Live collaboration

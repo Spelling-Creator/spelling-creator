@@ -1,5 +1,6 @@
 ---
 title: Lessons on this device
+description: How the editor keeps every lesson you work on in your browser, what the Lessons on this device page shows, and what stays local unless you save to the cloud.
 ---
 
 # Lessons on this device

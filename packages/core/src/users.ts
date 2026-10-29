@@ -15,7 +15,7 @@
 //   GET    {apiUrl()}/profiles/:id/following   -> { users: PublicUser[] }
 //   GET    {apiUrl()}/following/activity       -> { activity: FeedItem[] }              (Bearer)
 import { apiUrl, hasApi } from "./config.ts";
-import type { LessonSummary } from "./lessons.ts";
+import { readError, type LessonSummary } from "./lessons.ts";
 
 /** The public fields of a user (see fetchPublicUser in apps/api/src/lib/supabase.js). */
 export interface PublicUser {
@@ -69,10 +69,9 @@ export async function fetchUserProfile(
   } catch {
     throw new Error("Could not reach the server.");
   }
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(detail || `Request failed (${res.status}).`);
-  }
+  // The error carries the status: the server render answers a missing
+  // profile's URL with a real 404 (apps/api/src/routes/ssr.js).
+  if (!res.ok) throw await readError(res);
   const data: { user?: UserProfile; lessons?: LessonSummary[] } = await res
     .json()
     .catch(() => ({}));

@@ -34,7 +34,7 @@
   "install": {
     "ariaLabel": "install app",
     "tooltip": "Install app",
-    "iosTitle": "Install Spelling Lesson Maker",
+    "iosTitle": "Install Spelling Creator",
     "iosDescription": "Add it to your Home Screen to open it like an app: full screen, and your lessons stay available offline.",
     "iosStepShare": "Tap the Share button in Safari's toolbar.",
     "iosStepAdd": "Choose \"Add to Home Screen\"."

@@ -75,6 +75,21 @@ const APP_PATHS = [
 
 export { HUB_PATH, LESSON_PATH, PROFILE_PATH };
 
+// The signed-in and tool pages, whose content is the visitor's own. Each asks
+// not to be indexed with a robots meta tag once the app renders (lib/seo.jsx in
+// apps/web), but the shell they are served as carries no such tag, and a
+// crawler that doesn't run JavaScript only ever sees the shell. So serveApp
+// says it in a header too. robots.txt deliberately doesn't Disallow them: a
+// crawler can only read either signal on a page it is allowed to fetch.
+const PRIVATE_PATHS = [
+  MODERATION_PATH,
+  SETTINGS_PATH,
+  LOGIN_PATH,
+  LIBRARY_PATH,
+  EDITOR_PATH,
+  OAUTH_AUTHORIZE_PATH,
+];
+
 /**
  * True if this path is a page in App.jsx — i.e. one the shell can render.
  * @param {string} pathname
@@ -128,8 +143,13 @@ export async function serveApp(request, env, url) {
   const shell = (status) =>
     document(request, env, `${url.origin}/index.html`, status);
 
-  if (isAppRoute(url.pathname))
-    return (await shell(200)) || textResponse("Not found.", 404);
+  if (isAppRoute(url.pathname)) {
+    const page = await shell(200);
+    if (!page) return textResponse("Not found.", 404);
+    if (PRIVATE_PATHS.some((re) => re.test(url.pathname)))
+      page.headers.set("X-Robots-Tag", "noindex");
+    return page;
+  }
 
   // A missing file gets a plain 404 rather than a document. Handing HTML to a
   // broken script tag surfaces as a baffling syntax error instead of a missing

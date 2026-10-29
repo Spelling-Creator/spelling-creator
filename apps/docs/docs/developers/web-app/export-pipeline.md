@@ -1,5 +1,6 @@
 ---
 title: Export pipeline
+description: How lessons become DOCX, PDF and Google Docs through one shared document builder, plus the OSLF format and the on-demand export chunk.
 ---
 
 # Export pipeline

@@ -1,6 +1,6 @@
 # Spelling Creator (monorepo)
 
-A pnpm monorepo containing the Spelling Lesson Maker web app and its Cloudflare
+A pnpm monorepo containing the Spelling Creator web app and its Cloudflare
 Worker API.
 
 | Path            | Package                      | Description                                                                                                                                   |

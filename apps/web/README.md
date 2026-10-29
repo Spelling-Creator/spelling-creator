@@ -1,4 +1,4 @@
-# Spelling Lesson Maker
+# Spelling Creator (web app)
 
 A web app for building, sharing and printing lessons for **Spelling**, the
 umbrella term for ways nonspeaking people communicate by pointing to letters.

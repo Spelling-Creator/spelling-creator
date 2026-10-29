@@ -1,5 +1,6 @@
 ---
 title: MCP server overview
+description: An MCP server that lets AI assistants author, validate and publish lessons through the hub's normal API, with three ways to connect.
 ---
 
 # MCP server overview

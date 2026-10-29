@@ -1,5 +1,6 @@
 ---
 title: Pictures
+description: Adding pictures to a lesson from your device or from Pixabay and Wikimedia Commons, and how captions and credits work everywhere the lesson shows up.
 ---
 
 # Pictures

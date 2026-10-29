@@ -1,5 +1,6 @@
 ---
 title: Document import experiment
+description: Measured results from testing small on-device models against a rule-based parser for turning lesson documents into JSON, and the fine-tune that shipped.
 ---
 
 # Document import experiment

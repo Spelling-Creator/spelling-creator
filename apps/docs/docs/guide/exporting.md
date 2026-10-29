@@ -1,5 +1,6 @@
 ---
 title: Exporting & printing
+description: How to print a lesson or export it as a Word document, PDF, JSON or OSLF file, what the printed layout looks like, and how to save it to Google Docs.
 ---
 
 # Exporting & printing

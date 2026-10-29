@@ -1,5 +1,6 @@
 ---
 title: Letterboard sync
+description: "The hub side of a letterboard session: the PracticeRoom Durable Object, the WebSocket messages between host and board, and the limits on both."
 ---
 
 # Letterboard sync

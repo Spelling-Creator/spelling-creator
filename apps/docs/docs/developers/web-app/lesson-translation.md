@@ -1,5 +1,6 @@
 ---
 title: Lesson translation (on-device AI)
+description: How a published lesson is translated on the reader's device, batch by batch in reading order, and which parts deliberately stay as written.
 ---
 
 # Lesson translation (on-device AI)

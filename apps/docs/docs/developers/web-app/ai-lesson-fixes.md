@@ -1,5 +1,6 @@
 ---
 title: AI lesson fixes
+description: "How Fix with AI turns a lesson check finding into verified replace_block operations: which findings qualify, the two tries, and the preview."
 ---
 
 # AI lesson fixes

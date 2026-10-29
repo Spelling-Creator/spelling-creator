@@ -1,5 +1,6 @@
 ---
 title: Internationalization
+description: How every string routes through react-i18next, the namespace layout, what stays untranslated, and the steps for adding a language.
 ---
 
 # Internationalization

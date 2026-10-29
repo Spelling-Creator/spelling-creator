@@ -1,5 +1,6 @@
 ---
 title: Overview & features
+description: A tour of everything Spelling Creator can do, from building and checking lessons to the hub, collaboration, AI help, exporting and offline use.
 ---
 
 # Spelling Creator

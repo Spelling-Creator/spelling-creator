@@ -1,5 +1,6 @@
 ---
 title: Lesson checks
+description: How the editor's Check panel runs the shared lesson checks, splits problems from suggestions, and offers quick fixes with undo.
 ---
 
 # Lesson checks

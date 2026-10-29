@@ -1,5 +1,6 @@
 ---
 title: Moderation
+description: "The hub's moderator and admin tiers: shadowbanning, deletion requests, name and IP bans, password resets, and the /mod API endpoints."
 ---
 
 # Moderation
@@ -11,8 +12,11 @@ send-link messages and proposals, all via `glin-profanity` in
 `apps/api/src/lib/profanity.js`), the hub has a **moderation** layer with two
 privilege tiers and a moderation page at `/moderation`
 (`apps/web/src/pages/ModerationPage.jsx`). The page is linked from the account
-menu only for moderators and admins, and `robots.txt` (`routes/seo.js`)
-disallows it.
+menu only for moderators and admins, and it asks crawlers to stay out of the
+index twice: an `X-Robots-Tag: noindex` header on the shell
+(`routes/spa.js`), for crawlers that never run the app, and a `noindex` meta
+tag once it renders. (`robots.txt` used to disallow it instead, but a crawler
+can only read either signal on a page it is allowed to fetch.)
 
 The browser holds no authority of its own. `lib/auth.jsx` asks
 `GET /mod/whoami` for the caller's role whenever the access token changes and

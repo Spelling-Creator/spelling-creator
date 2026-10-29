@@ -1,5 +1,6 @@
 ---
 title: Mobile layout & touch targets
+description: "The conventions that keep the editor usable on a phone: footer controls, 40px touch targets, safe-area insets, scrolling dialogs and dvh units."
 ---
 
 # Mobile layout & touch targets

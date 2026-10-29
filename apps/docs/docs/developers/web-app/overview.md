@@ -1,5 +1,6 @@
 ---
 title: Web app overview
+description: "The web app's stack and architecture: React with Vite, shadcn/ui, git-backed version history, Yjs collaboration, and how the main features are built."
 ---
 
 # Web app overview

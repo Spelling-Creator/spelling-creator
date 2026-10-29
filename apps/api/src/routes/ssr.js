@@ -12,9 +12,11 @@
 // fill in when the client hydrates. That is the property that makes SSR
 // tractable here at all: every route worth rendering is a public read.
 //
-// Failure at request time is always soft: a failed data fetch or a render error
-// falls through to the static SPA shell, which is exactly what the app served
-// before this route existed. A *missing* server bundle is not a runtime case at
+// Failure at request time is soft: a failed data fetch or a render error falls
+// through to the static SPA shell, which is exactly what the app served before
+// this route existed. The one exception is the API answering 404, which means
+// the page doesn't exist; that comes back as a real 404 still carrying the
+// shell (see serverRender). A *missing* server bundle is not a runtime case at
 // all — the import below is static, so the Worker fails to bundle, which is why
 // every script that reaches wrangler builds it first.
 
@@ -132,12 +134,16 @@ async function shell(env, url) {
 // the generic one — so the generic set comes out and the page's own goes in.
 // Everything else in <head> (viewport, theme-color, icons, feeds, scripts) is
 // untouched.
+//
+// The defaults are recognized by their data-seo-default marker, not by tag
+// names: the crawler prerenderer (routes/render.js) removes the same set from
+// a live DOM where the page's own title and og tags are already present, and
+// matching by name there would take the page's tags with it. One marker, two
+// removal sites, same meaning.
 function stripDefaultMetadata(html) {
   return html
-    .replace(/<title>[\s\S]*?<\/title>\s*/i, "")
-    .replace(/<meta\s+name="description"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:[^"]*"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+name="twitter:[^"]*"[^>]*>\s*/gi, "");
+    .replace(/<title\s+data-seo-default[^>]*>[\s\S]*?<\/title>\s*/i, "")
+    .replace(/<meta\s+data-seo-default[^>]*>\s*/gi, "");
 }
 
 // Serialise the page's data for the client to hydrate against. The escape is
@@ -161,12 +167,38 @@ export async function serverRender(request, env, ctx, url) {
   let data;
   let html;
   try {
-    // One subrequest back into this same Worker, through the very same core
+    // A request back to this same app, answered in-process by selfFetch (see
+    // lib/selfFetch.js, installed by both entries), through the very same core
     // module the browser calls — no server-specific client, which is what
     // keeps the two paths from drifting.
     data = { [route.key]: await route.load() };
     html = await shell(env, url);
   } catch (err) {
+    // A 404 from the API is an answer, not a breakdown: this lesson or profile
+    // does not exist, or is a private draft, which the API reports the same
+    // way on purpose. Repeat it as a real 404 carrying the shell, so a deleted
+    // page stops telling crawlers it exists (a "soft 404"), while a draft's
+    // author still reaches it after hydration through their own authenticated
+    // fetch, since the SPA never reads the status. Every other failure stays a
+    // soft fall-through to the 200 shell: a timeout and a deletion must not be
+    // confused, and core's errors carry the status so they can't be. (The API
+    // keeps its side of that: a profile lookup that failed is a 502, not a 404;
+    // see routes/users.js.)
+    if (err?.status === 404) {
+      try {
+        return new Response(await shell(env, url), {
+          status: 404,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache",
+            "X-Rendered": "ssr-404",
+          },
+        });
+      } catch (shellErr) {
+        console.error("SSR shell failed", url.pathname, shellErr);
+        return null;
+      }
+    }
     console.error("SSR data/shell failed", url.pathname, err);
     return null;
   }

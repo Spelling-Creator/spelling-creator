@@ -1,5 +1,6 @@
 ---
 title: Notifications
+description: "How the notification bell works: the five notification types, where each one is created, the storage schema and the API endpoints."
 ---
 
 # Notifications

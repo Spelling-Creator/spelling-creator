@@ -1,5 +1,6 @@
 ---
 title: VAKT activities
+description: "How the VAKT regulation-break block is built: why it is not a question type, its red color and label, its images and links, and the round trips."
 ---
 
 # VAKT activities

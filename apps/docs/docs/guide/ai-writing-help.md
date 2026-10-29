@@ -1,5 +1,6 @@
 ---
 title: AI writing help
+description: "The editor's three AI helpers: lesson topic ideas, text for a section, and a question for a section, plus what the error messages mean."
 ---
 
 # AI writing help

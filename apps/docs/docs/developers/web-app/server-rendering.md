@@ -1,5 +1,6 @@
 ---
 title: Server rendering
+description: How the Worker server-renders the hub, lesson and profile pages, why only those routes, and what had to change for hydration to agree.
 ---
 
 # Server rendering
@@ -23,16 +24,23 @@ Both hosts do this: the Cloudflare Worker (`handleFrontend` in
 `serverRender` pair from `apps/api/src/routes/ssr.js`.
 
 The data is loaded the way the browser loads it, through core's own client,
-from the origin the page is being served at. On the Worker that is a
-subrequest back into the same Worker. On the Node host the same URL is often
-unreachable from inside the process: behind the compose stack's gateway it
-names a port only the gateway listens on. So the Node host answers any request
-to the origin it is currently serving in-process, with the app's own handler,
-and only sends other origins over the network (`apps/api/src/node/selfFetch.js`).
-Without that, every render there fails with "Could not reach the lesson hub" and
-falls back to the shell. The one exception is `/rest/v1` and `/auth/v1`, which
-the app never serves: on an origin that also fronts PostgREST and GoTrue, those
-still go over the network to them.
+from the origin the page is being served at. Neither host can reach that
+origin over the network from inside itself. Cloudflare does not route a
+Worker's fetch to its own hostname back into the Worker; it sends it on to the
+zone's origin server, and this site has no origin server behind the Worker, so
+the request dies as a 522. On the Node host behind the compose stack's
+gateway, the public address names a port only the gateway listens on. So both
+hosts answer any request to the origin they are currently serving in-process,
+with the app's own handler, and only send other origins over the network. That
+is `apps/api/src/lib/selfFetch.js`, which the Worker installs in `src/index.js`
+and the Node entry in `src/node/server.js`. Without it, every render fails with
+"SSR data/shell failed" and falls back to the shell. The hosted MCP server's
+tools hit the same wall from the other side: they call the API from the HubMcp
+Durable Object, where no Worker request is being served, so they register the
+API origin as a standing route that is always answered in-process (see
+[Remote mode](../mcp-server/remote-mode.md)). The one exception is
+`/rest/v1` and `/auth/v1`, which the app never serves: on an origin that also
+fronts PostgREST and GoTrue, those still go over the network to them.
 
 A lesson's tabs (`/hub/:id/practice`, `/discussion`, `/proposals`,
 `/proposals/:prId`, `/history`; see [Pages & routing](./pages-and-routing.md#a-lessons-tabs))
@@ -110,12 +118,23 @@ of this existed. A missing server bundle is not a runtime case: `ssr.js`
 imports it statically, so the Worker fails to bundle without it, which is why
 every script that reaches wrangler builds it first.
 
-One consequence is worth knowing: a lesson that genuinely does not exist takes
-that same soft path, because a 404 from the API and a timeout reaching it arrive
-here as the same thrown error. So `/hub/<deleted-id>` is still answered `200`
-with the shell, and the app reports the miss after it hydrates, unlike a path
-that isn't a route at all, which the server 404s outright
-([Unknown paths](./pages-and-routing.md#unknown-paths)).
+The one failure treated as an answer rather than a breakdown is a 404 from the
+API: core's fetch errors carry the HTTP status, so `/hub/<deleted-id>` is
+answered with the shell under a real `404` instead of a page insisting forever
+that it exists (a "soft 404", which is what gets junk URLs indexed). A private
+draft takes the same path on purpose: the render is anonymous, the API reports
+a draft exactly like a missing lesson, and the SPA never reads the status, so
+the draft's author still reaches it after hydration through their own
+authenticated fetch. A path that isn't a route at all is still 404ed outright,
+without a render ([Unknown paths](./pages-and-routing.md#unknown-paths)).
+
+That only works if the API's 404 means "missing" and nothing else, so the API
+keeps two promises. `GET /lessons/:id` answers an id that isn't a UUID with a
+404 straight away, since PostgREST would reject it with a 400 that surfaced as
+a 502 and a soft 200. And `GET /profiles/:id` answers a lookup that failed
+(GoTrue unreachable, a 5xx, rate limiting, a bad service key) with a 502, not
+the 404 it used to give, so an auth outage can't tell crawlers that every
+profile is gone (`lookupPublicUser` in `apps/api/src/lib/supabase.js`).
 
 ## Page metadata
 
@@ -124,17 +143,31 @@ hoists `<title>`, `<meta>` and `<link>` into `<head>` from anywhere in the tree,
 so page metadata is ordinary JSX, which is exactly what makes it work under
 SSR, where an effect that writes into `document.head` never runs.
 
+Every page renders one. An indexable page carries a canonical link and a
+matching `og:url`, without a trailing slash, since the routes accept one and
+the sitemap lists none. A lesson's tabs all point theirs at `/hub/:id`, so the
+views of one lesson don't compete with each other in search results. The
+signed-in and tool pages (the editor, library, settings, login, moderation and
+the OAuth consent screen) pass `noindex` instead, since their content is the
+visitor's own.
+
 JSON-LD is deliberately _not_ hoisted: React only hoists `<script>` when it's
 `async`, which is meaningless for a non-executable type. `<JsonLd>` renders in
-place, which search engines accept. The same file builds the lesson and hub
-schemas (`buildLessonCourseSchema`, `buildLessonListSchema`).
+place, which search engines accept. The same file builds the structured data:
+`buildLessonSchema` (a lesson page's `LearningResource`),
+`buildLessonListSchema` (the hub's `ItemList` of them) and
+`buildWebSiteSchema` (the homepage's `WebSite`, which is where search engines
+read the site name).
 
 ## Things that had to change to make it work
 
 - **`index.html`'s site-wide social defaults are stripped** on a rendered page
   (its `<title>`, `description`, `og:*` and `twitter:*` tags), before the page's
   own tags go in. Otherwise a scraper reading the _first_ `og:title` would get
-  the generic one.
+  the generic one. The default tags carry a `data-seo-default` marker and are
+  removed by it, because the Chromium prerenderer removes the same set from a
+  live DOM in which the page's own React-hoisted tags already sit, where
+  matching by tag name would take the page's tags too.
 - **The service worker must not answer these navigations.** `navigateFallback`
   would otherwise serve the precached shell and the server would never be asked,
   silently disabling SSR for exactly the returning visitors whose browsers have

@@ -1,5 +1,6 @@
 ---
 title: Images
+description: The image search dialog's Pixabay and Wikimedia Commons sources, Wikidata's curated pictures, and why a credit is stored apart from its caption.
 ---
 
 # Images

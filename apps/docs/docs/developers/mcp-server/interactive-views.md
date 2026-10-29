@@ -1,5 +1,6 @@
 ---
 title: Interactive views (MCP Apps)
+description: How the MCP server returns interactive views (MCP Apps) for image picking and proposal review, and what it takes to write and test one.
 ---
 
 # Interactive views (MCP Apps)

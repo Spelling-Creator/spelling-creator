@@ -29,6 +29,7 @@ import {
   refreshSupabaseSession,
   sessionHasEnded,
 } from "@spelling-creator/mcp/auth";
+import { installSelfFetch, serveSelfAt } from "../lib/selfFetch.js";
 import {
   handleAuthorize,
   handleOAuthRequest,
@@ -80,6 +81,30 @@ export class HubMcp extends McpAgent {
 
   async init() {
     const config = mcpConfig(this.env);
+    // The tools call back into the API at config.apiUrl, and from in here that
+    // is the Worker's own hostname: Cloudflare sends such a fetch to the zone's
+    // origin server, which this site doesn't have, so it fails with a 522. The
+    // Worker answers its own SSR fetches in-process for the same reason, but
+    // its request context never reaches this object (the Worker relays MCP
+    // messages to it), so the API origin is registered as a standing route
+    // instead: answered here, in-process, by the Worker's own entry. Imported
+    // lazily because index.js imports this module.
+    installSelfFetch();
+    serveSelfAt(new URL(config.apiUrl).origin, async (request) => {
+      const { default: worker } = await import("../index.js");
+      return worker.fetch(request, this.env, {
+        // The routes only use this to finish background work (cache writes)
+        // after responding. A Durable Object stays active while it has work
+        // pending, so there is no lifetime to extend; what matters is that a
+        // rejection doesn't surface as an unhandled one.
+        waitUntil(promise) {
+          Promise.resolve(promise).catch((error) => {
+            console.error("background task failed:", error);
+          });
+        },
+        passThroughOnException() {},
+      });
+    });
     // This object hibernates between tool calls and `init` runs again on the
     // way back, so anything the tools must remember across calls lives in its
     // storage rather than in the server they build. Today that is one thing:

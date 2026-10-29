@@ -12,32 +12,40 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <!-- Site-wide title/social defaults, for the pages served as the plain
+         shell. Each carries data-seo-default because a served page replaces
+         them with its own tags (from <DocumentMeta>, src/lib/seo.jsx), and both
+         removal sites need a marker rather than tag names: the server render
+         strips them from the raw shell (routes/ssr.js), and the crawler
+         prerenderer strips them from a live DOM where the page's own
+         React-hoisted tags already sit alongside (routes/render.js). A scraper
+         believes the *first* og:title it finds. -->
     <meta
+      data-seo-default
       name="description"
-      content="Create and print Spelling lessons with sections, text, and images."
+      content="Write, share and run lessons for Spelling: communication by pointing to letters on a letterboard or keyboard. Print them or run them on screen with your speller."
     />
-    <!-- Site-wide social defaults. The SPA overrides these per page (see
-         src/lib/seo.js); the Worker prerenders pages for crawlers so the
-         per-page values end up in the snapshot scrapers receive. -->
-    <meta property="og:site_name" content="Spelling Lesson Maker" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Spelling Lesson Maker" />
+    <meta data-seo-default property="og:site_name" content="Spelling Creator" />
+    <meta data-seo-default property="og:type" content="website" />
+    <meta data-seo-default property="og:title" content="Spelling Creator" />
     <meta
+      data-seo-default
       property="og:description"
-      content="Create and print Spelling lessons with sections, text, and images."
+      content="Write, share and run lessons for Spelling: communication by pointing to letters on a letterboard or keyboard. Print them or run them on screen with your speller."
     />
     <!-- Homepage screenshot rendered by the Worker (/og-image). The SPA swaps in
-         a per-page screenshot via src/lib/seo.js; this is the default a scraper
+         a per-page screenshot via src/lib/seo.jsx; this is the default a scraper
          sees if the page isn't prerendered. -->
     <meta
+      data-seo-default
       property="og:image"
       content="https://spellingcreator.org/og-image?path=/"
     />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <title>Spelling Lesson Maker</title>
+    <meta data-seo-default property="og:image:width" content="1200" />
+    <meta data-seo-default property="og:image:height" content="630" />
+    <meta data-seo-default property="og:image:type" content="image/png" />
+    <meta data-seo-default name="twitter:card" content="summary_large_image" />
+    <title data-seo-default>Spelling Creator</title>
     <link rel="icon" href="/src/favicon.svg" type="image/svg+xml" />
     <!-- PWA. The <link rel="manifest"> is injected at build time by
          vite-plugin-pwa from the `manifest` block in vite.config.js; what it

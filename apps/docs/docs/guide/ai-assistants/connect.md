@@ -1,5 +1,6 @@
 ---
 title: Connect an AI assistant
+description: "Three ways to connect an AI assistant to Spelling Creator: the hosted MCP connector, the Claude Desktop bundle, and running the server yourself."
 ---
 
 # Connect an AI assistant

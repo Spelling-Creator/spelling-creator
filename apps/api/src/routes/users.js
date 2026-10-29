@@ -4,7 +4,7 @@
 
 import {
   supabaseHeaders,
-  fetchPublicUser,
+  lookupPublicUser,
   verifySupabaseUser,
 } from "../lib/supabase.js";
 import { bearerToken } from "../lib/auth.js";
@@ -53,8 +53,8 @@ export async function handleUsers(request, env, url, cors) {
 
   // GET /profiles/:id — the profile: the user's public fields plus their published
   // lessons, newest first (the doc is excluded, as in the public listing).
-  const user = await fetchPublicUser(env, base, id);
-  if (!user) return textResponse("Profile not found.", 404, cors);
+  const { user, missing } = await lookupPublicUser(env, base, id);
+  if (!user) return profileLookupFailed(missing, cors);
 
   // Follower/following counts, and — when the request carries a session — whether
   // the caller already follows this profile (so the UI can show Follow vs
@@ -89,6 +89,16 @@ export async function handleUsers(request, env, url, cors) {
   return jsonResponse({ user, lessons }, 200, cors);
 }
 
+// No user came back: a 404 only when there is no such user. A failed lookup is
+// a 502, because the server render repeats an API 404 as a real one
+// (routes/ssr.js), and an auth outage must not tell crawlers that every
+// profile is gone.
+function profileLookupFailed(missing, cors) {
+  return missing
+    ? textResponse("Profile not found.", 404, cors)
+    : textResponse("Could not load the profile.", 502, cors);
+}
+
 /**
  * GET /profiles/:id/feed.xml — an Atom 1.0 activity feed for one user, merging
  * their published lessons and their comments, newest first (capped). Built and
@@ -98,8 +108,8 @@ export async function handleUsers(request, env, url, cors) {
  * matching handleSitemap.
  */
 async function userFeed(env, base, url, id, cors) {
-  const user = await fetchPublicUser(env, base, id);
-  if (!user) return textResponse("Profile not found.", 404, cors);
+  const { user, missing } = await lookupPublicUser(env, base, id);
+  if (!user) return profileLookupFailed(missing, cors);
 
   const origin = url.origin;
   const selfUrl = `${origin}/profiles/${encodeURIComponent(id)}/feed.xml`;

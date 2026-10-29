@@ -298,10 +298,10 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         // Explicit id so the install identity survives any future change to
         // start_url (browsers otherwise derive it from start_url).
         id: "/",
-        name: "Spelling Lesson Maker",
+        name: "Spelling Creator",
         short_name: "Spelling",
         description:
-          "Create and print Spelling lessons with sections, text, and images.",
+          "Write, share and run lessons for Spelling, on a letterboard or on screen.",
         start_url: "/",
         scope: "/",
         display: "standalone",

@@ -1,5 +1,6 @@
 ---
 title: Interactive mode
+description: How the Practice tab turns a lesson document into a step-by-step walkthrough, saves answers privately, and reads steps aloud with browser or Kokoro voices.
 ---
 
 # Interactive mode

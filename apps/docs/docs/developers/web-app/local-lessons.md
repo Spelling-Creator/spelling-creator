@@ -1,5 +1,6 @@
 ---
 title: Lessons on this device
+description: How the editor keeps a whole library of lessons in IndexedDB, where each lesson's metadata, document and git repository live, and how the flows use it.
 ---
 
 # Lessons on this device

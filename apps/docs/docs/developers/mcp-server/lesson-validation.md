@@ -1,5 +1,6 @@
 ---
 title: Lesson validation
+description: "The checks every lesson write goes through: the error and warning codes, comparison rules, skipValidation, and how patches are judged."
 ---
 
 # Lesson validation

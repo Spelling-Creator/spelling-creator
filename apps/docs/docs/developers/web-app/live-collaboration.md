@@ -1,5 +1,6 @@
 ---
 title: Live collaboration
+description: "How live collaboration works: a Durable Object room per session, Yjs merging per field, host-gated admission, live cursors, chat and edit credit."
 ---
 
 # Live collaboration

@@ -1,5 +1,6 @@
 ---
 title: Interactive mode
+description: "Working through a lesson on screen step by step: showing the author's answers, reading aloud, letterboard sessions, and privately saved answers."
 ---
 
 # Interactive mode

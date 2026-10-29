@@ -1,5 +1,6 @@
 ---
 title: Moderation
+description: "What moderators and admins can do: shadowbanning lessons, deleting comments, bans by name or IP address, and what each action means for the person."
 ---
 
 # Moderation

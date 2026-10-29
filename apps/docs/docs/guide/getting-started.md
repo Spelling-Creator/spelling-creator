@@ -1,5 +1,6 @@
 ---
 title: Your first lesson
+description: "A walkthrough of making a first lesson: a title, a section with a passage, spelling words, a question and a picture, then previewing and printing it."
 ---
 
 # Your first lesson

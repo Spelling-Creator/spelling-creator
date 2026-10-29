@@ -1,5 +1,6 @@
 ---
 title: What an assistant can do
+description: "What a connected assistant can do in Spelling Creator: write and edit lessons, propose changes, check facts, pick pictures, and what it asks you first."
 ---
 
 # What an assistant can do

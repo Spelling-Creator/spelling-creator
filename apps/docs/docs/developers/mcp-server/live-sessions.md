@@ -1,5 +1,6 @@
 ---
 title: Live sessions
+description: "How an assistant joins a live collaboration session over plain HTTP: admission, editing the shared document, chat, and what never merges."
 ---
 
 # Live sessions
