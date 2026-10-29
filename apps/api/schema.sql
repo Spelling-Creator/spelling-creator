@@ -1,4 +1,4 @@
--- Supabase schema for the Spelling Lesson Maker lesson hub.
+-- Supabase schema for the Spelling Creator lesson hub.
 --
 -- Run this once in the Supabase SQL editor (or via `supabase db` / psql) against
 -- your project. The Worker (src/index.js) connects with the service-role key,

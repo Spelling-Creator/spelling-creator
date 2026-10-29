@@ -954,7 +954,7 @@ export async function buildDocument(
   children.push(...sourcesParagraphs(doc));
 
   return new Document({
-    creator: meta.author || "Spelling Lesson Maker",
+    creator: meta.author || "Spelling Creator",
     title: doc.title || "Untitled Lesson",
     footnotes: notes.footnotes,
     styles: {

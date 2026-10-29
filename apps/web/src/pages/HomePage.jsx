@@ -37,7 +37,8 @@ import { Alert, AlertDescription } from "../components/ui/alert.jsx";
 import { Spinner } from "../components/ui/spinner.jsx";
 import { cn } from "../lib/utils.js";
 import { useAuth } from "../lib/auth.jsx";
-import { DocumentMeta } from "../lib/seo.jsx";
+import { DocumentMeta, JsonLd, buildWebSiteSchema } from "../lib/seo.jsx";
+import { useSiteOrigin } from "../lib/ssr.jsx";
 import {
   fetchLatestLessons,
   fetchUserActivity,
@@ -641,6 +642,7 @@ function DashboardView() {
 export default function HomePage() {
   const { t } = useTranslation("home");
   const { enabled, loading, user } = useAuth();
+  const origin = useSiteOrigin();
 
   // Wait for the session to resolve before choosing a face, so a returning user
   // doesn't see the marketing splash flash before their dashboard.
@@ -653,6 +655,10 @@ export default function HomePage() {
         title={t("meta.title")}
         description={t("meta.description")}
       />
+      {/* The WebSite markup Google reads the site name from. The homepage is
+          the one page that is about the site itself, so it's the one page that
+          carries this. */}
+      <JsonLd data={buildWebSiteSchema({ origin })} />
 
       {/* No PageBar: a crumb that just said "Spelling Creator" under a header
           that already says it. Both faces bring their own h1 — the hero's

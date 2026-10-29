@@ -89,7 +89,7 @@ import { useAuth } from "../../lib/auth.jsx";
 import {
   DocumentMeta,
   JsonLd,
-  buildLessonCourseSchema,
+  buildLessonSchema,
   htmlToDescription,
 } from "../../lib/seo.jsx";
 import { useServerData, useSiteOrigin } from "../../lib/ssr.jsx";
@@ -441,15 +441,15 @@ export default function LessonLayout() {
         ? t("lessonPage.lessonNotFound")
         : t("lessonPage.lessonFallback"));
 
-  // schema.org Course structured data so Google can show this lesson as a rich
-  // result. Only emitted once the lesson has loaded successfully — no markup for
-  // the loading or error states. The canonical URL is the overview tab even when
-  // a sub-tab is what's open: the tabs are views of one lesson, not separate
-  // works, and pointing them all at /hub/:id is what keeps them from competing
-  // with each other in search results.
-  const courseSchema =
+  // schema.org LearningResource structured data, so a search engine knows what
+  // this page is. Only emitted once the lesson has loaded successfully — no
+  // markup for the loading or error states. The canonical URL is the overview
+  // tab even when a sub-tab is what's open: the tabs are views of one lesson,
+  // not separate works, and pointing them all at /hub/:id is what keeps them
+  // from competing with each other in search results.
+  const lessonSchema =
     lesson && !error
-      ? buildLessonCourseSchema({
+      ? buildLessonSchema({
           lesson,
           description,
           url: `${origin}/hub/${id}`,
@@ -490,7 +490,7 @@ export default function LessonLayout() {
         path={`/hub/${id}`}
         noindex={!!error}
       />
-      <JsonLd data={courseSchema} />
+      <JsonLd data={lessonSchema} />
 
       <PageBar
         crumbs={[

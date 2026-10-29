@@ -260,7 +260,7 @@ username and password sign-in has no link to lose.
 
 The manifest is generated from the `manifest` block in `vite.config.js`;
 `vite-plugin-pwa` injects the `<link rel="manifest">`. It names the app
-"Spelling Lesson Maker" (short name "Spelling"), sets an explicit `id: "/"` so
+"Spelling Creator" (short name "Spelling"), sets an explicit `id: "/"` so
 the install identity survives a change to `start_url`, uses
 `display: "standalone"`, and adds two shortcuts: **New lesson** (`/editor`) and
 **Lesson hub** (`/hub`).
