@@ -238,7 +238,8 @@ export default function LessonFind({
                   onMouseEnter={() => setActive(i)}
                   className={cn(
                     "flex w-full cursor-pointer flex-col gap-0.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-foreground transition-colors",
-                    i === current && "bg-accent text-accent-foreground",
+                    i === current &&
+                      "selected-bar bg-accent text-accent-foreground",
                   )}
                 >
                   <span className="text-xs text-muted-foreground">

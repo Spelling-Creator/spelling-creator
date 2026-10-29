@@ -266,39 +266,51 @@ the install identity survives a change to `start_url`, uses
 **Lesson hub** (`/hub`).
 
 The tags it doesn't own are written by hand in `apps/web/index.html`:
-`theme-color` (twice; a `prefers-color-scheme: dark` variant, `#12131f`, first,
+`theme-color` (twice; a `prefers-color-scheme: dark` variant, `#1b1b1b`, first,
 since Safari takes the first match), `mobile-web-app-capable`,
 `apple-mobile-web-app-title`, the status-bar style (`black-translucent`), and
 `apple-touch-icon`. iOS ignores the manifest's icons and its `display` field
 without those.
 
-`theme_color` and `background_color` in the manifest are both `#dee3f3`, as is
-the light `theme-color` meta tag. The comments beside them say they track the
-light `--background`, since the top of the screen is now the page rather than an
-indigo app bar. (They used to be `--primary`, `#4f5fd9`.)
+The browser chrome is tinted to match the header at the top of the screen,
+which is drawn on `--card`. The two meta tags carry its light (`#ffffff`) and
+dark (`#1b1b1b`) values and can only choose between them by the OS preference,
+so `ColorSchemeProvider` (`src/lib/colorScheme.jsx`) rewrites both to the
+`--card` of the theme the app resolves. A theme chosen in the app's settings
+then wins over the OS.
 
-Icons live in `apps/web/public/icons/`. `icon.svg` and `maskable.svg` are the
-sources; the PNGs are rasterized from them.
+The manifest can't vary by theme, so its colors are fixed light values:
+`theme_color` is the light `--card` (`#ffffff`) and `background_color`, the
+splash screen, is the light `--background` (`#f4f3ef`). An installed app in
+dark mode still gets the dark chrome, because the meta tags take over once the
+page loads.
 
-- **`icon.svg` / `icon-192.png` / `icon-512.png`**: purpose `any`. Drawn as is
-  by the platform, so they carry their own rounded corners.
-- **`maskable.svg` / `maskable-512.png`**: purpose `maskable`. A full-bleed
-  square that Android crops to whatever shape the launcher uses, with the glyph
-  at 45% so it stays inside the safe zone (the center 80% circle).
-- **`apple-touch-icon.png`** (180px): full-bleed for the same reason; iOS
-  applies its own rounding.
-
-To regenerate the PNGs after editing an SVG, on macOS:
+Icons live in `apps/web/public/icons/`. All of them are the logo's square mark,
+generated with the rest of the logo files from `src/lib/logo.js` (see
+[The logo](./design-system.md#the-logo)). Don't edit them by hand; change the
+shapes in `logo.js` and run:
 
 ```bash
-cd apps/web/public/icons
-sips -s format png icon.svg --out icon-512.png
-sips -s format png maskable.svg --out maskable-512.png
+pnpm --filter @spelling-creator/web icons
 ```
 
-`sips` rasterizes at the SVG's intrinsic size, so the 192px and 180px variants
-need an SVG whose `width`/`height` say so: change those two attributes (the
-`viewBox` stays) and convert again.
+The letters are cut-outs, and an app icon has no page behind it, so each icon
+puts the same warm light behind them that the home page hero shines through its
+board.
+
+- **`icon.svg` / `icon-192.png` / `icon-512.png`**: purpose `any`. The mark at
+  512px, with the light behind its letters. The board's own rounded corners are
+  the icon's corners.
+- **`maskable.svg` / `maskable-512.png`**: purpose `maskable`. A full-bleed
+  square of the light that Android crops to whatever shape the launcher uses,
+  with the mark scaled so its farthest point, the pencil's eraser, stays inside
+  the safe zone (the center 80% circle).
+- **`apple-touch-icon.png`** (180px): `maskable.svg` again, full-bleed for the
+  same reason; iOS applies its own rounding.
+
+The script also writes the MCP bundle's `apps/mcp/icon.png` (the `any` icon at
+512px) and the docs site's `favicon.ico` (the same icon at 16 to 256px). The PNGs
+are rendered with `sharp`.
 
 ## Local development
 

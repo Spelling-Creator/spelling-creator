@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import PageBody, { PAGE_GUTTER } from "../components/layout/PageBody.jsx";
 import FloatingWords from "../components/FloatingWords.jsx";
+import { LogoBoard } from "../components/Logo.jsx";
 import { FeedListSkeleton } from "../components/Skeletons.jsx";
 import { Button } from "../components/ui/button.jsx";
 import { Alert, AlertDescription } from "../components/ui/alert.jsx";
@@ -170,18 +171,18 @@ function LandingView() {
   const { t } = useTranslation("home");
   return (
     <>
-      {/* Hero: floating spelling words behind a headline + calls to action.
-          A fixed, theme-independent gradient (not tied to --primary, which
-          shifts between light/dark) — this banner always shows white text on
-          a bold brand-blue-to-violet backdrop, drawn from the same hex values
-          as --foreground/--primary-foreground (dark) and --primary (light),
-          which are also this design system's real brand colors, in place of
-          the old MUI theme.js hex triplet this replaced. */}
+      {/* Hero: floating spelling words behind the logo, a headline and calls
+          to action. A fixed, theme-independent gradient (not tied to
+          --primary, which flips from charcoal to off-white in dark mode). This
+          banner always shows white text on the logo's charcoal board, drawn
+          from the same hex values as the dark --background and the light
+          --primary, with a faint glow of the pencil's yellow from above so
+          the charcoal doesn't read as a flat slab. */}
       <div
         className="relative flex min-h-[70vh] items-center overflow-hidden text-white md:min-h-[78vh]"
         style={{
           background:
-            "linear-gradient(135deg, #14162a 0%, #4f5fd9 55%, #5f3dc4 100%)",
+            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255, 202, 61, 0.14), transparent 70%), linear-gradient(135deg, #111111 0%, #292929 55%, #3a3a3a 100%)",
         }}
       >
         <FloatingWords />
@@ -202,6 +203,20 @@ function LandingView() {
             PAGE_GUTTER,
           )}
         >
+          {/* The board's letters are cut out, so a warm light behind it shines
+              through them (and spills a little past its edges), like a
+              stencil held up to a lamp. */}
+          <div className="relative mx-auto mb-8 w-56 md:w-72">
+            <div
+              aria-hidden="true"
+              className="absolute -inset-4 blur-md"
+              style={{
+                background:
+                  "radial-gradient(closest-side, #fffbef 0%, #fff0c4 60%, rgba(255, 202, 61, 0.55) 85%, transparent 100%)",
+              }}
+            />
+            <LogoBoard className="relative h-auto w-full" />
+          </div>
           <h1
             className="mb-4 font-serif text-4xl font-semibold md:text-6xl"
             style={{ textShadow: "0 2px 18px rgba(0,0,0,0.4)" }}
@@ -219,11 +234,14 @@ function LandingView() {
               above), and Button's variants carry their own dark: overrides
               (meant for a normal page background) that would fight it.
               outline-white for the same reason: the app-wide focus ring in
-              globals.css is --ring, which is this gradient's own indigo. */}
+              globals.css is --ring, which follows the app theme, and in light
+              mode that is charcoal, which would vanish on this gradient.
+              White shows on it in either theme. The main action is the logo's
+              pencil yellow (--brand): charcoal text on it is 9.5:1. */}
           <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <RouterLink
               to="/editor"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-white px-8 py-3 text-base font-medium text-[#1e2138] no-underline transition-colors focus-visible:outline-white hover:bg-white/90"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-8 py-3 text-base font-medium text-brand-foreground no-underline transition-colors focus-visible:outline-white hover:bg-brand/85"
             >
               <PencilIcon data-icon="inline-start" />
               {t("marketing.hero.openEditor")}

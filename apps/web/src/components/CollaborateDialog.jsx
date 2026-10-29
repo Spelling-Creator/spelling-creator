@@ -94,10 +94,12 @@ function ToneAlert({ severity, icon, children, className }) {
 
 // A single row shared by the pending-requests, roster, and trusted-collaborator
 // lists: an avatar, a primary/secondary text pair, and optional trailing content
-// (action buttons, a badge).
+// (action buttons, a badge). Initials are white on the per-person colors;
+// `avatarForeground` overrides that for a fill white doesn't read on.
 function PersonRow({
   avatarSrc,
   avatarColor,
+  avatarForeground,
   label,
   primary,
   secondary,
@@ -109,7 +111,7 @@ function PersonRow({
         {avatarSrc && <AvatarImage src={avatarSrc} alt={primary} />}
         <AvatarFallback
           className="text-white"
-          style={{ backgroundColor: avatarColor }}
+          style={{ backgroundColor: avatarColor, color: avatarForeground }}
         >
           {label}
         </AvatarFallback>
@@ -504,6 +506,9 @@ export default function CollaborateDialog({
               key={p.id}
               avatarSrc={p.avatarUrl}
               avatarColor={p.host ? "var(--primary)" : colorForId(p.id)}
+              avatarForeground={
+                p.host ? "var(--primary-foreground)" : undefined
+              }
               label={initials(p)}
               primary={
                 p.name || t("collaborateDialog.roster.collaboratorFallback")

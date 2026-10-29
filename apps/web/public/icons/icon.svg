@@ -1,10 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="113" ry="113" fill="#4f5fd9" />
-  <svg x="108" y="108" width="297" height="297" viewBox="5 3 18 20" preserveAspectRatio="xMidYMid meet">
-    <g fill="none" stroke="#f2f3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m6 16 6-12 6 12" />
-      <path d="M8 12h8" />
-      <path d="m16 20 2 2 4-4" />
-    </g>
-  </svg>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 207 207"><defs><radialGradient id="light"><stop offset="0" stop-color="#fffbef"/><stop offset="0.6" stop-color="#fff0c4"/><stop offset="1" stop-color="#ffe08a"/></radialGradient></defs><rect x="30" y="18" width="147" height="171" fill="url(#light)"/><path fill="#292929" d="M14 207a14 14 0 0 1-14-14V14A14 14 0 0 1 14 0h179a14 14 0 0 1 14 14v179a14 14 0 0 1-14 14zm28.4-26.2 10-3.8 33.3-74.5h35.6l33.4 74.5 9.9 3.8 3.7-10-30.6-68.3h23.8L169 95l-7.5-7.5H131L103.5 26 84.2 69 98 75.3l5.6-12.5 11 24.8h-22l2.8-6.4-13.7-6L76 87.4H45.5L38 95l7.5 7.5h23.8l-30.6 68.4z"/><path fill="#ffca3d" d="M132.5 87.5h28L19.8 172.6l-7.5-12.4z"/><path fill="#ffacec" d="m12.3 160.2 7.5 12.4-6 3.6-7.5-12.4z"/></svg>

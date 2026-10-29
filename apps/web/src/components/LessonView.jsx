@@ -113,8 +113,12 @@ const LESSON_STYLES = `
     list-style: none;
     font-size: 13px;
   }
+  /* Links here, in footnote markers and in the end matter are underlined:
+     --primary is as dark (or as light) as the body text, so color alone
+     wouldn't mark them as links. */
   .s2c-lesson-root .s2c-vakt-links a {
     color: var(--primary);
+    text-decoration: underline;
     text-underline-offset: 2px;
   }
   .s2c-lesson-root figure { margin: 0; }
@@ -176,7 +180,8 @@ const LESSON_STYLES = `
   .s2c-lesson-root sup.s2c-fn { font-size: 0.7em; line-height: 0; }
   .s2c-lesson-root sup.s2c-fn a {
     color: var(--primary);
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 1px;
     padding: 0 1px;
   }
   .s2c-lesson-root .s2c-endmatter {
@@ -198,7 +203,7 @@ const LESSON_STYLES = `
     padding-left: 22px;
     text-indent: -22px;
   }
-  .s2c-lesson-root .s2c-endmatter a { color: var(--primary); text-underline-offset: 2px; }
+  .s2c-lesson-root .s2c-endmatter a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .s2c-lesson-root .s2c-label {
       color: color-mix(in oklab, var(--s2c-label) 60%, white);
