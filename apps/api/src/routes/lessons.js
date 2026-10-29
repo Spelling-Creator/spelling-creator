@@ -419,7 +419,14 @@ export async function handleLessons(request, env, url, cors, ctx) {
     const title = (body.title || doc.title || "Untitled Lesson")
       .toString()
       .slice(0, 300);
-    const patch = { title, doc };
+    const patch = {
+      title,
+      doc,
+      // When the content last changed — which created_at stops saying the
+      // moment a lesson is edited. The sitemap serves it as <lastmod>, so
+      // crawlers come back for edited lessons (routes/seo.js).
+      updated_at: new Date().toISOString(),
+    };
 
     if (isAuthor) {
       if (typeof body.published === "boolean") patch.published = body.published;

@@ -55,6 +55,12 @@ alter table public.lessons add column if not exists forked_from_url text;
 -- Listing is ordered newest-first; index the sort key.
 create index if not exists lessons_created_at_idx on public.lessons (created_at desc);
 
+-- When the lesson's content last changed: written by the Worker on every save
+-- (routes/lessons.js) and served as the sitemap's <lastmod> (routes/seo.js), so
+-- crawlers re-fetch edited lessons. Null for a row not edited since this column
+-- arrived; readers fall back to created_at. Safe to re-run.
+alter table public.lessons add column if not exists updated_at timestamptz;
+
 -- The Worker connects with the service-role key, which bypasses RLS. RLS is still
 -- worth enabling as defence-in-depth in case the anon key is ever used directly:
 alter table public.lessons enable row level security;
