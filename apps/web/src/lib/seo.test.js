@@ -138,6 +138,60 @@ describe("buildLessonSchema", () => {
   it("returns null without a lesson", () => {
     expect(buildLessonSchema({ origin: ORIGIN })).toBeNull();
   });
+
+  it("carries each hub picture with the credit the page shows", () => {
+    const hash = "a".repeat(64);
+    const schema = buildLessonSchema({
+      lesson: {
+        ...LESSON,
+        doc: {
+          sections: [
+            {
+              blocks: [
+                {
+                  type: "image",
+                  image: { hash },
+                  caption: "A wildcat",
+                  credit: "Image (by Ada, CC BY 4.0) via Wikimedia Commons",
+                },
+                // Legacy block: the credit still lives inside the caption and
+                // must come out split, exactly as the page displays it.
+                {
+                  type: "image",
+                  image: { hash: "b".repeat(64) },
+                  caption: "Lions (Image from Pixabay)",
+                },
+                // A local image that never reached the hub has no public URL.
+                { type: "image", caption: "Local only" },
+                { type: "text", text: "Not a picture." },
+              ],
+            },
+          ],
+        },
+      },
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+    });
+
+    expect(schema.image).toHaveLength(2);
+    expect(schema.image[0]).toEqual({
+      "@type": "ImageObject",
+      contentUrl: `${ORIGIN}/images/${hash}`,
+      caption: "A wildcat",
+      creditText: "Image (by Ada, CC BY 4.0) via Wikimedia Commons",
+    });
+    expect(schema.image[1].caption).toBe("Lions");
+    expect(schema.image[1].creditText).toBe("Image from Pixabay");
+  });
+
+  it("emits no image list for a lesson without hub pictures", () => {
+    const schema = buildLessonSchema({
+      lesson: { ...LESSON, doc: { sections: [{ blocks: [] }] } },
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+    });
+    expect(schema.image).toBeUndefined();
+  });
 });
 
 describe("buildBreadcrumbSchema", () => {
