@@ -174,7 +174,7 @@ export default function LoginPage() {
 
   return (
     <>
-      <DocumentMeta title={t("meta.title")} />
+      <DocumentMeta title={t("meta.title")} noindex image={null} />
 
       {/* The card is narrow — a couple of fields — but the column it sits in is
           the app's, not a width of this page's own. */}

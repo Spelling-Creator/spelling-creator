@@ -2627,8 +2627,10 @@ export default function EditorPage() {
 
   return (
     <>
-      {/* No page-specific title: the editor is the app default. */}
-      <DocumentMeta />
+      {/* No page-specific title: the editor is the app default. noindex — the
+          page is whatever draft is open, which is nobody's search result — and
+          no screenshot, for the same reason. */}
+      <DocumentMeta noindex image={null} />
       {/* The trail names the lesson being edited, not "Editor" — on the one
           page where you're deep inside a single document, which document it is
           is the useful fact. */}

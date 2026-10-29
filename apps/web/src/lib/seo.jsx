@@ -27,35 +27,55 @@ const DEFAULT_DESCRIPTION =
  * @param {string} [props.title]        Page title; appended to the site name.
  * @param {string} [props.description]  Meta/OG description (falls back to the site default).
  * @param {string} [props.image]        Absolute URL for the OG/Twitter preview
- *   image. Leave undefined to default to a live screenshot of the current page
+ *   image. Leave undefined to default to a live screenshot of the canonical page
  *   (rendered by the Worker's /og-image endpoint); pass null to opt out entirely.
  * @param {string} [props.type]         OG type: "website" (default) or "article".
+ * @param {string} [props.path]         The canonical path, when it isn't the one
+ *   being viewed: a lesson's tabs are all views of one lesson, and pointing their
+ *   canonical link and og:url at /hub/:id keeps them from competing with each
+ *   other in search results.
+ * @param {boolean} [props.noindex]     Ask crawlers to keep the page out of the
+ *   index — for the signed-in and tool pages, whose content is the visitor's
+ *   own. A noindexed page gets no canonical link; the two would contradict.
  */
-export function DocumentMeta({ title, description, image, type = "website" }) {
+export function DocumentMeta({
+  title,
+  description,
+  image,
+  type = "website",
+  path,
+  noindex = false,
+}) {
   const origin = useSiteOrigin();
   const { pathname } = useLocation();
 
   const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
   const desc = description || DEFAULT_DESCRIPTION;
+  const canonical = `${origin}${path || pathname}`;
 
-  // Default the preview image to a screenshot of this page: the Worker's
-  // /og-image endpoint renders the path with headless Chromium. Pass `null` to
-  // opt out.
+  // Default the preview image to a screenshot of the canonical page: the
+  // Worker's /og-image endpoint renders the path with headless Chromium. Pass
+  // `null` to opt out.
   const ogImage =
     image === undefined
-      ? `${origin}/og-image?path=${encodeURIComponent(pathname)}`
+      ? `${origin}/og-image?path=${encodeURIComponent(path || pathname)}`
       : image;
 
   return (
     <>
       <title>{fullTitle}</title>
       <meta name="description" content={desc} />
+      {noindex ? (
+        <meta name="robots" content="noindex" />
+      ) : (
+        <link rel="canonical" href={canonical} />
+      )}
 
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:type" content={type} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
-      <meta property="og:url" content={`${origin}${pathname}`} />
+      <meta property="og:url" content={canonical} />
       {ogImage && (
         <>
           <meta property="og:image" content={ogImage} />

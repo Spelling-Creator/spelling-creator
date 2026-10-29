@@ -30,8 +30,7 @@ export default function NotFoundPage() {
       {/* No preview image: the default is a live screenshot of the current
           page, and a screenshot of an error is not worth rendering a browser
           for — let alone unfurling into a chat. */}
-      <DocumentMeta title={t("notFound.title")} image={null} />
-      <meta name="robots" content="noindex" />
+      <DocumentMeta title={t("notFound.title")} image={null} noindex />
 
       <PageBody width="reading">
         <div className="flex flex-col items-center gap-4 py-16 text-center">

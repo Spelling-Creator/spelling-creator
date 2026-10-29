@@ -39,6 +39,48 @@ describe("server rendering a page that does not exist", () => {
       }),
     );
 
+  it("renders a lesson page with its canonical URL in the head", async () => {
+    const LESSON_ID = "7296d446-4039-4c2d-8393-9d46a1dda3d3";
+    const row = {
+      id: LESSON_ID,
+      author_id: "00000000-0000-0000-0000-000000000001",
+      title: "Volcano words",
+      author: "SSR Test",
+      section_count: 1,
+      published: true,
+      shadowbanned: false,
+      forked_from: null,
+      created_at: "2026-10-18T00:00:00Z",
+      doc: {
+        title: "Volcano words",
+        sections: [
+          {
+            id: "s1",
+            name: "One",
+            blocks: [{ id: "b1", type: "text", text: "Hello" }],
+          },
+        ],
+      },
+    };
+    const handle = handler(
+      vi.fn(async (input) => {
+        const url = new URL(input instanceof Request ? input.url : input);
+        if (url.pathname === "/rest/v1/lessons") return Response.json([row]);
+        return Response.json([]);
+      }),
+    );
+    // A tab, not the overview: every view of a lesson declares /hub/:id as its
+    // canonical URL, so the tabs don't compete with each other in results.
+    const res = await ask(handle, `/hub/${LESSON_ID}/practice`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-rendered")).toBe("ssr");
+    const text = await res.text();
+    expect(text).toContain(
+      `<link rel="canonical" href="http://localhost:8080/hub/${LESSON_ID}"`,
+    );
+  });
+
   it("answers a deleted lesson's URL with a real 404, still carrying the shell", async () => {
     // PostgREST finds no row, so the API's lesson route answers 404, which
     // must reach the crawler as one, not as a page insisting it exists.

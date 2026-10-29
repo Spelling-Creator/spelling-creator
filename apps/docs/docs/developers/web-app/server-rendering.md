@@ -142,6 +142,13 @@ hoists `<title>`, `<meta>` and `<link>` into `<head>` from anywhere in the tree,
 so page metadata is ordinary JSX, which is exactly what makes it work under
 SSR, where an effect that writes into `document.head` never runs.
 
+Every page renders one. An indexable page carries a canonical link and a
+matching `og:url` — a lesson's tabs all point theirs at `/hub/:id`, so the
+views of one lesson don't compete with each other in search results — and the
+signed-in and tool pages (the editor, library, settings, login, moderation and
+the OAuth consent screen) pass `noindex` instead, since their content is the
+visitor's own.
+
 JSON-LD is deliberately _not_ hoisted: React only hoists `<script>` when it's
 `async`, which is meaningless for a non-executable type. `<JsonLd>` renders in
 place, which search engines accept. The same file builds the lesson and hub

@@ -484,6 +484,11 @@ export default function LessonLayout() {
         type="article"
         title={metaTitle}
         description={description}
+        // The overview tab is the canonical URL for every tab (see the
+        // courseSchema comment above); a lesson that failed to load asks to
+        // stay out of the index instead.
+        path={`/hub/${id}`}
+        noindex={!!error}
       />
       <JsonLd data={courseSchema} />
 
