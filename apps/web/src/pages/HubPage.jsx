@@ -252,12 +252,10 @@ export default function HubPage() {
   const visibleLessons = searchResults ?? lessons;
   const searching = searchResults !== null;
 
-  // schema.org Course-list carousel for the published lessons — the still-
-  // supported Course rich result (the per-lesson "Course info" markup was
-  // retired by Google in Sept 2025). Each entry embeds a full named Course, as
-  // the carousel requires. We always describe the full published set (not the
-  // transient search view), and the builder emits nothing below Google's three-
-  // course minimum.
+  // schema.org ItemList of the published lessons, each embedded as a full
+  // LearningResource (see lib/seo.jsx for why not Course). We always describe
+  // the full published set, not the transient search view, and the builder
+  // emits nothing when there are no lessons.
   const listSchema = buildLessonListSchema({ lessons, origin });
 
   // Delete-confirmation dialog. `deleting` holds the lesson summary being

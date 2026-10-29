@@ -152,8 +152,11 @@ visitor's own.
 
 JSON-LD is deliberately _not_ hoisted: React only hoists `<script>` when it's
 `async`, which is meaningless for a non-executable type. `<JsonLd>` renders in
-place, which search engines accept. The same file builds the lesson and hub
-schemas (`buildLessonCourseSchema`, `buildLessonListSchema`).
+place, which search engines accept. The same file builds the structured data:
+`buildLessonSchema` (a lesson page's `LearningResource`),
+`buildLessonListSchema` (the hub's `ItemList` of them) and
+`buildWebSiteSchema` (the homepage's `WebSite`, which is where search engines
+read the site name).
 
 ## Things that had to change to make it work
 

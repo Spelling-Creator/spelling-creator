@@ -16,7 +16,7 @@ import { useLocation } from "react-router-dom";
 import { useSiteOrigin } from "./ssr.jsx";
 
 // One brand everywhere: the domain, the app header, the docs and the PWA
-// manifest all say "Spelling Creator", so search results must too — split
+// manifest all say "Spelling Creator", so search results must too, since split
 // naming dilutes which name Google shows for the site. The old "Spelling
 // Lesson Maker" survives as the WebSite schema's alternateName below.
 const SITE_NAME = "Spelling Creator";
@@ -132,8 +132,8 @@ export function JsonLd({ data }) {
 // so it can either stand alone or be embedded inside an ItemList).
 //
 // LearningResource, not Course: a lesson here is one passage with questions,
-// not a curriculum, and Google's course markup guidelines want actual courses —
-// markup that misdescribes the page risks a structured-data manual action,
+// not a curriculum, and Google's course markup guidelines want actual courses.
+// Markup that misdescribes the page risks a structured-data manual action,
 // while the Course rich results it used to aim for are gone anyway (Course info
 // was retired in September 2025, and the course carousel expects real courses).
 // LearningResource says what the page is; isAccessibleForFree is accurate (and
@@ -182,7 +182,7 @@ function summaryDescription(lesson) {
  *
  * @param {object}  opts
  * @param {object}  opts.lesson       Lesson summary/doc ({ title, author, createdAt }).
- * @param {string} [opts.description] Plain-text summary (1–500 chars).
+ * @param {string} [opts.description] Plain-text summary (1 to 500 chars).
  * @param {string}  opts.url          Canonical URL of this lesson's page.
  * @param {string}  opts.origin       Site origin, used as the publisher URL.
  * @returns {object|null}
@@ -220,7 +220,7 @@ export function buildLessonListSchema({ lessons, origin }) {
 }
 
 /**
- * Build the homepage's schema.org `WebSite` JSON-LD — the markup Google reads
+ * Build the homepage's schema.org `WebSite` JSON-LD, the markup Google reads
  * the site name from. The old name rides along as alternateName so anything
  * that knew the site by it keeps matching.
  *
