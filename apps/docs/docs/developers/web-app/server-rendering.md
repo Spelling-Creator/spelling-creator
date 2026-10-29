@@ -8,12 +8,17 @@ description: How the Worker server-renders the hub, lesson and profile pages, wh
 Three kinds of page are rendered on the server before the browser runs any
 JavaScript, and then hydrated in place:
 
-| Route            | Data the server fetches   | Rendered for |
-| ---------------- | ------------------------- | ------------ |
-| `/hub`           | `fetchPublishedLessons()` | Everyone     |
-| `/hub/:id`       | `fetchLesson(id)`         | Everyone     |
-| `/hub/:id/<tab>` | `fetchLesson(id)`         | Everyone     |
-| `/users/:id`     | `fetchUserProfile(id)`    | Everyone     |
+| Route            | Data the server fetches                 | Rendered for |
+| ---------------- | --------------------------------------- | ------------ |
+| `/hub`           | `fetchPublishedLessons()`               | Everyone     |
+| `/hub/:id`       | `fetchLesson(id)` + `fetchComments(id)` | Everyone     |
+| `/hub/:id/<tab>` | `fetchLesson(id)` + `fetchComments(id)` | Everyone     |
+| `/users/:id`     | `fetchUserProfile(id)`                  | Everyone     |
+
+The comments ride along for the lesson page's structured data (the `comment`
+thread in its JSON-LD), not for the page body; the discussion tab still fetches
+them itself, with the viewer's token, when it opens. A failed comments fetch
+costs only that markup, never the render.
 
 Everything else (`/`, `/editor`, `/library`, `/settings`, `/login`,
 `/oauth/authorize`, `/moderation`) is served as the static SPA shell.
@@ -154,8 +159,9 @@ visitor's own.
 JSON-LD is deliberately _not_ hoisted: React only hoists `<script>` when it's
 `async`, which is meaningless for a non-executable type. `<JsonLd>` renders in
 place, which search engines accept. The same file builds the structured data:
-`buildLessonSchema` (a lesson page's `LearningResource`),
-`buildLessonListSchema` (the hub's `ItemList` of them),
+`buildLessonSchema` (a lesson page, typed `Article` + `LearningResource`, with
+its pictures' credits and its comment thread),
+`buildLessonListSchema` (the hub's `ItemList` of plain `LearningResource`s),
 `buildProfileSchema` (a profile's `ProfilePage`, whose Person carries the `@id`
 that lesson markup points its author at), `buildBreadcrumbSchema` (a lesson
 page's visible crumb trail, which desktop results can show in place of the raw

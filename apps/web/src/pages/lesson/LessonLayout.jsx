@@ -137,6 +137,11 @@ export default function LessonLayout() {
   // document rather than a skeleton, and the effect below skips the round trip
   // it would otherwise repeat. undefined on every client-side navigation.
   const serverLesson = useServerData("lesson");
+  // The comments the Worker fetched alongside the lesson, for this page's
+  // structured data only; the discussion tab keeps its own authenticated
+  // fetch. undefined on a client-side navigation, and the markup then simply
+  // says nothing about comments. A crawler always gets the server render.
+  const serverComments = useServerData("comments");
 
   const [lesson, setLesson] = useState(serverLesson ?? null);
   const [loading, setLoading] = useState(!serverLesson);
@@ -455,6 +460,7 @@ export default function LessonLayout() {
           description,
           url: `${origin}/hub/${id}`,
           origin,
+          comments: serverComments,
         })
       : null;
 

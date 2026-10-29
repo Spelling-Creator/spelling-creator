@@ -25,6 +25,7 @@ import { textResponse, jsonResponse } from "../lib/http.js";
 import { fetchRatingStats, upsertRating } from "../lib/ratings.js";
 import { richTextToPlain, sanitizeRichText } from "../lib/richtext.js";
 import { isTrustedCollaborator } from "../lib/lesson.js";
+import { LESSON_ID_RE } from "../lib/lessonGit.js";
 import { createNotification } from "./notifications.js";
 
 // The longest comment we accept, measured in the text the user actually wrote —
@@ -154,6 +155,11 @@ export async function handleComments(request, env, lessonId, cors) {
     );
   }
   if (!lessonId) return textResponse("Missing lesson id.", 400, cors);
+  // Same reasoning as GET /lessons/:id (routes/lessons.js): a lesson id is a
+  // UUID, PostgREST rejects anything else with a 400 that would surface as a
+  // 502, and something that can't name a lesson has no comments either.
+  if (!LESSON_ID_RE.test(lessonId))
+    return textResponse("Lesson not found.", 404, cors);
 
   const base = env.SUPABASE_URL.replace(/\/$/, "");
 

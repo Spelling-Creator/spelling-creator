@@ -81,6 +81,49 @@ describe("server rendering a page that does not exist", () => {
     );
   });
 
+  it("renders the lesson's comments into its structured data", async () => {
+    const LESSON_ID = "7296d446-4039-4c2d-8393-9d46a1dda3d3";
+    const row = {
+      id: LESSON_ID,
+      author_id: "00000000-0000-0000-0000-000000000001",
+      title: "Volcano words",
+      author: "SSR Test",
+      section_count: 1,
+      published: true,
+      shadowbanned: false,
+      forked_from: null,
+      created_at: "2026-10-18T00:00:00Z",
+      doc: { title: "Volcano words", sections: [] },
+    };
+    const handle = handler(
+      vi.fn(async (input) => {
+        const url = new URL(input instanceof Request ? input.url : input);
+        if (url.pathname === "/rest/v1/lessons") return Response.json([row]);
+        if (url.pathname === "/rest/v1/comments")
+          return Response.json([
+            {
+              id: "c1",
+              parent_id: null,
+              author_id: null,
+              author: "Grace",
+              body: "<p>Lovely lesson!</p>",
+              created_at: "2026-10-19T10:00:00Z",
+              edited_at: null,
+            },
+          ]);
+        return Response.json([]);
+      }),
+    );
+    const res = await ask(handle, `/hub/${LESSON_ID}`);
+
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    // The comment reached the served HTML as markup, so a crawler needs no
+    // JavaScript; the body is plain text there, not the stored HTML.
+    expect(text).toContain('"commentCount":1');
+    expect(text).toContain('"text":"Lovely lesson!"');
+  });
+
   it("drops a trailing slash from the canonical URL, as the sitemap does", async () => {
     // /hub/ is the same route as /hub, and only /hub is in the sitemap; the
     // slashed spelling must not claim to be canonical in its own right.

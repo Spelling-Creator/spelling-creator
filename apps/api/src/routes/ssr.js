@@ -20,6 +20,7 @@
 // all — the import below is static, so the Worker fails to bundle, which is why
 // every script that reaches wrangler builds it first.
 
+import { fetchComments } from "@spelling-creator/core/comments";
 import { configureCore } from "@spelling-creator/core/config";
 import {
   fetchLesson,
@@ -48,27 +49,40 @@ import { render } from "../../../web/dist-ssr/entry-server.js";
 import { HUB_PATH, LESSON_PATH, PROFILE_PATH } from "./spa.js";
 
 /**
- * Which page (if any) this request should be server-rendered as.
- * @returns {{key: string, load: (cfg: object) => Promise<object>}|null}
+ * Which page (if any) this request should be server-rendered as. `load`
+ * resolves to the whole bootstrap data object, keyed the way the pages read it
+ * back through useServerData.
+ * @returns {{load: () => Promise<object>}|null}
  */
 function matchRoute(url) {
   if (HUB_PATH.test(url.pathname)) {
-    return { key: "lessons", load: () => fetchPublishedLessons() };
+    return { load: async () => ({ lessons: await fetchPublishedLessons() }) };
   }
   const lesson = url.pathname.match(LESSON_PATH);
   if (lesson) {
     // No access token: a private draft 404s here and the author sees it after
     // hydration, when their own authenticated fetch runs.
     return {
-      key: "lesson",
-      load: () => fetchLesson(decodeURIComponent(lesson[1])),
+      load: async () => {
+        const id = decodeURIComponent(lesson[1]);
+        // The comments ride along for the page's structured data (the comment
+        // markup in buildLessonSchema). Their failure must not cost the
+        // render, so it degrades to markup without them; the lesson's own
+        // failure keeps its meaning (a 404 stays a 404).
+        const [full, comments] = await Promise.all([
+          fetchLesson(id),
+          fetchComments(id).catch(() => null),
+        ]);
+        return comments ? { lesson: full, comments } : { lesson: full };
+      },
     };
   }
   const profile = url.pathname.match(PROFILE_PATH);
   if (profile) {
     return {
-      key: "profile",
-      load: () => fetchUserProfile(decodeURIComponent(profile[1])),
+      load: async () => ({
+        profile: await fetchUserProfile(decodeURIComponent(profile[1])),
+      }),
     };
   }
   return null;
@@ -171,7 +185,7 @@ export async function serverRender(request, env, ctx, url) {
     // lib/selfFetch.js, installed by both entries), through the very same core
     // module the browser calls — no server-specific client, which is what
     // keeps the two paths from drifting.
-    data = { [route.key]: await route.load() };
+    data = await route.load();
     html = await shell(env, url);
   } catch (err) {
     // A 404 from the API is an answer, not a breakdown: this lesson or profile

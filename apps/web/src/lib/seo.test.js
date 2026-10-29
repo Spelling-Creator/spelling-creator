@@ -128,11 +128,73 @@ describe("buildLessonSchema", () => {
       origin: ORIGIN,
     });
     expect(schema["@context"]).toBe("https://schema.org");
+    // Article (a written piece whose comments belong to it) and
+    // LearningResource (what the piece is), as one entity.
+    expect(schema["@type"]).toEqual(["Article", "LearningResource"]);
     expect(schema.name).toBe("Volcano words");
+    expect(schema.headline).toBe("Volcano words");
     expect(schema.learningResourceType).toBe("Lesson");
     expect(schema.isAccessibleForFree).toBe(true);
     expect(schema.author).toMatchObject({ "@type": "Person", name: "Ada" });
     expect(schema.dateCreated).toBe("2026-10-18T00:00:00.000Z");
+    expect(schema.datePublished).toBe(schema.dateCreated);
+    // Without a loaded comment list the markup says nothing about comments,
+    // rather than claiming zero.
+    expect(schema.commentCount).toBeUndefined();
+  });
+
+  it("nests the comment thread the way the discussion tab draws it", () => {
+    const schema = buildLessonSchema({
+      lesson: LESSON,
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+      comments: [
+        {
+          id: "c1",
+          parentId: null,
+          authorId: "00000000-0000-0000-0000-000000000002",
+          author: "Grace",
+          body: "<p>Lovely <strong>lesson</strong>!</p>",
+          createdAt: "2026-10-19T10:00:00Z",
+        },
+        {
+          id: "c2",
+          parentId: "c1",
+          authorId: null,
+          author: "",
+          body: "<p>Thanks!</p>",
+          createdAt: "2026-10-19T11:00:00Z",
+        },
+      ],
+    });
+
+    // Both comments count; only the top-level one starts a thread.
+    expect(schema.commentCount).toBe(2);
+    expect(schema.comment).toHaveLength(1);
+    const [comment] = schema.comment;
+    // Plain text, not the stored HTML.
+    expect(comment.text).toBe("Lovely lesson !");
+    expect(comment.dateCreated).toBe("2026-10-19T10:00:00.000Z");
+    // The author points at their profile, like a lesson's author does.
+    expect(comment.author["@id"]).toBe(
+      `${ORIGIN}/users/00000000-0000-0000-0000-000000000002#person`,
+    );
+    expect(comment.comment).toHaveLength(1);
+    expect(comment.comment[0].author).toEqual({
+      "@type": "Person",
+      name: "Anonymous",
+    });
+  });
+
+  it("claims zero comments only when the list really is empty", () => {
+    const schema = buildLessonSchema({
+      lesson: LESSON,
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+      comments: [],
+    });
+    expect(schema.commentCount).toBe(0);
+    expect(schema.comment).toBeUndefined();
   });
 
   it("returns null without a lesson", () => {
@@ -228,6 +290,9 @@ describe("buildLessonListSchema", () => {
       position: 2,
       item: { name: "Second", url: `${ORIGIN}/hub/b` },
     });
+    // The list stays plain LearningResource: the Article half belongs to the
+    // lesson's own page, where the comments it claims actually are.
+    expect(schema.itemListElement[0].item["@type"]).toBe("LearningResource");
   });
 
   it("emits nothing for an empty hub", () => {

@@ -265,23 +265,73 @@ function summaryDescription(lesson) {
 }
 
 /**
- * Build standalone schema.org `LearningResource` JSON-LD for a single lesson's
- * page: accurate semantic data that helps a search engine understand the page,
- * and the per-lesson detail markup the hub's ItemList points at.
+ * Build the JSON-LD for a single lesson's page: the per-lesson detail markup
+ * the hub's ItemList points at, under a two-type `@type`. `LearningResource`
+ * says what the piece is; `Article` says it is a written piece whose comments
+ * belong to it, which is the shape search engines read a `comment` thread
+ * from. (Google's forum markup is explicitly not for articles a site wrote
+ * itself, even with comments; Article is.)
  *
  * @param {object}  opts
  * @param {object}  opts.lesson       Lesson summary/doc ({ title, author, createdAt }).
  * @param {string} [opts.description] Plain-text summary (1 to 500 chars).
  * @param {string}  opts.url          Canonical URL of this lesson's page.
  * @param {string}  opts.origin       Site origin, used as the publisher URL.
+ * @param {Array<object>} [opts.comments]  The lesson's comments, as the API
+ *   lists them (the same visible list the discussion tab shows, so moderation
+ *   can't leave a hidden comment in the markup). Omit when they aren't loaded;
+ *   the markup then says nothing about comments rather than claiming zero.
  * @returns {object|null}
  */
 export function buildLessonSchema(opts) {
   if (!opts.lesson) return null;
   const resource = lessonObject(opts);
+  resource["@type"] = ["Article", "LearningResource"];
+  resource.headline = resource.name;
+  if (resource.dateCreated) resource.datePublished = resource.dateCreated;
   const images = imageObjects(opts.lesson.doc, opts.origin);
   if (images.length > 0) resource.image = images;
+  if (Array.isArray(opts.comments)) {
+    resource.commentCount = opts.comments.length;
+    const comments = commentObjects(opts.comments, opts.origin);
+    if (comments.length > 0) resource.comment = comments;
+  }
   return { "@context": "https://schema.org", ...resource };
+}
+
+// The lesson's comments as schema.org Comment objects, replies nested under
+// the comment they answer, exactly as the discussion tab draws the thread.
+// Bodies are sanitized rich-text HTML; markup wants plain text.
+function commentObjects(comments, origin) {
+  const replies = new Map();
+  const top = [];
+  for (const comment of comments) {
+    if (!comment?.id) continue;
+    if (comment.parentId) {
+      const siblings = replies.get(comment.parentId) || [];
+      siblings.push(comment);
+      replies.set(comment.parentId, siblings);
+    } else {
+      top.push(comment);
+    }
+  }
+  const toObject = (comment) => {
+    const object = {
+      "@type": "Comment",
+      text: htmlToDescription(comment.body, 2000),
+      author: personObject({
+        name: comment.author || "Anonymous",
+        userId: comment.authorId,
+        origin,
+      }),
+    };
+    const d = new Date(comment.createdAt);
+    if (!Number.isNaN(d.getTime())) object.dateCreated = d.toISOString();
+    const kids = replies.get(comment.id);
+    if (kids) object.comment = kids.map(toObject);
+    return object;
+  };
+  return top.map(toObject);
 }
 
 // Every picture in the lesson (image blocks, and VAKT blocks that carry one),
