@@ -81,6 +81,19 @@ describe("server rendering a page that does not exist", () => {
     );
   });
 
+  it("drops a trailing slash from the canonical URL, as the sitemap does", async () => {
+    // /hub/ is the same route as /hub, and only /hub is in the sitemap; the
+    // slashed spelling must not claim to be canonical in its own right.
+    const handle = handler(vi.fn(async () => Response.json([])));
+    const res = await ask(handle, "/hub/");
+    expect(res.headers.get("x-rendered")).toBe("ssr");
+    const text = await res.text();
+    expect(text).toContain(
+      '<link rel="canonical" href="http://localhost:8080/hub"',
+    );
+    expect(text).not.toContain('href="http://localhost:8080/hub/"');
+  });
+
   it("answers a deleted lesson's URL with a real 404, still carrying the shell", async () => {
     // PostgREST finds no row, so the API's lesson route answers 404, which
     // must reach the crawler as one, not as a page insisting it exists.

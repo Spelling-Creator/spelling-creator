@@ -35,8 +35,9 @@ const DEFAULT_DESCRIPTION =
  *   canonical link and og:url at /hub/:id keeps them from competing with each
  *   other in search results.
  * @param {boolean} [props.noindex]     Ask crawlers to keep the page out of the
- *   index — for the signed-in and tool pages, whose content is the visitor's
- *   own. A noindexed page gets no canonical link; the two would contradict.
+ *   index. For the signed-in and tool pages, whose content is the visitor's
+ *   own. A noindexed page gets no canonical link and no og:url; either would
+ *   name it as the page's real address, which contradicts noindex.
  */
 export function DocumentMeta({
   title,
@@ -51,14 +52,18 @@ export function DocumentMeta({
 
   const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
   const desc = description || DEFAULT_DESCRIPTION;
-  const canonical = `${origin}${path || pathname}`;
+  // The routes accept a trailing slash (/hub/, /users/:id/), and the sitemap
+  // lists them without one. Dropping it here keeps the two spellings of a page
+  // from each claiming to be canonical.
+  const canonicalPath = (path || pathname).replace(/(.)\/+$/, "$1");
+  const canonical = `${origin}${canonicalPath}`;
 
   // Default the preview image to a screenshot of the canonical page: the
   // Worker's /og-image endpoint renders the path with headless Chromium. Pass
   // `null` to opt out.
   const ogImage =
     image === undefined
-      ? `${origin}/og-image?path=${encodeURIComponent(path || pathname)}`
+      ? `${origin}/og-image?path=${encodeURIComponent(canonicalPath)}`
       : image;
 
   return (
@@ -75,7 +80,7 @@ export function DocumentMeta({
       <meta property="og:type" content={type} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
-      <meta property="og:url" content={canonical} />
+      {!noindex && <meta property="og:url" content={canonical} />}
       {ogImage && (
         <>
           <meta property="og:image" content={ogImage} />

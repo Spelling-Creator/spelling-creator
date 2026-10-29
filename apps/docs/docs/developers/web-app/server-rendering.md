@@ -143,8 +143,9 @@ so page metadata is ordinary JSX, which is exactly what makes it work under
 SSR, where an effect that writes into `document.head` never runs.
 
 Every page renders one. An indexable page carries a canonical link and a
-matching `og:url` — a lesson's tabs all point theirs at `/hub/:id`, so the
-views of one lesson don't compete with each other in search results — and the
+matching `og:url`, without a trailing slash, since the routes accept one and
+the sitemap lists none. A lesson's tabs all point theirs at `/hub/:id`, so the
+views of one lesson don't compete with each other in search results. The
 signed-in and tool pages (the editor, library, settings, login, moderation and
 the OAuth consent screen) pass `noindex` instead, since their content is the
 visitor's own.
