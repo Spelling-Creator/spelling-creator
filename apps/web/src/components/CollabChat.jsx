@@ -177,7 +177,10 @@ export default function CollabChat({ collab }) {
                       alt={m.name || t("chat.collaboratorFallback")}
                     />
                     <AvatarFallback
-                      className={cn("text-xs text-white", mine && "bg-primary")}
+                      className={cn(
+                        "text-xs text-white",
+                        mine && "bg-primary text-primary-foreground",
+                      )}
                       style={
                         !mine
                           ? { backgroundColor: colorForId(m.uid) }

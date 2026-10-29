@@ -179,7 +179,10 @@ export default defineConfig({
   },
 
   themeConfig: {
-    logo: "/img/logo.svg",
+    // The logo's letters are cut-outs that show the page, so the board is
+    // charcoal on the light theme and light on the dark one. Both are written
+    // by the web app's icons script (apps/web/scripts/icons.mjs).
+    logo: { light: "/img/logo.svg", dark: "/img/logo-dark.svg" },
     siteTitle: "Spelling Creator",
     search: { provider: "local" },
     socialLinks: [

@@ -205,20 +205,18 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
                 thing you need off this row, and a filled pill reads at a
                 glance down a column of them where a 10%-tint outline doesn't.
 
-                The colours follow the convention every repo host uses, which
-                is the point of the redesign — green is open, and the brand
-                charcoal is reserved for merged, the outcome the whole flow is
-                aimed at. (They used to be the other way round.) Closed stays
-                grey rather than the red a repo host would use: closing a
-                proposal here is a routine outcome, not a failure, and nobody
-                using this should have to know GitHub's colour vocabulary to
-                read it as one. */}
+                Green is open, as it is everywhere else this shape appears,
+                and the logo's pencil yellow (--brand) is reserved for merged,
+                the outcome the whole flow is aimed at, so it still has a hue
+                of its own next to Closed. Closed stays gray rather than the
+                red a repo host would use: closing a proposal here is a routine
+                outcome, not a failure, and nobody using this should have to
+                know GitHub's color vocabulary to read it as one. */}
             <Badge
               className={cn(
                 "gap-1 border-transparent",
                 isOpen && "bg-success text-success-foreground",
-                pull.status === "merged" &&
-                  "bg-primary text-primary-foreground",
+                pull.status === "merged" && "bg-brand text-brand-foreground",
                 pull.status === "closed" &&
                   "bg-secondary text-secondary-foreground",
               )}

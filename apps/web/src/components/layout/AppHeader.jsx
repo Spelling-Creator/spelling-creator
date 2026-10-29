@@ -91,6 +91,9 @@ const utilityTrigger = cn(
  * the lesson has its own place in the breadcrumb, and two things claiming to
  * be "where you are" reads as a bug.
  */
+//
+// The current one is underlined in the text color rather than tinted: the
+// chrome's tint is a neutral gray too faint to mark a state by itself.
 function HeaderNavLink({ to, label }) {
   const resolved = useResolvedPath(to);
   const match = useMatch({ path: resolved.pathname, end: true });
@@ -102,7 +105,7 @@ function HeaderNavLink({ to, label }) {
       className={cn(
         "rounded-md px-3 py-1.5 text-sm font-medium no-underline transition-colors",
         match
-          ? "bg-accent text-accent-foreground"
+          ? "text-foreground underline decoration-2 underline-offset-8 hover:bg-accent"
           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
       )}
     >
@@ -125,7 +128,7 @@ function SheetNavLink({ to, icon: Icon, label, onNavigate }) {
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors",
         match
-          ? "bg-accent text-accent-foreground"
+          ? "selected-bar bg-accent font-semibold text-accent-foreground"
           : "text-foreground hover:bg-accent hover:text-accent-foreground",
       )}
     >
@@ -216,8 +219,11 @@ export default function AppHeader() {
           </SheetContent>
         </Sheet>
 
+        {/* aria-label because below `sm` the wordmark is hidden and the mark
+            is decorative, which would leave the link nameless. */}
         <RouterLink
           to="/"
+          aria-label={t("nav.appName")}
           className="flex min-w-0 shrink-0 items-center gap-2 rounded-md px-1 text-foreground no-underline"
         >
           <LogoMark className="size-8" />

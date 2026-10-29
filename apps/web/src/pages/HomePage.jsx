@@ -234,13 +234,14 @@ function LandingView() {
               above), and Button's variants carry their own dark: overrides
               (meant for a normal page background) that would fight it.
               outline-white for the same reason: the app-wide focus ring in
-              globals.css is --ring, which is this gradient's own charcoal.
-              The main action is the logo's pencil yellow, the one place it
-              fills a surface: charcoal text on it is 9.5:1. */}
+              globals.css is --ring, which follows the app theme, and in light
+              mode that is charcoal, which would vanish on this gradient.
+              White shows on it in either theme. The main action is the logo's
+              pencil yellow (--brand): charcoal text on it is 9.5:1. */}
           <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <RouterLink
               to="/editor"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-[#ffca3d] px-8 py-3 text-base font-medium text-[#292929] no-underline transition-colors focus-visible:outline-white hover:bg-[#ffd666]"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-8 py-3 text-base font-medium text-brand-foreground no-underline transition-colors focus-visible:outline-white hover:bg-brand/85"
             >
               <PencilIcon data-icon="inline-start" />
               {t("marketing.hero.openEditor")}

@@ -44,19 +44,20 @@
          doesn't own is written here.
 
          theme-color tints the OS/browser chrome around an installed window, so
-         it has to match whatever is actually at the top of the screen. That
-         used to be AppHeader's block of --primary indigo; the top of the screen
-         is now the page itself (PageBar draws on the background), so these
-         track --background instead — see src/styles/globals.css. Safari picks
-         the first matching tag, so the dark one must come first. iOS ignores
+         it has to match whatever is actually at the top of the screen, which
+         is AppHeader on --card (see src/styles/globals.css). These tags pick
+         by the OS preference; ColorSchemeProvider (src/lib/colorScheme.jsx)
+         rewrites them to the theme the app resolves, so a theme chosen in the
+         app wins. Safari picks the first matching tag, so the dark one must
+         come first. iOS ignores
          the manifest's icons and uses apple-touch-icon; it also ignores
          `display: standalone` unless mobile-web-app-capable is present. -->
     <meta
       name="theme-color"
       media="(prefers-color-scheme: dark)"
-      content="#111111"
+      content="#1b1b1b"
     />
-    <meta name="theme-color" content="#f4f3ef" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Spelling" />
     <meta

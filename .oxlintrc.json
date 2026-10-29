@@ -100,7 +100,8 @@
         "scripts/**/*.js",
         "scripts/**/*.mjs",
         "packages/core/scripts/**/*.mjs",
-        "apps/docs/scripts/**/*.mjs"
+        "apps/docs/scripts/**/*.mjs",
+        "apps/web/scripts/**/*.mjs"
       ],
       "env": { "node": true }
     },

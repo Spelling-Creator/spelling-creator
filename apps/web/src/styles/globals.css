@@ -38,6 +38,8 @@
   --color-flag-foreground: var(--flag-foreground);
   --color-focus: var(--focus);
   --color-focus-foreground: var(--focus-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -233,11 +235,13 @@
      sixty lessons stay legible, and it is most of what the redesign is.
 
      The identity comes from the logo, a stencil letterboard. --primary is the
-     board's charcoal and --accent is a pale tint of its pencil yellow. The
-     chrome stays neutral on purpose: a lesson already uses a color for each
-     question type, plus VAKT red and the spelling teal, and a colored brand
-     would sit among them. The pencil yellow itself is too light for text or
-     a focus ring on white, so in light mode it only ever appears as a tint. */
+     board's charcoal, and the chrome, --accent included, stays neutral on
+     purpose: a lesson already uses a color for each question type, plus VAKT
+     red and the spelling teal, and the --focus amber marks warnings. A colored
+     hover or selection would sit among them and could be read as one. The
+     pencil yellow is kept for the logo, the hero's main button and the Merged
+     pill (--brand). Because --primary is as dark (or as light) as the text,
+     links are underlined and "you are here" states use a bar, not a tint. */
   --background: #f4f3ef;
   --foreground: #1f1f1f;
   --card: #ffffff;
@@ -250,8 +254,8 @@
   --secondary-foreground: #1f1f1f;
   --muted: #f1f0ec;
   --muted-foreground: #6b6a66;
-  --accent: #fff4d1;
-  --accent-foreground: #292929;
+  --accent: #ecebe6;
+  --accent-foreground: #1f1f1f;
   --destructive: #d94b64;
   --destructive-foreground: #ffffff;
   --border: #dddbd5;
@@ -266,6 +270,12 @@
   --flag-foreground: #ffffff;
   --focus: #b9791f;
   --focus-foreground: #1f1f1f;
+
+  /* The logo's pencil yellow, for the few places the brand fills a surface.
+     The same in both themes (charcoal on it is 9.5:1), so the theme blocks
+     below don't restate it. Too light for text or an edge on white. */
+  --brand: #ffca3d;
+  --brand-foreground: #292929;
 
   --surface-muted: #f0efeb;
 
@@ -309,8 +319,8 @@
     --secondary-foreground: #f0efeb;
     --muted: #1e1e1e;
     --muted-foreground: #b0aea8;
-    --accent: #2e2a1f;
-    --accent-foreground: #ffca3d;
+    --accent: #2a2a2a;
+    --accent-foreground: #f0efeb;
     --destructive: #f0788d;
     --destructive-foreground: #1b1b1b;
     --border: #303030;
@@ -349,8 +359,8 @@
   --secondary-foreground: #f0efeb;
   --muted: #1e1e1e;
   --muted-foreground: #b0aea8;
-  --accent: #2e2a1f;
-  --accent-foreground: #ffca3d;
+  --accent: #2a2a2a;
+  --accent-foreground: #f0efeb;
   --destructive: #f0788d;
   --destructive-foreground: #1b1b1b;
   --border: #303030;
@@ -387,8 +397,8 @@
   --secondary-foreground: #1f1f1f;
   --muted: #f1f0ec;
   --muted-foreground: #6b6a66;
-  --accent: #fff4d1;
-  --accent-foreground: #292929;
+  --accent: #ecebe6;
+  --accent-foreground: #1f1f1f;
   --destructive: #d94b64;
   --destructive-foreground: #ffffff;
   --border: #dddbd5;
@@ -406,6 +416,14 @@
 
   --shadow-panel:
     0 8px 24px -6px rgba(20, 20, 20, 0.18), 0 2px 6px rgba(20, 20, 20, 0.08);
+}
+
+/* "You are here" for a row in a list (the current page in the menu sheet, the
+   chosen version, the current find result). --accent is a neutral tint that
+   sits under 3:1 against the surface, too faint to carry a state on its own,
+   so a bar in the text color goes down the row's leading edge as well. */
+@utility selected-bar {
+  box-shadow: inset 3px 0 0 var(--foreground);
 }
 
 /* Shared spacing for rendered rich text — both the live tiptap editor
@@ -457,9 +475,13 @@
   padding: 0.125em 0.375em;
   border-radius: 0.25em;
 }
+/* Underlined, because --primary is as dark (or as light) as the text around
+   it, so color alone wouldn't say "link". */
 .prose-editor a,
 .prose-content a {
   color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .prose-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);

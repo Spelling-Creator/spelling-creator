@@ -308,7 +308,7 @@ function ShadowbannedSection({ accessToken, onToast }) {
               <div className="min-w-0">
                 <RouterLink
                   to={`/hub/${l.id}`}
-                  className="block truncate text-sm font-medium text-primary hover:underline"
+                  className="block truncate text-sm font-semibold text-foreground no-underline hover:underline"
                 >
                   {l.title || t("shadowbanned.untitledLesson")}
                 </RouterLink>
@@ -385,7 +385,7 @@ function DeleteRequestsSection({ accessToken, onToast }) {
                 <div className="min-w-0">
                   <RouterLink
                     to={`/hub/${r.lessonId}`}
-                    className="block truncate text-sm font-medium text-primary hover:underline"
+                    className="block truncate text-sm font-semibold text-foreground no-underline hover:underline"
                   >
                     {r.lessonTitle || t("deleteRequests.deletedLesson")}
                   </RouterLink>

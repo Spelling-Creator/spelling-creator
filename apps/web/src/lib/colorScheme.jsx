@@ -88,7 +88,20 @@ export function ColorSchemeProvider({ children }) {
   }, [scheme]);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", resolved);
+    const root = document.documentElement;
+    root.setAttribute("data-theme", resolved);
+    // theme-color tints the browser and OS chrome around the page, and has to
+    // match the header (--card) under it. index.html's tags can only choose by
+    // the OS preference, so once the app has resolved its own theme, every tag
+    // takes that theme's value instead and a theme chosen against the OS wins.
+    const color = getComputedStyle(root).getPropertyValue("--card").trim();
+    if (color) {
+      for (const meta of document.querySelectorAll(
+        'meta[name="theme-color"]',
+      )) {
+        meta.setAttribute("content", color);
+      }
+    }
   }, [resolved]);
 
   const value = useMemo(

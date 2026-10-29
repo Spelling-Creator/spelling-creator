@@ -308,18 +308,19 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         lang: "en",
         dir: "ltr",
         categories: ["education", "productivity"],
-        // Both match the light --background in src/styles/globals.css, so the
-        // OS chrome and the splash screen are continuous with the page. This
-        // used to be the app bar's indigo, which was right while the bar was a
-        // block of --primary at the top of every screen; PageBar draws on the
-        // background, so the background is what the OS should tint to.
-        theme_color: "#f4f3ef",
+        // Light values from src/styles/globals.css, since a manifest can't
+        // vary by theme: theme_color is --card, the header at the top of every
+        // screen, so the OS chrome runs on from it, and background_color is
+        // --background, so the splash screen matches the page that replaces
+        // it. In the browser, index.html's theme-color tags and
+        // ColorSchemeProvider take over and follow the dark theme too.
+        theme_color: "#ffffff",
         background_color: "#f4f3ef",
         icons: [
           // "any" icons are drawn as-is (they carry their own rounded corners);
           // the maskable one is a full-bleed square the platform crops to its
-          // own shape. Both are generated from the SVGs beside them — see the
-          // docs page for the command.
+          // own shape. All of them are written by scripts/icons.mjs from the
+          // logo's shapes in src/lib/logo.js.
           { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
           { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml" },

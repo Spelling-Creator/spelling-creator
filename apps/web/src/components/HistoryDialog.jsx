@@ -224,7 +224,7 @@ export default function HistoryDialog({
                     className={cn(
                       "cursor-pointer rounded-md border-0 px-2 py-1.5 text-left transition-colors",
                       commit.oid === selected
-                        ? "bg-accent text-accent-foreground"
+                        ? "selected-bar bg-accent text-accent-foreground"
                         : "bg-transparent hover:bg-accent/50",
                     )}
                   >

@@ -61,42 +61,71 @@ as everything else.
 The logo is a stencil letterboard: charcoal, with the letters cut out and a
 yellow pencil poking through them. The palette takes its two colors from it.
 
-| Token                        | Light                    | Dark                         |
-| ---------------------------- | ------------------------ | ---------------------------- |
-| `--primary`                  | `#292929`, the board     | `#f0efeb`, with dark text    |
-| `--accent` (hover, selected) | `#fff4d1`, a pencil tint | `#2e2a1f`, a dim pencil tint |
-| `--accent-foreground`        | `#292929`                | `#ffca3d`, the pencil itself |
+| Token                        | Light                 | Dark                      |
+| ---------------------------- | --------------------- | ------------------------- |
+| `--primary`                  | `#292929`, the board  | `#f0efeb`, with dark text |
+| `--brand`                    | `#ffca3d`, the pencil | the same                  |
+| `--accent` (hover, selected) | `#ecebe6`, neutral    | `#2a2a2a`, neutral        |
 
-The chrome is neutral on purpose. A lesson already gives each question type its
-own color, plus VAKT red and the spelling teal, and a colored brand would sit
-among them. (The old indigo was close enough to the purple of math questions
-that a button and a question could be mistaken for each other.) The pencil
-yellow is only 1.5:1 on white, so in light mode it never carries text or a focus
-ring; it appears as the `--accent` tint. The one place it fills a surface is the
-main button in the home page's hero, where charcoal text on it is 9.5:1.
+The chrome is neutral on purpose, and that includes `--accent`. A lesson already
+gives each question type its own color, plus VAKT red and the spelling teal, and
+`--focus` amber marks warnings. A colored brand or a colored hover would sit
+among them and could be read as one of them. (The old indigo was close enough to
+the purple of math questions that a button and a question could be mistaken for
+each other, and a yellow hover would have done the same with the amber of
+Semi-open questions.)
+
+`--brand` is only 1.5:1 on white, so it never carries text, an edge or a focus
+ring. It fills a surface in three places, always with `--brand-foreground`
+(charcoal, 9.5:1) on it: the logo's pencil, the main button in the home page's
+hero and the Merged pill. It is the same in both themes, so only `:root`
+defines it.
+
+Two things follow from `--primary` being as dark (or as light) as body text:
+
+- **Links are underlined.** Color can't tell a link from the sentence around it
+  any more, so rich text, the lesson view's footnotes and sources, and the
+  `link` variants of `Button` and `Badge` all draw an underline.
+- **"You are here" isn't a tint alone.** `--accent` sits under 3:1 against the
+  surface, too faint to carry a state by itself. The current page in the
+  header's nav is underlined, and a selected row in a list (the menu sheet,
+  the version history, the find results) adds the `selected-bar` utility, a
+  bar in the text color down its leading edge.
 
 ## The logo
 
-There are two versions, both in `apps/web/src`: `favicon.svg`, the square "A"
-mark, and `logo-board.svg`, the full "ABC" board. `components/Logo.jsx` shows
-them as `LogoMark` (the header) and `LogoBoard` (the hero). The letters are real
-cut-outs, so they show whatever is behind the logo. The mark is a charcoal board
-and would lose its letters on the dark header, so it has a white backing behind
-them, like the paper under a stencil. The board only appears in the hero, which
-puts a soft yellow-white light behind it, so it has no backing and the light
-shines through its letters. The PWA icons are made from the
-same mark (see [The manifest and icons](./pwa-and-offline.md#the-manifest-and-icons)),
-as are the docs site's `logo.svg` and `favicon.ico` and the MCP bundle's
-`icon.png`.
+The shapes are written down once, in `apps/web/src/lib/logo.js`: `MARK`, the
+square "A", and `BOARD`, the full "ABC" board. `components/Logo.jsx` draws them
+inline as `LogoMark` (the header and menu sheet) and `LogoBoard` (the hero).
+
+The letters are real cut-outs, so they show whatever is behind the logo, and
+nothing is put behind them in the app. `LogoMark`'s board is `--primary`:
+charcoal on the light header, and light on the dark one, where a charcoal board
+would make its letters disappear. `LogoBoard` only appears in the hero, which
+puts a soft yellow-white light behind it, so it stays charcoal and the light
+shines through its letters.
+
+Every logo file is generated from `logo.js` by
+`pnpm --filter @spelling-creator/web icons` (`apps/web/scripts/icons.mjs`).
+Run it after changing a shape, and don't edit the outputs by hand:
+
+- `src/favicon.svg`, with see-through letters and a board that turns light
+  when the OS is in dark mode
+- the PWA icons in `public/icons/` (see
+  [The manifest and icons](./pwa-and-offline.md#the-manifest-and-icons)), which
+  have no page behind them, so the hero's light sits behind their letters
+- the docs site's `logo.svg` and `logo-dark.svg` (one per docs theme) and its
+  `favicon.ico`
+- the MCP bundle's `icon.png`
 
 ## Other color tokens
 
 Beside shadcn's standard set (`--primary`, `--secondary`, `--muted`,
 `--accent`, `--destructive` and their `-foreground` pairs), the app adds three
 semantic accents: `--success` (green), `--flag` (red, for something wrong) and
-`--focus` (amber). Each has a `-foreground` partner and a Tailwind color
-(`bg-success`, `text-flag` and so on). `--ring` is the same value as
-`--primary`.
+`--focus` (amber), plus `--brand` (above). Each has a `-foreground` partner and
+a Tailwind color (`bg-success`, `text-flag`, `bg-brand` and so on). `--ring` is
+the same value as `--primary`.
 
 ## `--shadow-panel` means "this floats"
 
@@ -169,7 +198,7 @@ every repository host uses:
 | State  | Token         | Why                                                                                                                                                                                                          |
 | ------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Open   | `--success`   | Green is open, as it is everywhere else this shape appears                                                                                                                                                   |
-| Merged | `--primary`   | The brand charcoal, kept for the outcome the flow aims at                                                                                                                                                    |
+| Merged | `--brand`     | The pencil yellow, kept for the outcome the flow aims at, so it has a hue of its own beside gray Closed                                                                                                      |
 | Closed | `--secondary` | Gray. Deliberately **not** the red a repo host would use: closing a proposal here is a routine outcome, not a failure, and nobody using this should have to know GitHub's color vocabulary to read it as one |
 
 ## Fields are defined by their border, not a fill
