@@ -117,12 +117,15 @@ of this existed. A missing server bundle is not a runtime case: `ssr.js`
 imports it statically, so the Worker fails to bundle without it, which is why
 every script that reaches wrangler builds it first.
 
-One consequence is worth knowing: a lesson that genuinely does not exist takes
-that same soft path, because a 404 from the API and a timeout reaching it arrive
-here as the same thrown error. So `/hub/<deleted-id>` is still answered `200`
-with the shell, and the app reports the miss after it hydrates, unlike a path
-that isn't a route at all, which the server 404s outright
-([Unknown paths](./pages-and-routing.md#unknown-paths)).
+The one failure treated as an answer rather than a breakdown is a 404 from the
+API: core's fetch errors carry the HTTP status, so `/hub/<deleted-id>` is
+answered with the shell under a real `404` instead of a page insisting forever
+that it exists (a "soft 404", which is what gets junk URLs indexed). A private
+draft takes the same path on purpose: the render is anonymous, the API reports
+a draft exactly like a missing lesson, and the SPA never reads the status, so
+the draft's author still reaches it after hydration through their own
+authenticated fetch. A path that isn't a route at all is still 404ed outright,
+without a render ([Unknown paths](./pages-and-routing.md#unknown-paths)).
 
 ## Page metadata
 

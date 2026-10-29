@@ -104,10 +104,24 @@ export function lessonsFeedUrl(): string {
   return `${apiUrl()}/feed.xml`;
 }
 
-async function readError(res: Response): Promise<Error> {
+/**
+ * An error from the hub's API, carrying the HTTP status that produced it.
+ * Mostly read as a plain Error; the status is for the rare caller that must
+ * tell "missing" apart from "broken" — the server render answers a deleted
+ * lesson's URL with a real 404 rather than a soft one (apps/api/src/routes/ssr.js).
+ */
+export interface ApiError extends Error {
+  status?: number;
+}
+
+async function readError(res: Response): Promise<ApiError> {
   // The Worker returns a plain-text reason for 4xx/5xx; surface it directly.
   const detail = await res.text().catch(() => "");
-  return new Error(detail || `Request failed (${res.status}).`);
+  const error: ApiError = new Error(
+    detail || `Request failed (${res.status}).`,
+  );
+  error.status = res.status;
+  return error;
 }
 
 /**

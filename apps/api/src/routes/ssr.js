@@ -172,6 +172,28 @@ export async function serverRender(request, env, ctx, url) {
     data = { [route.key]: await route.load() };
     html = await shell(env, url);
   } catch (err) {
+    // A 404 from the API is an answer, not a breakdown: this lesson or profile
+    // does not exist — or is a private draft, which the API reports the same
+    // way on purpose. Repeat it as a real 404 carrying the shell, so a deleted
+    // page stops telling crawlers it exists (a "soft 404"), while a draft's
+    // author still reaches it after hydration, through their own authenticated
+    // fetch — the SPA never reads the status. Every other failure stays a soft
+    // fall-through to the 200 shell: a timeout and a deletion must not be
+    // confused, and core's errors carry the status so they can't be.
+    if (err?.status === 404) {
+      try {
+        return new Response(await shell(env, url), {
+          status: 404,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache",
+            "X-Rendered": "ssr-404",
+          },
+        });
+      } catch {
+        return null;
+      }
+    }
     console.error("SSR data/shell failed", url.pathname, err);
     return null;
   }
