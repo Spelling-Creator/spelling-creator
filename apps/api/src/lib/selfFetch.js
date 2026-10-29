@@ -1,19 +1,28 @@
-// Requests this process makes to itself, answered in-process.
+// Requests this app makes to itself, answered in-process — on both hosts.
 //
 // Server rendering loads a page's data the way the browser would, through core's
 // own client, from the origin the page is being served at (see coreConfig in
-// routes/ssr.js). On the Worker that is one subrequest back into the same
-// Worker. On this host it is an HTTP request to the public address, which from
-// inside a container is usually unreachable: behind the compose stack's gateway
-// the request arrives for localhost:8080, and inside the container nothing
-// listens there. Rendering then fails, falls back to the bare shell, and logs
-// "Could not reach the lesson hub".
+// routes/ssr.js). That is an HTTP request to the app's own public address, and
+// on neither host does such a request actually come back here:
+//
+// - On the Cloudflare Worker, a fetch to the Worker's own hostname is not
+//   routed back into the Worker (that is how Cloudflare prevents loops); it is
+//   sent on to the zone's origin server. This site has no origin server behind
+//   the Worker, so the request times out and Cloudflare answers it with a 522.
+// - On the Node host, the public address is often unreachable from inside the
+//   process: behind the compose stack's gateway the request arrives for
+//   localhost:8080, and inside the container nothing listens there.
+//
+// Either way, rendering then fails, falls back to the bare shell, and logs
+// "SSR data/shell failed". The MCP tool layer's callbacks into the API
+// (SPELLING_CREATOR_API_URL, routes/mcp.js) fail the same way on the Worker.
 //
 // So `fetch` is wrapped. While a request is being handled, its origin and the
 // app's handler are kept in an AsyncLocalStorage, and any fetch to that same
-// origin goes straight to the handler instead of onto the network, which is
-// what the Worker's subrequest amounts to anyway. Everything else (PostgREST,
-// GoTrue, object storage, AI providers) goes through the real `fetch`.
+// origin goes straight to the handler instead of onto the network. Everything
+// else (PostgREST, GoTrue, object storage, AI providers) goes through the real
+// `fetch`, as do fetches made outside a request (the Worker's queue handler),
+// which have no serving origin to match against.
 //
 // No configuration, and it works whatever is in front of the process: a proxy
 // on another port, a domain, TLS, or nothing at all.

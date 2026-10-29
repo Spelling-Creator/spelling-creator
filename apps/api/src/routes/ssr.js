@@ -161,7 +161,8 @@ export async function serverRender(request, env, ctx, url) {
   let data;
   let html;
   try {
-    // One subrequest back into this same Worker, through the very same core
+    // A request back to this same app, answered in-process by selfFetch (see
+    // lib/selfFetch.js, installed by both entries), through the very same core
     // module the browser calls — no server-specific client, which is what
     // keeps the two paths from drifting.
     data = { [route.key]: await route.load() };

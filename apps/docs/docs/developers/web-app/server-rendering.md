@@ -23,16 +23,20 @@ Both hosts do this: the Cloudflare Worker (`handleFrontend` in
 `serverRender` pair from `apps/api/src/routes/ssr.js`.
 
 The data is loaded the way the browser loads it, through core's own client,
-from the origin the page is being served at. On the Worker that is a
-subrequest back into the same Worker. On the Node host the same URL is often
-unreachable from inside the process: behind the compose stack's gateway it
-names a port only the gateway listens on. So the Node host answers any request
-to the origin it is currently serving in-process, with the app's own handler,
-and only sends other origins over the network (`apps/api/src/node/selfFetch.js`).
-Without that, every render there fails with "Could not reach the lesson hub" and
-falls back to the shell. The one exception is `/rest/v1` and `/auth/v1`, which
-the app never serves: on an origin that also fronts PostgREST and GoTrue, those
-still go over the network to them.
+from the origin the page is being served at. Neither host can reach that
+origin over the network from inside itself. Cloudflare does not route a
+Worker's fetch to its own hostname back into the Worker; it sends it on to the
+zone's origin server, and this site has no origin server behind the Worker, so
+the request dies as a 522. On the Node host behind the compose stack's
+gateway, the public address names a port only the gateway listens on. So both
+hosts answer any request to the origin they are currently serving in-process,
+with the app's own handler, and only send other origins over the network
+(`apps/api/src/lib/selfFetch.js` — the Worker installs it in `src/index.js`,
+the Node entry in `src/node/server.js`). Without that, every render fails with
+"SSR data/shell failed" and falls back to the shell, and the hosted MCP
+server's callbacks into the API fail the same way. The one exception is
+`/rest/v1` and `/auth/v1`, which the app never serves: on an origin that also
+fronts PostgREST and GoTrue, those still go over the network to them.
 
 A lesson's tabs (`/hub/:id/practice`, `/discussion`, `/proposals`,
 `/proposals/:prId`, `/history`; see [Pages & routing](./pages-and-routing.md#a-lessons-tabs))
