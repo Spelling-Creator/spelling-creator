@@ -49,7 +49,7 @@ The two halves are verified in different places, because no single runner covers
 both. The Node half runs in the API's Node test project; the Workers half is
 resolved by wrangler's bundler, which CI exercises with
 `pnpm --filter @spelling-creator/api bundle` (a `wrangler deploy --dry-run`).
-`vitest-pool-workers` cannot resolve a `.wasm` out of `node_modules`. It uses
+`@cloudflare/vitest-plugin` cannot resolve a `.wasm` out of `node_modules`. It uses
 Vite's module graph, not wrangler's, so the image tests are excluded from that
 project (`apps/api/vitest.workers.config.js`) rather than made to limp along in
 it.
