@@ -1,5 +1,6 @@
 ---
 title: Packaging the bundle
+description: "Building the .mcpb bundle for Claude Desktop: staging and vendoring dependencies, compiling the core modules, and cutting a release by hand."
 ---
 
 # Packaging the bundle

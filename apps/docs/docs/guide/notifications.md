@@ -1,5 +1,6 @@
 ---
 title: Notifications
+description: "What the notification bell tells you about: replies, new followers, session invite links, proposed changes, and saves by trusted collaborators."
 ---
 
 # Notifications

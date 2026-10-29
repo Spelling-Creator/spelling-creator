@@ -1,5 +1,6 @@
 ---
 layout: home
+description: "Documentation for Spelling Creator: a user guide to writing, sharing and running lessons for Spelling, and developer docs for the code behind it."
 
 hero:
   name: Spelling Creator

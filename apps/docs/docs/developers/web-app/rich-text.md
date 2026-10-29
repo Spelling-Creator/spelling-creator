@@ -1,5 +1,6 @@
 ---
 title: Rich text (comments & bios)
+description: How comments and bios are stored as sanitized HTML, where the no-media rule is enforced, and how links and legacy plain-text values are handled.
 ---
 
 # Rich text (comments & bios)

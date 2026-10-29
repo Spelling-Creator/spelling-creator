@@ -1,5 +1,6 @@
 ---
 title: Variations
+description: How variations map onto git branches of a lesson's repository, how one is merged back in, and how branches travel through pushes and fetches.
 ---
 
 # Variations

@@ -1,5 +1,6 @@
 ---
 title: Getting started
+description: "Setting up the monorepo: requirements, commands, portless URLs, Turborepo, Git LFS, environment files, AI providers, code quality, and CI."
 ---
 
 # Getting started

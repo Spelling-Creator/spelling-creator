@@ -1,5 +1,6 @@
 ---
 title: Pull requests
+description: "How proposed changes work: a fork's packfile snapshot, review and merge in the reviewer's editor, trying one in a variation, and who can do what."
 ---
 
 # Pull requests

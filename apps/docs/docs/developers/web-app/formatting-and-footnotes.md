@@ -1,5 +1,6 @@
 ---
 title: Formatting, footnotes & sources
+description: How lesson text stores formatting, footnotes, sources, read-aloud hints and formulas, and how each survives export, import and translation.
 ---
 
 # Formatting, footnotes & sources

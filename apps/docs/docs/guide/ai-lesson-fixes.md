@@ -1,5 +1,6 @@
 ---
 title: AI lesson fixes
+description: How the Fix with AI button repairs problems the lesson checks find, which findings it covers, and how each fix is verified before you apply it.
 ---
 
 # AI lesson fixes

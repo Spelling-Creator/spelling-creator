@@ -1,5 +1,6 @@
 ---
 title: Profiles and display names
+description: How display names and bios live in Supabase user metadata, how the public profile pages and Atom feeds are built, and how following works.
 ---
 
 # Profiles and display names

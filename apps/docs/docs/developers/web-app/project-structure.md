@@ -1,5 +1,6 @@
 ---
 title: Project structure
+description: A map of the web app's source tree and the shared core package, the config seam, and the conventions behind text fields and focus rings.
 ---
 
 # Project structure

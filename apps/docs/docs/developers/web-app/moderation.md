@@ -1,5 +1,6 @@
 ---
 title: Moderation
+description: "The hub's moderator and admin tiers: shadowbanning, deletion requests, name and IP bans, password resets, and the /mod API endpoints."
 ---
 
 # Moderation

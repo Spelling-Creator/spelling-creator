@@ -1,5 +1,6 @@
 ---
 title: VAKT activities
+description: What a VAKT activity is (a movement or sensory break, not a question), how it prints in red, and the pictures and links it can carry.
 ---
 
 # VAKT activities

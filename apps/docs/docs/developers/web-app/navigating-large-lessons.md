@@ -1,5 +1,6 @@
 ---
 title: Navigating large lessons
+description: "How the editor keeps a 37-screen lesson navigable: sticky section headers, question numbers, collapsible sections, the outline and find in lesson."
 ---
 
 # Navigating large lessons

@@ -1,5 +1,6 @@
 ---
 title: Live sessions with an assistant
+description: How to bring an AI assistant into a live editing session, watch its edits land in your editor, work alongside it, and remove it when you're done.
 ---
 
 # Live sessions with an assistant

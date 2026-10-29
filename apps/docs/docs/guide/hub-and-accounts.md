@@ -1,5 +1,6 @@
 ---
 title: Lesson hub and accounts
+description: Browsing the lesson hub, signing in with a magic link, publishing lessons or keeping drafts, comments, ratings, forking, and trusted collaborators.
 ---
 
 # Lesson hub and accounts

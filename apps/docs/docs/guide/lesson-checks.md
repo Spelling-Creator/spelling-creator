@@ -1,5 +1,6 @@
 ---
 title: Lesson checks
+description: What the editor's Check panel looks for in a lesson, the difference between problems and suggestions, and the one-click fixes for some findings.
 ---
 
 # Lesson checks

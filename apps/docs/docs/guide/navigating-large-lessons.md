@@ -1,5 +1,6 @@
 ---
 title: Navigating large lessons
+description: "The editor's tools for moving around a long lesson: pinned section headers, folding, the section list, question numbers and Find in lesson."
 ---
 
 # Navigating large lessons

@@ -1,5 +1,6 @@
 ---
 title: Server rendering
+description: How the Worker server-renders the hub, lesson and profile pages, why only those routes, and what had to change for hydration to agree.
 ---
 
 # Server rendering

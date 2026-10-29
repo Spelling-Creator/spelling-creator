@@ -1,5 +1,6 @@
 ---
 title: Getting started
+description: The web app's dev, build and preview scripts, its environment variables, and how each feature degrades when left unconfigured.
 ---
 
 # Getting started

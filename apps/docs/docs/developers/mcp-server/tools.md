@@ -1,5 +1,6 @@
 ---
 title: Tools
+description: "Every MCP tool the server offers: writing and patching lessons, versioning, proposals, fact checking, images, and the markup assistants write."
 ---
 
 # Tools

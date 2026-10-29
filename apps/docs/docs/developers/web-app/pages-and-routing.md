@@ -1,5 +1,6 @@
 ---
 title: Pages & routing
+description: The route table, the single AppShell layout, the content column widths, 404 handling, query-string deep links and which routes load lazily.
 ---
 
 # Pages & routing

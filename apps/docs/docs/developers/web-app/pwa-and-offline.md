@@ -1,5 +1,6 @@
 ---
 title: Installable app & offline use
+description: "How the app installs as a PWA and works offline: the precache, the navigation fallback denylist, runtime caching, model storage and updates."
 ---
 
 # Installable app & offline use

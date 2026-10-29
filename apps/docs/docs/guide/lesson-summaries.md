@@ -1,5 +1,6 @@
 ---
 title: Lesson summaries
+description: How a published lesson can be summarized by an AI model running in your own browser, the styles and lengths offered, and the one-time model download.
 ---
 
 # Lesson summaries

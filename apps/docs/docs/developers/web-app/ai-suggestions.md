@@ -1,5 +1,6 @@
 ---
 title: AI suggestions
+description: "The three editor AI helpers (lesson ideas, section text, questions): the shared endpoint, challenge and rate limit, caching, and provider fallback."
 ---
 
 # AI suggestions

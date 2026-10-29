@@ -1,5 +1,6 @@
 ---
 title: Development
+description: Running and testing the MCP server, where each source file lives, how the standards file and views reach both runtimes, and version bumps.
 ---
 
 # Development

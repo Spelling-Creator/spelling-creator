@@ -1,5 +1,6 @@
 ---
 title: Comment translation (on-device AI)
+description: "How comments translate on the reader's device: the browser's Translator API, the transformers.js fallback, the language table, and manual picks."
 ---
 
 # Comment translation (on-device AI)

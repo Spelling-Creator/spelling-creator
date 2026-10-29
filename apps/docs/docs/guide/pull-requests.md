@@ -1,5 +1,6 @@
 ---
 title: Proposing changes
+description: How to fork a published lesson, propose your changes back to the original, and how its author reviews, merges or declines a proposal.
 ---
 
 # Proposing changes

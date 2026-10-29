@@ -1,5 +1,6 @@
 ---
 title: Local setup
+description: "Running the stdio MCP server locally: installing, signing in for a Supabase session, and pointing Claude Desktop or Claude Code at it."
 ---
 
 # Local setup (stdio)

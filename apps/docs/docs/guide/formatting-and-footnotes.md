@@ -1,5 +1,6 @@
 ---
 title: Formatting, footnotes & sources
+description: "What lesson text can carry: bold, italic, footnotes that cite sources, read-aloud fixes, pauses and typeset formulas, and where each one shows up."
 ---
 
 # Formatting, footnotes & sources

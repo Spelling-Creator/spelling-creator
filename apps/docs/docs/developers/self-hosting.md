@@ -1,5 +1,6 @@
 ---
 title: Self-hosting
+description: "Running your own instance on Node with Docker Compose: Postgres, PostgREST, GoTrue, S3 storage, HTTPS, sign-in modes, AI checks, and federation."
 ---
 
 # Self-hosting

@@ -1,5 +1,6 @@
 ---
 title: What is Spelling Creator?
+description: "An open-source tool for writing, sharing and running lessons for Spelling: the ways nonspeaking people communicate by pointing to letters on a letterboard or keyboard."
 ---
 
 # What is Spelling Creator?

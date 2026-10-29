@@ -1,5 +1,6 @@
 ---
 title: Profiles
+description: Display names, bios and public profile pages, how following people works, and what shows up on your home page from the people you follow.
 ---
 
 # Profiles

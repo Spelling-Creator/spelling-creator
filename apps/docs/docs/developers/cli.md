@@ -1,5 +1,6 @@
 ---
 title: Command line tool
+description: "The spelling-creator command line tool: its check, fix and convert commands, what it reads, the rolldown build, and publishing to npm."
 ---
 
 # Command line tool

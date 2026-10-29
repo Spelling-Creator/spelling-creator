@@ -1,5 +1,6 @@
 ---
 title: Overview
+description: "A map of the monorepo: each app and package, how the pieces fit together, the shared core package, and where the platform seam sits."
 ---
 
 # Developer overview

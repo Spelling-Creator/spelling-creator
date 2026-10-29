@@ -1,5 +1,6 @@
 ---
 title: Install and use offline
+description: How to install Spelling Creator as an app on a computer, phone or tablet, what works without an internet connection, and how to free up model space.
 ---
 
 # Install and use offline

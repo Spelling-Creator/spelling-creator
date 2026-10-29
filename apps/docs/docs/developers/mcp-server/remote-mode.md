@@ -1,5 +1,6 @@
 ---
 title: Remote (hosted) mode
+description: "The hosted MCP endpoint at /mcp: OAuth 2.1 with a consent page, the Worker-side implementation on Durable Objects, and the dependency patches."
 ---
 
 # Remote (hosted) mode

@@ -1,5 +1,6 @@
 ---
 title: Translation
+description: How comments and published lessons are translated on your own device, what is translated and what stays as written, and the one-time model downloads.
 ---
 
 # Translation

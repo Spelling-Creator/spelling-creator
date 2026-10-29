@@ -1,5 +1,6 @@
 ---
 title: Frontend migration
+description: "The decision record on staying with React and adding SSR: bundle measurements, the options weighed, and the move to Vite 8 and VitePress."
 ---
 
 # Frontend migration

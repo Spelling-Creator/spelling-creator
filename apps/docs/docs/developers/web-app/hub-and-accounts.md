@@ -1,5 +1,6 @@
 ---
 title: Lesson hub and accounts
+description: "How the lesson hub works: Supabase sign-in, the API's session checks, comments, forking, the endpoint contract and the Postgres schema."
 ---
 
 # Lesson hub and accounts
