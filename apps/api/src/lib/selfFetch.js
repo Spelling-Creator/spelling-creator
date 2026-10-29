@@ -1,4 +1,4 @@
-// Requests this app makes to itself, answered in-process — on both hosts.
+// Requests this app makes to itself, answered in-process on both hosts.
 //
 // Server rendering loads a page's data the way the browser would, through core's
 // own client, from the origin the page is being served at (see coreConfig in
@@ -14,15 +14,23 @@
 //   localhost:8080, and inside the container nothing listens there.
 //
 // Either way, rendering then fails, falls back to the bare shell, and logs
-// "SSR data/shell failed". The MCP tool layer's callbacks into the API
-// (SPELLING_CREATOR_API_URL, routes/mcp.js) fail the same way on the Worker.
+// "SSR data/shell failed". The remote MCP server's tools, which call back into
+// the API at SPELLING_CREATOR_API_URL (routes/mcp.js), fail the same way on the
+// Worker.
 //
 // So `fetch` is wrapped. While a request is being handled, its origin and the
 // app's handler are kept in an AsyncLocalStorage, and any fetch to that same
 // origin goes straight to the handler instead of onto the network. Everything
 // else (PostgREST, GoTrue, object storage, AI providers) goes through the real
-// `fetch`, as do fetches made outside a request (the Worker's queue handler),
-// which have no serving origin to match against.
+// `fetch`.
+//
+// A fetch made outside any request's context has no serving origin to match,
+// and that is not only the Worker's queue handler. The MCP tools run in the
+// HubMcp Durable Object, which the Worker reaches by relaying messages to it,
+// so the Worker request's context never extends to them. For those callers
+// there are standing routes (`serveSelfAt`): an origin the app always answers
+// in-process, whatever context the fetch was made in. A request's own origin
+// still wins when one is being served.
 //
 // No configuration, and it works whatever is in front of the process: a proxy
 // on another port, a domain, TLS, or nothing at all.
@@ -37,6 +45,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 const serving = new AsyncLocalStorage();
+
+// Origins the app answers in-process even outside a request's context, keyed by
+// origin (see serveSelfAt).
+const standing = new Map();
 
 // Marks the wrapper so installing it twice (a test building several handlers)
 // doesn't wrap the wrapper.
@@ -55,9 +67,9 @@ function urlOf(input) {
 }
 
 /**
- * A `fetch` that answers requests to the origin currently being served with the
- * app's own handler, apart from PostgREST's and GoTrue's paths, and passes every
- * other request to `baseFetch`.
+ * A `fetch` that answers requests to the origin currently being served, or to a
+ * standing route, with the app's own handler, apart from PostgREST's and
+ * GoTrue's paths, and passes every other request to `baseFetch`.
  *
  * @param {typeof fetch} baseFetch
  * @returns {typeof fetch}
@@ -65,15 +77,17 @@ function urlOf(input) {
 export function createSelfFetch(baseFetch) {
   const selfFetch = (input, init) => {
     const current = serving.getStore();
-    const url = current && urlOf(input);
-    if (
-      url &&
-      url.origin === current.origin &&
-      !UPSTREAM_PATH.test(url.pathname)
-    ) {
-      // Only a request to ourselves is rebuilt as a Request, so every other
-      // call reaches the real fetch exactly as it was made.
-      return current.handle(new Request(input, init));
+    if (current || standing.size > 0) {
+      const url = urlOf(input);
+      if (url && !UPSTREAM_PATH.test(url.pathname)) {
+        const handle =
+          current && url.origin === current.origin
+            ? current.handle
+            : standing.get(url.origin);
+        // Only a request to ourselves is rebuilt as a Request, so every other
+        // call reaches the real fetch exactly as it was made.
+        if (handle) return handle(new Request(input, init));
+      }
     }
     return baseFetch(input, init);
   };
@@ -109,4 +123,23 @@ export function servingSelf(handle) {
       handle(request),
     );
   return serve;
+}
+
+/**
+ * Answer every fetch to `origin` in-process with `handle`, in any context, until
+ * the returned function is called. For callers that run outside a request's
+ * context, like the MCP tools in the HubMcp Durable Object (routes/mcp.js). The
+ * handler is wrapped with servingSelf, so the requests it serves can make
+ * self-requests of their own. Registering the same origin again replaces it.
+ *
+ * @param {string} origin  An origin, such as "https://spellingcreator.org".
+ * @param {(request: Request) => Promise<Response>} handle
+ * @returns {() => void}  Removes the route.
+ */
+export function serveSelfAt(origin, handle) {
+  const serve = servingSelf(handle);
+  standing.set(origin, serve);
+  return () => {
+    if (standing.get(origin) === serve) standing.delete(origin);
+  };
 }

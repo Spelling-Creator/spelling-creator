@@ -30,11 +30,14 @@ zone's origin server, and this site has no origin server behind the Worker, so
 the request dies as a 522. On the Node host behind the compose stack's
 gateway, the public address names a port only the gateway listens on. So both
 hosts answer any request to the origin they are currently serving in-process,
-with the app's own handler, and only send other origins over the network
-(`apps/api/src/lib/selfFetch.js` — the Worker installs it in `src/index.js`,
-the Node entry in `src/node/server.js`). Without that, every render fails with
-"SSR data/shell failed" and falls back to the shell, and the hosted MCP
-server's callbacks into the API fail the same way. The one exception is
+with the app's own handler, and only send other origins over the network. That
+is `apps/api/src/lib/selfFetch.js`, which the Worker installs in `src/index.js`
+and the Node entry in `src/node/server.js`. Without it, every render fails with
+"SSR data/shell failed" and falls back to the shell. The hosted MCP server's
+tools hit the same wall from the other side: they call the API from the HubMcp
+Durable Object, where no Worker request is being served, so they register the
+API origin as a standing route that is always answered in-process (see
+[Remote mode](../mcp-server/remote-mode.md)). The one exception is
 `/rest/v1` and `/auth/v1`, which the app never serves: on an origin that also
 fronts PostgREST and GoTrue, those still go over the network to them.
 

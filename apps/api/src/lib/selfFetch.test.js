@@ -1,13 +1,13 @@
 // The wrapper itself, driven directly: requests to the origin being served are
 // answered in-process, and nothing else is touched. Runs in both test projects,
-// because both entries install it — the Worker's own-origin fetches die as 522s
-// without it (src/index.js), the Node host's inside a container (src/node/
-// server.js). The integration half, which server-renders a lesson page through
-// the Node entry, lives in src/node/selfFetch.test.js.
+// because both entries install it. Without it, the Worker's own-origin fetches
+// fail with a 522 (src/index.js) and the Node host's fail inside a container
+// (src/node/server.js). The integration half, which server-renders a lesson
+// page through the Node entry, lives in src/node/selfFetch.test.js.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createSelfFetch, servingSelf } from "./selfFetch.js";
+import { createSelfFetch, serveSelfAt, servingSelf } from "./selfFetch.js";
 
 describe("createSelfFetch", () => {
   const network = vi.fn(
@@ -92,5 +92,74 @@ describe("createSelfFetch", () => {
     expect(await (await fetch("http://localhost:8080/b")).text()).toBe(
       "network:http://localhost:8080/b",
     );
+  });
+});
+
+describe("serveSelfAt", () => {
+  const network = vi.fn(
+    async (input) =>
+      new Response(`network:${input instanceof Request ? input.url : input}`),
+  );
+  const fetch = createSelfFetch(network);
+
+  afterEach(() => network.mockClear());
+
+  // The case it exists for: the MCP tools fetch the API from a Durable Object,
+  // where no request is being served, so only a standing route can catch it.
+  it("answers its origin in-process with no request being served", async () => {
+    const remove = serveSelfAt("https://hub.test", async (request) => {
+      return new Response(`standing:${new URL(request.url).pathname}`);
+    });
+    try {
+      expect(await (await fetch("https://hub.test/lessons")).text()).toBe(
+        "standing:/lessons",
+      );
+      expect(network).not.toHaveBeenCalled();
+
+      // Other origins, and the upstreams' paths on this one, still go out.
+      await fetch("https://other.test/x");
+      await fetch("https://hub.test/rest/v1/lessons");
+      expect(network).toHaveBeenCalledTimes(2);
+    } finally {
+      remove();
+    }
+    // Removed: the network again.
+    expect(await (await fetch("https://hub.test/lessons")).text()).toBe(
+      "network:https://hub.test/lessons",
+    );
+  });
+
+  it("serves its requests with their own context, so they can call themselves", async () => {
+    // The standing handler fetches /b on its own origin while serving /a,
+    // which only works if the request it serves carries a serving context.
+    const remove = serveSelfAt("https://hub.test", async (request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname === "/a") return fetch("https://hub.test/b");
+      return new Response("inner");
+    });
+    try {
+      expect(await (await fetch("https://hub.test/a")).text()).toBe("inner");
+      expect(network).not.toHaveBeenCalled();
+    } finally {
+      remove();
+    }
+  });
+
+  it("gives way to the origin of the request being served", async () => {
+    const remove = serveSelfAt("http://localhost:8080", async () => {
+      return new Response("standing");
+    });
+    const handler = servingSelf(async (request) =>
+      new URL(request.url).pathname === "/a"
+        ? fetch("http://localhost:8080/b")
+        : new Response("request"),
+    );
+    try {
+      expect(
+        await (await handler(new Request("http://localhost:8080/a"))).text(),
+      ).toBe("request");
+    } finally {
+      remove();
+    }
   });
 });
