@@ -90,6 +90,14 @@ async function prerender(request, env, ctx, url) {
       waitUntil: "networkidle0",
       timeout: 20000,
     });
+    // index.html's site-wide title/social defaults are still in this DOM, next
+    // to the page's own tags (React hoists <DocumentMeta>'s into <head>), and a
+    // scraper believes the first og:title it finds. Remove the default set —
+    // marked data-seo-default — before the snapshot, exactly as ssr.js strips
+    // it from the raw shell.
+    await page.$$eval("[data-seo-default]", (defaults) => {
+      for (const el of defaults) el.remove();
+    });
     const html = await page.content();
 
     const response = new Response(html, {
@@ -104,9 +112,12 @@ async function prerender(request, env, ctx, url) {
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch (err) {
-    // If rendering fails (timeout, quota, etc.) fall back to the SPA shell so
-    // the crawler still receives valid HTML rather than an error.
-    return env.ASSETS.fetch(request);
+    // If rendering fails (timeout, quota, etc.) fall back to the ordinary
+    // frontend answer so the crawler still receives valid HTML. Through
+    // serveApp, not ASSETS directly: a client-side route like /hub has no file
+    // behind it, so the asset layer answers it with an empty 404 — which is
+    // what crawlers were being served whenever the browser pool hiccuped.
+    return serveApp(request, env, url);
   } finally {
     if (browser) await browser.close();
   }

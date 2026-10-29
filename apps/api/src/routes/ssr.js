@@ -132,12 +132,16 @@ async function shell(env, url) {
 // the generic one — so the generic set comes out and the page's own goes in.
 // Everything else in <head> (viewport, theme-color, icons, feeds, scripts) is
 // untouched.
+//
+// The defaults are recognised by their data-seo-default marker, not by tag
+// names: the crawler prerenderer (routes/render.js) removes the same set from
+// a live DOM where the page's own title and og tags are already present, and
+// matching by name there would take the page's tags with it. One marker, two
+// removal sites, same meaning.
 function stripDefaultMetadata(html) {
   return html
-    .replace(/<title>[\s\S]*?<\/title>\s*/i, "")
-    .replace(/<meta\s+name="description"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:[^"]*"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+name="twitter:[^"]*"[^>]*>\s*/gi, "");
+    .replace(/<title\s+data-seo-default[^>]*>[\s\S]*?<\/title>\s*/i, "")
+    .replace(/<meta\s+data-seo-default[^>]*>\s*/gi, "");
 }
 
 // Serialise the page's data for the client to hydrate against. The escape is
