@@ -2,7 +2,11 @@
 // never touches the database directly — it calls these Worker routes, which hold
 // the privileged service-role key (see README "Lesson hub").
 
-import { supabaseHeaders, verifySupabaseUser } from "../lib/supabase.js";
+import {
+  isMissingColumn,
+  supabaseHeaders,
+  verifySupabaseUser,
+} from "../lib/supabase.js";
 import {
   authorFromUser,
   bearerToken,
@@ -422,7 +426,7 @@ export async function handleLessons(request, env, url, cors, ctx) {
     const patch = {
       title,
       doc,
-      // When the content last changed — which created_at stops saying the
+      // When the content last changed, which created_at stops saying the
       // moment a lesson is edited. The sitemap serves it as <lastmod>, so
       // crawlers come back for edited lessons (routes/seo.js).
       updated_at: new Date().toISOString(),
@@ -477,9 +481,8 @@ export async function handleLessons(request, env, url, cors, ctx) {
 
     // The ownership check above already gated this, so the PATCH is filtered on
     // the id alone (a trusted collaborator is, by definition, not the author).
-    let res;
-    try {
-      res = await fetch(
+    const write = (body) =>
+      fetch(
         `${base}/rest/v1/lessons?id=eq.${encodeURIComponent(
           id,
         )}&select=id,author_id,title,author,section_count,published,shadowbanned,forked_from,forked_from_url,created_at`,
@@ -490,9 +493,22 @@ export async function handleLessons(request, env, url, cors, ctx) {
             "Content-Type": "application/json",
             Prefer: "return=representation",
           },
-          body: JSON.stringify(patch),
+          body: JSON.stringify(body),
         },
       );
+    let res;
+    try {
+      res = await write(patch);
+      // A database that hasn't had the updated_at migration yet (schema.sql)
+      // rejects the whole PATCH over that one column. Save without it rather
+      // than fail every edit: the timestamp only feeds the sitemap.
+      if (await isMissingColumn(res, "updated_at")) {
+        console.warn(
+          "lessons.updated_at is missing; apply apps/api/schema.sql. Saving without it.",
+        );
+        const { updated_at: _skipped, ...rest } = patch;
+        res = await write(rest);
+      }
     } catch (e) {
       return textResponse("Could not reach the lesson store.", 502, cors);
     }

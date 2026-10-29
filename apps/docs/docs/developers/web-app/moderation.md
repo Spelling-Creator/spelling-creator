@@ -12,9 +12,10 @@ send-link messages and proposals, all via `glin-profanity` in
 privilege tiers and a moderation page at `/moderation`
 (`apps/web/src/pages/ModerationPage.jsx`). The page is linked from the account
 menu only for moderators and admins, and it asks crawlers to stay out of the
-index with a `noindex` meta tag. (`robots.txt` used to disallow it instead,
-but a crawler can only read a page's `noindex` if it is allowed to fetch the
-page.)
+index twice: an `X-Robots-Tag: noindex` header on the shell
+(`routes/spa.js`), for crawlers that never run the app, and a `noindex` meta
+tag once it renders. (`robots.txt` used to disallow it instead, but a crawler
+can only read either signal on a page it is allowed to fetch.)
 
 The browser holds no authority of its own. `lib/auth.jsx` asks
 `GET /mod/whoami` for the caller's role whenever the access token changes and

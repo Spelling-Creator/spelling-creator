@@ -27,6 +27,28 @@ export function supabaseHeaders(env) {
 }
 
 /**
+ * Whether a failed PostgREST response is it not knowing `column`: a database
+ * that hasn't had schema.sql's latest `alter`s applied yet. Reading a column
+ * that doesn't exist is Postgres's 42703; writing one is PostgREST's PGRST204
+ * ("Could not find the ... column ... in the schema cache"). Both name the
+ * column in the message, which is how a different missing column is told apart.
+ *
+ * For the few places that write or read a column newer than the deploy that
+ * uses it, so a Worker shipped before the migration degrades instead of
+ * failing. Reads the body, so pass a response that is going to be discarded.
+ *
+ * @param {Response} res
+ * @param {string} column
+ */
+export async function isMissingColumn(res, column) {
+  if (res.ok || res.status !== 400) return false;
+  const error = await res.json().catch(() => null);
+  if (!error || (error.code !== "42703" && error.code !== "PGRST204"))
+    return false;
+  return String(error.message || "").includes(column);
+}
+
+/**
  * Verify a Supabase session JWT by asking Supabase Auth who it belongs to.
  *
  * We call GET /auth/v1/user with the client-supplied token rather than checking

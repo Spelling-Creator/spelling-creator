@@ -2,16 +2,17 @@
 // URL per published lesson (and one per distinct author), a robots.txt that points
 // crawlers at it, and an Atom feed of the latest published lessons ("RSS" in the UI).
 
-import { supabaseHeaders } from "../lib/supabase.js";
+import { isMissingColumn, supabaseHeaders } from "../lib/supabase.js";
 import { xmlEscape } from "../lib/xml.js";
 
 /**
  * GET /sitemap.xml — a dynamically generated sitemap covering the static pages
  * (root and /hub) plus one URL per published lesson (/hub/:id). Visibility
- * matches the public hub listing — published and not shadowbanned — so neither
- * drafts nor shadowbanned lessons leak into the sitemap. <lastmod> is
- * `updated_at` (when the content last changed; see routes/lessons.js) with
- * `created_at` as the fallback for rows never edited since that column arrived.
+ * matches the public hub listing (published and not shadowbanned), so neither
+ * drafts nor shadowbanned lessons leak into the sitemap. <lastmod> is the full
+ * `updated_at` timestamp (when the content last changed; see routes/lessons.js)
+ * with `created_at` as the fallback for rows never edited since that column
+ * arrived, or for a database that doesn't have the column yet.
  *
  * URLs are built from the request's own origin so the sitemap is correct on any
  * host (custom domain or workers.dev). If Supabase is unreachable we still serve
@@ -26,12 +27,18 @@ export async function handleSitemap(request, env, url) {
 
   if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
     const base = env.SUPABASE_URL.replace(/\/$/, "");
-    const query =
-      "published=eq.true&shadowbanned=eq.false&select=id,author_id,created_at,updated_at&order=created_at.desc";
+    const list = (columns) =>
+      fetch(
+        `${base}/rest/v1/lessons?published=eq.true&shadowbanned=eq.false&select=${columns}&order=created_at.desc`,
+        { headers: supabaseHeaders(env) },
+      );
     try {
-      const res = await fetch(`${base}/rest/v1/lessons?${query}`, {
-        headers: supabaseHeaders(env),
-      });
+      let res = await list("id,author_id,created_at,updated_at");
+      // Before the updated_at migration (schema.sql) the select is rejected
+      // outright, which would drop every lesson from the sitemap. Fall back to
+      // created_at alone.
+      if (await isMissingColumn(res, "updated_at"))
+        res = await list("id,author_id,created_at");
       if (res.ok) {
         const rows = await res.json().catch(() => []);
         // One entry per published lesson, plus one profile entry per distinct
@@ -44,9 +51,10 @@ export async function handleSitemap(request, env, url) {
             changefreq: "weekly",
             priority: "0.6",
           };
+          // The full timestamp, which the sitemap format allows, not just the
+          // date: a lesson edited twice in one day still reports the second.
           const touched = row.updated_at || row.created_at;
-          if (touched)
-            entry.lastmod = new Date(touched).toISOString().slice(0, 10);
+          if (touched) entry.lastmod = new Date(touched).toISOString();
           urls.push(entry);
           if (row.author_id && !seenAuthors.has(row.author_id)) {
             seenAuthors.add(row.author_id);
@@ -172,9 +180,10 @@ ${entries
  * domain or workers.dev).
  *
  * Deliberately no Disallow lines. The pages that should stay out of results
- * (the editor, settings, moderation and the rest) say so themselves with a
- * robots noindex meta tag (apps/web/src/lib/seo.jsx) — a signal a crawler can
- * only read if it is allowed to fetch the page. /moderation used to be
+ * (the editor, settings, moderation and the rest) say so themselves, with an
+ * X-Robots-Tag header on the shell (routes/spa.js) and a robots noindex meta
+ * tag once the app renders (apps/web/src/lib/seo.jsx). A crawler can only read
+ * either signal if it is allowed to fetch the page. /moderation used to be
  * disallowed here, which would have hidden exactly that.
  */
 export function handleRobots(request, env, url) {
