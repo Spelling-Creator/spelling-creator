@@ -84,6 +84,17 @@ function participant(ws) {
         if (roster.requests?.length) return roster.requests[0];
       }
     },
+    // Admit a slot and wait for the roster that shows it in. An agent asks over
+    // separate requests, and those can reach the room before a frame sent on
+    // this socket, so an agent test that asks straight after admitting races.
+    async admit(slot) {
+      ws.send(slotFrame(T.ADMIT, slot));
+      for (;;) {
+        const f = await this.nextOf(T.PRESENCE);
+        const roster = JSON.parse(decoder.decode(f.subarray(1)));
+        if (roster.participants.some((p) => p.slot === slot)) return;
+      }
+    },
   };
 }
 
@@ -110,6 +121,10 @@ async function connect(
 async function join(code, opts) {
   const { status, ws } = await connect(code, opts);
   expect(status).toBe(101);
+  // Binary frames arrive as Blobs by default under this compatibility date, the
+  // same as in a browser. The web client asks for ArrayBuffers (lib/collab.js),
+  // so the test does too.
+  ws.binaryType = "arraybuffer";
   ws.accept();
   return participant(ws);
 }
@@ -400,7 +415,7 @@ async function hostedWithAgent(code) {
   const joined = await agentJoin(code);
   expect(joined.status).toBe(201);
   const pending = await host.nextRequest();
-  host.send(slotFrame(T.ADMIT, pending.slot));
+  await host.admit(pending.slot);
   const me = agent(code, joined.body.token);
   return { host, hostSlot, hostPeer, me, slot: joined.body.slot };
 }
@@ -451,7 +466,7 @@ describe("CollabRoom agents", () => {
     const me = agent("agent-admit", joined.body.token);
     expect((await me.state()).body.admitted).toBe(false);
 
-    host.send(slotFrame(T.ADMIT, pending.slot));
+    await host.admit(pending.slot);
 
     const { status, body } = await me.state();
     expect(status).toBe(200);
@@ -643,8 +658,7 @@ describe("CollabRoom agents", () => {
     // agent's token learns nothing about it.
     const second = await agentJoin("agent-leave-waiting");
     expect(second.body.slot).toBe(joined.body.slot);
-    const pending = await host.nextRequest();
-    host.send(slotFrame(T.ADMIT, pending.slot));
+    await host.admit(second.body.slot);
     expect(
       (await agent("agent-leave-waiting", second.body.token).state()).body
         .admitted,
@@ -670,7 +684,7 @@ describe("CollabRoom agents", () => {
       );
       if (roster.requests.length === 2) break;
     }
-    host.send(slotFrame(T.ADMIT, admittedJoin.body.slot));
+    await host.admit(admittedJoin.body.slot);
     const pendingAgent = agent(code, pendingJoin.body.token);
     const admittedAgent = agent(code, admittedJoin.body.token, {
       ...AGENT,
@@ -774,7 +788,7 @@ describe("CollabRoom agents", () => {
 
     // Admission makes a reader, and the caret parked earlier is written down
     // at that moment, so it would survive an eviction before the first ask.
-    host.send(slotFrame(T.ADMIT, pending.slot));
+    await host.admit(pending.slot);
     const me = agent(code, joined.body.token);
     expect((await me.state()).body.cursors[hostSlot].field).toBe("b1");
     expect((await stored())[hostSlot].field).toBe("b1");

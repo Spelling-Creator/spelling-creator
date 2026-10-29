@@ -310,6 +310,14 @@ the pool package widens that range.
 > on `vitest ^4.1.0 || ^5.0.0`. So the way for `apps/api` (and `packages/core`)
 > to reach Vitest 4 is to move to that package, not to wait.
 
+> And that move is done. A Dependabot bump took the old pool package to 0.23,
+> which had already dropped Vitest 3 and its `/config` entry, so the Worker
+> suite stopped loading. `apps/api` now runs `@cloudflare/vitest-plugin` on
+> Vitest 5, with the pool options passed to its `cloudflareTest()` Vite plugin.
+> `isolatedStorage: false` went with it: the plugin no longer has a per-test
+> storage stack to turn off. `packages/core` and `apps/stub-api` are still on
+> Vitest 3, with nothing holding them there any more.
+
 **`apps/docs` moved to VitePress**, which is what finally took Rspack out of the
 tree: it was the last Rspress-shaped thing left. The pages themselves needed
 almost nothing: they were already plain Markdown with relative `.md` links, so
@@ -330,8 +338,8 @@ have added a second Vite major to a repo that builds `apps/web` on **Vite 8**;
 VitePress 2 depends on Vite `^8.2.0` and **deduplicates onto the same install**.
 The docs site therefore adds no bundler and no extra Vite major: the goal the
 Rsbuild-to-Vite move above was chasing, finished. (`vite@7` is still in the tree,
-but from `agents` and the Vitest 3 that `apps/api` and `packages/core` pin,
-nothing to do with the docs.)
+but from `agents` and the Vitest 3 that `packages/core` and `apps/stub-api`
+pin, nothing to do with the docs.)
 
 The alpha risk is bounded by what this app is: a static site rendered at build
 time, in CI, before anything deploys. A regression is a failed build on a pull
@@ -361,7 +369,7 @@ time and deferred, for reasons that are about sequencing rather than merit:
   enforcing the `core/browser/*` boundary, and override semantics differ.
 - `vp migrate` aliases `vite` to Vite+ core through a workspace-root pnpm
   override and removes `vitest` as a direct dependency. `apps/api` runs
-  `@cloudflare/vitest-pool-workers`, which peers on a specific Vitest.
+  `@cloudflare/vitest-plugin`, which peers on a specific Vitest.
 - 0.2.8 pins `oxlint =1.76.0` and `oxfmt =0.61.0`; this repo is ahead of both.
 
 Its own prerequisite is Vite 8 + Vitest 4.1, which this move satisfies. Revisit

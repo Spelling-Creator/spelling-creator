@@ -455,7 +455,7 @@ The configs are `apps/api/vitest.workers.config.js` and
 
 `pnpm test` is `turbo run test`, which runs each workspace's own suite:
 `packages/core` and `apps/api` under vitest (the API's workerd project through
-`@cloudflare/vitest-pool-workers`, so its platform-adapter tests run against real
+`@cloudflare/vitest-plugin`, so its platform-adapter tests run against real
 R2 and KV), `apps/web` and `apps/stub-api` under vitest too, and `apps/mcp`
 and `apps/cli` under `node --test` (the CLI's tests are TypeScript, which Node
 runs directly). `apps/docs` has no test script and is skipped.
