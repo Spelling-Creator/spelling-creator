@@ -89,6 +89,7 @@ import { useAuth } from "../../lib/auth.jsx";
 import {
   DocumentMeta,
   JsonLd,
+  buildBreadcrumbSchema,
   buildLessonSchema,
   htmlToDescription,
 } from "../../lib/seo.jsx";
@@ -457,6 +458,19 @@ export default function LessonLayout() {
         })
       : null;
 
+  // The crumb trail the PageBar below shows, as BreadcrumbList markup. Same
+  // gate as the lesson markup: no trail for a page that isn't one.
+  const breadcrumbSchema =
+    lesson && !error
+      ? buildBreadcrumbSchema({
+          crumbs: [
+            { name: t("lessonPage.lessonHub"), path: "/hub" },
+            { name: lesson.title || t("lessonPage.lessonFallback") },
+          ],
+          origin,
+        })
+      : null;
+
   const outlet = {
     id,
     lesson,
@@ -491,6 +505,7 @@ export default function LessonLayout() {
         noindex={!!error}
       />
       <JsonLd data={lessonSchema} />
+      <JsonLd data={breadcrumbSchema} />
 
       <PageBar
         crumbs={[

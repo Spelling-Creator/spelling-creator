@@ -157,8 +157,10 @@ place, which search engines accept. The same file builds the structured data:
 `buildLessonSchema` (a lesson page's `LearningResource`),
 `buildLessonListSchema` (the hub's `ItemList` of them),
 `buildProfileSchema` (a profile's `ProfilePage`, whose Person carries the `@id`
-that lesson markup points its author at) and `buildWebSiteSchema` (the
-homepage's `WebSite`, which is where search engines read the site name). All of
+that lesson markup points its author at), `buildBreadcrumbSchema` (a lesson
+page's visible crumb trail, which desktop results can show in place of the raw
+URL) and `buildWebSiteSchema` (the homepage's `WebSite`, which is where search
+engines read the site name). All of
 them name the site through one shared `Organization`, identified across pages
 by its `@id`.
 

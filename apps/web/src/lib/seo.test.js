@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildBreadcrumbSchema,
   buildLessonSchema,
   buildLessonListSchema,
   buildProfileSchema,
@@ -136,6 +137,29 @@ describe("buildLessonSchema", () => {
 
   it("returns null without a lesson", () => {
     expect(buildLessonSchema({ origin: ORIGIN })).toBeNull();
+  });
+});
+
+describe("buildBreadcrumbSchema", () => {
+  it("matches the visible trail, leaving the page itself without an item URL", () => {
+    const schema = buildBreadcrumbSchema({
+      crumbs: [{ name: "Lesson hub", path: "/hub" }, { name: "Volcano words" }],
+      origin: ORIGIN,
+    });
+    expect(schema["@type"]).toBe("BreadcrumbList");
+    expect(schema.itemListElement).toEqual([
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Lesson hub",
+        item: `${ORIGIN}/hub`,
+      },
+      { "@type": "ListItem", position: 2, name: "Volcano words" },
+    ]);
+  });
+
+  it("emits nothing without crumbs", () => {
+    expect(buildBreadcrumbSchema({ crumbs: [], origin: ORIGIN })).toBeNull();
   });
 });
 
