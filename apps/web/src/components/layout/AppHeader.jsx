@@ -46,7 +46,6 @@ import {
   PlusIcon,
   SettingsIcon,
   ShieldIcon,
-  SpellCheckIcon,
   SunIcon,
   UserIcon,
 } from "lucide-react";
@@ -72,6 +71,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip.jsx";
 import DisplayNameDialog from "../DisplayNameDialog.jsx";
 import InstallAppButton from "../InstallAppButton.jsx";
+import { LogoMark } from "../Logo.jsx";
 import NotificationBell from "../NotificationBell.jsx";
 
 // Shared styling for the header's icon controls (install, theme, settings,
@@ -183,9 +183,7 @@ export default function AppHeader() {
           <SheetContent side="left" className="w-72 gap-0">
             <SheetHeader className="border-b border-border">
               <SheetTitle className="flex items-center gap-2 text-base">
-                <span className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <SpellCheckIcon className="size-4" />
-                </span>
+                <LogoMark className="size-7" />
                 <span className="font-serif">{t("nav.appName")}</span>
               </SheetTitle>
             </SheetHeader>
@@ -222,9 +220,7 @@ export default function AppHeader() {
           to="/"
           className="flex min-w-0 shrink-0 items-center gap-2 rounded-md px-1 text-foreground no-underline"
         >
-          <span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <SpellCheckIcon className="size-4" />
-          </span>
+          <LogoMark className="size-8" />
           {/* The wordmark yields before anything functional does. */}
           <span className="hidden truncate font-serif font-semibold sm:block">
             {t("nav.appName")}

@@ -313,8 +313,8 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
         // used to be the app bar's indigo, which was right while the bar was a
         // block of --primary at the top of every screen; PageBar draws on the
         // background, so the background is what the OS should tint to.
-        theme_color: "#dee3f3",
-        background_color: "#dee3f3",
+        theme_color: "#f4f3ef",
+        background_color: "#f4f3ef",
         icons: [
           // "any" icons are drawn as-is (they carry their own rounded corners);
           // the maskable one is a full-bleed square the platform crops to its

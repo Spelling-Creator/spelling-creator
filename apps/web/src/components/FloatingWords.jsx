@@ -25,8 +25,9 @@ async function initEngine(engine) {
   await loadEmittersPlugin(engine);
 }
 
-// Soft, light tints that read against the hero's dark gradient.
-const WORD_COLORS = ["#ffffff", "#dbe4ff", "#bac8ff", "#eebefa", "#d0bfff"];
+// Warm whites and the logo's pencil yellow, which read against the hero's
+// charcoal gradient.
+const WORD_COLORS = ["#ffffff", "#f0efeb", "#d9d6cf", "#ffca3d", "#ffe08a"];
 
 // A row of launch points spread evenly across the bottom edge, so words rise
 // from many places rather than one. Each is a near-point emitter; together they

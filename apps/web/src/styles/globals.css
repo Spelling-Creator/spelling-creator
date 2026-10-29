@@ -93,7 +93,7 @@
      (the header triggers, the editor's toolbar buttons, the star rating) that
      never had a focus style — so they fell through to the browser's default
      ring, which Chrome draws as a dark outline banded with white. That looked
-     like stray chrome rather than part of the app, and on the indigo header
+     like stray chrome rather than part of the app, and on the old indigo header
      bar the white band was the only part you saw.
 
      A base-layer rule rather than a class each control has to remember: the
@@ -232,39 +232,42 @@
      a drop shadow. Opaque surfaces with a real border is what lets a list of
      sixty lessons stay legible, and it is most of what the redesign is.
 
-     The identity tokens below the surfaces — --primary and the semantic
-     accents — are untouched. This is the same app in the same colours, with
-     edges. */
-  --background: #f3f5fc;
-  --foreground: #1e2138;
+     The identity comes from the logo, a stencil letterboard. --primary is the
+     board's charcoal and --accent is a pale tint of its pencil yellow. The
+     chrome stays neutral on purpose: a lesson already uses a color for each
+     question type, plus VAKT red and the spelling teal, and a colored brand
+     would sit among them. The pencil yellow itself is too light for text or
+     a focus ring on white, so in light mode it only ever appears as a tint. */
+  --background: #f4f3ef;
+  --foreground: #1f1f1f;
   --card: #ffffff;
-  --card-foreground: #1e2138;
+  --card-foreground: #1f1f1f;
   --popover: #ffffff;
-  --popover-foreground: #1e2138;
-  --primary: #4f5fd9;
-  --primary-foreground: #f2f3ff;
-  --secondary: #e9edfa;
-  --secondary-foreground: #1e2138;
-  --muted: #f1f3fc;
-  --muted-foreground: #585d80;
-  --accent: #eceffc;
-  --accent-foreground: #4f5fd9;
+  --popover-foreground: #1f1f1f;
+  --primary: #292929;
+  --primary-foreground: #ffffff;
+  --secondary: #ecebe6;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f1f0ec;
+  --muted-foreground: #6b6a66;
+  --accent: #fff4d1;
+  --accent-foreground: #292929;
   --destructive: #d94b64;
-  --destructive-foreground: #f2f3ff;
-  --border: #d5daed;
+  --destructive-foreground: #ffffff;
+  --border: #dddbd5;
   /* Stronger than --border on purpose: a field has to look like something you
      can type into while sitting on the same white card as everything else. */
-  --input: #c6cde6;
-  --ring: #4f5fd9;
+  --input: #cbc9c2;
+  --ring: #292929;
 
   --success: #2f9e6e;
-  --success-foreground: #f2f3ff;
+  --success-foreground: #ffffff;
   --flag: #d94b64;
-  --flag-foreground: #f2f3ff;
+  --flag-foreground: #ffffff;
   --focus: #b9791f;
-  --focus-foreground: #1e2138;
+  --focus-foreground: #1f1f1f;
 
-  --surface-muted: #eff2fb;
+  --surface-muted: #f0efeb;
 
   /* Kept its name, narrowed its job. This used to sit under every card on the
      page, doing the separating that --border couldn't. Now it belongs only to
@@ -278,7 +281,7 @@
      to give a translucent panel an edge that --border now draws itself.
      --shadow-tile went with them — it was already unreferenced. */
   --shadow-panel:
-    0 8px 24px -6px rgba(30, 34, 70, 0.18), 0 2px 6px rgba(30, 34, 70, 0.08);
+    0 8px 24px -6px rgba(20, 20, 20, 0.18), 0 2px 6px rgba(20, 20, 20, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -294,34 +297,34 @@
        gradient meant a card's colour depended on what happened to be behind it,
        so two identical panels on the same page were different greys. These are
        flat values, and a panel is now the same panel wherever it lands. */
-    --background: #0c0d16;
-    --foreground: #eef0fb;
-    --card: #161829;
-    --card-foreground: #eef0fb;
-    --popover: #1b1e31;
-    --popover-foreground: #eef0fb;
-    --primary: #5b64dd;
-    --primary-foreground: #f4f5ff;
-    --secondary: #232741;
-    --secondary-foreground: #eef0fb;
-    --muted: #1a1c2d;
-    --muted-foreground: #aeb3d1;
-    --accent: #222541;
-    --accent-foreground: #8891f2;
+    --background: #111111;
+    --foreground: #f0efeb;
+    --card: #1b1b1b;
+    --card-foreground: #f0efeb;
+    --popover: #212121;
+    --popover-foreground: #f0efeb;
+    --primary: #f0efeb;
+    --primary-foreground: #1b1b1b;
+    --secondary: #2a2a2a;
+    --secondary-foreground: #f0efeb;
+    --muted: #1e1e1e;
+    --muted-foreground: #b0aea8;
+    --accent: #2e2a1f;
+    --accent-foreground: #ffca3d;
     --destructive: #f0788d;
-    --destructive-foreground: #14162a;
-    --border: #2c3050;
-    --input: #3a3f66;
-    --ring: #5b64dd;
+    --destructive-foreground: #1b1b1b;
+    --border: #303030;
+    --input: #424242;
+    --ring: #f0efeb;
 
     --success: #57cd99;
-    --success-foreground: #14162a;
+    --success-foreground: #1b1b1b;
     --flag: #f0788d;
-    --flag-foreground: #14162a;
+    --flag-foreground: #1b1b1b;
     --focus: #e3b567;
-    --focus-foreground: #14162a;
+    --focus-foreground: #1b1b1b;
 
-    --surface-muted: #1c1f33;
+    --surface-muted: #222222;
 
     --shadow-panel:
       0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -334,34 +337,34 @@
   /* Same values as the prefers-color-scheme block above — see the commentary
      there. Restated rather than shared because this one has to win against a
      light OS preference, which a single combined selector can't do. */
-  --background: #0c0d16;
-  --foreground: #eef0fb;
-  --card: #161829;
-  --card-foreground: #eef0fb;
-  --popover: #1b1e31;
-  --popover-foreground: #eef0fb;
-  --primary: #5b64dd;
-  --primary-foreground: #f4f5ff;
-  --secondary: #232741;
-  --secondary-foreground: #eef0fb;
-  --muted: #1a1c2d;
-  --muted-foreground: #aeb3d1;
-  --accent: #222541;
-  --accent-foreground: #8891f2;
+  --background: #111111;
+  --foreground: #f0efeb;
+  --card: #1b1b1b;
+  --card-foreground: #f0efeb;
+  --popover: #212121;
+  --popover-foreground: #f0efeb;
+  --primary: #f0efeb;
+  --primary-foreground: #1b1b1b;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #f0efeb;
+  --muted: #1e1e1e;
+  --muted-foreground: #b0aea8;
+  --accent: #2e2a1f;
+  --accent-foreground: #ffca3d;
   --destructive: #f0788d;
-  --destructive-foreground: #14162a;
-  --border: #2c3050;
-  --input: #3a3f66;
-  --ring: #5b64dd;
+  --destructive-foreground: #1b1b1b;
+  --border: #303030;
+  --input: #424242;
+  --ring: #f0efeb;
 
   --success: #57cd99;
-  --success-foreground: #14162a;
+  --success-foreground: #1b1b1b;
   --flag: #f0788d;
-  --flag-foreground: #14162a;
+  --flag-foreground: #1b1b1b;
   --focus: #e3b567;
-  --focus-foreground: #14162a;
+  --focus-foreground: #1b1b1b;
 
-  --surface-muted: #1c1f33;
+  --surface-muted: #222222;
 
   --shadow-panel:
     0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -372,37 +375,37 @@
 
   /* Same values as the :root block — see the commentary there. Restated so an
      explicit light choice wins against a dark OS preference. */
-  --background: #f3f5fc;
-  --foreground: #1e2138;
+  --background: #f4f3ef;
+  --foreground: #1f1f1f;
   --card: #ffffff;
-  --card-foreground: #1e2138;
+  --card-foreground: #1f1f1f;
   --popover: #ffffff;
-  --popover-foreground: #1e2138;
-  --primary: #4f5fd9;
-  --primary-foreground: #f2f3ff;
-  --secondary: #e9edfa;
-  --secondary-foreground: #1e2138;
-  --muted: #f1f3fc;
-  --muted-foreground: #585d80;
-  --accent: #eceffc;
-  --accent-foreground: #4f5fd9;
+  --popover-foreground: #1f1f1f;
+  --primary: #292929;
+  --primary-foreground: #ffffff;
+  --secondary: #ecebe6;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f1f0ec;
+  --muted-foreground: #6b6a66;
+  --accent: #fff4d1;
+  --accent-foreground: #292929;
   --destructive: #d94b64;
-  --destructive-foreground: #f2f3ff;
-  --border: #d5daed;
-  --input: #c6cde6;
-  --ring: #4f5fd9;
+  --destructive-foreground: #ffffff;
+  --border: #dddbd5;
+  --input: #cbc9c2;
+  --ring: #292929;
 
   --success: #2f9e6e;
-  --success-foreground: #f2f3ff;
+  --success-foreground: #ffffff;
   --flag: #d94b64;
-  --flag-foreground: #f2f3ff;
+  --flag-foreground: #ffffff;
   --focus: #b9791f;
-  --focus-foreground: #1e2138;
+  --focus-foreground: #1f1f1f;
 
-  --surface-muted: #eff2fb;
+  --surface-muted: #f0efeb;
 
   --shadow-panel:
-    0 8px 24px -6px rgba(30, 34, 70, 0.18), 0 2px 6px rgba(30, 34, 70, 0.08);
+    0 8px 24px -6px rgba(20, 20, 20, 0.18), 0 2px 6px rgba(20, 20, 20, 0.08);
 }
 
 /* Shared spacing for rendered rich text — both the live tiptap editor

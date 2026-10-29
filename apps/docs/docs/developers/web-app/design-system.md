@@ -26,10 +26,10 @@ strip and the line that separates any of them:
 
 | Role                                                        | Token             | Light     | Dark      |
 | ----------------------------------------------------------- | ----------------- | --------- | --------- |
-| The page, as a tinted well                                  | `--background`    | `#f3f5fc` | `#0c0d16` |
-| Content boxes and the app's chrome (`AppHeader`, `PageBar`) | `--card`          | `#ffffff` | `#161829` |
-| The strip at the top of a box                               | `--surface-muted` | `#eff2fb` | `#1c1f33` |
-| The line that separates any of them                         | `--border`        | `#d5daed` | `#2c3050` |
+| The page, as a tinted well                                  | `--background`    | `#f4f3ef` | `#111111` |
+| Content boxes and the app's chrome (`AppHeader`, `PageBar`) | `--card`          | `#ffffff` | `#1b1b1b` |
+| The strip at the top of a box                               | `--surface-muted` | `#f0efeb` | `#222222` |
+| The line that separates any of them                         | `--border`        | `#dddbd5` | `#303030` |
 
 `--surface-muted` is deliberately its own token rather than a reuse of
 `--muted`: `--muted` is a _content_ surface (a code block, the collab chat's
@@ -52,9 +52,42 @@ That is worth knowing because it explains most of the rules below:
   see through. The sticky `PageBar` and `LessonTabs` are opaque instead of
   translucent plus blur, which is cheaper and needs no filter at all.
 
-Fields get a stronger line of their own, `--input` (`#c6cde6` light, `#3a3f66`
+Fields get a stronger line of their own, `--input` (`#cbc9c2` light, `#424242`
 dark), so something you type into still reads as a field on the same white card
 as everything else.
+
+## Brand colors come from the logo
+
+The logo is a stencil letterboard: charcoal, with the letters cut out and a
+yellow pencil poking through them. The palette takes its two colors from it.
+
+| Token                        | Light                    | Dark                         |
+| ---------------------------- | ------------------------ | ---------------------------- |
+| `--primary`                  | `#292929`, the board     | `#f0efeb`, with dark text    |
+| `--accent` (hover, selected) | `#fff4d1`, a pencil tint | `#2e2a1f`, a dim pencil tint |
+| `--accent-foreground`        | `#292929`                | `#ffca3d`, the pencil itself |
+
+The chrome is neutral on purpose. A lesson already gives each question type its
+own color, plus VAKT red and the spelling teal, and a colored brand would sit
+among them. (The old indigo was close enough to the purple of math questions
+that a button and a question could be mistaken for each other.) The pencil
+yellow is only 1.5:1 on white, so in light mode it never carries text or a focus
+ring; it appears as the `--accent` tint. The one place it fills a surface is the
+main button in the home page's hero, where charcoal text on it is 9.5:1.
+
+## The logo
+
+There are two versions, both in `apps/web/src`: `favicon.svg`, the square "A"
+mark, and `logo-board.svg`, the full "ABC" board. `components/Logo.jsx` shows
+them as `LogoMark` (the header) and `LogoBoard` (the hero). The letters are real
+cut-outs, so they show whatever is behind the logo. The mark is a charcoal board
+and would lose its letters on the dark header, so it has a white backing behind
+them, like the paper under a stencil. The board only appears in the hero, which
+puts a soft yellow-white light behind it, so it has no backing and the light
+shines through its letters. The PWA icons are made from the
+same mark (see [The manifest and icons](./pwa-and-offline.md#the-manifest-and-icons)),
+as are the docs site's `logo.svg` and `favicon.ico` and the MCP bundle's
+`icon.png`.
 
 ## Other color tokens
 
@@ -136,7 +169,7 @@ every repository host uses:
 | State  | Token         | Why                                                                                                                                                                                                          |
 | ------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Open   | `--success`   | Green is open, as it is everywhere else this shape appears                                                                                                                                                   |
-| Merged | `--primary`   | The brand indigo, kept for the outcome the flow aims at                                                                                                                                                      |
+| Merged | `--primary`   | The brand charcoal, kept for the outcome the flow aims at                                                                                                                                                    |
 | Closed | `--secondary` | Gray. Deliberately **not** the red a repo host would use: closing a proposal here is a routine outcome, not a failure, and nobody using this should have to know GitHub's color vocabulary to read it as one |
 
 ## Fields are defined by their border, not a fill

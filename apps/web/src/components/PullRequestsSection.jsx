@@ -207,7 +207,7 @@ export default function PullRequestsSection({ lessonId, standalone = false }) {
 
                 The colours follow the convention every repo host uses, which
                 is the point of the redesign — green is open, and the brand
-                indigo is reserved for merged, the outcome the whole flow is
+                charcoal is reserved for merged, the outcome the whole flow is
                 aimed at. (They used to be the other way round.) Closed stays
                 grey rather than the red a repo host would use: closing a
                 proposal here is a routine outcome, not a failure, and nobody
