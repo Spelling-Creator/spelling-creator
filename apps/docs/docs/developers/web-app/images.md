@@ -49,7 +49,7 @@ The flow:
 1. Type a search term; a [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/)
    token (the same widget as the AI dialogs) is sent with the request.
 2. The Worker verifies the token, calls the Pixabay API with `mode:
-"imageSearch"`, and returns normalized hits (preview/webformat URLs, size,
+   "imageSearch"`, and returns normalized hits (preview/webformat URLs, size,
    tags). It edge-caches the Pixabay response for 24 hours (`cacheTtl: 86400`),
    which both satisfies Pixabay's caching requirement and keeps requests well
    under Pixabay's own limit of 100 a minute. If Pixabay does answer 429, the
