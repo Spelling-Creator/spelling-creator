@@ -134,6 +134,27 @@ describe("server rendering a page that does not exist", () => {
     expect(res.status).toBe(404);
   });
 
+  it("renders a profile page with its ProfilePage markup", async () => {
+    const USER_ID = "00000000-0000-0000-0000-000000000001";
+    const network = vi.fn(async (input) => {
+      const url = new URL(input instanceof Request ? input.url : input);
+      if (url.pathname.startsWith("/auth/v1/admin/users/"))
+        return Response.json({
+          id: USER_ID,
+          user_metadata: { display_name: "Ada", bio: "" },
+        });
+      return Response.json([]);
+    });
+    const res = await ask(handler(network), `/users/${USER_ID}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-rendered")).toBe("ssr");
+    const text = await res.text();
+    // The JSON-LD is in the served HTML, so a crawler needs no JavaScript.
+    expect(text).toContain('"@type":"ProfilePage"');
+    expect(text).toContain(`/users/${USER_ID}#person`);
+  });
+
   it("keeps a real profile a soft 200 while the auth service is down", async () => {
     // An outage is not a deletion: answering it with a 404 would tell
     // crawlers every profile was gone for as long as GoTrue was.

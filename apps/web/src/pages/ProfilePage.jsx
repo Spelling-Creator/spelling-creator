@@ -46,8 +46,8 @@ import {
   userFeedUrl,
 } from "@spelling-creator/core/users";
 import { useAuth } from "../lib/auth.jsx";
-import { DocumentMeta } from "../lib/seo.jsx";
-import { useServerData } from "../lib/ssr.jsx";
+import { DocumentMeta, JsonLd, buildProfileSchema } from "../lib/seo.jsx";
+import { useServerData, useSiteOrigin } from "../lib/ssr.jsx";
 
 function formatDate(value) {
   if (!value) return "";
@@ -190,6 +190,7 @@ export default function ProfilePage() {
   const followingCount = profile?.followingCount ?? 0;
 
   const feedUrl = userFeedUrl(id);
+  const origin = useSiteOrigin();
 
   return (
     <>
@@ -203,6 +204,23 @@ export default function ProfilePage() {
             ? richTextToLine(bio) ||
               t("profilePage.metaDescriptionFallback", { name: displayName })
             : undefined
+        }
+      />
+      {/* ProfilePage markup, once the profile has loaded: its Person is the
+          @id the author on this person's lesson pages points at. */}
+      <JsonLd
+        data={
+          profile
+            ? buildProfileSchema({
+                id,
+                name: displayName,
+                description: richTextToLine(bio),
+                followerCount,
+                followingCount,
+                lessonCount: lessons.length,
+                origin,
+              })
+            : null
         }
       />
       {/* No PageBar: the body's own header (avatar, name, counts) is the page
