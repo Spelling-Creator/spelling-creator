@@ -12,9 +12,11 @@
 // fill in when the client hydrates. That is the property that makes SSR
 // tractable here at all: every route worth rendering is a public read.
 //
-// Failure at request time is always soft: a failed data fetch or a render error
-// falls through to the static SPA shell, which is exactly what the app served
-// before this route existed. A *missing* server bundle is not a runtime case at
+// Failure at request time is soft: a failed data fetch or a render error falls
+// through to the static SPA shell, which is exactly what the app served before
+// this route existed. The one exception is the API answering 404, which means
+// the page doesn't exist; that comes back as a real 404 still carrying the
+// shell (see serverRender). A *missing* server bundle is not a runtime case at
 // all — the import below is static, so the Worker fails to bundle, which is why
 // every script that reaches wrangler builds it first.
 
@@ -173,13 +175,15 @@ export async function serverRender(request, env, ctx, url) {
     html = await shell(env, url);
   } catch (err) {
     // A 404 from the API is an answer, not a breakdown: this lesson or profile
-    // does not exist — or is a private draft, which the API reports the same
+    // does not exist, or is a private draft, which the API reports the same
     // way on purpose. Repeat it as a real 404 carrying the shell, so a deleted
     // page stops telling crawlers it exists (a "soft 404"), while a draft's
-    // author still reaches it after hydration, through their own authenticated
-    // fetch — the SPA never reads the status. Every other failure stays a soft
-    // fall-through to the 200 shell: a timeout and a deletion must not be
-    // confused, and core's errors carry the status so they can't be.
+    // author still reaches it after hydration through their own authenticated
+    // fetch, since the SPA never reads the status. Every other failure stays a
+    // soft fall-through to the 200 shell: a timeout and a deletion must not be
+    // confused, and core's errors carry the status so they can't be. (The API
+    // keeps its side of that: a profile lookup that failed is a 502, not a 404;
+    // see routes/users.js.)
     if (err?.status === 404) {
       try {
         return new Response(await shell(env, url), {
@@ -190,7 +194,8 @@ export async function serverRender(request, env, ctx, url) {
             "X-Rendered": "ssr-404",
           },
         });
-      } catch {
+      } catch (shellErr) {
+        console.error("SSR shell failed", url.pathname, shellErr);
         return null;
       }
     }

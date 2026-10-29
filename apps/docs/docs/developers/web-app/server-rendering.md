@@ -127,6 +127,14 @@ the draft's author still reaches it after hydration through their own
 authenticated fetch. A path that isn't a route at all is still 404ed outright,
 without a render ([Unknown paths](./pages-and-routing.md#unknown-paths)).
 
+That only works if the API's 404 means "missing" and nothing else, so the API
+keeps two promises. `GET /lessons/:id` answers an id that isn't a UUID with a
+404 straight away, since PostgREST would reject it with a 400 that surfaced as
+a 502 and a soft 200. And `GET /profiles/:id` answers a lookup that failed
+(GoTrue unreachable, a 5xx, rate limiting, a bad service key) with a 502, not
+the 404 it used to give, so an auth outage can't tell crawlers that every
+profile is gone (`lookupPublicUser` in `apps/api/src/lib/supabase.js`).
+
 ## Page metadata
 
 `src/lib/seo.jsx` exports a `<DocumentMeta>` component, not a hook. React 19

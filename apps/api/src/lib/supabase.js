@@ -111,6 +111,28 @@ export async function getAuthUserById(env, id) {
  * expose the email — only the chosen display name and bio.
  */
 export async function fetchPublicUser(env, base, userId) {
+  return (await lookupPublicUser(env, base, userId)).user;
+}
+
+// Supabase user ids are UUIDs. Anything else can't name a user, so it is
+// answered as missing without asking GoTrue (which would reject it as a bad
+// request, indistinguishable from a broken one).
+const USER_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * fetchPublicUser, telling apart the two ways of finding nobody: `missing` is
+ * true when there is no such user, false when the lookup itself failed
+ * (unreachable, 5xx, rate-limited, a bad service key). Callers whose answer is
+ * a status code need the difference: a profile that doesn't exist is a 404,
+ * while one that couldn't be looked up is an outage, and answering that with a
+ * 404 tells crawlers real profiles are gone (the server render repeats an API
+ * 404 as a real one; see routes/ssr.js).
+ *
+ * @returns {Promise<{user: {id: string, displayName: string, bio: string}|null, missing: boolean}>}
+ */
+export async function lookupPublicUser(env, base, userId) {
+  if (!USER_ID_RE.test(userId || "")) return { user: null, missing: true };
   let res;
   try {
     res = await fetch(
@@ -120,15 +142,19 @@ export async function fetchPublicUser(env, base, userId) {
       },
     );
   } catch (e) {
-    return null;
+    return { user: null, missing: false };
   }
-  if (!res.ok) return null;
+  if (res.status === 404) return { user: null, missing: true };
+  if (!res.ok) return { user: null, missing: false };
   const user = await res.json().catch(() => null);
-  if (!user || !user.id) return null;
+  if (!user || !user.id) return { user: null, missing: false };
   const meta = user.user_metadata || {};
   return {
-    id: user.id,
-    displayName: (meta.display_name || "").toString().trim() || "Anonymous",
-    bio: (meta.bio || "").toString().trim(),
+    user: {
+      id: user.id,
+      displayName: (meta.display_name || "").toString().trim() || "Anonymous",
+      bio: (meta.bio || "").toString().trim(),
+    },
+    missing: false,
   };
 }

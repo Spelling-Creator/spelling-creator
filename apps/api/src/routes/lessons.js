@@ -135,6 +135,12 @@ export async function handleLessons(request, env, url, cors, ctx) {
   // turns out to need it — a normal published, non-shadowbanned read stays
   // token-free.
   if (request.method === "GET" && id) {
+    // A lesson id is a UUID, and PostgREST rejects anything else with a 400,
+    // which would surface here as a 502. Something that can't name a lesson
+    // is a lesson that doesn't exist, so it is answered as one, and a crawler
+    // following a junk /hub/<id> link gets a real 404 (routes/ssr.js).
+    if (!LESSON_ID_RE.test(id))
+      return textResponse("Lesson not found.", 404, cors);
     const query = `id=eq.${encodeURIComponent(id)}&select=id,author_id,title,author,section_count,published,shadowbanned,author_ip,forked_from,forked_from_url,created_at,doc&limit=1`;
     let res;
     try {
