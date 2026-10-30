@@ -16,15 +16,13 @@ import {
   bearerToken,
   clientIp,
   displayNameOf,
-  isModeratorRole,
-  verifyUserAndRole,
 } from "../lib/auth.js";
 import { bannedResponse } from "../lib/bans.js";
 import { profanityFilter } from "../lib/profanity.js";
 import { textResponse, jsonResponse } from "../lib/http.js";
 import { fetchRatingStats, upsertRating } from "../lib/ratings.js";
 import { richTextToPlain, sanitizeRichText } from "../lib/richtext.js";
-import { isTrustedCollaborator } from "../lib/lesson.js";
+import { canReadLesson } from "../lib/lesson.js";
 import { LESSON_ID_RE } from "../lib/lessonGit.js";
 import { createNotification } from "./notifications.js";
 
@@ -167,11 +165,14 @@ export async function handleComments(request, env, lessonId, cors) {
   // to bottom. Public for a published lesson; a private draft's comments are as
   // private as the draft itself, so they're gated the same way GET /lessons/:id
   // gates the lesson — owner, trusted collaborator, or moderator/admin only.
+  // The row leaves out `doc`: the server render of a discussion tab calls this
+  // right after loading the whole lesson, and canReadLesson fetches the doc
+  // itself on the one path that needs it (a trusted collaborator's draft).
   if (request.method === "GET") {
     let lessonRes;
     try {
       lessonRes = await fetch(
-        `${base}/rest/v1/lessons?id=eq.${encodeURIComponent(lessonId)}&select=id,author_id,published,shadowbanned,doc&limit=1`,
+        `${base}/rest/v1/lessons?id=eq.${encodeURIComponent(lessonId)}&select=id,author_id,published,shadowbanned&limit=1`,
         { headers: supabaseHeaders(env) },
       );
     } catch (e) {
@@ -183,14 +184,8 @@ export async function handleComments(request, env, lessonId, cors) {
     if (!Array.isArray(lessonRows) || lessonRows.length === 0) {
       return textResponse("Lesson not found.", 404, cors);
     }
-    const lesson = lessonRows[0];
-    if (!lesson.published || lesson.shadowbanned) {
-      const { user, role } = await verifyUserAndRole(env, base, request);
-      const isOwner = user && user.id === lesson.author_id;
-      const isTrusted = !isOwner && user && isTrustedCollaborator(lesson, user);
-      if (!isOwner && !isTrusted && !isModeratorRole(role)) {
-        return textResponse("Lesson not found.", 404, cors);
-      }
+    if (!(await canReadLesson(env, base, request, lessonRows[0]))) {
+      return textResponse("Lesson not found.", 404, cors);
     }
 
     const query = `lesson_id=eq.${encodeURIComponent(lessonId)}&select=${COMMENT_COLUMNS}&order=created_at.asc`;
@@ -440,6 +435,9 @@ export async function handleCommentEdit(
     return textResponse("Missing comment id.", 400, cors);
   if (request.method !== "PATCH")
     return textResponse("Method not allowed.", 405, cors);
+  // Both ids are UUIDs; see the same guard in handleComments.
+  if (!LESSON_ID_RE.test(lessonId) || !LESSON_ID_RE.test(commentId))
+    return textResponse("Comment not found.", 404, cors);
 
   const base = env.SUPABASE_URL.replace(/\/$/, "");
 

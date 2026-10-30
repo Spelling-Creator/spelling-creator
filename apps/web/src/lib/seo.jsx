@@ -16,6 +16,7 @@ import {
   hasPicture,
   imageCaptionParts,
 } from "@spelling-creator/core/imageCredit";
+import { richTextToPlain } from "@spelling-creator/core/richText";
 import { useLocation } from "react-router-dom";
 import { useSiteOrigin } from "./ssr.jsx";
 
@@ -279,8 +280,9 @@ function summaryDescription(lesson) {
  * @param {string}  opts.origin       Site origin, used as the publisher URL.
  * @param {Array<object>} [opts.comments]  The lesson's comments, as the API
  *   lists them (the same visible list the discussion tab shows, so moderation
- *   can't leave a hidden comment in the markup). Omit when they aren't loaded;
- *   the markup then says nothing about comments rather than claiming zero.
+ *   can't leave a hidden comment in the markup). Pass them only where the
+ *   thread is on the page, since markup must describe what a reader can see;
+ *   omitted, the markup says nothing about comments rather than claiming zero.
  * @returns {object|null}
  */
 export function buildLessonSchema(opts) {
@@ -288,20 +290,24 @@ export function buildLessonSchema(opts) {
   const resource = lessonObject(opts);
   resource["@type"] = ["Article", "LearningResource"];
   resource.headline = resource.name;
-  if (resource.dateCreated) resource.datePublished = resource.dateCreated;
+  // No datePublished: a lesson can sit as a private draft before it goes on
+  // the hub, and nothing records when that happened, so dateCreated (the date
+  // the page shows) is the only date the markup can vouch for.
   const images = imageObjects(opts.lesson.doc, opts.origin);
   if (images.length > 0) resource.image = images;
   if (Array.isArray(opts.comments)) {
-    resource.commentCount = opts.comments.length;
-    const comments = commentObjects(opts.comments, opts.origin);
-    if (comments.length > 0) resource.comment = comments;
+    const { thread, count } = commentObjects(opts.comments, opts.origin);
+    resource.commentCount = count;
+    if (thread.length > 0) resource.comment = thread;
   }
   return { "@context": "https://schema.org", ...resource };
 }
 
 // The lesson's comments as schema.org Comment objects, replies nested under
 // the comment they answer, exactly as the discussion tab draws the thread.
-// Bodies are sanitized rich-text HTML; markup wants plain text.
+// `count` is how many made it into the thread, so a reply whose parent is gone
+// (which the tab can't place either) isn't counted. Bodies are sanitized
+// rich-text HTML; markup wants the plain text a reader sees.
 function commentObjects(comments, origin) {
   const replies = new Map();
   const top = [];
@@ -315,10 +321,12 @@ function commentObjects(comments, origin) {
       top.push(comment);
     }
   }
+  let count = 0;
   const toObject = (comment) => {
+    count += 1;
     const object = {
       "@type": "Comment",
-      text: htmlToDescription(comment.body, 2000),
+      text: richTextToPlain(comment.body),
       author: personObject({
         name: comment.author || "Anonymous",
         userId: comment.authorId,
@@ -331,7 +339,8 @@ function commentObjects(comments, origin) {
     if (kids) object.comment = kids.map(toObject);
     return object;
   };
-  return top.map(toObject);
+  const thread = top.map(toObject);
+  return { thread, count };
 }
 
 // Every picture in the lesson (image blocks, and VAKT blocks that carry one),

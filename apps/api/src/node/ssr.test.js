@@ -81,7 +81,7 @@ describe("server rendering a page that does not exist", () => {
     );
   });
 
-  it("renders the lesson's comments into its structured data", async () => {
+  describe("a lesson's comments", () => {
     const LESSON_ID = "7296d446-4039-4c2d-8393-9d46a1dda3d3";
     const row = {
       id: LESSON_ID,
@@ -95,7 +95,7 @@ describe("server rendering a page that does not exist", () => {
       created_at: "2026-10-18T00:00:00Z",
       doc: { title: "Volcano words", sections: [] },
     };
-    const handle = handler(
+    const network = () =>
       vi.fn(async (input) => {
         const url = new URL(input instanceof Request ? input.url : input);
         if (url.pathname === "/rest/v1/lessons") return Response.json([row]);
@@ -106,22 +106,41 @@ describe("server rendering a page that does not exist", () => {
               parent_id: null,
               author_id: null,
               author: "Grace",
-              body: "<p>Lovely lesson!</p>",
+              body: "<p>Lovely <strong>lesson</strong>!</p>",
               created_at: "2026-10-19T10:00:00Z",
               edited_at: null,
             },
           ]);
         return Response.json([]);
-      }),
-    );
-    const res = await ask(handle, `/hub/${LESSON_ID}`);
+      });
 
-    expect(res.status).toBe(200);
-    const text = await res.text();
-    // The comment reached the served HTML as markup, so a crawler needs no
-    // JavaScript; the body is plain text there, not the stored HTML.
-    expect(text).toContain('"commentCount":1');
-    expect(text).toContain('"text":"Lovely lesson!"');
+    it("render on the discussion tab, as its thread and its markup", async () => {
+      const res = await ask(handler(network()), `/hub/${LESSON_ID}/discussion`);
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      // The thread itself is in the served HTML, as plain text until the
+      // browser can sanitize the formatting, so the markup below describes
+      // something a reader of the page can see.
+      expect(text).toMatch(/<p[^>]*>Lovely lesson!<\/p>/);
+      expect(text).toContain('"commentCount":1');
+      expect(text).toContain('"text":"Lovely lesson!"');
+    });
+
+    it("stay off the other tabs, which don't show them", async () => {
+      const fetch = network();
+      const res = await ask(handler(fetch), `/hub/${LESSON_ID}`);
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).not.toContain("commentCount");
+      expect(text).not.toContain("Lovely lesson");
+      const asked = fetch.mock.calls.map(
+        ([input]) =>
+          new URL(input instanceof Request ? input.url : input).pathname,
+      );
+      expect(asked).not.toContain("/rest/v1/comments");
+    });
   });
 
   it("drops a trailing slash from the canonical URL, as the sitemap does", async () => {

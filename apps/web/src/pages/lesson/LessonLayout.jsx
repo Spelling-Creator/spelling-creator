@@ -137,10 +137,11 @@ export default function LessonLayout() {
   // document rather than a skeleton, and the effect below skips the round trip
   // it would otherwise repeat. undefined on every client-side navigation.
   const serverLesson = useServerData("lesson");
-  // The comments the Worker fetched alongside the lesson, for this page's
-  // structured data only; the discussion tab keeps its own authenticated
-  // fetch. undefined on a client-side navigation, and the markup then simply
-  // says nothing about comments. A crawler always gets the server render.
+  // The comments the Worker fetched alongside the lesson, which it does only
+  // for the discussion tab: they seed that tab's thread and go into this
+  // page's structured data, so the markup describes a thread that is actually
+  // on the page. undefined on every other tab and on a client-side navigation,
+  // and the markup then simply says nothing about comments.
   const serverComments = useServerData("comments");
 
   const [lesson, setLesson] = useState(serverLesson ?? null);
@@ -491,6 +492,7 @@ export default function LessonLayout() {
     forkLesson,
     editLesson,
     handleRated,
+    serverComments,
     answersSaved,
     onAnswersSaved: () => setAnswersSaved((count) => count + 1),
     formatDate,

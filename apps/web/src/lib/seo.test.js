@@ -137,7 +137,9 @@ describe("buildLessonSchema", () => {
     expect(schema.isAccessibleForFree).toBe(true);
     expect(schema.author).toMatchObject({ "@type": "Person", name: "Ada" });
     expect(schema.dateCreated).toBe("2026-10-18T00:00:00.000Z");
-    expect(schema.datePublished).toBe(schema.dateCreated);
+    // A lesson may have been a private draft first, and nothing records when
+    // it went public, so no publish date is claimed.
+    expect(schema.datePublished).toBeUndefined();
     // Without a loaded comment list the markup says nothing about comments,
     // rather than claiming zero.
     expect(schema.commentCount).toBeUndefined();
@@ -172,8 +174,8 @@ describe("buildLessonSchema", () => {
     expect(schema.commentCount).toBe(2);
     expect(schema.comment).toHaveLength(1);
     const [comment] = schema.comment;
-    // Plain text, not the stored HTML.
-    expect(comment.text).toBe("Lovely lesson !");
+    // Plain text, not the stored HTML, with no space where a tag was.
+    expect(comment.text).toBe("Lovely lesson!");
     expect(comment.dateCreated).toBe("2026-10-19T10:00:00.000Z");
     // The author points at their profile, like a lesson's author does.
     expect(comment.author["@id"]).toBe(
@@ -184,6 +186,39 @@ describe("buildLessonSchema", () => {
       "@type": "Person",
       name: "Anonymous",
     });
+  });
+
+  it("decodes entities in comment text, as a reader sees it", () => {
+    const schema = buildLessonSchema({
+      lesson: LESSON,
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+      comments: [
+        {
+          id: "c1",
+          parentId: null,
+          body: "<p>Tom &amp; Jerry &lt;3 &#233;t&#xE9;</p>",
+          createdAt: "2026-10-19T10:00:00Z",
+        },
+      ],
+    });
+    expect(schema.comment[0].text).toBe("Tom & Jerry <3 été");
+  });
+
+  it("counts only the comments the thread can place", () => {
+    const schema = buildLessonSchema({
+      lesson: LESSON,
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+      comments: [
+        { id: "c1", parentId: null, body: "<p>Hi</p>" },
+        // A reply whose parent is gone has nowhere to sit, on the page or in
+        // the markup, so it isn't counted either.
+        { id: "c2", parentId: "missing", body: "<p>Orphan</p>" },
+      ],
+    });
+    expect(schema.commentCount).toBe(1);
+    expect(schema.comment).toHaveLength(1);
   });
 
   it("claims zero comments only when the list really is empty", () => {

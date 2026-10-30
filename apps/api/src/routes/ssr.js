@@ -48,6 +48,11 @@ import { render } from "../../../web/dist-ssr/entry-server.js";
 // through to — it would fail outright. The two lists have to agree.
 import { HUB_PATH, LESSON_PATH, PROFILE_PATH } from "./spa.js";
 
+// The one lesson tab whose server render carries comments (see matchRoute).
+// Anchored on the whole path, so a lesson whose id happened to be
+// "discussion" would still be an overview.
+const DISCUSSION_PATH = /^\/hub\/[^/]+\/discussion\/?$/;
+
 /**
  * Which page (if any) this request should be server-rendered as. `load`
  * resolves to the whole bootstrap data object, keyed the way the pages read it
@@ -65,10 +70,15 @@ function matchRoute(url) {
     return {
       load: async () => {
         const id = decodeURIComponent(lesson[1]);
-        // The comments ride along for the page's structured data (the comment
-        // markup in buildLessonSchema). Their failure must not cost the
-        // render, so it degrades to markup without them; the lesson's own
-        // failure keeps its meaning (a 404 stays a 404).
+        // The discussion tab is the one view that shows the comments, so it is
+        // the one that fetches them: they render as its thread and as the
+        // comment markup in buildLessonSchema, and no other tab carries them.
+        // Their failure must not cost the render, so it degrades to the
+        // thread loading in the browser and markup without it; the lesson's
+        // own failure keeps its meaning (a 404 stays a 404).
+        if (!DISCUSSION_PATH.test(url.pathname)) {
+          return { lesson: await fetchLesson(id) };
+        }
         const [full, comments] = await Promise.all([
           fetchLesson(id),
           fetchComments(id).catch(() => null),
