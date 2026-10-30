@@ -15,7 +15,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "../lib/utils.js";
-import { isRichTextHtml } from "@spelling-creator/core/richText";
+import {
+  isRichTextHtml,
+  richTextToPlain,
+} from "@spelling-creator/core/richText";
 import { sanitizeRichText } from "@spelling-creator/core/browser/sanitizeRichText";
 
 // Text size for the two places this renders: a comment body (the default,
@@ -39,9 +42,11 @@ const VARIANT_CLASSES = {
 export default function RichText({ value, variant = "body2", className }) {
   // The sanitizer is DOMPurify, which needs a real DOM — so the rich-text branch
   // is browser-only. The server render and the client's first (hydrating) pass
-  // both produce nothing here, which is what keeps them identical; the content
-  // appears in the effect immediately afterwards. A profile bio still reaches a
-  // crawler, as the page's meta description (see lib/seo.jsx).
+  // both show the value's plain text instead, which keeps them identical and
+  // puts the words in the served HTML (a crawler reads a comment thread or a
+  // bio there); the formatted version replaces it in the effect immediately
+  // afterwards. Plain text is safe to send unsanitized because React renders
+  // it as a text node, so nothing in it can become markup.
   //
   // Rendering the *unsanitized* HTML on the server instead is not an option:
   // React never re-checks dangerouslySetInnerHTML during hydration, so whatever
@@ -58,13 +63,16 @@ export default function RichText({ value, variant = "body2", className }) {
 
   const sizeClass = VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.body2;
 
-  // Legacy plain text: render as text, never as markup.
-  if (!isRichTextHtml(value)) {
+  // Legacy plain text: render as text, never as markup. Rich text takes the
+  // same shape until it can be sanitized (see above).
+  if (!isRichTextHtml(value) || !canSanitize) {
+    const text = isRichTextHtml(value) ? richTextToPlain(value) : value;
+    if (!text) return null;
     return (
       <p
         className={cn(sizeClass, "whitespace-pre-wrap break-words", className)}
       >
-        {value}
+        {text}
       </p>
     );
   }

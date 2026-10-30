@@ -81,6 +81,68 @@ describe("server rendering a page that does not exist", () => {
     );
   });
 
+  describe("a lesson's comments", () => {
+    const LESSON_ID = "7296d446-4039-4c2d-8393-9d46a1dda3d3";
+    const row = {
+      id: LESSON_ID,
+      author_id: "00000000-0000-0000-0000-000000000001",
+      title: "Volcano words",
+      author: "SSR Test",
+      section_count: 1,
+      published: true,
+      shadowbanned: false,
+      forked_from: null,
+      created_at: "2026-10-18T00:00:00Z",
+      doc: { title: "Volcano words", sections: [] },
+    };
+    const network = () =>
+      vi.fn(async (input) => {
+        const url = new URL(input instanceof Request ? input.url : input);
+        if (url.pathname === "/rest/v1/lessons") return Response.json([row]);
+        if (url.pathname === "/rest/v1/comments")
+          return Response.json([
+            {
+              id: "c1",
+              parent_id: null,
+              author_id: null,
+              author: "Grace",
+              body: "<p>Lovely <strong>lesson</strong>!</p>",
+              created_at: "2026-10-19T10:00:00Z",
+              edited_at: null,
+            },
+          ]);
+        return Response.json([]);
+      });
+
+    it("render on the discussion tab, as its thread and its markup", async () => {
+      const res = await ask(handler(network()), `/hub/${LESSON_ID}/discussion`);
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      // The thread itself is in the served HTML, as plain text until the
+      // browser can sanitize the formatting, so the markup below describes
+      // something a reader of the page can see.
+      expect(text).toMatch(/<p[^>]*>Lovely lesson!<\/p>/);
+      expect(text).toContain('"commentCount":1');
+      expect(text).toContain('"text":"Lovely lesson!"');
+    });
+
+    it("stay off the other tabs, which don't show them", async () => {
+      const fetch = network();
+      const res = await ask(handler(fetch), `/hub/${LESSON_ID}`);
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).not.toContain("commentCount");
+      expect(text).not.toContain("Lovely lesson");
+      const asked = fetch.mock.calls.map(
+        ([input]) =>
+          new URL(input instanceof Request ? input.url : input).pathname,
+      );
+      expect(asked).not.toContain("/rest/v1/comments");
+    });
+  });
+
   it("drops a trailing slash from the canonical URL, as the sitemap does", async () => {
     // /hub/ is the same route as /hub, and only /hub is in the sitemap; the
     // slashed spelling must not claim to be canonical in its own right.

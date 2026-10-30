@@ -142,7 +142,20 @@ function Notice({ notice, blockedTitle, onDismiss }) {
   );
 }
 
-export default function CommentsSection({ lessonId, onRated }) {
+/**
+ * @param {object} props
+ * @param {string} props.lessonId
+ * @param {(stats: object) => void} [props.onRated]
+ * @param {Array<object>} [props.initialComments]  The thread the server already
+ *   fetched for this lesson, from a server-rendered load. It is the public
+ *   list, and every reader of a public lesson sees the same one, so it stands
+ *   in for the first fetch rather than being re-fetched with a token.
+ */
+export default function CommentsSection({
+  lessonId,
+  onRated,
+  initialComments,
+}) {
   const { t, i18n } = useTranslation("lesson");
   const navigate = useNavigate();
   const { enabled: authEnabled, user, accessToken, isModerator } = useAuth();
@@ -161,9 +174,18 @@ export default function CommentsSection({ lessonId, onRated }) {
     [targetLanguage],
   );
 
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState(initialComments ?? []);
+  const [loading, setLoading] = useState(!initialComments);
   const [error, setError] = useState("");
+  // Which lesson the seeded thread belongs to, keyed by id like LessonLayout's
+  // server lesson, so moving to another lesson still fetches its own.
+  const seededFor = useRef(initialComments ? lessonId : null);
+
+  // Timestamps are formatted in the reader's own locale and time zone, which
+  // the server can't know; it renders them blank, and so does the hydrating
+  // pass, so the two agree. They fill in straight after.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   // Drafts are rich-text HTML, not plain strings. `draftKey` remounts the editor:
   // tiptap owns its content once mounted, so bumping the key is how we clear the box
@@ -248,7 +270,8 @@ export default function CommentsSection({ lessonId, onRated }) {
   };
 
   useEffect(() => {
-    if (lessonId) load();
+    if (lessonId && seededFor.current !== lessonId) load();
+    seededFor.current = null;
     // Reset the in-progress draft state when switching lessons.
     setDraft("");
     setDraftKey((k) => k + 1);
@@ -610,10 +633,10 @@ export default function CommentsSection({ lessonId, onRated }) {
                 )}
               </span>
               <span className="text-xs text-muted-foreground">
-                {formatDateTime(c.createdAt)}
+                {hydrated && formatDateTime(c.createdAt)}
                 {/* An edit is never silent: say so, so a reader can tell the comment
                     they're looking at isn't necessarily the one that was replied to. */}
-                {c.editedAt ? ` · ${t("comments.edited")}` : ""}
+                {hydrated && c.editedAt ? ` · ${t("comments.edited")}` : ""}
               </span>
               {/* Moderator-only actions on this comment. */}
               {isModerator && (

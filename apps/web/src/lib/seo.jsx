@@ -16,6 +16,7 @@ import {
   hasPicture,
   imageCaptionParts,
 } from "@spelling-creator/core/imageCredit";
+import { richTextToPlain } from "@spelling-creator/core/richText";
 import { useLocation } from "react-router-dom";
 import { useSiteOrigin } from "./ssr.jsx";
 
@@ -265,23 +266,81 @@ function summaryDescription(lesson) {
 }
 
 /**
- * Build standalone schema.org `LearningResource` JSON-LD for a single lesson's
- * page: accurate semantic data that helps a search engine understand the page,
- * and the per-lesson detail markup the hub's ItemList points at.
+ * Build the JSON-LD for a single lesson's page: the per-lesson detail markup
+ * the hub's ItemList points at, under a two-type `@type`. `LearningResource`
+ * says what the piece is; `Article` says it is a written piece whose comments
+ * belong to it, which is the shape search engines read a `comment` thread
+ * from. (Google's forum markup is explicitly not for articles a site wrote
+ * itself, even with comments; Article is.)
  *
  * @param {object}  opts
  * @param {object}  opts.lesson       Lesson summary/doc ({ title, author, createdAt }).
  * @param {string} [opts.description] Plain-text summary (1 to 500 chars).
  * @param {string}  opts.url          Canonical URL of this lesson's page.
  * @param {string}  opts.origin       Site origin, used as the publisher URL.
+ * @param {Array<object>} [opts.comments]  The lesson's comments, as the API
+ *   lists them (the same visible list the discussion tab shows, so moderation
+ *   can't leave a hidden comment in the markup). Pass them only where the
+ *   thread is on the page, since markup must describe what a reader can see;
+ *   omitted, the markup says nothing about comments rather than claiming zero.
  * @returns {object|null}
  */
 export function buildLessonSchema(opts) {
   if (!opts.lesson) return null;
   const resource = lessonObject(opts);
+  resource["@type"] = ["Article", "LearningResource"];
+  resource.headline = resource.name;
+  // No datePublished: a lesson can sit as a private draft before it goes on
+  // the hub, and nothing records when that happened, so dateCreated (the date
+  // the page shows) is the only date the markup can vouch for.
   const images = imageObjects(opts.lesson.doc, opts.origin);
   if (images.length > 0) resource.image = images;
+  if (Array.isArray(opts.comments)) {
+    const { thread, count } = commentObjects(opts.comments, opts.origin);
+    resource.commentCount = count;
+    if (thread.length > 0) resource.comment = thread;
+  }
   return { "@context": "https://schema.org", ...resource };
+}
+
+// The lesson's comments as schema.org Comment objects, replies nested under
+// the comment they answer, exactly as the discussion tab draws the thread.
+// `count` is how many made it into the thread, so a reply whose parent is gone
+// (which the tab can't place either) isn't counted. Bodies are sanitized
+// rich-text HTML; markup wants the plain text a reader sees.
+function commentObjects(comments, origin) {
+  const replies = new Map();
+  const top = [];
+  for (const comment of comments) {
+    if (!comment?.id) continue;
+    if (comment.parentId) {
+      const siblings = replies.get(comment.parentId) || [];
+      siblings.push(comment);
+      replies.set(comment.parentId, siblings);
+    } else {
+      top.push(comment);
+    }
+  }
+  let count = 0;
+  const toObject = (comment) => {
+    count += 1;
+    const object = {
+      "@type": "Comment",
+      text: richTextToPlain(comment.body),
+      author: personObject({
+        name: comment.author || "Anonymous",
+        userId: comment.authorId,
+        origin,
+      }),
+    };
+    const d = new Date(comment.createdAt);
+    if (!Number.isNaN(d.getTime())) object.dateCreated = d.toISOString();
+    const kids = replies.get(comment.id);
+    if (kids) object.comment = kids.map(toObject);
+    return object;
+  };
+  const thread = top.map(toObject);
+  return { thread, count };
 }
 
 // Every picture in the lesson (image blocks, and VAKT blocks that carry one),
