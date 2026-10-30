@@ -22,6 +22,26 @@ import { useSiteOrigin } from "./ssr.jsx";
 const SITE_NAME = "Spelling Creator";
 const DEFAULT_DESCRIPTION =
   "Write, share and run lessons for Spelling: communication by pointing to letters on a letterboard or keyboard. Print them or run them on screen with your speller.";
+const GITHUB_URL = "https://github.com/Spelling-Creator/spelling-creator";
+
+// The site as one schema.org Organization, shared by everything that names a
+// publisher (the WebSite block, each lesson's markup). The @id marks every
+// copy as the same entity, so a consumer that reads several pages can merge
+// them. Each page still embeds the full object rather than a bare reference,
+// because an @id only resolves against nodes on the same page.
+function organizationObject(origin) {
+  return {
+    "@type": "Organization",
+    "@id": `${origin}/#organization`,
+    name: SITE_NAME,
+    url: origin,
+    logo: {
+      "@type": "ImageObject",
+      url: `${origin}/icons/apple-touch-icon.png`,
+    },
+    sameAs: [GITHUB_URL],
+  };
+}
 
 /**
  * Document title and social/SEO meta tags for the current page. Render it
@@ -147,11 +167,7 @@ function lessonObject({ lesson, description, url, origin }) {
     description: description || summaryDescription(lesson),
     inLanguage: "en",
     isAccessibleForFree: true,
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: origin,
-    },
+    publisher: organizationObject(origin),
   };
   if (url) resource.url = url;
   if (lesson.author) {
@@ -235,15 +251,7 @@ export function buildWebSiteSchema({ origin }) {
     alternateName: "Spelling Lesson Maker",
     url: origin,
     description: DEFAULT_DESCRIPTION,
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: origin,
-      logo: {
-        "@type": "ImageObject",
-        url: `${origin}/icons/apple-touch-icon.png`,
-      },
-    },
+    publisher: organizationObject(origin),
   };
 }
 
