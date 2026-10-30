@@ -12,6 +12,10 @@
 // executable. It renders in place instead, which search engines accept: the
 // spec allows `application/ld+json` anywhere in the document.)
 
+import {
+  hasPicture,
+  imageCaptionParts,
+} from "@spelling-creator/core/imageCredit";
 import { useLocation } from "react-router-dom";
 import { useSiteOrigin } from "./ssr.jsx";
 
@@ -274,7 +278,37 @@ function summaryDescription(lesson) {
  */
 export function buildLessonSchema(opts) {
   if (!opts.lesson) return null;
-  return { "@context": "https://schema.org", ...lessonObject(opts) };
+  const resource = lessonObject(opts);
+  const images = imageObjects(opts.lesson.doc, opts.origin);
+  if (images.length > 0) resource.image = images;
+  return { "@context": "https://schema.org", ...resource };
+}
+
+// Every picture in the lesson (image blocks, and VAKT blocks that carry one),
+// as ImageObjects carrying the stored credit. contentUrl plus creditText is
+// what makes an image eligible for credit details in Google Images; a picture
+// without a credit still rides along as plain semantics. The caption/credit
+// split is the same one the page renders with (imageCaptionParts), so the
+// markup matches what a reader sees, legacy credit-in-caption blocks included.
+// Hub lessons address images by content hash, served at /images/<hash>; a
+// block without one (a local image that never reached the hub) has no public
+// URL and is skipped.
+function imageObjects(doc, origin) {
+  const images = [];
+  for (const section of doc?.sections || []) {
+    for (const block of section?.blocks || []) {
+      if (!hasPicture(block) || !block.image?.hash) continue;
+      const image = {
+        "@type": "ImageObject",
+        contentUrl: `${origin}/images/${block.image.hash}`,
+      };
+      const { caption, credit } = imageCaptionParts(block);
+      if (caption) image.caption = caption;
+      if (credit) image.creditText = credit;
+      images.push(image);
+    }
+  }
+  return images;
 }
 
 /**

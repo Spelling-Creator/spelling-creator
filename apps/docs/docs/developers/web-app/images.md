@@ -146,6 +146,13 @@ license asks for. Search and the MCP server's `add_image` fill in the credit
 and leave the caption empty; a picture uploaded from the author's device starts
 with no credit.
 
+The credit also reaches search engines: a lesson page's JSON-LD carries each
+hub picture as an `ImageObject` with the credit as `creditText`
+(`buildLessonSchema` in `apps/web/src/lib/seo.jsx`), which is what makes it
+eligible for credit details in Google Images. The markup splits caption and
+credit with the same `imageCaptionParts` the page renders with, so what a
+crawler reads matches what a reader sees.
+
 ### Why they're separate
 
 The credit used to be written into the caption. That meant:
