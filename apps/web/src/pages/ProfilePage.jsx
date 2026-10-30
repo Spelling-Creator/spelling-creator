@@ -207,10 +207,12 @@ export default function ProfilePage() {
         }
       />
       {/* ProfilePage markup, once the profile has loaded: its Person is the
-          @id the author on this person's lesson pages points at. */}
+          @id the author on this person's lesson pages points at. Only for the
+          profile this URL names, so the previous one, still in state while a
+          new id loads, never goes out under the new @id. */}
       <JsonLd
         data={
-          profile
+          profile?.id === id
             ? buildProfileSchema({
                 id,
                 name: displayName,

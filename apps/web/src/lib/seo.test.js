@@ -106,6 +106,16 @@ describe("buildProfileSchema", () => {
     });
     expect(lesson.author).toEqual({ "@type": "Person", name: "Ada" });
   });
+
+  it("still links a nameless author to their profile", () => {
+    const lesson = buildLessonSchema({
+      lesson: { ...LESSON, author: "", authorId: AUTHOR_ID },
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+    });
+    expect(lesson.author.name).toBe("Anonymous");
+    expect(lesson.author["@id"]).toBe(`${ORIGIN}/users/${AUTHOR_ID}#person`);
+  });
 });
 
 describe("buildLessonSchema", () => {

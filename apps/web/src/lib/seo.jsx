@@ -233,9 +233,11 @@ function lessonObject({ lesson, description, url, origin }) {
     publisher: organizationObject(origin),
   };
   if (url) resource.url = url;
-  if (lesson.author) {
+  // A nameless author with an account still links to their profile, under the
+  // "Anonymous" the page shows for them.
+  if (lesson.author || lesson.authorId) {
     resource.author = personObject({
-      name: lesson.author,
+      name: lesson.author || "Anonymous",
       userId: lesson.authorId,
       origin,
     });
