@@ -30,6 +30,7 @@ describe("the shared Organization", () => {
     });
 
     expect(site.publisher).toEqual(lesson.publisher);
+    expect(site.publisher["@type"]).toBe("Organization");
     expect(site.publisher["@id"]).toBe(`${ORIGIN}/#organization`);
     // Embedded in full, not referenced: an @id alone only resolves against
     // nodes on the same page, and these blocks live on different pages.
