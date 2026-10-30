@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildLessonSchema,
   buildLessonListSchema,
+  buildProfileSchema,
   buildWebSiteSchema,
 } from "./seo.jsx";
 
@@ -41,6 +42,79 @@ describe("the shared Organization", () => {
     expect(site.publisher.sameAs).toContain(
       "https://github.com/Spelling-Creator/spelling-creator",
     );
+  });
+});
+
+describe("buildProfileSchema", () => {
+  const AUTHOR_ID = "00000000-0000-0000-0000-000000000001";
+
+  it("describes the person and the counts the page shows", () => {
+    const schema = buildProfileSchema({
+      id: AUTHOR_ID,
+      name: "Ada",
+      description: "Writes lessons about volcanoes.",
+      followerCount: 3,
+      followingCount: 2,
+      lessonCount: 5,
+      origin: ORIGIN,
+    });
+    expect(schema["@type"]).toBe("ProfilePage");
+    expect(schema.mainEntity).toMatchObject({
+      "@type": "Person",
+      name: "Ada",
+      identifier: AUTHOR_ID,
+      url: `${ORIGIN}/users/${AUTHOR_ID}`,
+    });
+    // Followers are interactions with the person; follows and lessons written
+    // are the person's own activity.
+    expect(schema.mainEntity.interactionStatistic).toEqual([
+      {
+        "@type": "InteractionCounter",
+        interactionType: "https://schema.org/FollowAction",
+        userInteractionCount: 3,
+      },
+    ]);
+    expect(
+      schema.mainEntity.agentInteractionStatistic.map(
+        (s) => s.userInteractionCount,
+      ),
+    ).toEqual([2, 5]);
+  });
+
+  it("gives a lesson's author the same @id as the profile's mainEntity", () => {
+    const profile = buildProfileSchema({
+      id: AUTHOR_ID,
+      name: "Ada",
+      origin: ORIGIN,
+    });
+    const lesson = buildLessonSchema({
+      lesson: { ...LESSON, authorId: AUTHOR_ID },
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+    });
+    expect(profile.mainEntity["@id"]).toBe(
+      `${ORIGIN}/users/${AUTHOR_ID}#person`,
+    );
+    expect(lesson.author["@id"]).toBe(profile.mainEntity["@id"]);
+  });
+
+  it("leaves the author un-identified without a user id", () => {
+    const lesson = buildLessonSchema({
+      lesson: LESSON,
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+    });
+    expect(lesson.author).toEqual({ "@type": "Person", name: "Ada" });
+  });
+
+  it("still links a nameless author to their profile", () => {
+    const lesson = buildLessonSchema({
+      lesson: { ...LESSON, author: "", authorId: AUTHOR_ID },
+      url: `${ORIGIN}/hub/${LESSON.id}`,
+      origin: ORIGIN,
+    });
+    expect(lesson.author.name).toBe("Anonymous");
+    expect(lesson.author["@id"]).toBe(`${ORIGIN}/users/${AUTHOR_ID}#person`);
   });
 });
 

@@ -155,9 +155,12 @@ JSON-LD is deliberately _not_ hoisted: React only hoists `<script>` when it's
 `async`, which is meaningless for a non-executable type. `<JsonLd>` renders in
 place, which search engines accept. The same file builds the structured data:
 `buildLessonSchema` (a lesson page's `LearningResource`),
-`buildLessonListSchema` (the hub's `ItemList` of them) and
-`buildWebSiteSchema` (the homepage's `WebSite`, which is where search engines
-read the site name).
+`buildLessonListSchema` (the hub's `ItemList` of them),
+`buildProfileSchema` (a profile's `ProfilePage`, whose Person carries the `@id`
+that lesson markup points its author at) and `buildWebSiteSchema` (the
+homepage's `WebSite`, which is where search engines read the site name). All of
+them name the site through one shared `Organization`, identified across pages
+by its `@id`.
 
 ## Things that had to change to make it work
 

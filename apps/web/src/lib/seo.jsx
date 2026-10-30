@@ -148,6 +148,69 @@ export function JsonLd({ data }) {
   );
 }
 
+// A lesson's (and later a comment's) author as a schema.org Person. With a
+// user id it carries the same @id as the profile page's mainEntity, so pages
+// about this person (/users/:id) and pages by them read as one entity.
+function personObject({ name, userId, origin }) {
+  const person = { "@type": "Person", name };
+  if (userId) {
+    person["@id"] = `${origin}/users/${encodeURIComponent(userId)}#person`;
+    person.url = `${origin}/users/${encodeURIComponent(userId)}`;
+  }
+  return person;
+}
+
+/**
+ * Build schema.org `ProfilePage` JSON-LD for /users/:id: Google's markup for
+ * "a user profile on a forum or social media site", which is what these pages
+ * are. The mainEntity Person carries the @id that lesson markup points its
+ * author at. No `image`: the page shows an initials placeholder, and Google's
+ * guidelines rule out placeholder images.
+ *
+ * @param {object} opts
+ * @param {string} opts.id              The user's id (also the page's path segment).
+ * @param {string} opts.name            Display name, with any fallback already applied.
+ * @param {string} [opts.description]   The bio, flattened to plain text.
+ * @param {number} [opts.followerCount]
+ * @param {number} [opts.followingCount]
+ * @param {number} [opts.lessonCount]   Published lessons shown on the page.
+ * @param {string} opts.origin
+ * @returns {object|null}
+ */
+export function buildProfileSchema({
+  id,
+  name,
+  description,
+  followerCount,
+  followingCount,
+  lessonCount,
+  origin,
+}) {
+  if (!id) return null;
+  const interaction = (type, count) => ({
+    "@type": "InteractionCounter",
+    interactionType: `https://schema.org/${type}`,
+    userInteractionCount: count,
+  });
+  const person = personObject({ name, userId: id, origin });
+  person.identifier = id;
+  if (description) person.description = description;
+  // The counts the page itself shows: this person's followers, then their own
+  // activity (who they follow, lessons they wrote).
+  person.interactionStatistic = [
+    interaction("FollowAction", followerCount ?? 0),
+  ];
+  person.agentInteractionStatistic = [
+    interaction("FollowAction", followingCount ?? 0),
+    interaction("WriteAction", lessonCount ?? 0),
+  ];
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    mainEntity: person,
+  };
+}
+
 // Build the bare schema.org `LearningResource` object (no top-level @context,
 // so it can either stand alone or be embedded inside an ItemList).
 //
@@ -170,8 +233,14 @@ function lessonObject({ lesson, description, url, origin }) {
     publisher: organizationObject(origin),
   };
   if (url) resource.url = url;
-  if (lesson.author) {
-    resource.author = { "@type": "Person", name: lesson.author };
+  // A nameless author with an account still links to their profile, under the
+  // "Anonymous" the page shows for them.
+  if (lesson.author || lesson.authorId) {
+    resource.author = personObject({
+      name: lesson.author || "Anonymous",
+      userId: lesson.authorId,
+      origin,
+    });
   }
   if (lesson.createdAt) {
     // schema.org dateCreated expects ISO 8601; skip an unparseable value.

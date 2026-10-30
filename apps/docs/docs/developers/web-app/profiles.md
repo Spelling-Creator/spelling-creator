@@ -11,6 +11,13 @@ Every signed-in user has a public display name, an optional bio, and a public
 profile page at `/users/:id`. None of this exposes the user's email: the API only
 ever returns the display name (falling back to `"Anonymous"`) and the bio.
 
+The page carries schema.org `ProfilePage` JSON-LD (`buildProfileSchema` in
+`apps/web/src/lib/seo.jsx`): the person's name, id, flattened bio and the
+page's own counts (followers, follows, lessons). Its Person has an `@id` that
+the author in lesson markup points at, so a person's profile and their lessons
+read as one entity. There is no `image` on purpose: the page shows an initials
+placeholder, and Google's guidelines rule out placeholder images.
+
 ## Display names
 
 `DisplayNameGate.jsx` wraps the whole app (in `main.jsx`, and in
