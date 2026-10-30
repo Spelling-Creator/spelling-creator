@@ -305,6 +305,30 @@ export function buildLessonListSchema({ lessons, origin }) {
 }
 
 /**
+ * Build schema.org `BreadcrumbList` JSON-LD matching a page's visible crumb
+ * trail (the PageBar). Google shows breadcrumbs in place of the raw URL on
+ * desktop results. The last crumb is the page itself, which carries no item
+ * URL per Google's guidelines: the canonical link already names it.
+ *
+ * @param {object} opts
+ * @param {Array<{name: string, path?: string}>} opts.crumbs  In order, root first.
+ * @param {string} opts.origin
+ * @returns {object|null}
+ */
+export function buildBreadcrumbSchema({ crumbs, origin }) {
+  if (!Array.isArray(crumbs) || crumbs.length === 0) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, i) => {
+      const item = { "@type": "ListItem", position: i + 1, name: crumb.name };
+      if (crumb.path) item.item = `${origin}${crumb.path}`;
+      return item;
+    }),
+  };
+}
+
+/**
  * Build the homepage's schema.org `WebSite` JSON-LD, the markup Google reads
  * the site name from. The old name rides along as alternateName so anything
  * that knew the site by it keeps matching.
