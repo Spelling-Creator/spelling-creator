@@ -29,5 +29,5 @@
     "portless": "^0.15.9",
     "turbo": "^2.11.10"
   },
-  "packageManager": "pnpm@12.4.1"
+  "packageManager": "pnpm@12.16.1"
 }
