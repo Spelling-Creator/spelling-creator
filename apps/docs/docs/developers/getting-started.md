@@ -11,7 +11,7 @@ description: "Setting up the monorepo: requirements, commands, portless URLs, Tu
   and VitePress would run on 20.19 or 22.12, but [portless](#local-urls), which
   serves their dev servers, needs 24. CI and the deploy workflow run Node 26,
   and the Docker image uses Node 24.
-- **pnpm**: the root `package.json` pins `"packageManager": "pnpm@12.4.1"`.
+- **pnpm**: the root `package.json` pins `"packageManager": "pnpm@12.16.1"`.
   `corepack enable` picks that version up for you.
 - **Git LFS**, before you clone (see [below](#git-lfs)).
 

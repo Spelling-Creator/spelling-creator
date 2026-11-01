@@ -30,7 +30,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 12.4.1
+          version: 12.16.1
 
       # No dependency cache: npm recommends release builds start clean, so
       # nothing a poisoned cache holds can end up in the published package.
