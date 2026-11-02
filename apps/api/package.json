@@ -39,7 +39,7 @@
     "yjs": "^13.6.32"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "^1.4.9",
+    "@cloudflare/vitest-plugin": "^1.4.11",
     "vitest": "~5.0.5",
     "wrangler": "^4.152.0"
   },
