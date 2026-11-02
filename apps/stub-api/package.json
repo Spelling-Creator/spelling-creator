@@ -16,8 +16,8 @@
   "dependencies": {
     "@spelling-creator/api": "workspace:*",
     "@spelling-creator/core": "workspace:*",
-    "ws": "^8.21.3",
-    "yjs": "^13.6.32"
+    "ws": "^8.22.0",
+    "yjs": "^13.6.33"
   },
   "devDependencies": {
     "vitest": "~3.2.7"
