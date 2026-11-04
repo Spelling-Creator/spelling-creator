@@ -22,9 +22,9 @@
 // expensive for one to adjudicate, so a reorder on both sides resolves to ours
 // and is reported in the summary instead.
 //
-// A section one side deleted stays only while it still holds a block, such as
-// one the other side edited or added, and it keeps the name the other side gave
-// it. Once the merge leaves it empty, the deletion stands.
+// A section one side deleted stays, in its place, while it still holds a block
+// the other side edited or added, or if the other side renamed it, and it keeps
+// the other side's name. Otherwise the deletion stands.
 //
 // The lesson's sources merge the same quiet way, by id and field by field: a
 // source one side added or edited comes through, and where both sides changed
@@ -87,7 +87,8 @@ export type DeleteConflict = {
   merged: Block;
   /**
    * The block's section, when the side that deleted the block deleted the whole
-   * section. Honoring the delete then also removes the section once it is empty.
+   * section and the other side kept its name. Honoring the delete then also
+   * removes the section once it is empty.
    */
   deletedSection?: string;
 } & (
@@ -245,10 +246,11 @@ function mergeFields<B extends object>(
  *
  * Deliberately not a conflict source — see the note at the top of the file.
  *
- * `placeRest` appends whatever `keep` holds that neither list placed. That is
- * only right when `keep` describes this one list. A section's block list is
- * merged against the kept blocks of the whole lesson, so it passes false, or
- * every other section's blocks would land in the first one.
+ * `placeRest` also places whatever `keep` holds that the steps above didn't,
+ * such as an id one side deleted that the other still lists. That is only right
+ * when `keep` describes this one list. A section's block list is merged against
+ * the kept blocks of the whole lesson, so it passes false, or every other
+ * section's blocks would land in the first one.
  */
 function mergeIdList(
   base: string[],
@@ -273,31 +275,54 @@ function mergeIdList(
     const id = theirs[i];
     if (ourSet.has(id) || baseSet.has(id) || !keep.has(id)) continue;
     if (merged.includes(id)) continue;
-
-    let at = merged.length;
-    for (let j = i - 1; j >= 0; j--) {
-      const anchor = merged.indexOf(theirs[j]);
-      if (anchor !== -1) {
-        at = anchor + 1;
-        break;
-      }
-    }
-    merged.splice(at, 0, id);
+    merged.splice(indexAfterAnchor(merged, theirs, i, merged.length), 0, id);
   }
 
-  // Anything the resolution kept that neither list places (e.g. a section we
-  // deleted that they still have) lands at the end rather than being lost.
+  // Anything the resolution kept that the steps above didn't place (e.g. a
+  // section one side deleted that the other still has) goes back after the id
+  // it follows on the side that lists it, so it keeps its place in the lesson.
+  // An id neither side lists lands at the end rather than being lost.
   if (placeRest) {
-    for (const id of keep) if (!merged.includes(id)) merged.push(id);
+    for (const id of keep) {
+      if (merged.includes(id)) continue;
+      const list = ourSet.has(id) ? ours : theirs;
+      const index = list.indexOf(id);
+      const fallback = index === -1 ? merged.length : 0;
+      merged.splice(indexAfterAnchor(merged, list, index, fallback), 0, id);
+    }
   }
 
   return merged;
+}
+
+/**
+ * Where the id at `list[index]` belongs in `merged`: right after the nearest
+ * id before it in `list` that `merged` holds, or at `fallback` if there is none.
+ */
+function indexAfterAnchor(
+  merged: string[],
+  list: string[],
+  index: number,
+  fallback: number,
+): number {
+  for (let j = index - 1; j >= 0; j--) {
+    const anchor = merged.indexOf(list[j]);
+    if (anchor !== -1) return anchor + 1;
+  }
+  return fallback;
 }
 
 function sectionsById(doc: DocLike) {
   const map = new Map<string, Section>();
   for (const section of doc?.sections || []) map.set(section.id, section);
   return map;
+}
+
+/** The section of `doc` holding a block. */
+function sectionHolding(doc: DocLike, blockId: string) {
+  return (doc?.sections || []).find((section) =>
+    (section.blocks || []).some((b) => b.id === blockId),
+  );
 }
 
 function blockIdsOf(doc: DocLike, sectionId: string) {
@@ -328,13 +353,21 @@ export function mergeDocs(
   ]);
 
   const baseSections = sectionsById(base);
-  /** The section holding a block on `keeper`, if `deleter` deleted that section. */
-  const deletedSection = (id: string, keeper: DocLike, deleter: DocLike) => {
-    const home = (keeper?.sections || []).find((section) =>
-      (section.blocks || []).some((b) => b.id === id),
-    );
+  const ourSections = sectionsById(ours);
+  const theirSections = sectionsById(theirs);
+  /**
+   * The section holding a block on `keeper`, if the deleting side deleted that
+   * section and `keeper` didn't rename it (see sectionWasRenamed).
+   */
+  const deletedSection = (
+    id: string,
+    keeper: DocLike,
+    deleterSections: Map<string, Section>,
+  ) => {
+    const home = sectionHolding(keeper, id);
     if (!home || !baseSections.has(home.id)) return {};
-    return sectionsById(deleter).has(home.id)
+    if (deleterSections.has(home.id)) return {};
+    return sectionWasRenamed(home, baseSections)
       ? {}
       : { deletedSection: home.id };
   };
@@ -382,7 +415,7 @@ export function mergeDocs(
           base: b,
           fields: [],
           merged: o,
-          ...deletedSection(id, ours, theirs),
+          ...deletedSection(id, ours, theirSections),
         });
       }
       continue;
@@ -409,7 +442,7 @@ export function mergeDocs(
           base: b,
           fields: [],
           merged: t,
-          ...deletedSection(id, theirs, ours),
+          ...deletedSection(id, theirs, ourSections),
         });
       }
       continue;
@@ -453,10 +486,26 @@ export function mergeDocs(
   }
 
   return {
-    doc: assemble(base, ours, theirs, resolved),
+    doc: assemble(base, ours, theirs, resolved, {
+      baseSections,
+      ourSections,
+      theirSections,
+    }),
     conflicts,
     auto,
   };
+}
+
+/**
+ * Whether the side holding `section` gave it a different name from the base's.
+ * A rename is an edit, and a deletion doesn't get to discard an edit unasked, so
+ * a section one side deleted and the other renamed stays, even with no blocks.
+ */
+function sectionWasRenamed(
+  section: Section,
+  baseSections: Map<string, Section>,
+) {
+  return section.name !== baseSections.get(section.id)?.name;
 }
 
 /**
@@ -468,20 +517,26 @@ function assemble(
   ours: DocLike,
   theirs: DocLike,
   resolved: Map<string, Block | null>,
+  {
+    baseSections,
+    ourSections,
+    theirSections,
+  }: {
+    baseSections: Map<string, Section>;
+    ourSections: Map<string, Section>;
+    theirSections: Map<string, Section>;
+  },
 ): LessonDoc {
   const kept = new Set<string>();
   for (const [id, block] of resolved) if (block) kept.add(id);
-
-  const baseSections = sectionsById(base);
-  const ourSections = sectionsById(ours);
-  const theirSections = sectionsById(theirs);
 
   const sectionIds = mergeIdList(
     (base?.sections || []).map((s) => s.id),
     (ours?.sections || []).map((s) => s.id),
     (theirs?.sections || []).map((s) => s.id),
-    // A section survives if either side still has it. Dropping a section would
-    // orphan the blocks the block-level merge decided to keep.
+    // Every section either side still has is laid out, so no block the
+    // block-level merge kept is orphaned. One that a side deleted and has no
+    // reason left to stay is filtered out once the layout is known.
     new Set([...ourSections.keys(), ...theirSections.keys()]),
   );
 
@@ -511,23 +566,17 @@ function assemble(
   for (const id of kept) {
     if (placed.has(id)) continue;
     for (const doc of [ours, theirs]) {
-      const home = (doc?.sections || []).find((section) =>
-        (section.blocks || []).some((b) => b.id === id),
-      );
+      const home = sectionHolding(doc, id);
       if (!home) continue;
       const blockIds = layout.get(home.id);
       if (!blockIds) continue;
 
       const order = home.blocks.map((b) => b.id);
-      let at = 0;
-      for (let j = order.indexOf(id) - 1; j >= 0; j--) {
-        const anchor = blockIds.indexOf(order[j]);
-        if (anchor !== -1) {
-          at = anchor + 1;
-          break;
-        }
-      }
-      blockIds.splice(at, 0, id);
+      blockIds.splice(
+        indexAfterAnchor(blockIds, order, order.indexOf(id), 0),
+        0,
+        id,
+      );
       placed.add(id);
       break;
     }
@@ -536,16 +585,18 @@ function assemble(
   // Every id placed or orphaned is in `kept`, so it resolved to a block.
   const keptBlock = (id: string) => resolved.get(id)!;
 
-  // A section one side deleted only stays for the blocks it still holds. Every
-  // merged section id was given a layout above.
+  // A section one side deleted only stays for a block it still holds or a name
+  // the other side gave it. Every merged section id was given a layout above,
+  // and is on at least one side.
   const sections: Section[] = sectionIds
     .filter((sectionId) => {
-      const onBothSides =
-        ourSections.has(sectionId) && theirSections.has(sectionId);
+      const mine = ourSections.get(sectionId);
+      const other = theirSections.get(sectionId);
       return (
-        onBothSides ||
+        (mine && other) ||
         !baseSections.has(sectionId) ||
-        layout.get(sectionId)!.length > 0
+        layout.get(sectionId)!.length > 0 ||
+        sectionWasRenamed((mine || other)!, baseSections)
       );
     })
     .map((sectionId) => {
@@ -554,8 +605,7 @@ function assemble(
       return {
         id: sectionId,
         // A side without the section has no say in its name, so this isn't
-        // left to mergeName, where a missing value counts as a change. Every
-        // merged section id is on at least one side.
+        // left to mergeName, where a missing value counts as a change.
         name:
           mine && other
             ? mergeName(
