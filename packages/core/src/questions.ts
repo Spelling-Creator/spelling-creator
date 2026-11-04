@@ -64,8 +64,10 @@ export interface QuestionFields {
 // file, which the type leaves out so the rows stay readable as { text } elsewhere.
 type AnswerRow = { text?: string } | null | undefined;
 
-function answerRowText(row: AnswerRow | string): string {
-  return (typeof row === "string" ? row : row?.text) || "";
+/** A row of a question's answer list as text, or "" when it holds none. */
+export function answerRowText(row: AnswerRow | string): string {
+  const text = typeof row === "string" ? row : row?.text;
+  return typeof text === "string" ? text : "";
 }
 
 export const QUESTION_TYPES: {

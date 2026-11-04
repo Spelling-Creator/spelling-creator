@@ -26,6 +26,7 @@ import {
   type TextNode,
 } from "./lessonText.ts";
 import { newId } from "./id.ts";
+import { answerRowText } from "./questions.ts";
 import type { Block, LessonDoc, QuestionBlock, Section } from "./types.ts";
 
 const ORANGE_TIGHT = "multiple";
@@ -213,9 +214,7 @@ const FIXES = {
         return null;
       }
       const already = block.answers.some(
-        (a) =>
-          ((typeof a === "string" ? a : a?.text) || "").trim().toLowerCase() ===
-          item.toLowerCase(),
+        (a) => answerRowText(a).trim().toLowerCase() === item.toLowerCase(),
       );
       if (already) return null;
       return {

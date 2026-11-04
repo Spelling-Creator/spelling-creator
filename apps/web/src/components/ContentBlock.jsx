@@ -52,6 +52,7 @@ import { cn } from "../lib/utils.js";
 import { useImageSrc } from "../lib/useImageSrc.js";
 import {
   THREE_BOARD_MARK,
+  answerRowText,
   isOrangeType,
   questionAnswerPlain,
   questionBesides,
@@ -944,7 +945,8 @@ function SpellingBlock({
 function QuestionBlock({ block, onChange, controls, questionNumber = null }) {
   const { t } = useTranslation("editorSections");
   const meta = questionMeta(block.questionType);
-  const answers = block.answers || [];
+  // A null row has nothing to edit, and goes for good with the next change.
+  const answers = (block.answers || []).filter(Boolean);
   const steps = block.steps || [];
 
   const setAnswer = (id, text) =>
@@ -1208,7 +1210,7 @@ function HeadingBlock({ block, onChange, controls }) {
 function ThreeBoardControls({ block, onChange }) {
   const { t } = useTranslation("editorSections");
   const answers = (block.answers || [])
-    .map((a) => (a.text || "").trim())
+    .map((a) => answerRowText(a).trim())
     .filter(Boolean);
   const besides = questionBesides(block);
   const NONE = "__none__";

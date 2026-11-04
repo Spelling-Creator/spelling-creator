@@ -210,6 +210,11 @@ describe("questionAnswerPlain", () => {
     expect(
       questionAnswerItems({ questionType: "multiple", answers: strings }),
     ).toEqual(["dog"]);
+    // Nor does the type cover a row whose text isn't a string.
+    const numbers = [{ text: 5 }, { text: "cat" }] as never;
+    expect(
+      questionAnswerItems({ questionType: "multiple", answers: numbers }),
+    ).toEqual(["cat"]);
     // Its neighbor reads the same list the same way.
     expect(
       questionBesides({
