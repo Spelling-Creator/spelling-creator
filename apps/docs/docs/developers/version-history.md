@@ -315,6 +315,12 @@ block order is merged on its own, and a block moved to another section on one
 side follows the move. A block one side deleted and the other edited goes back
 into the section that still holds it, after the block it followed there.
 
+A section one side deleted stays only while it still holds a block, such as one
+the other side edited or added, and it keeps the name that side has for it. If
+nothing is left in it, the deletion stands: the section goes without a question
+when the other side's blocks were untouched, and it goes when the dialog's choice
+honors the delete of its last contested block.
+
 A text block's words count as **one field**, whichever of its two shapes they
 are stored in (a plain `text` string, or a formatted `content` document; see
 [Formatting, footnotes & sources](web-app/formatting-and-footnotes.md)). Without

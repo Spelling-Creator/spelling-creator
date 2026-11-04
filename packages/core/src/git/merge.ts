@@ -22,6 +22,10 @@
 // expensive for one to adjudicate, so a reorder on both sides resolves to ours
 // and is reported in the summary instead.
 //
+// A section one side deleted stays only while it still holds a block, such as
+// one the other side edited or added, and it keeps the name the other side gave
+// it. Once the merge leaves it empty, the deletion stands.
+//
 // The lesson's sources merge the same quiet way, by id and field by field: a
 // source one side added or edited comes through, and where both sides changed
 // the same field of the same source, ours stands. A source is a reference, not
@@ -81,6 +85,11 @@ export type DeleteConflict = {
   fields: [];
   /** The surviving edit. */
   merged: Block;
+  /**
+   * The block's section, when the side that deleted the block deleted the whole
+   * section. Honoring the delete then also removes the section once it is empty.
+   */
+  deletedSection?: string;
 } & (
   | { deletedBy: "theirs"; ours: Block; theirs: null }
   | { deletedBy: "ours"; ours: null; theirs: Block }
@@ -318,6 +327,18 @@ export function mergeDocs(
     ...baseBlocks.keys(),
   ]);
 
+  const baseSections = sectionsById(base);
+  /** The section holding a block on `keeper`, if `deleter` deleted that section. */
+  const deletedSection = (id: string, keeper: DocLike, deleter: DocLike) => {
+    const home = (keeper?.sections || []).find((section) =>
+      (section.blocks || []).some((b) => b.id === id),
+    );
+    if (!home || !baseSections.has(home.id)) return {};
+    return sectionsById(deleter).has(home.id)
+      ? {}
+      : { deletedSection: home.id };
+  };
+
   /** blockId -> the resolved block, or null when the merge deletes it. */
   const resolved = new Map<string, Block | null>();
   const conflicts: MergeConflict[] = [];
@@ -361,6 +382,7 @@ export function mergeDocs(
           base: b,
           fields: [],
           merged: o,
+          ...deletedSection(id, ours, theirs),
         });
       }
       continue;
@@ -387,6 +409,7 @@ export function mergeDocs(
           base: b,
           fields: [],
           merged: t,
+          ...deletedSection(id, theirs, ours),
         });
       }
       continue;
@@ -513,18 +536,37 @@ function assemble(
   // Every id placed or orphaned is in `kept`, so it resolved to a block.
   const keptBlock = (id: string) => resolved.get(id)!;
 
-  // Every merged section id was given a layout above.
-  const sections: Section[] = sectionIds.map((sectionId) => ({
-    id: sectionId,
-    // Undefined for a section we deleted and they kept, since ours is then
-    // the side that changed it.
-    name: mergeName(
-      baseSections.get(sectionId)?.name,
-      ourSections.get(sectionId)?.name,
-      theirSections.get(sectionId)?.name,
-    ) as string,
-    blocks: layout.get(sectionId)!.map(keptBlock),
-  }));
+  // A section one side deleted only stays for the blocks it still holds. Every
+  // merged section id was given a layout above.
+  const sections: Section[] = sectionIds
+    .filter((sectionId) => {
+      const onBothSides =
+        ourSections.has(sectionId) && theirSections.has(sectionId);
+      return (
+        onBothSides ||
+        !baseSections.has(sectionId) ||
+        layout.get(sectionId)!.length > 0
+      );
+    })
+    .map((sectionId) => {
+      const mine = ourSections.get(sectionId);
+      const other = theirSections.get(sectionId);
+      return {
+        id: sectionId,
+        // A side without the section has no say in its name, so this isn't
+        // left to mergeName, where a missing value counts as a change. Every
+        // merged section id is on at least one side.
+        name:
+          mine && other
+            ? mergeName(
+                baseSections.get(sectionId)?.name,
+                mine.name,
+                other.name,
+              )
+            : (mine || other)!.name,
+        blocks: layout.get(sectionId)!.map(keptBlock),
+      };
+    });
 
   // A kept block whose every section disappeared would otherwise be dropped.
   const orphans = [...kept].filter((id) => !placed.has(id));
@@ -632,6 +674,17 @@ export function applyResolutions(
       const survivor = conflict.ours || conflict.theirs;
       const keep = choice === "both" || choice === keptSide(conflict);
       doc = replaceBlock(doc, blockId, keep ? survivor : null, null, newId);
+      // Honoring the delete of a block whose whole section was deleted: nothing
+      // is left to keep that section for, unless another block still holds it.
+      if (!keep && conflict.deletedSection) {
+        const emptied = conflict.deletedSection;
+        doc = {
+          ...doc,
+          sections: doc.sections.filter(
+            (s) => s.id !== emptied || s.blocks.length > 0,
+          ),
+        };
+      }
       continue;
     }
 
