@@ -24,7 +24,13 @@
 // stored shape — e.g. spelling words are plain strings here, objects in the doc.
 
 import { isObjectLike } from "./guards.ts";
-import { IMAGE_ALIGNS, type ImageAlign, extFromMime } from "./image.ts";
+import {
+  IMAGE_ALIGNS,
+  IMAGE_SIZES,
+  type ImageAlign,
+  type ImageSize,
+  extFromMime,
+} from "./image.ts";
 import { withSeparateCredit } from "./imageCredit.ts";
 import { inlineTextMarkup, markupToInlineText } from "./inlineText.ts";
 import { isSafeLink } from "./richText.ts";
@@ -77,6 +83,10 @@ function isQuestionType(value: unknown): value is QuestionType {
 
 function isImageAlign(value: unknown): value is ImageAlign {
   return (IMAGE_ALIGNS as readonly unknown[]).includes(value);
+}
+
+function isImageSize(value: unknown): value is ImageSize {
+  return IMAGE_SIZES.some((size) => size.key === value);
 }
 
 /**
@@ -409,7 +419,7 @@ function buildImageBlock(block: BlockInput, where: string): ImageBlock {
   // The license credit, apart from the caption (see ./imageCredit.ts).
   if (typeof block.credit === "string") out.credit = block.credit;
   if (isImageAlign(block.align)) out.align = block.align;
-  if (typeof block.size === "string" && block.size) out.size = block.size;
+  if (isImageSize(block.size)) out.size = block.size;
   return out;
 }
 

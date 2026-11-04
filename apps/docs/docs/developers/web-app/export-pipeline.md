@@ -203,9 +203,12 @@ is a list of email addresses and a lesson file is something people pass around.
 On import, an age range the editor doesn't offer is dropped and the lesson reads
 as "any age". An image block is rebuilt from the fields a picture has (`image`,
 `src`, `width`, `height`, `caption` and `credit`), the same ones a VAKT activity's
-picture keeps, so anything else on it is dropped. A size or an alignment the
-editor doesn't offer becomes the default, full width and centered, so its toggles
-always show a setting.
+picture keeps, so anything else on it is dropped, along with a field of the wrong
+type. A block left with no usable `image` or `src` is dropped too. A size or an
+alignment the editor doesn't offer becomes the default, full width and centered.
+The MCP server's block builder leaves such a value out, which means the same
+default. A lesson saved before these checks can still hold one, so the editor
+reads its toggles through the same `imageSizeOrDefault` and `imageAlignOrDefault`.
 
 ### Formatting, footnotes and sources
 

@@ -56,14 +56,20 @@ export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const DEFAULT_IMAGE_SIZE = "full" satisfies ImageSize;
 export const DEFAULT_IMAGE_ALIGN = "center" satisfies ImageAlign;
 
-/** A size the editor offers, or the default for anything else. */
-export function imageSizeOrDefault(size: unknown): ImageSize {
-  return IMAGE_SIZES.find((s) => s.key === size)?.key ?? DEFAULT_IMAGE_SIZE;
+/** A size the editor offers, or the fallback for anything else. */
+export function imageSizeOrDefault(
+  size: unknown,
+  fallback: ImageSize = DEFAULT_IMAGE_SIZE,
+): ImageSize {
+  return IMAGE_SIZES.find((s) => s.key === size)?.key ?? fallback;
 }
 
-/** An alignment the editor offers, or the default for anything else. */
-export function imageAlignOrDefault(align: unknown): ImageAlign {
-  return IMAGE_ALIGNS.find((a) => a === align) ?? DEFAULT_IMAGE_ALIGN;
+/** An alignment the editor offers, or the fallback for anything else. */
+export function imageAlignOrDefault(
+  align: unknown,
+  fallback: ImageAlign = DEFAULT_IMAGE_ALIGN,
+): ImageAlign {
+  return IMAGE_ALIGNS.find((a) => a === align) ?? fallback;
 }
 
 export function imageSizeScale(size: unknown): number {

@@ -281,11 +281,12 @@ function normalizeBlock(block: unknown): Block | null {
     case "image": {
       // Only a size and an alignment the editor offers survive. Anything else
       // would leave its toggles with none pressed, and travel with the lesson.
-      if (!block.image && !block.src) return null;
+      const picture = normalizePicture(block);
+      if (!picture.image && !picture.src) return null;
       const image: ImageBlock = {
         id: keepId(block.id),
         type: "image",
-        ...normalizePicture(block),
+        ...picture,
         size: imageSizeOrDefault(block.size),
         align: imageAlignOrDefault(block.align),
       };
@@ -300,15 +301,22 @@ function normalizeBlock(block: unknown): Block | null {
 // The picture an image block or a VAKT activity holds. A hash ref is what a
 // stored lesson carries, and an inline `src` data URL is what one still carries
 // between a DOCX import and the convertDocImages pass that turns it into a ref,
-// so both are kept. The ref, `src` and the dimensions are as the file has them,
-// which the type takes on trust.
+// so both are kept. A field of the wrong type is dropped: a ref with no hash or a
+// `src` that isn't a string can't be drawn, and a dimension that isn't a number
+// would size the picture as NaN. A ref's mime and ext are taken on trust, since
+// the readers fall back when they are missing.
 function normalizePicture(block: Record<string, unknown>): Picture {
-  const raw = block as Picture;
   const picture: Picture = {};
-  if (raw.image) picture.image = raw.image;
-  if (raw.src) picture.src = raw.src;
-  if (raw.width != null) picture.width = raw.width;
-  if (raw.height != null) picture.height = raw.height;
+  const { image, src, width, height } = block;
+  if (isObjectLike(image) && typeof image.hash === "string" && image.hash) {
+    picture.image = image as unknown as Picture["image"];
+  }
+  if (typeof src === "string" && src) picture.src = src;
+  if (typeof width === "number" && Number.isFinite(width))
+    picture.width = width;
+  if (typeof height === "number" && Number.isFinite(height)) {
+    picture.height = height;
+  }
   if (typeof block.caption === "string") picture.caption = block.caption;
   if (typeof block.credit === "string") picture.credit = block.credit;
   return picture;
@@ -316,8 +324,8 @@ function normalizePicture(block: Record<string, unknown>): Picture {
 
 // A VAKT activity: the text (with any label the author typed in front of it
 // stripped, so nothing ends up doubly prefixed), its links, and an optional
-// picture. Dropped entirely when it holds nothing at all — a blank red card is
-// noise in an imported lesson.
+// picture. Dropped entirely when it holds nothing at all, since a blank red card
+// is noise in an imported lesson.
 function normalizeVakt(block: Record<string, unknown>): VaktBlock | null {
   // The framing as the file has it, which is only ever compared against the
   // known sizes and alignments.
@@ -333,8 +341,9 @@ function normalizeVakt(block: Record<string, unknown>): VaktBlock | null {
   };
   // Dropping `src` here would silently lose the picture and, for a block that
   // had nothing else, the whole block.
-  if (framing.image || framing.src) {
-    Object.assign(normalized, normalizePicture(block));
+  const picture = normalizePicture(block);
+  if (picture.image || picture.src) {
+    Object.assign(normalized, picture);
     // The framing, defaulted the VAKT way rather than the image block's, so a
     // file that never carried one imports looking the way it printed.
     normalized.size = vaktImageSize(framing);

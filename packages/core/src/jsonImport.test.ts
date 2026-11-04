@@ -121,8 +121,47 @@ describe("image blocks in a lesson file", () => {
     });
   });
 
-  it("drops a block with no picture", () => {
-    expect(() => importImage({ src: undefined })).toThrow();
+  it("drops a dimension that isn't a finite number", () => {
+    expect(importImage({ width: "big", height: Infinity })).toEqual({
+      id: "i1",
+      type: "image",
+      src: "x.png",
+      size: "full",
+      align: "center",
+    });
+  });
+
+  it.each([
+    ["no picture", { src: undefined }],
+    ["a ref that isn't an object", { src: undefined, image: "foo" }],
+    ["a ref with no hash", { src: undefined, image: { mime: "image/png" } }],
+    ["a src that isn't a string", { src: 42 }],
+  ])("drops a block with %s", (_label, fields) => {
+    expect(() => importImage(fields)).toThrow();
+  });
+
+  it("treats a VAKT activity's unusable picture as no picture", () => {
+    const [block] = normalizeLessonFile({
+      title: "Lions",
+      sections: [
+        {
+          id: "s1",
+          name: "One",
+          blocks: [
+            {
+              id: "v1",
+              type: "vakt",
+              text: "Roar like a lion.",
+              src: 42,
+              caption: "A lion.",
+            },
+          ],
+        },
+      ],
+    }).sections[0].blocks;
+    expect(block).toMatchObject({ type: "vakt", text: "Roar like a lion." });
+    expect(block).not.toHaveProperty("caption");
+    expect(block).not.toHaveProperty("size");
   });
 });
 
