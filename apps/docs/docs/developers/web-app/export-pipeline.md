@@ -201,7 +201,11 @@ the title, the age range, the lesson's sources and every section. The one thing
 it leaves out on purpose is the lesson's trusted-collaborator list, because that
 is a list of email addresses and a lesson file is something people pass around.
 On import, an age range the editor doesn't offer is dropped and the lesson reads
-as "any age".
+as "any age". An image block is rebuilt from the fields a picture has (`image`,
+`src`, `width`, `height`, `caption` and `credit`), the same ones a VAKT activity's
+picture keeps, so anything else on it is dropped. A size or an alignment the
+editor doesn't offer becomes the default, full width and centered, so its toggles
+always show a setting.
 
 ### Formatting, footnotes and sources
 

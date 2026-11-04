@@ -55,6 +55,77 @@ describe("three-board questions in a lesson file", () => {
   });
 });
 
+describe("image blocks in a lesson file", () => {
+  const importImage = (fields: Record<string, unknown>) =>
+    normalizeLessonFile({
+      title: "Lions",
+      sections: [
+        {
+          id: "s1",
+          name: "One",
+          blocks: [{ id: "i1", type: "image", src: "x.png", ...fields }],
+        },
+      ],
+    }).sections[0].blocks[0];
+
+  it("keeps a size and an alignment the editor offers", () => {
+    expect(importImage({ size: "small", align: "left" })).toMatchObject({
+      size: "small",
+      align: "left",
+    });
+  });
+
+  it.each([
+    ["missing", {}],
+    ["unknown", { size: "huge", align: "middle" }],
+    ["not a string", { size: 5, align: true }],
+  ])("defaults a size and an alignment that are %s", (_label, fields) => {
+    expect(importImage(fields)).toMatchObject({
+      size: "full",
+      align: "center",
+    });
+  });
+
+  it("keeps the picture's own fields", () => {
+    const image = { hash: "abc", mime: "image/png", ext: "png" };
+    expect(
+      importImage({
+        src: undefined,
+        image,
+        width: 640,
+        height: 480,
+        caption: "A lion.",
+        credit: "Image by jdoe from Pixabay",
+      }),
+    ).toEqual({
+      id: "i1",
+      type: "image",
+      image,
+      width: 640,
+      height: 480,
+      caption: "A lion.",
+      credit: "Image by jdoe from Pixabay",
+      size: "full",
+      align: "center",
+    });
+  });
+
+  it("drops a field it doesn't know and a caption that isn't text", () => {
+    const block = importImage({ caption: 5, credit: {}, mystery: "kept?" });
+    expect(block).toEqual({
+      id: "i1",
+      type: "image",
+      src: "x.png",
+      size: "full",
+      align: "center",
+    });
+  });
+
+  it("drops a block with no picture", () => {
+    expect(() => importImage({ src: undefined })).toThrow();
+  });
+});
+
 describe("heading blocks in a lesson file", () => {
   const read = (block: unknown) =>
     normalizeLessonFile({
