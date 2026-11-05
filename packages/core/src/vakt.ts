@@ -23,8 +23,8 @@
 
 import { isSafeLink } from "./richText.ts";
 import {
-  IMAGE_ALIGNS,
-  IMAGE_SIZES,
+  imageAlignOrDefault,
+  imageSizeOrDefault,
   type ImageAlign,
   type ImageSize,
 } from "./image.ts";
@@ -72,18 +72,14 @@ export const VAKT_DEFAULT_IMAGE_ALIGN = "center" satisfies ImageAlign;
 export function vaktImageSize(
   block: Partial<VaktBlock> | null | undefined,
 ): ImageSize {
-  const size = block?.size;
-  return (
-    IMAGE_SIZES.find((s) => s.key === size)?.key ?? VAKT_DEFAULT_IMAGE_SIZE
-  );
+  return imageSizeOrDefault(block?.size, VAKT_DEFAULT_IMAGE_SIZE);
 }
 
 /** Where a VAKT picture sits, defaulting the same way. */
 export function vaktImageAlign(
   block: Partial<VaktBlock> | null | undefined,
 ): ImageAlign {
-  const align = block?.align;
-  return IMAGE_ALIGNS.find((a) => a === align) ?? VAKT_DEFAULT_IMAGE_ALIGN;
+  return imageAlignOrDefault(block?.align, VAKT_DEFAULT_IMAGE_ALIGN);
 }
 
 /**
