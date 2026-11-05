@@ -200,6 +200,31 @@ describe("questionAnswerPlain", () => {
     );
   });
 
+  it("copes with the rows a block mid-edit can hold in its answer list", () => {
+    const answers = [null, undefined, { id: "x", text: " cat " }, {}];
+    expect(questionAnswerItems({ questionType: "multiple", answers })).toEqual([
+      "cat",
+    ]);
+    // A bare string is outside the type, but a hand-written file can hold one.
+    const strings = [null, " dog "] as never;
+    expect(
+      questionAnswerItems({ questionType: "multiple", answers: strings }),
+    ).toEqual(["dog"]);
+    // Nor does the type cover a row whose text isn't a string.
+    const numbers = [{ text: 5 }, { text: "cat" }] as never;
+    expect(
+      questionAnswerItems({ questionType: "multiple", answers: numbers }),
+    ).toEqual(["cat"]);
+    // Its neighbor reads the same list the same way.
+    expect(
+      questionBesides({
+        questionType: "multiple",
+        answers: strings,
+        besides: "DOG",
+      }),
+    ).toBe("dog");
+  });
+
   it("is what the importer stores for such an answer", () => {
     const file = normalizeLessonFile({
       title: "T",

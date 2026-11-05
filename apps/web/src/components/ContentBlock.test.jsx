@@ -61,3 +61,17 @@ describe("an image block's framing toggles", () => {
     expect(pressed(draw(image({ size: "huge", align: "middle" })))).toBe(2);
   });
 });
+
+describe("a question's answer list", () => {
+  it("draws a block mid-edit with a null row", () => {
+    const host = draw({
+      id: "q1",
+      type: "question",
+      questionType: "multiple",
+      prompt: "Name one.",
+      answers: [null, { id: "a1", text: "cat" }],
+    });
+    const inputs = [...host.querySelectorAll("input")].map((i) => i.value);
+    expect(inputs).toContain("cat");
+  });
+});
