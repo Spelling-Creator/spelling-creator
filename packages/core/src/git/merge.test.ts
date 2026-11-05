@@ -240,6 +240,32 @@ describe("merging a section one side deleted", () => {
     }
   });
 
+  it("keeps the base order of sections each side deleted the other needs", () => {
+    const three = { id: "s3", name: "Three", blocks: [block("c")] };
+    const start: LessonDoc = { title: "Cats", sections: [one, two, three] };
+    // Each side edits the block in one section and deletes the other section.
+    const keepsTwo: LessonDoc = {
+      title: "Cats",
+      sections: [one, { ...two, blocks: [block("b", "b!")] }],
+    };
+    const keepsThree: LessonDoc = {
+      title: "Cats",
+      sections: [one, { ...three, blocks: [block("c", "c!")] }],
+    };
+    for (const [mine, other] of [
+      [keepsTwo, keepsThree],
+      [keepsThree, keepsTwo],
+    ]) {
+      const { doc, conflicts } = mergeDocs(start, mine, other);
+      expect(conflicts).toHaveLength(2);
+      expect(doc.sections.map((section) => section.id)).toEqual([
+        "s1",
+        "s2",
+        "s3",
+      ]);
+    }
+  });
+
   it("keeps a first section in first place", () => {
     const start: LessonDoc = { title: "Cats", sections: [two, one] };
     const gone: LessonDoc = { title: "Cats", sections: [one] };

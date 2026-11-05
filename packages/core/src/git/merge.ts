@@ -283,12 +283,28 @@ function mergeIdList(
   // it follows on the side that lists it, so it keeps its place in the lesson.
   // An id neither side lists lands at the end rather than being lost.
   if (placeRest) {
+    // Two ids put back after the same anchor (one from each side) would land
+    // in the order they were put back, so they are ordered as the base had them.
+    const restored = new Set<string>();
+    const baseIndex = new Map(base.map((id, i) => [id, i]));
+    const beforeInBase = (a: string, b: string) =>
+      (baseIndex.get(a) ?? Infinity) < (baseIndex.get(b) ?? -Infinity);
+
     for (const id of keep) {
       if (merged.includes(id)) continue;
       const list = ourSet.has(id) ? ours : theirs;
       const index = list.indexOf(id);
       const fallback = index === -1 ? merged.length : 0;
-      merged.splice(indexAfterAnchor(merged, list, index, fallback), 0, id);
+      let at = indexAfterAnchor(merged, list, index, fallback);
+      while (
+        at < merged.length &&
+        restored.has(merged[at]) &&
+        beforeInBase(merged[at], id)
+      ) {
+        at++;
+      }
+      merged.splice(at, 0, id);
+      restored.add(id);
     }
   }
 
