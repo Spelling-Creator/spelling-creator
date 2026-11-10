@@ -32,3 +32,25 @@ export const VOICES = {
 export type VoiceId = keyof typeof VOICES;
 
 export const DEFAULT_VOICE: VoiceId = "af_heart";
+
+// A natural voice is stored in the same preference as a browser voice, as this
+// prefix plus the voice's id, so choosing one is just choosing a voice. No
+// browser voiceURI starts with it.
+export const NATURAL_VOICE_PREFIX = "kokoro:";
+
+/** The voice preference that names a natural voice. */
+export function naturalVoiceURI(id: VoiceId): string {
+  return `${NATURAL_VOICE_PREFIX}${id}`;
+}
+
+/**
+ * The Kokoro voice id a stored voice preference names, or null for a browser
+ * voice (or the browser default).
+ */
+export function naturalVoiceId(
+  voiceURI: string | null | undefined,
+): VoiceId | null {
+  if (!voiceURI?.startsWith(NATURAL_VOICE_PREFIX)) return null;
+  const id = voiceURI.slice(NATURAL_VOICE_PREFIX.length);
+  return Object.hasOwn(VOICES, id) ? (id as VoiceId) : null;
+}

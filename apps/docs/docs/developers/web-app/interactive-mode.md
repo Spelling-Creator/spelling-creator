@@ -260,10 +260,20 @@ is marked `pauseAfter`. The two kinds of voice then take it differently:
   pause is the gap between two utterances.
 - **A natural voice** speaks phonemes, so it follows every hint (see below), and
   a long pause is 0.7 seconds of silence on the audio timeline
-  (`LONG_PAUSE_SECONDS` in `useSpeech.js`).
+  (`LONG_PAUSE_SECONDS` in `core/browser/speechPlayer.ts`).
+
+The speaking is done by `createSpeechPlayer`
+(`packages/core/src/browser/speechPlayer.ts`), which knows nothing about
+React and remembers no preference: the page passes the voice, pace and on/off
+choices in through `configure`, and reads whether it is speaking and how the
+natural voice's load is going from its snapshot (it is a store, see
+[Sessions outside React](./project-structure.md#sessions-outside-react)).
+`useSpeech` (`apps/web/src/lib/useSpeech.js`) is the hook over it, and the
+player is tested in core with the browser's voice, Web Audio and the Kokoro
+door stood in for.
 
 A formula in a text block is either its author's spoken words or a formula run
-(`{ text: source, formula }`). Before a step with one is spoken, `useSpeech`
+(`{ text: source, formula }`). Before a step with one is spoken, the player
 has `withFormulaSpeech` replace each with the words the speech rule engine
 makes from the formula's MathML (`formulaWords` in `core/browser/formulas.ts`;
 see [Formulas](./formatting-and-footnotes.md#formulas)), for both voices. The
@@ -279,12 +289,15 @@ aloud** section of the settings page. `SPEECH_RATES` is `[0.7, 0.85, 1, 1.25,
 1.5]`; an unrecognized stored rate falls back to 1. A change made in one place
 reaches the other the next time it mounts, not live (no `storage` listener).
 
-Three platform quirks are handled between the two files. `speechPrefs.js` takes
+Three platform quirks are handled between the two sides. `speechPrefs.js` takes
 the one that belongs to the voice list: voices load asynchronously, announced by
-`voiceschanged`. `useSpeech.js` takes the two that belong to speaking: Chromium
+`voiceschanged`. The player takes the two that belong to speaking: Chromium
 cuts off a single utterance after about 15 seconds (so text is split into chunks
 of at most 180 characters, `MAX_CHUNK` in `core/speech.ts`, and queued), and
 `cancel()` isn't synchronous (so a new utterance is deferred a tick after one).
+A natural voice is stored in the same preference as a browser voice, as
+`kokoro:` plus its id (`naturalVoiceURI` and `naturalVoiceId` in
+`core/browser/readAloud`), so choosing one is just choosing a voice.
 
 ### Natural voices (Kokoro)
 
@@ -363,7 +376,7 @@ How it behaves:
   timeline straight after the one before, so playback runs on while the next
   chunk is made.
 - **The next step is made ahead.** While a step plays, the first two chunks of
-  the next step are made too (`prepare` in `useSpeech.js`, `PREPARED_CHUNKS`), so
+  the next step are made too (`prepare` in `speechPlayer.ts`, `PREPARED_CHUNKS`), so
   pressing Next starts speaking at once. This waits until the current step has
   been made: the model does one thing at a time, so running it alongside would
   hold up the chunks being listened to. Made clips are kept (up to 24,

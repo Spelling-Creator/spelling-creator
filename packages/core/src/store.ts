@@ -33,18 +33,22 @@ export interface Store<S extends object> extends ReadableStore<S> {
   patch(fields: Partial<S>): void;
 }
 
-export function createStore<S extends object>(initial: S): Store<S> {
-  let snapshot = initial;
+/**
+ * A store of one value rather than a snapshot of fields: for something that
+ * changes too often to sit in a session's snapshot, such as a download's
+ * progress, which a page shows in one place and nowhere else.
+ */
+export interface ValueStore<T> extends ReadableStore<T> {
+  /** Replace the value. The same value again (by Object.is) is not a change. */
+  set(next: T): void;
+}
+
+export function createValueStore<T>(initial: T): ValueStore<T> {
+  let value = initial;
   const listeners = new Set<() => void>();
 
-  // Over a copy, so a listener that unsubscribes (or subscribes another) while
-  // being told doesn't disturb the round.
-  const notify = () => {
-    for (const listener of [...listeners]) listener();
-  };
-
   return {
-    getSnapshot: () => snapshot,
+    getSnapshot: () => value,
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -52,11 +56,24 @@ export function createStore<S extends object>(initial: S): Store<S> {
       };
     },
     set(next) {
-      if (Object.is(next, snapshot)) return;
-      snapshot = next;
-      notify();
+      if (Object.is(next, value)) return;
+      value = next;
+      // Over a copy, so a listener that unsubscribes (or subscribes another)
+      // while being told doesn't disturb the round.
+      for (const listener of [...listeners]) listener();
     },
+  };
+}
+
+export function createStore<S extends object>(initial: S): Store<S> {
+  const value = createValueStore(initial);
+
+  return {
+    getSnapshot: value.getSnapshot,
+    subscribe: value.subscribe,
+    set: value.set,
     patch(fields) {
+      const snapshot = value.getSnapshot();
       let changed = false;
       for (const key of Object.keys(fields) as (keyof S)[]) {
         if (!Object.is(fields[key], snapshot[key])) {
@@ -65,8 +82,7 @@ export function createStore<S extends object>(initial: S): Store<S> {
         }
       }
       if (!changed) return;
-      snapshot = { ...snapshot, ...fields };
-      notify();
+      value.set({ ...snapshot, ...fields });
     },
   };
 }

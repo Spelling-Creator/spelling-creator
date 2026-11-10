@@ -1,6 +1,9 @@
 // @vitest-environment happy-dom
 
-// A natural voice chosen on an earlier visit has to be the one that reads,
+// The hook over core's speech player, with the player's own cases covered in
+// core (browser/speechPlayer.test.ts). What is pinned down here is the wiring
+// through the stored preferences and the voice lists:
+// a natural voice chosen on an earlier visit has to be the one that reads,
 // without being picked again in practice mode. Once it's downloaded, it loads
 // as soon as speech is on and the first step waits for it; before that, the
 // browser's voice reads while it downloads.
@@ -12,9 +15,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 let possible;
 let cached;
 let load;
-vi.mock("@spelling-creator/core/browser/readAloud", () => ({
-  VOICES: { af_heart: { name: "Heart", lang: "en-US" } },
-  DOWNLOAD_MB: 330,
+vi.mock("@spelling-creator/core/browser/readAloud", async (importOriginal) => ({
+  ...(await importOriginal()),
   readAloudPossible: vi.fn(() => possible.promise),
   readAloudCached: vi.fn(() => Promise.resolve(cached)),
   loadReadAloud: vi.fn(() => load.promise),

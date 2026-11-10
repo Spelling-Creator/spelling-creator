@@ -33,6 +33,7 @@
     "./browser/presence": "./src/browser/presence.ts",
     "./browser/readAloud": "./src/browser/readAloud.ts",
     "./browser/sanitizeRichText": "./src/browser/sanitizeRichText.ts",
+    "./browser/speechPlayer": "./src/browser/speechPlayer.ts",
     "./browser/storage": "./src/browser/storage.ts",
     "./browser/summarizer": "./src/browser/summarizer.ts",
     "./browser/supabase": "./src/browser/supabase.ts",
