@@ -251,6 +251,10 @@ export default defineConfig({
               link: "/developers/web-app/getting-started",
             },
             {
+              text: "End-to-end tests",
+              link: "/developers/web-app/end-to-end-tests",
+            },
+            {
               text: "Project structure",
               link: "/developers/web-app/project-structure",
             },

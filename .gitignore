@@ -40,5 +40,9 @@ packages/core/scripts/extract-eval/out-*/
 .playwright-mcp/
 .playwright-cli/
 
+# Playwright end-to-end test runs (apps/web/playwright.config.ts)
+test-results/
+playwright-report/
+
 # Claude Code worktrees
 .claude/worktrees/

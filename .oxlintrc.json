@@ -60,6 +60,14 @@
       }
     },
 
+    // The web app's browser tests and their Playwright config: Node drives the
+    // tests, and the snippets they inject into pages (addInitScript) run in the
+    // browser.
+    {
+      "files": ["apps/web/e2e/**/*.ts", "apps/web/playwright.config.ts"],
+      "env": { "browser": true, "node": true }
+    },
+
     // API — Cloudflare Worker runtime
     {
       "files": ["apps/api/**/*.js"],

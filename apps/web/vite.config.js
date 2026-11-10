@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { configDefaults } from "vitest/config";
 import {
   STUB,
   addAlias,
@@ -440,6 +441,12 @@ export default defineConfig(({ isSsrBuild, mode }) => ({
     // html2pdf.js / mammoth reference a Node-ish `global`; map it to globalThis
     // so the browser build resolves it.
     global: "globalThis",
+  },
+  // vitest reads this file too. The browser tests under e2e/ are Playwright's
+  // (see playwright.config.ts), which vitest's default include would otherwise
+  // collect and fail on.
+  test: {
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
   // The server build (`pnpm build:ssr` -> dist-ssr/entry-server.js) that the
   // Worker imports. `target: "webworker"` and the `react-dom/server.browser`

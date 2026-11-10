@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "portless run --name preview.spelling-creator vite preview",
     "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test",
     "build:ssr": "vite build --ssr src/entry-server.jsx --outDir dist-ssr",
     "icons": "node scripts/icons.mjs"
   },
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@playwright/test": "^1.65.0",
     "@rolldown/plugin-babel": "^0.2.4",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.2",
