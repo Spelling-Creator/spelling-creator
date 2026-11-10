@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { createStore } from "./store.ts";
+import { createStore, createValueStore } from "./store.ts";
+
+describe("createValueStore", () => {
+  it("holds one value and tells listeners when it changes", () => {
+    const store = createValueStore(0);
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    store.set(0.5);
+    store.set(0.5);
+    expect(store.getSnapshot()).toBe(0.5);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("createStore", () => {
   it("hands out the same snapshot until something changes", () => {

@@ -17,7 +17,13 @@ import {
   type ReadAloudDtype,
 } from "./readAloudVoices.ts";
 
-export { VOICES, DEFAULT_VOICE } from "./readAloudVoices.ts";
+export {
+  VOICES,
+  DEFAULT_VOICE,
+  NATURAL_VOICE_PREFIX,
+  naturalVoiceId,
+  naturalVoiceURI,
+} from "./readAloudVoices.ts";
 export type { ReadAloudDtype, VoiceId } from "./readAloudVoices.ts";
 export type {
   LoadReadAloudOptions,

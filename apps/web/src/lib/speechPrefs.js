@@ -28,10 +28,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  naturalVoiceURI,
   readAloudCached,
   readAloudPossible,
   VOICES as NATURAL_VOICES,
 } from "@spelling-creator/core/browser/readAloud";
+
+// Which natural voice a stored preference names, if any. In core, where the
+// player needs it too.
+export { naturalVoiceId } from "@spelling-creator/core/browser/readAloud";
 
 const ENABLED_KEY = "spelling-creator:tts-enabled";
 const VOICE_KEY = "spelling-creator:tts-voice";
@@ -91,26 +96,10 @@ export function useSpeechVoices() {
   return { supported, voices };
 }
 
-// A natural (Kokoro) voice is stored in the same preference as a browser voice,
-// as this prefix plus the voice's id, so choosing one is just choosing a voice.
-// No browser voiceURI starts with it.
-const NATURAL_PREFIX = "kokoro:";
-
-/**
- * The Kokoro voice id a stored voice preference names, or null for a browser
- * voice (or the browser default).
- * @param {string} voiceURI
- * @returns {string|null}
- */
-export function naturalVoiceId(voiceURI) {
-  if (!voiceURI?.startsWith(NATURAL_PREFIX)) return null;
-  const id = voiceURI.slice(NATURAL_PREFIX.length);
-  return Object.hasOwn(NATURAL_VOICES, id) ? id : null;
-}
-
 /**
  * The natural voices this device can use, shaped like browser voices so the
- * picker lists both the same way: empty until the device check has run, and
+ * picker lists both the same way (a natural one is stored as its voiceURI,
+ * see naturalVoiceURI in core): empty until the device check has run, and
  * empty for good where it fails (no WebGPU, a phone or tablet, or a metered
  * connection unless the model is already downloaded). See
  * core/browser/readAloud.ts.
@@ -128,7 +117,7 @@ export function useNaturalVoices() {
         if (cancelled || !possible) return;
         setVoices(
           Object.entries(NATURAL_VOICES).map(([id, { name, lang }]) => ({
-            voiceURI: `${NATURAL_PREFIX}${id}`,
+            voiceURI: naturalVoiceURI(id),
             name,
             lang,
           })),

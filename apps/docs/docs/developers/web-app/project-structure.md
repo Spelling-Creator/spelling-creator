@@ -126,7 +126,7 @@ src/
       engine.js, load.js   the docx/PDF/import pipeline, behind one dynamic import (keeps docx, mammoth and html2pdf.js off every page that never exports; preview doesn't need it)
     useImageSrc.js         resolves an image ref to a displayable src
     speechPrefs.js         the read-aloud preferences (on/off, voice, pace) and the voice lists (the browser's, and the natural voices this device can run), shared by interactive mode and the settings page
-    useSpeech.js           text-to-speech for interactive mode: the browser's voices over the Web Speech API, or a natural voice (Kokoro) played through Web Audio, with the browser's as the fallback
+    useSpeech.js           useSpeech: the hook over core's speech player (browser/speechPlayer), configured from those preferences
     auth.jsx               AuthProvider + useAuth (session, magic link, emailed code, password sign-in, sign out)
     aiChallenge.jsx        useAiChallenge: the instance's check before an AI request (Turnstile, ALTCHA or none), shared by every AI dialog
     altchaWidget.js        registers <altcha-widget>; loaded on demand by aiChallenge.jsx, stubbed out of the server build
@@ -255,7 +255,8 @@ the MCP server cannot reach it by accident:
   translator            on-device translation: browser Translator API with an in-page fallback
   fallbackTranslator    (internal) the fallback itself: Opus-MT / NLLB-200 via transformers.js, a lazy chunk only a click ever loads
   deviceCheck           (internal) the checks the in-page models share: the WebGPU adapter (asked for once a page), the large-model limits, a metered connection
-  readAloud             the natural read-aloud voice (Kokoro): the device check, whether it's already downloaded, and the door to its engine
+  speechPlayer          text-to-speech for interactive mode: the browser's voices over the Web Speech API, or a natural voice (Kokoro) played through Web Audio, with the browser's as the fallback (see interactive-mode.md)
+  readAloud             the natural read-aloud voice (Kokoro): the device check, whether it's already downloaded, which voice a stored preference names, and the door to its engine
   readAloudEngine       (internal) the engine itself: Kokoro via transformers.js on WebGPU, a lazy chunk only speaking ever loads
   readAloudText         (internal) the engine's input: text cleanup, espeak-ng phonemes (Spellophone) and read-aloud hints, kept light so it tests under Node
   formulas              formulas: which a lesson has, and the door to MathJax (rendering for the exports, words for read-aloud), a lazy chunk only a formula ever loads
@@ -353,6 +354,7 @@ The sessions, each tested in core against a stub of what it talks to:
   collabSession         createCollabSession: a live collaboration session (live-collaboration.md)
   git/lessonHistory     createLessonHistory: a lesson's version history in the editor (version-history.md)
   practiceHost          createPracticeHost: a letterboard session's host (letterboard-sync.md)
+  speechPlayer          createSpeechPlayer: reading a walkthrough's steps aloud (interactive-mode.md)
 ```
 
 ### Why version history splits the way it does
