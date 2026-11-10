@@ -1,7 +1,8 @@
 // Taking part in a live collaboration session with nothing held open.
 //
-// The web app joins a room over a WebSocket from a React hook
-// (apps/web/src/lib/collab.js). This server can't do that: between tool calls
+// The web app holds a WebSocket to the room for the whole session
+// (packages/core/src/browser/collabSession.ts). This server can't do that:
+// between tool calls
 // it may not exist. On the remote transport it runs inside a Durable Object
 // that hibernates between requests and rebuilds its server on the way back, so
 // a socket opened in one tool call is gone by the next. Rather than fight that,

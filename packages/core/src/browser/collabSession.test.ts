@@ -323,6 +323,36 @@ describe("joining a live session as a guest", () => {
     });
   });
 
+  it("pushes nothing of the guest's old lesson while the editor is slow to pass the room's on", async () => {
+    // As in the app: the editor adopts the room's document a render later,
+    // so setDoc only hears of it after the push debounce has gone by.
+    session = createCollabSession({
+      doc: GUEST_OWN,
+      identity: { uid: "guest-uid", name: "Guest" },
+    });
+    const adopted: LessonDoc[] = [];
+    session.setCallbacks({
+      onRemoteDoc: (next) => adopted.push(next),
+      onAdmitted: () => {},
+    });
+
+    const { ws, room } = joinAndAdmit(session);
+    await settle();
+    expect(adopted).toEqual([HOST_PUBLIC]);
+    expect(ws.updatesSent()).toEqual([]);
+
+    // The editor catches up, and the guest's next edit carries the room's
+    // lesson, never their own.
+    session.setDoc(adopted[0]);
+    const edit = lesson("Host's lesson", "host", [
+      block("h1", "fixed by the guest"),
+    ]);
+    session.setDoc(edit);
+    await settle();
+    expect(roomAfter(ws, room)).toEqual(edit);
+    expect(JSON.stringify(docFromY(room))).not.toContain("guest's own words");
+  });
+
   it("needs a code, a hub and a sign-in", () => {
     session = createCollabSession();
     session.joinSession("  ", "token");
@@ -638,6 +668,27 @@ describe("hosting a live session", () => {
       status: "idle",
       error: "Disconnected from the collaboration session.",
     });
+  });
+
+  it("keeps a session started straight after leaving one", () => {
+    session = createCollabSession({ doc: HOST_LESSON });
+    const first = hostSession(session);
+    session.leave();
+
+    const second = hostSession(session);
+    expect(second).not.toBe(first);
+    // The first socket's close and a stray last frame arrive only now.
+    first.receive(frameBytes(T.REMOVED, utf8.encode("removed")));
+    first.onclose?.();
+
+    expect(second.closed).toBe(false);
+    expect(session.getSnapshot()).toMatchObject({
+      status: "hosting",
+      error: null,
+      synced: true,
+    });
+    session.sendChat("still here");
+    expect(second.frames(T.CHAT)).toHaveLength(1);
   });
 
   it("keeps the socket alive from a background tab", () => {

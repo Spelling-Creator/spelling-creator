@@ -30,7 +30,7 @@
 // Wire protocol: binary frames for speed, defined once in ../collabFrames.ts
 // (see it for the frame shapes). A peer is identified by a server-assigned
 // numeric "slot"; we map slot -> identity from the presence roster so cursors
-// and chat can be labelled without shipping a name in every packet.
+// and chat can be labeled without shipping a name in every packet.
 //
 // Nothing here knows about React. The session is a store (see ../store.ts):
 // the editor reads its snapshot and calls its methods, and feeds it the
@@ -57,7 +57,7 @@ import { LOCAL, applyRemote, docFromY, reconcile } from "../ydoc.ts";
 import { colorForId } from "./presence.ts";
 
 // How long to sit on a burst of local edits before pushing them into the Y.Doc.
-// Short, because a CRDT update is bytes rather than a re-serialised lesson.
+// Short, because a CRDT update is bytes rather than a re-serialized lesson.
 const SYNC_DEBOUNCE_MS = 50;
 
 // Cap on a single chat message so a peer can't flood the channel with a huge
@@ -307,7 +307,7 @@ export function createCollabSession(
   // Our server-assigned slot for this session, and our role.
   let mySlot: number | null = null;
   let role: CollabRole | null = null;
-  // slot -> identity, so cursors and chat are labelled from the presence
+  // slot -> identity, so cursors and chat are labeled from the presence
   // roster rather than trusting per-message identity.
   let roster = new Map<number, RosterEntry>();
   // Everyone whose edits have reached us since version history last committed,
@@ -325,9 +325,6 @@ export function createCollabSession(
   // the editor, which is still holding the guest's previous lesson until the
   // move is done (see the ADMITTED case).
   let holding = false;
-  // True while we're intentionally tearing down, so the close handler doesn't
-  // surface a spurious "disconnected" error.
-  let closing = false;
   let ping: ReturnType<typeof setInterval> | null = null;
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -385,10 +382,15 @@ export function createCollabSession(
   // into the host's lesson. A guest therefore starts with an empty Y.Doc and
   // only begins syncing once ADMITTED has delivered the real one. The host,
   // whose document *is* the lesson, starts syncing immediately.
+  //
+  // Nothing is pushed here: the host has just reconciled its lesson in, and
+  // a guest's Y.Doc already is the session's lesson. The next push comes from
+  // the next setDoc, which is also what keeps a guest from pushing the lesson
+  // they left (still the last one setDoc was given) before the editor has
+  // passed on the room's.
   function startSyncing() {
     synced = true;
     store.patch({ synced: true });
-    schedulePush();
   }
 
   // Merge an update from the room, then hand the resulting document to the
@@ -454,7 +456,6 @@ export function createCollabSession(
     sendFrame(slotFrame(T.REMOVE, slot));
 
   function cleanup() {
-    closing = true;
     if (ping) {
       clearInterval(ping);
       ping = null;
@@ -536,7 +537,12 @@ export function createCollabSession(
               holding = false;
               // Left, removed or disconnected while the editor was moving.
               if (ydoc !== mine) return;
-              callbacks.onRemoteDoc?.(docFromY(mine));
+              const adopted = docFromY(mine);
+              // What the editor holds from here, even before it says so
+              // through setDoc: a push in between must carry this, never
+              // the lesson the guest had open.
+              doc = adopted;
+              callbacks.onRemoteDoc?.(adopted);
               startSyncing();
             },
             () => {
@@ -679,7 +685,6 @@ export function createCollabSession(
     if (ws) return;
 
     role = create ? "host" : "guest";
-    closing = false;
     mySlot = null;
     roster = new Map();
     synced = false;
@@ -700,36 +705,41 @@ export function createCollabSession(
     socket.binaryType = "arraybuffer";
     ws = socket;
 
+    // Whether this handler's socket is still the session's. Closing is
+    // asynchronous, so a socket we ended (leave, then join again at once)
+    // still fires its close, and maybe a last frame, after a new one has
+    // taken its place; neither may touch the new session. The same check is
+    // what keeps a teardown we caused from being reported as a disconnection.
+    const current = () => ws === socket;
+
     socket.onopen = () => {
+      if (!current()) return;
       if (ping) clearInterval(ping);
       ping = setInterval(() => {
-        const sock = ws;
-        if (sock && sock.readyState === WebSocket.OPEN) {
-          try {
-            sock.send("ping");
-          } catch {
-            /* a socket mid-close; the close handler cleans up */
-          }
+        if (!current() || socket.readyState !== WebSocket.OPEN) return;
+        try {
+          socket.send("ping");
+        } catch {
+          /* a socket mid-close; the close handler cleans up */
         }
       }, PING_MS);
     };
     socket.onmessage = (ev) => {
-      if (ev.data instanceof ArrayBuffer) handleFrame(ev.data);
+      if (current() && ev.data instanceof ArrayBuffer) handleFrame(ev.data);
     };
     socket.onclose = () => {
-      if (closing) return;
-      ws = null;
+      if (!current()) return;
       // The Worker rejects an unauthenticated or rate-limited upgrade before
       // the socket opens, which surfaces here as a close without a HELLO.
-      let error = store.getSnapshot().error;
-      if (mySlot == null) {
-        error = create
-          ? "Couldn't start the session. Please sign in and try again."
-          : "Couldn't connect. The code may be wrong, the host may have left, or you've hit the rate limit.";
-      } else if (!error) {
-        error = "Disconnected from the collaboration session.";
-      }
-      end(error ?? "Disconnected from the collaboration session.");
+      // After one, a message the room already sent (REMOVED, ERROR) stands.
+      const { error } = store.getSnapshot();
+      end(
+        mySlot == null
+          ? create
+            ? "Couldn't start the session. Please sign in and try again."
+            : "Couldn't connect. The code may be wrong, the host may have left, or you've hit the rate limit."
+          : error || "Disconnected from the collaboration session.",
+      );
     };
     socket.onerror = () => {
       // onclose runs next and owns the user-facing message.
