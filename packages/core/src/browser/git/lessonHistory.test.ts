@@ -187,6 +187,47 @@ describe("opening a lesson's history", () => {
     expect(await history.loadHistory()).toHaveLength(1);
   });
 
+  it("writes nothing for a lesson the editor left before its setup ran", async () => {
+    const { engine } = testEngine();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const history = createLessonHistory({
+      // The engine is slow to arrive, as the first time the editor opens.
+      loadEngine: () => gate.then(() => engine),
+      doc: DOC,
+      identity: { uid: "u1", name: "Alex" },
+    });
+    history.open({ localId: "a" });
+    const other = withText("Lesson B's own words.");
+    history.setDoc(other);
+    history.open({ localId: "b" });
+    release();
+    await drain(history);
+
+    expect(await engine.repoExists("a")).toBe(false);
+    expect(history.getSnapshot()).toMatchObject({ repoId: "b", ready: true });
+    const head = history.getSnapshot().lastCommit!.oid;
+    expect(
+      await engine.readDocAt({ ...engine.repoCtx("b"), oid: head }),
+    ).toEqual(other);
+  });
+
+  it("shows nothing of the lesson left behind while the next one opens", async () => {
+    const { engine } = testEngine();
+    const history = await opened(engine);
+    await history.createVariation("Shorter");
+    history.open({ localId: "l2" });
+    expect(history.getSnapshot()).toMatchObject({
+      repoId: "l2",
+      ready: false,
+      branch: "main",
+      branches: [],
+      lastCommit: null,
+      error: null,
+    });
+    await drain(history);
+  });
+
   it("starts a published lesson empty when the hub has no history for it", async () => {
     configureCore({ apiUrl: "https://api.example.test" });
     vi.stubGlobal(
@@ -358,6 +399,24 @@ describe("committing", () => {
     expect(await history.loadHistory()).toHaveLength(2);
   });
 
+  it("still commits at the pause when it can't tell what is outstanding", async () => {
+    vi.useFakeTimers();
+    const { engine } = testEngine();
+    const history = await opened(engine);
+    const baseline = history.getSnapshot().lastCommit!.oid;
+    const pendingOps = engine.pendingOps;
+    engine.pendingOps = async () => {
+      throw new Error("IndexedDB read failed");
+    };
+
+    history.setDoc(withText("typed through a bad read"));
+    await drain(history);
+    engine.pendingOps = pendingOps;
+    await vi.advanceTimersByTimeAsync(4000);
+    await drain(history);
+    expect(history.getSnapshot().lastCommit?.oid).not.toBe(baseline);
+  });
+
   it("reports a commit that failed", async () => {
     const { engine } = testEngine();
     const history = await opened(engine);
@@ -411,9 +470,12 @@ describe("history, restore and variations", () => {
 
     // Outstanding edits are committed before the branch is made.
     history.setDoc(withText("before branching"));
+    const before = history.getSnapshot().lastCommit!.oid;
     const name = await history.createVariation("Shorter version");
     expect(name).toBe(toBranchName("Shorter version"));
     expect(history.getSnapshot()).toMatchObject({ branch: name, pending: 0 });
+    // The checkpoint taken on the way is the tip the chip now times.
+    expect(history.getSnapshot().lastCommit?.oid).not.toBe(before);
     expect(
       history
         .getSnapshot()

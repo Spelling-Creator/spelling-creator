@@ -206,7 +206,7 @@ export function createLessonHistory(
   let idleTimer: ReturnType<typeof setTimeout> | null = null;
   let dirtySince: number | null = null;
 
-  // Commits are serialised through this promise chain. Two commits racing on
+  // Commits are serialized through this promise chain. Two commits racing on
   // one repo would interleave their ref writes, and the loser's work would
   // vanish.
   let queue: Promise<unknown> = Promise.resolve();
@@ -282,6 +282,9 @@ export function createLessonHistory(
         }
         return result;
       } catch (err) {
+        // The edits are still outstanding, but counted from now: otherwise,
+        // past the one-minute mark, every keystroke would retry at once.
+        dirtySince = Date.now();
         store.patch({ error: messageOf(err, "Could not save a version.") });
         return null;
       }
@@ -303,8 +306,19 @@ export function createLessonHistory(
       const engine = await loadEngine();
       const ops = await engine
         .pendingOps({ ...engine.repoCtx(repo), doc: current })
-        .catch((): Op[] => []);
+        .catch((): Op[] | null => null);
       if (mine !== checkSeq) return;
+      if (!ops) {
+        // Couldn't tell what is outstanding. Not "nothing": the count stays
+        // as it was, and a commit is still taken at the next pause, which
+        // finds out for itself.
+        clearIdle();
+        idleTimer = setTimeout(() => {
+          idleTimer = null;
+          commitNow();
+        }, IDLE_MS);
+        return;
+      }
       store.patch({ pending: ops.length });
       if (ops.length === 0) {
         dirtySince = null;
@@ -362,8 +376,26 @@ export function createLessonHistory(
     // so none of it may land on this one.
     coAuthors?.discard();
 
-    store.patch({ repoId, ready: false });
+    // Nothing of the lesson being left stays on show while this one opens.
+    store.patch({
+      repoId,
+      ready: false,
+      pending: 0,
+      lastCommit: null,
+      error: null,
+      branch: DEFAULT_BRANCH,
+      branches: [],
+    });
+    // The document as it is now, which is this lesson's: the editor hands the
+    // controller a lesson's document before opening its history. By the time
+    // a setup queued behind another runs, the live one may be the next
+    // lesson's, which must never seed this one's repository.
+    const seed = doc;
+    // Whether the editor has opened something else since. Checked before
+    // every write, not only at the end, so a setup left behind writes nothing.
+    const left = () => mine !== generation;
     run(async () => {
+      if (left()) return;
       try {
         noRepo = false;
         const engine = await loadEngine();
@@ -387,6 +419,7 @@ export function createLessonHistory(
         const createRepo = async () => {
           if (nextEditing) {
             const pack = await fetchPack(nextEditing);
+            if (left()) return;
             if (pack) {
               await engine.cloneFromPack({ ...ctx, ...pack });
               return;
@@ -395,6 +428,7 @@ export function createLessonHistory(
           await engine.ensureRepo(ctx);
         };
 
+        if (left()) return;
         if (!(await engine.repoExists(nextRepo))) {
           await createRepo();
         } else {
@@ -424,6 +458,7 @@ export function createLessonHistory(
               .then(() => true)
               .catch(() => false);
             if (!readable) {
+              if (left()) return;
               await engine.deleteRepo(nextRepo);
               await createRepo();
             }
@@ -431,33 +466,35 @@ export function createLessonHistory(
         }
 
         // Seed a baseline so the first real edit has something to diff against.
-        if (!(await engine.headOid(ctx)) && worthCommitting(doc)) {
+        if (left()) return;
+        if (!(await engine.headOid(ctx)) && worthCommitting(seed)) {
+          if (left()) return;
           await engine.commitDoc({
             ...ctx,
-            doc,
+            doc: seed,
             author: identity,
             message: "Start the lesson\n",
           });
         }
 
         const lastCommit = await headAt(engine, ctx);
-        if (mine !== generation) return;
+        if (left()) return;
         const pending = worthCommitting(doc)
           ? (await engine.pendingOps({ ...ctx, doc })).length
           : 0;
         const branch = await engine.currentBranch(ctx);
         const branches = await engine.listBranches(ctx);
-        if (mine !== generation) return;
+        if (left()) return;
         store.patch({ lastCommit, pending, branch, branches, ready: true });
         // The document may have moved on while the repository was opening.
         scheduleCheck();
       } catch (err) {
         console.error("[lesson-git] setup failed", err);
+        if (left()) return;
         // Nothing usable was left on disk, and commitNow must not put anything
         // there either: a stray object store would be indistinguishable from a
         // real repository next time, and the clone would never be retried.
         noRepo = true;
-        if (mine !== generation) return;
         store.patch({
           error: messageOf(err, "Version history is unavailable."),
           ready: false,
@@ -622,11 +659,10 @@ export function createLessonHistory(
 
         await engine.createBranch({ ...ctx, name });
         dirtySince = null;
-        store.patch({
-          pending: 0,
-          branch: name,
-          branches: await engine.listBranches(ctx),
-        });
+        store.patch({ pending: 0 });
+        // The checkpoint above may have moved the tip, so the chip is
+        // refreshed along with the list.
+        await branchState(engine, ctx);
         return name;
       });
     },
@@ -640,10 +676,7 @@ export function createLessonHistory(
         const engine = await loadEngine();
         const ctx = engine.repoCtx(repo);
         await engine.renameBranch({ ...ctx, from, to });
-        store.patch({
-          branch: await engine.currentBranch(ctx),
-          branches: await engine.listBranches(ctx),
-        });
+        await branchState(engine, ctx);
         return to;
       });
     },
