@@ -42,7 +42,8 @@
 // string comparison would be both wrong a lot of the time and the wrong shape of
 // feedback.
 //
-// Speech is optional and off until asked for; see lib/useSpeech.js.
+// Speech is optional and off until asked for; see lib/useSpeech.js and the
+// player it wraps, core/browser/speechPlayer.ts.
 //
 // A letterboard tablet can follow along. The partner starts a session from the
 // tablet button in the top bar and reads its code onto the tablet; the board then
@@ -1024,7 +1025,8 @@ export default function InteractiveLesson({
   }, [open, phase, speech, step, spokenKey]);
 
   // With a natural voice, make the start of the next step while this one plays,
-  // so moving on starts at once (see lib/useSpeech.js). After the effect above,
+  // so moving on starts at once (see `prepare` in core/browser/speechPlayer.ts).
+  // After the effect above,
   // so this step is already being made and the next one queues behind it. It
   // runs again once the voice has loaded, which may be mid-step. Without a
   // natural voice ready, prepare does nothing.
