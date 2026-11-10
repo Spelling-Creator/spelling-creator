@@ -704,8 +704,9 @@ export default function EditorPage() {
   // "Replace your current work?" dialog to guard it. A lesson you leave is a
   // lesson still in the list.
 
-  // commitNow keeps a stable identity (it is keyed to the repository), unlike
-  // the `git` object, which is rebuilt every render.
+  // commitNow keeps a stable identity (it is the controller's own method, and
+  // the controller lives as long as the editor), unlike the `git` object,
+  // which is rebuilt every render.
   const commitNow = git.commitNow;
 
   // Checkpoint the moment a live session ends, however it ended. The session's

@@ -28,8 +28,9 @@
 // prose, so a disagreement over its year is not worth a dialog.
 //
 // This module is pure — no git, no fs, no React. It takes three docs and returns
-// a merged doc plus the conflicts. The caller (useLessonGit) fetches base/ours/
-// theirs out of git and commits the result with two parents.
+// a merged doc plus the conflicts. The caller (the merge flows in
+// browser/git/sync.ts, driven by the editor) fetches base/ours/theirs out of
+// git and commits the result with two parents.
 
 import { docBlocks, type DocLike } from "./doc.ts";
 import { sameValue } from "./ops.ts";
