@@ -14,12 +14,6 @@ import {
 } from "@spelling-creator/core/browser/practiceHost";
 import { useStore } from "./useStore.js";
 
-export {
-  checkPracticeAvailable,
-  forgetPracticeAvailability,
-  newPracticeCode,
-} from "@spelling-creator/core/browser/practiceHost";
-
 /**
  * `checkPracticeAvailable` as React state: false until the hub has said yes.
  * @param {boolean} enabled  Whether to ask at all (the walkthrough is open).

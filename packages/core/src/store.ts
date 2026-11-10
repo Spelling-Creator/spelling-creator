@@ -2,8 +2,8 @@
 // listeners told each time it changes.
 //
 // This is the shape a session written in core takes when a page needs to show
-// it: a socket (browser/collabSession.ts, browser/practiceHost.ts), a
-// repository, a voice. The session owns its state and its timers; the view
+// it, such as a socket (browser/practiceHost.ts, a letterboard session). The
+// session owns its state and its timers; the view
 // layer only reads the snapshot and calls the methods. It is also exactly what
 // React's useSyncExternalStore reads (apps/web/src/lib/useStore.js is the one
 // line that connects them), so a session needs no hook of its own to hold

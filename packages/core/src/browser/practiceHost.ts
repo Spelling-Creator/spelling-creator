@@ -153,7 +153,11 @@ export interface PracticeHost extends ReadableStore<PracticeHostState> {
    * coalesced over a short moment so a burst of keystrokes is one message.
    */
   setPosition(position: PracticePosition): void;
-  /** Replace the callbacks, for a caller whose handlers change over time. */
+  /**
+   * Replace the callbacks, for a caller whose handlers change over time. All
+   * three at once: one left out is dropped, and what the board sends for it
+   * is ignored from then on.
+   */
   setHandlers(handlers: PracticeHandlers): void;
 }
 

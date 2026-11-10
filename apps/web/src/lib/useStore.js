@@ -1,7 +1,7 @@
 // The one line between a core store and a React component.
 //
-// A session in core (live collaboration, a letterboard session, version
-// history, read-aloud) keeps its own state in a store (packages/core/src/store.ts)
+// A session in core (a letterboard session, say) keeps its own state in a
+// store (packages/core/src/store.ts)
 // rather than in a hook, so it works the same behind any view layer. This reads
 // such a store as React state: the component renders again when the snapshot
 // changes, and not otherwise.

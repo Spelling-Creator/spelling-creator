@@ -225,6 +225,20 @@ describe("hosting a letterboard session", () => {
     expect(handle.link.error).toBeNull();
   });
 
+  it("ends the session when the walkthrough goes away", async () => {
+    handle = mount();
+    const ws = await startAndHello(handle);
+
+    handle.unmount();
+    handle = null;
+    await settle();
+    expect(ws.closed).toBe(true);
+    // Nothing more goes out: no state, no keep-alive.
+    const sent = ws.sent.length;
+    await settle(200);
+    expect(ws.sent).toHaveLength(sent);
+  });
+
   it("keeps a session started straight after ending one", async () => {
     handle = mount();
     const first = await startAndHello(handle);

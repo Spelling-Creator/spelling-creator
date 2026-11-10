@@ -324,7 +324,8 @@ along with a dozen `useState` and `useRef` calls. Everything subtle about it
 that isn't synchronous) was tangled up with how React re-renders, which made
 it hard to test and impossible to reuse outside the app.
 
-Each of those is now an object in core that knows nothing about React. It
+They are moving, one at a time, into objects in core that know nothing about
+React (the list below says which have moved so far). Such an object
 keeps its state in a store (`@spelling-creator/core/store`): one snapshot,
 replaced whole on every change, and listeners told when that happens. The
 object's methods are its actions (`start`, `stop`, `setPosition`, and so on),

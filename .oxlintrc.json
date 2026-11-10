@@ -8,9 +8,9 @@
     "**/node_modules/**",
     "**/.wrangler/**",
     "**/doc_build/**",
-    // Agent skills: instructions for coding assistants, with sample code that
-    // is shown to them rather than run here (the shadcn skill's showcase is
-    // browser and Node snippets side by side). Not project code.
+    // Agent skills: instructions for coding assistants, and any sample code
+    // they carry is shown to an assistant rather than run here. Not project
+    // code, and not held to its environments.
     ".agents/**",
     ".claude/**"
   ],
