@@ -1,13 +1,7 @@
 // Building a lesson in the editor, with no account: it is kept in the
 // browser, with a version taken whenever the writer pauses.
 import { expect, test } from "@playwright/test";
-import {
-  addSection,
-  addText,
-  escapeRe,
-  startLesson,
-  unique,
-} from "./fixtures.ts";
+import { addSection, addText, startLesson, unique } from "./fixtures.ts";
 
 test("builds a lesson on this device and keeps its versions", async ({
   page,
@@ -53,7 +47,7 @@ test("builds a lesson on this device and keeps its versions", async ({
   ).toBeVisible();
   const entry = page.getByRole("button", {
     name: new RegExp(
-      `^${escapeRe(title)} \\(open in the editor\\) 1 section · 1 block`,
+      `^${RegExp.escape(title)} \\(open in the editor\\) 1 section · 1 block`,
     ),
   });
   await expect(entry).toBeVisible();

@@ -2,13 +2,7 @@
 // starts a session, the guest asks in and waits, the host admits them, and
 // edits then sync both ways.
 import { expect, test } from "@playwright/test";
-import {
-  addSection,
-  escapeRe,
-  signedIn,
-  startLesson,
-  unique,
-} from "./fixtures.ts";
+import { addSection, signedIn, startLesson, unique } from "./fixtures.ts";
 
 test("a guest is admitted by the host and edits sync both ways", async ({
   browser,
@@ -91,13 +85,13 @@ test("a guest is admitted by the host and edits sync both ways", async ({
   await guest.getByRole("link", { name: "On this device" }).click();
   await expect(
     guest.getByRole("button", {
-      name: new RegExp(`^${escapeRe(guestsOwn)} 0 sections · 0 blocks`),
+      name: new RegExp(`^${RegExp.escape(guestsOwn)} 0 sections · 0 blocks`),
     }),
   ).toBeVisible();
   await expect(
     guest.getByRole("button", {
       name: new RegExp(
-        `^${escapeRe(retitled)} \\(open in the editor\\) 1 section`,
+        `^${RegExp.escape(retitled)} \\(open in the editor\\) 1 section`,
       ),
     }),
   ).toBeVisible();

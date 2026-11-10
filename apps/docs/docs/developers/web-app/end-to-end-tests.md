@@ -28,7 +28,9 @@ to watch a test against your own dev servers (`PORTLESS=0 pnpm dev:stub` and
 live hub's lessons into `apps/stub-api/.cache`, which is why its startup
 timeout is generous.
 
-The browser comes from `pnpm exec playwright install chromium` the first time.
+The browser comes from
+`pnpm --filter @spelling-creator/web exec playwright install chromium` the
+first time (Playwright is a dependency of the web app only).
 `pnpm test` leaves these tests out: they take a minute or two, and CI runs them
 in a job of their own (`e2e` in `.github/workflows/ci.yml`), which keeps the
 stub's snapshot of the hub between runs and uploads the HTML report when a run

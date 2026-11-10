@@ -124,14 +124,20 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # The stub API snapshots the live hub's published lessons the first time
-      # it starts (apps/stub-api/.cache). Kept between runs, by the day, so a
-      # pull request doesn't fetch every lesson and image from the hub again.
+      # it starts (apps/stub-api/.cache), and reuses a snapshot it finds. Kept
+      # between the runs of one day, so a pull request doesn't fetch every
+      # lesson and image from the hub again, and no longer, so the lessons the
+      # tests run against follow the hub. No restore-keys on purpose: a
+      # restored older snapshot would never be refreshed.
+      - name: Name today's snapshot
+        id: day
+        run: echo "day=$(date +%F)" >> "$GITHUB_OUTPUT"
+
       - name: Restore the stub's snapshot of the hub
         uses: actions/cache@v6
         with:
           path: apps/stub-api/.cache
-          key: stub-hub-${{ github.run_id }}
-          restore-keys: stub-hub-
+          key: stub-hub-${{ steps.day.outputs.day }}
 
       - name: Install Chromium
         run: pnpm --filter @spelling-creator/web exec playwright install --with-deps chromium

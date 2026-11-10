@@ -8,7 +8,12 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
-import { sessionFor, storageKey } from "@spelling-creator/stub-api/sessions";
+// Reached by path rather than as a workspace dependency: depending on the
+// stub package would put it, and the API and MCP packages behind it, into
+// turbo's dependency graph for the web app, so an edit to either would rerun
+// the web app's build and tests. These two functions need nothing but the
+// stub's list of people.
+import { sessionFor, storageKey } from "../../stub-api/src/sessions.js";
 import { STUB_URL } from "../playwright.config.ts";
 
 /**
@@ -40,6 +45,7 @@ export async function hubLessons(
   request: APIRequestContext,
 ): Promise<HubLesson[]> {
   const res = await request.get(`${STUB_URL}/lessons`);
+  if (!res.ok()) throw new Error(`GET /lessons answered ${res.status()}`);
   const { lessons } = (await res.json()) as { lessons: HubLesson[] };
   return lessons;
 }
@@ -69,11 +75,6 @@ export function unique(label: string): string {
   return `${label} ${Date.now().toString(36)}`;
 }
 
-/** Escape a title for use in a RegExp (an accessible name match). */
-export function escapeRe(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /**
  * A new lesson in the editor with this title, the first-lesson guide out of
  * the way. The heading follows the title, which is how the test knows the
@@ -83,10 +84,15 @@ export async function startLesson(page: Page, title: string): Promise<void> {
   await page.goto("/editor?new=1");
   const titleBox = page.getByRole("textbox", { name: "Untitled Lesson" });
   await titleBox.waitFor();
+  // The guide opens for every fresh browser, a moment after the editor does.
+  // Closed when it comes, and not waited for forever in case it stops coming.
   const guide = page
     .getByRole("complementary", { name: "How to create a lesson" })
     .getByRole("button", { name: "close" });
-  if (await guide.isVisible().catch(() => false)) await guide.click();
+  await guide.waitFor({ timeout: 5000 }).then(
+    () => guide.click(),
+    () => {},
+  );
   await titleBox.fill(title);
   await expect(
     page.getByRole("heading", { level: 1, name: title }),

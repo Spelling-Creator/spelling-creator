@@ -20,6 +20,10 @@ export default defineConfig({
   // write give their writing a name of their own rather than assuming a
   // clean hub.
   fullyParallel: true,
+  // A test walks several pages, waits out the editor's four-second commit
+  // pause, and on a cold dev server pays for the first compile of the whole
+  // app; Playwright's 30s default is not enough for that.
+  timeout: 90_000,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
