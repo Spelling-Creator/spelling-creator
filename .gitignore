@@ -39,3 +39,6 @@ packages/core/scripts/extract-eval/out-*/
 # Playwright MCP/CLI screenshots/snapshots (browser-based verification artifacts)
 .playwright-mcp/
 .playwright-cli/
+
+# Claude Code worktrees
+.claude/worktrees/
