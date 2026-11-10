@@ -1,49 +1,28 @@
-// The editor's version-control controller: keeps a lesson's repository in step
-// with the document being edited, and commits periodically.
+// The editor's version-control controller, as React sees it.
 //
-// Why periodically, rather than per edit? A commit per keystroke would be
-// unreadable as history and would churn IndexedDB. So edits accumulate in the
-// document, and a commit is taken when the user *pauses* (IDLE_MS) — or, if they
-// never pause, at least every MAX_WAIT_MS, so a long uninterrupted stretch of
-// typing still gets checkpointed. A commit whose tree matches HEAD is skipped
-// outright (see repo.ts commitDoc), so an idle editor never accretes empty
-// commits.
-//
-// The repository is set up lazily on mount:
-//   - a lesson that already has a local repo just opens it
-//   - a hub lesson with no local repo clones its published history (so opening
-//     the same lesson on another machine brings its whole timeline with it)
-//   - anything else gets a fresh repo, seeded with a root commit of the current
-//     doc, so there is always a baseline to diff against
-//
-// Which repository that is comes from the lesson being edited: its hub id once
-// it has one, and otherwise its id in this device's library. Switching lessons
-// in the editor therefore changes `repoId`, which re-runs the setup effect and
-// opens the other lesson's history — nothing here has to be told about it.
+// The controller itself (repository setup, the periodic commits, history,
+// restore and variations) is createLessonHistory in
+// @spelling-creator/core/browser/git/lessonHistory, which knows nothing about
+// React and takes the git engine as a loader, so load.js keeps isomorphic-git
+// behind its dynamic import. What is left here is the wiring: one controller
+// per editor, the lesson opened as the props name it, the document and the
+// identity fed to it as they change, its snapshot read as state, and the
+// controller closed with the editor. See
+// apps/docs/docs/developers/version-history.md.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { createLessonHistory } from "@spelling-creator/core/browser/git/lessonHistory";
 import { repoIdFor } from "@spelling-creator/core/git/doc";
+import { DEFAULT_BRANCH } from "@spelling-creator/core/git/refs";
+import { useStore } from "../useStore.js";
 import { loadGitEngine } from "./load.js";
-import { fetchPack } from "@spelling-creator/core/git/remote";
-import { DEFAULT_BRANCH, toBranchName } from "@spelling-creator/core/git/refs";
-import { diffDocs } from "@spelling-creator/core/git/ops";
-
-// Commit once the user has been still for this long.
-const IDLE_MS = 4000;
-// ...but never let unsaved work sit longer than this, however fast they type.
-const MAX_WAIT_MS = 60000;
-
-/** A doc worth committing. The starter doc (no sections) isn't. */
-function worthCommitting(doc) {
-  return Boolean(doc && Array.isArray(doc.sections) && doc.sections.length > 0);
-}
 
 /**
  * @param {object}  opts.doc         The live editor document.
  * @param {string}  [opts.editingId] The hub lesson being edited, if any.
- * @param {string}  [opts.localId]   The lesson's id in this device's library —
+ * @param {string}  [opts.localId]   The lesson's id in this device's library:
  *                                   the repository it uses until it's published.
- * @param {object}  [opts.identity]  { uid, name } — stamped on commits.
+ * @param {object}  [opts.identity]  { uid, name }: stamped on commits.
  * @param {object}  [opts.coAuthors] A live session's `coAuthors` (core/browser/collabSession):
  *                                   who else's edits a commit holds, credited
  *                                   with a `Co-authored-by` trailer each.
@@ -57,505 +36,66 @@ export function useLessonGit({
   coAuthors,
   enabled = true,
 }) {
-  const repoId = repoIdFor(editingId, localId);
-
-  const [ready, setReady] = useState(false);
-  const [pending, setPending] = useState(0);
-  const [lastCommit, setLastCommit] = useState(null); // { oid, at } | null
-  const [error, setError] = useState(null);
-
-  // The variations this lesson holds, and which one is being edited. Both come
-  // out of the repository (branches, and HEAD) rather than being state of their
-  // own — so a reload, a second tab, or publishing a draft all find the same
-  // answer the repository already had.
-  const [branches, setBranches] = useState([]);
-  const [branch, setBranch] = useState(DEFAULT_BRANCH);
-
-  // Timers for the two commit triggers, and the wall-clock time the current
-  // batch of unsaved edits began (so MAX_WAIT_MS is measured from the first
-  // unsaved edit, not the most recent one).
-  const idleTimer = useRef(null);
-  const dirtySince = useRef(null);
-
-  // Commits are serialised through this promise chain. Two commits racing on one
-  // repo would interleave their ref writes, and the loser's work would vanish.
-  const queue = useRef(Promise.resolve());
-
-  // Set when this lesson deliberately has no repository — its published history
-  // was unreachable, so setup left the slot empty for a later mount to clone
-  // into. Nothing may write git objects there in the meantime.
-  const noRepoRef = useRef(false);
-
-  // The doc, mirrored for the timer callbacks, which outlive any single render.
-  const docRef = useRef(doc);
-  const identityRef = useRef(identity);
-  const coAuthorsRef = useRef(coAuthors);
-  useEffect(() => {
-    docRef.current = doc;
-  }, [doc]);
-  useEffect(() => {
-    identityRef.current = identity;
-  }, [identity]);
-  useEffect(() => {
-    coAuthorsRef.current = coAuthors;
-  }, [coAuthors]);
-
-  const run = useCallback((task) => {
-    const next = queue.current.then(task, task);
-    // Keep the chain alive even if a task rejects, or every later commit dies too.
-    queue.current = next.catch(() => {});
-    return next;
-  }, []);
-
-  /**
-   * Commit the document being edited, crediting everyone in a live session
-   * whose edits arrived since the last commit. Every path that checkpoints the
-   * live document goes through here, so whichever of them picks a session's
-   * edits up is the one that names who made them. A restore, undo or merge
-   * doesn't: those are the local user's own decision.
-   *
-   * The people it checked are forgotten whether or not there was anything to
-   * commit. A commit holds their edits; finding nothing means the document
-   * already matches HEAD, so their edits are in an earlier commit or were
-   * undone, and either way they have nothing left to be credited for. Only a
-   * failed commit leaves them waiting.
-   */
-  const commitLive = useCallback(async (engine, ctx, doc = docRef.current) => {
-    const credited = coAuthorsRef.current?.peek() || [];
-    const result = await engine.commitDoc({
-      ...ctx,
+  const [history] = useState(() =>
+    createLessonHistory({
+      loadEngine: loadGitEngine,
       doc,
-      author: identityRef.current,
-      coAuthors: credited,
-    });
-    coAuthorsRef.current?.clear(credited);
-    return result;
-  }, []);
+      identity,
+      coAuthors,
+    }),
+  );
 
-  // ---- repository setup ----------------------------------------------------
+  // The latest identity, co-author list and document, for the commits that
+  // run later than the render that produced them.
   useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-
-    // A different lesson's repository. Whatever was still waiting for credit
-    // belongs to the lesson being left, which was checkpointed on the way out,
-    // so none of it may land on this one.
-    coAuthorsRef.current?.discard();
-
-    setReady(false);
-    run(async () => {
-      try {
-        noRepoRef.current = false;
-        // Fetches the git chunk the first time the editor mounts (see load.js).
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-
-        // Give this lesson a repository. A published one brings its history down
-        // first, so the timeline follows the lesson rather than the browser;
-        // anything else starts empty.
-        //
-        // fetchPack distinguishes the two failures that matter here, and this
-        // must not flatten them: it returns null when the lesson genuinely has no
-        // published history (a 404, or a pack with no tip), and *throws* when the
-        // hub couldn't be reached at all. Only the first means "start empty". If a
-        // dropped connection were read that way, the empty repository would take a
-        // baseline commit of the current document, and every later open would find
-        // a repository that exists with a readable head and leave it alone — the
-        // published timeline never cloned, and the local one diverged from the hub
-        // for good. So a throw propagates: setup fails, no repository is left
-        // behind, and the next mount tries the clone again.
-        const createRepo = async () => {
-          if (editingId) {
-            const pack = await fetchPack(editingId);
-            if (pack) {
-              await engine.cloneFromPack({ ...ctx, ...pack });
-              return;
-            }
-          }
-          await engine.ensureRepo(ctx);
-        };
-
-        if (!(await engine.repoExists(repoId))) {
-          await createRepo();
-        } else {
-          // A repository we already hold, which we are about to read the whole
-          // timeline out of — so check first that we actually can.
-          //
-          // A browser closed (or reloaded) in the middle of a commit can leave
-          // the branch pointing at a commit whose object never made it to disk:
-          // LightningFS persists file contents and its directory index
-          // separately, so a torn write is possible however careful the code
-          // above it is. Every later read then throws on the same missing
-          // object, and the lesson is stuck with no history at all rather than a
-          // shortened one. Starting the repository again costs the old timeline,
-          // which was already unreadable; the *document* is never at stake,
-          // since it lives in the library, not in here.
-          //
-          // Rebuilt through the same createRepo as a lesson we never had, which
-          // is what makes a published lesson whole again rather than merely
-          // working: its history is on the hub, so the replacement is a clone of
-          // it. An empty repository would look established enough for every
-          // later open to leave alone, stranding the published timeline for good.
-          const existingHead = await engine.headOid(ctx).catch(() => null);
-          if (existingHead) {
-            const readable = await engine
-              .readDocAt({ ...ctx, oid: existingHead })
-              .then(() => true)
-              .catch(() => false);
-            if (!readable) {
-              await engine.deleteRepo(repoId);
-              await createRepo();
-            }
-          }
-        }
-
-        // Seed a baseline so the first real edit has something to diff against.
-        if (!(await engine.headOid(ctx)) && worthCommitting(docRef.current)) {
-          await engine.commitDoc({
-            ...ctx,
-            doc: docRef.current,
-            author: identityRef.current,
-            message: "Start the lesson\n",
-          });
-        }
-
-        const head = await engine.headOid(ctx);
-        if (cancelled) return;
-        setLastCommit(head ? { oid: head, at: Date.now() } : null);
-        setPending(
-          (await engine.pendingOps({ ...ctx, doc: docRef.current })).length,
-        );
-        setBranch(await engine.currentBranch(ctx));
-        setBranches(await engine.listBranches(ctx));
-        setReady(true);
-      } catch (err) {
-        console.error("[lesson-git] setup failed", err);
-        // Nothing usable was left on disk, and commitNow must not put anything
-        // there either: a stray object store would be indistinguishable from a
-        // real repository next time, and the clone would never be retried.
-        noRepoRef.current = true;
-        if (!cancelled) {
-          setError(err.message || "Version history is unavailable.");
-          setReady(false);
-        }
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-    // Every one of the flows that swaps a repository out — a fork, an import, a
-    // duplicate — now does it by creating a *new* lesson, which changes `repoId`
-    // and re-runs this effect on its own. There is nothing left that replaces a
-    // repository under its own id, so there is no "reload" to ask for.
-  }, [repoId, editingId, enabled, run]);
-
-  // ---- committing ----------------------------------------------------------
-  const commitNow = useCallback(
-    () =>
-      run(async () => {
-        const current = docRef.current;
-        if (!worthCommitting(current) || noRepoRef.current) return null;
-
-        try {
-          const engine = await loadGitEngine();
-          const result = await commitLive(
-            engine,
-            engine.repoCtx(repoId),
-            current,
-          );
-          // Whatever happened, the doc now matches HEAD — clear the dirty state.
-          dirtySince.current = null;
-          setPending(0);
-          if (result) setLastCommit({ oid: result.oid, at: Date.now() });
-          return result;
-        } catch (err) {
-          setError(err.message || "Could not save a version.");
-          return null;
-        }
-      }),
-    [repoId, run, commitLive],
-  );
-
-  // ---- the periodic trigger ------------------------------------------------
+    history.setIdentity(identity);
+  }, [history, identity]);
   useEffect(() => {
-    if (!enabled || !ready) return;
-    if (!worthCommitting(doc)) return;
-
-    let cancelled = false;
-
-    // Recompute what's outstanding, then decide whether this edit should commit
-    // now (we've been dirty too long) or reset the idle countdown.
-    run(async () => {
-      if (cancelled) return;
-      const engine = await loadGitEngine();
-      const ops = await engine
-        .pendingOps({ ...engine.repoCtx(repoId), doc })
-        .catch(() => []);
-      if (cancelled) return;
-      setPending(ops.length);
-      if (ops.length === 0) {
-        dirtySince.current = null;
-        return;
-      }
-      if (dirtySince.current === null) dirtySince.current = Date.now();
-
-      if (Date.now() - dirtySince.current >= MAX_WAIT_MS) {
-        commitNow();
-        return;
-      }
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-      idleTimer.current = setTimeout(commitNow, IDLE_MS);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [doc, repoId, ready, enabled, commitNow, run]);
-
-  // Commit whatever is outstanding when the editor goes away (tab hidden, or the
-  // component unmounts), so closing the tab mid-edit doesn't lose the checkpoint.
+    history.setCoAuthors(coAuthors);
+  }, [history, coAuthors]);
   useEffect(() => {
-    if (!enabled) return;
-    const flush = () => {
-      if (document.visibilityState === "hidden") commitNow();
-    };
-    document.addEventListener("visibilitychange", flush);
-    return () => {
-      document.removeEventListener("visibilitychange", flush);
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
-  }, [commitNow, enabled]);
+    history.setDoc(doc);
+  }, [history, doc]);
 
-  // ---- history -------------------------------------------------------------
-  const loadHistory = useCallback(
-    () =>
-      run(async () => {
-        try {
-          const engine = await loadGitEngine();
-          return await engine.history(engine.repoCtx(repoId));
-        } catch {
-          return [];
-        }
-      }),
-    [repoId, run],
-  );
+  // Which lesson's history. Every flow that swaps a repository out (a fork, an
+  // import, a duplicate) does it by opening a *new* lesson, which changes the
+  // ids here and so opens the other lesson's repository on its own.
+  useEffect(() => {
+    if (!enabled) {
+      history.close();
+      return;
+    }
+    history.open({ editingId, localId });
+  }, [history, editingId, localId, enabled]);
 
-  /** What a commit changed, as block operations, against its first parent. */
-  const diffFor = useCallback(
-    (oid) =>
-      run(async () => {
-        try {
-          const engine = await loadGitEngine();
-          return await engine.diffFromParent({
-            ...engine.repoCtx(repoId),
-            oid,
-          });
-        } catch {
-          return [];
-        }
-      }),
-    [repoId, run],
-  );
+  // No more periodic commits once the editor is gone.
+  useEffect(() => () => history.close(), [history]);
 
-  /**
-   * What restoring a version would change — the difference between it and the
-   * document as it now stands.
-   *
-   * A different question from `diffFor`, and the one actually being asked at the
-   * moment somebody hovers over Restore. "What changed in this version" is
-   * history; "what would I get back" is a decision.
-   *
-   * Against the *live* document, not the last commit. Restoring replaces what is
-   * on screen, so edits made inside the four-second commit window are part of what
-   * would be lost — and a preview that omitted them would understate the cost of
-   * the one action it exists to inform.
-   */
-  const diffAgainstCurrent = useCallback(
-    (oid) =>
-      run(async () => {
-        try {
-          const engine = await loadGitEngine();
-          const ctx = engine.repoCtx(repoId);
-          return diffDocs(
-            docRef.current,
-            await engine.readDocAt({ ...ctx, oid }),
-          );
-        } catch {
-          return [];
-        }
-      }),
-    [repoId, run],
-  );
-
-  /** Restore an earlier version. Returns the restored doc for the editor to adopt. */
-  const restore = useCallback(
-    (oid) =>
-      run(async () => {
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-        const result = await engine.restoreCommit({
-          ...ctx,
-          oid,
-          author: identityRef.current,
-        });
-        const head = await engine.headOid(ctx);
-        setLastCommit(head ? { oid: head, at: Date.now() } : null);
-        setPending(0);
-        dirtySince.current = null;
-        return result.doc;
-      }),
-    [repoId, run],
-  );
-
-  // ---- variations ----------------------------------------------------------
-  //
-  // A variation is a branch, and the four things you can do to one are create,
-  // switch, rename and delete. Every one of them commits what's outstanding
-  // first: the editor's rule is that work is checkpointed when you pause, so a
-  // variation must never be the thing that loses the last few seconds of it.
-  //
-  // Which is why the checkpoint below is *not* wrapped in a catch. commitDoc
-  // returns null when there is nothing to commit — that is the ordinary case and
-  // needs no handling — so the only thing a catch could swallow is a real failure,
-  // and swallowing that would let the checkout replace the document and clear the
-  // dirty markers with the edits still uncommitted. The caller shows the error
-  // instead, and nothing moves.
-
-  const refreshBranches = useCallback(
-    () =>
-      run(async () => {
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-        const list = await engine.listBranches(ctx);
-        setBranches(list);
-        setBranch(await engine.currentBranch(ctx));
-
-        // Re-read the tip too. A merge doesn't always leave a commit behind — a
-        // fast-forward moves the branch instead (see completeMerge) — so the
-        // chip would otherwise still be timing the commit before it.
-        const head = await engine.headOid(ctx);
-        setLastCommit(head ? { oid: head, at: Date.now() } : null);
-        return list;
-      }),
-    [repoId, run],
-  );
-
-  /** Move to a branch and hand back the document as it stands there. */
-  const switchBranch = useCallback(
-    (name) =>
-      run(async () => {
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-
-        await commitLive(engine, ctx);
-
-        const result = await engine.checkoutBranch({ ...ctx, name });
-        dirtySince.current = null;
-        setPending(0);
-        setBranch(result.name);
-        setBranches(await engine.listBranches(ctx));
-        const head = await engine.headOid(ctx);
-        setLastCommit(head ? { oid: head, at: Date.now() } : null);
-        return result.doc;
-      }),
-    [repoId, run, commitLive],
-  );
-
-  /**
-   * Start a variation from where we are and switch to it.
-   *
-   * `label` is what the author typed; the branch takes the name that survives
-   * git's rules (see core/git/refs.ts). An empty result means they typed nothing
-   * git could keep, which is the caller's to report.
-   */
-  const createVariation = useCallback(
-    (label) =>
-      run(async () => {
-        const name = toBranchName(label);
-        if (!name) throw new Error("Please give this variation a name.");
-
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-
-        await commitLive(engine, ctx);
-
-        await engine.createBranch({ ...ctx, name });
-        dirtySince.current = null;
-        setPending(0);
-        setBranch(name);
-        setBranches(await engine.listBranches(ctx));
-        return name;
-      }),
-    [repoId, run, commitLive],
-  );
-
-  const renameVariation = useCallback(
-    (from, label) =>
-      run(async () => {
-        const to = toBranchName(label);
-        if (!to) throw new Error("Please give this variation a name.");
-
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-        await engine.renameBranch({ ...ctx, from, to });
-        setBranch(await engine.currentBranch(ctx));
-        setBranches(await engine.listBranches(ctx));
-        return to;
-      }),
-    [repoId, run],
-  );
-
-  const deleteVariation = useCallback(
-    (name) =>
-      run(async () => {
-        const engine = await loadGitEngine();
-        const ctx = engine.repoCtx(repoId);
-        await engine.deleteBranch({ ...ctx, name });
-        setBranches(await engine.listBranches(ctx));
-      }),
-    [repoId, run],
-  );
-
-  /**
-   * Take the draft repo's history with us when a draft is first published.
-   * Commits everything outstanding first, so nothing is stranded in the draft.
-   */
-  const adoptDraft = useCallback(
-    (lessonId) =>
-      run(async () => {
-        // Nothing to adopt once the repo is already the lesson's own — which is
-        // the case for every save after the first.
-        if (!lessonId || repoId === lessonId) return;
-        const engine = await loadGitEngine();
-        await commitLive(engine, engine.repoCtx(repoId)).catch(() => null);
-        await engine.adoptDraftRepo(lessonId, repoId);
-      }),
-    [repoId, run, commitLive],
-  );
+  const { ready, pending, lastCommit, error, branch, branches } =
+    useStore(history);
 
   return {
     ready,
     pending,
     lastCommit,
     error,
-    clearError: () => setError(null),
-    repoId,
+    clearError: history.clearError,
+    repoId: repoIdFor(editingId, localId),
     branch,
     branches,
     onDefaultBranch: branch === DEFAULT_BRANCH,
-    refreshBranches,
-    switchBranch,
-    createVariation,
-    renameVariation,
-    deleteVariation,
-    commitNow,
-    loadHistory,
-    diffFor,
-    diffAgainstCurrent,
-    restore,
-    adoptDraft,
+    refreshBranches: history.refreshBranches,
+    switchBranch: history.switchBranch,
+    createVariation: history.createVariation,
+    renameVariation: history.renameVariation,
+    deleteVariation: history.deleteVariation,
+    commitNow: history.commitNow,
+    loadHistory: history.loadHistory,
+    diffFor: history.diffFor,
+    diffAgainstCurrent: history.diffAgainstCurrent,
+    restore: history.restore,
+    adoptDraft: history.adoptDraft,
     /** Queue work against this lesson's repo (used by the fork/merge flows). */
-    run,
+    run: history.run,
   };
 }

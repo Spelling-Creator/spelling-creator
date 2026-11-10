@@ -117,7 +117,8 @@ them ("Alex, with Sam and Priya"). Because these are ordinary git trailers,
 ## Periodic commits
 
 A commit per keystroke would be unreadable history and would thrash IndexedDB.
-Instead (`lib/git/useLessonGit.js`):
+Instead (`createLessonHistory` in
+`@spelling-creator/core/browser/git/lessonHistory`):
 
 - a commit is taken when the user **pauses** (4s), and
 - at least every **60s** during an unbroken stretch of typing, and
@@ -492,12 +493,18 @@ including a catch-up commit for a row that had run ahead of its history, which i
 what every lesson edited over MCP before that looks like. See
 [MCP tools](mcp-server/tools.md) and [Pull requests](web-app/pull-requests.md).
 
+The editor's controller (`browser/git/lessonHistory`) is in core too: repository
+setup, the periodic commits, history, restore and variations, with no React in
+it and the git engine handed in as a loader. It is tested there against the
+real plumbing on `memfs`. See
+[Sessions outside React](web-app/project-structure.md#sessions-outside-react).
+
 App-bound (`apps/web/src/lib/git/`) is what cannot leave the bundle:
 
-| File                    | Purpose                                                                |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `engine.js` + `load.js` | The git engine, behind one dynamic import.                             |
-| `useLessonGit.js`       | The editor's controller: setup, periodic commits, history, variations. |
+| File                    | Purpose                                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `engine.js` + `load.js` | The git engine, behind one dynamic import.                                                            |
+| `useLessonGit.js`       | `useLessonGit`, the hook over the controller: it hands `load.js` in and passes the editor's props on. |
 
 `repo` and friends take their filesystem through `repoCtx` rather than opening
 one, which is exactly what lets the same commit/merge/restore logic run against

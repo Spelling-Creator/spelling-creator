@@ -195,14 +195,14 @@ again.
 
 ## Where it lives
 
-| Piece                                          | What it does                                                                                                                    |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `@spelling-creator/core/git/refs`              | Name rules (`toBranchName`, `branchLabel`), limits, and the ref map's wire format. No git.                                      |
-| `@spelling-creator/core/git/repo`              | `currentBranch`, `createBranch` / `checkoutBranch` / `renameBranch` / `deleteBranch`, `aheadCount`, the `refs/deleted/` markers |
-| `@spelling-creator/core/git/pack`              | Packing every branch; a clone writing them back                                                                                 |
-| `@spelling-creator/core/browser/git/fs`        | `adoptDraftRepo` and `copyRepo`, which carry `HEAD` along                                                                       |
-| `@spelling-creator/core/browser/git/sync`      | Per-branch push, adopting the hub's branches, `prepareBranchMerge`                                                              |
-| `apps/api/src/routes/git.js`                   | The per-branch compare-and-swap (`applyRefs`)                                                                                   |
-| `apps/web/src/lib/git/useLessonGit.js`         | The editor's variation state and actions                                                                                        |
-| `apps/web/src/components/VariationsDialog.jsx` | The list, and everything you can do from it                                                                                     |
-| `apps/web/src/pages/EditorPage.jsx`            | The variation chip, and `handleBringVariationIn`                                                                                |
+| Piece                                              | What it does                                                                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `@spelling-creator/core/git/refs`                  | Name rules (`toBranchName`, `branchLabel`), limits, and the ref map's wire format. No git.                                      |
+| `@spelling-creator/core/git/repo`                  | `currentBranch`, `createBranch` / `checkoutBranch` / `renameBranch` / `deleteBranch`, `aheadCount`, the `refs/deleted/` markers |
+| `@spelling-creator/core/git/pack`                  | Packing every branch; a clone writing them back                                                                                 |
+| `@spelling-creator/core/browser/git/fs`            | `adoptDraftRepo` and `copyRepo`, which carry `HEAD` along                                                                       |
+| `@spelling-creator/core/browser/git/sync`          | Per-branch push, adopting the hub's branches, `prepareBranchMerge`                                                              |
+| `apps/api/src/routes/git.js`                       | The per-branch compare-and-swap (`applyRefs`)                                                                                   |
+| `@spelling-creator/core/browser/git/lessonHistory` | The editor's variation state and actions (`useLessonGit` in `apps/web/src/lib/git/` is the hook over it)                        |
+| `apps/web/src/components/VariationsDialog.jsx`     | The list, and everything you can do from it                                                                                     |
+| `apps/web/src/pages/EditorPage.jsx`                | The variation chip, and `handleBringVariationIn`                                                                                |

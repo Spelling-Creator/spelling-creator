@@ -121,7 +121,7 @@ src/
     useScrollAnchor.js     keeps a section/block still on screen while the move buttons reorder it, plus scrollToElement/idSelector (see navigating-large-lessons.md)
     git/                   what has to stay in the app; the rest is in core (see below)
       engine.js, load.js   the git engine, behind one dynamic import (keeps isomorphic-git off the main bundle)
-      useLessonGit.js      the editor's controller: setup, periodic commits, history, restore
+      useLessonGit.js      useLessonGit: the hook over core's version history controller (browser/git/lessonHistory), given load.js as its engine loader
     exports/
       engine.js, load.js   the docx/PDF/import pipeline, behind one dynamic import (keeps docx, mammoth and html2pdf.js off every page that never exports; preview doesn't need it)
     useImageSrc.js         resolves an image ref to a displayable src
@@ -266,6 +266,7 @@ the MCP server cannot reach it by accident:
   readAloudVoices       (internal) the Kokoro model (id and pinned revision) and the voices on offer, readable without the engine
   downloadProgress      (internal) shared by the transformers.js engines: per-file download events summed into the one 0-1 fraction the UI shows
   git/fs                LightningFS, the IndexedDB filesystem the repos live on
+  git/lessonHistory     the editor's version history controller: repository setup, periodic commits, history, restore and variations, with the engine handed in as a loader (see version-history.md)
   git/sync              fork (= clone the repo), merge-with-original and proposal-review flows
 ```
 
@@ -350,6 +351,7 @@ The sessions, each tested in core against a stub of what it talks to:
 ```
 @spelling-creator/core/browser/
   collabSession         createCollabSession: a live collaboration session (live-collaboration.md)
+  git/lessonHistory     createLessonHistory: a lesson's version history in the editor (version-history.md)
   practiceHost          createPracticeHost: a letterboard session's host (letterboard-sync.md)
 ```
 
@@ -359,9 +361,11 @@ The sessions, each tested in core against a stub of what it talks to:
 a `{ fs, gitdir }` context, which is why they port unchanged (LightningFS in the
 browser, `git/memfs` where there is nothing else). What stays in the web app is
 `lib/git/engine.js` and `lib/git/load.js` (the dynamic-import boundary and the
-`Buffer` polyfill browsers need) plus `useLessonGit`, the editor's own
-controller. `fs` (LightningFS over IndexedDB) and `sync` sit in core's browser
-tier, and `remote` is runtime-neutral now that it reads its base URL through
+`Buffer` polyfill browsers need) plus `useLessonGit`, the hook over the
+editor's controller, `browser/git/lessonHistory`, which is handed `load.js` so
+the engine stays behind the app's dynamic import. `fs` (LightningFS over
+IndexedDB) and `sync` sit in core's browser tier, and `remote` is
+runtime-neutral now that it reads its base URL through
 [the config seam](#the-config-seam) rather than `import.meta.env`.
 
 That boundary is load-bearing for bundle size: isomorphic-git stays behind

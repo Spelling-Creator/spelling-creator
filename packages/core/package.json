@@ -18,6 +18,7 @@
     "./browser/feeds": "./src/browser/feeds.ts",
     "./browser/formulas": "./src/browser/formulas.ts",
     "./browser/git/fs": "./src/browser/git/fs.ts",
+    "./browser/git/lessonHistory": "./src/browser/git/lessonHistory.ts",
     "./browser/git/sync": "./src/browser/git/sync.ts",
     "./browser/googleDrive": "./src/browser/googleDrive.ts",
     "./browser/imageFile": "./src/browser/imageFile.ts",

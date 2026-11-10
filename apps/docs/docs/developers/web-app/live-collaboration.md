@@ -241,7 +241,8 @@ go after half an hour. Its edits arrive as ordinary Yjs updates, so `EDITED`
 credits them to its slot and version history treats them like anyone's.
 
 `collab.coAuthors` is how the session hands its list of editors to version
-history. Every path in `useLessonGit` that commits the live document (the
+history. Every path in `createLessonHistory` (`core/browser/git/lessonHistory`)
+that commits the live document (the
 regular checkpoint, switching or starting a variation, and first publishing)
 reads it (`peek`) and then drops the people it checked (`clear`), whether or
 not there turned out to be anything to commit: finding nothing means their
