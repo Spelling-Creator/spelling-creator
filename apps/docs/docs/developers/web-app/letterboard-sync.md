@@ -40,8 +40,9 @@ Object. Before interactive mode offers its letterboard button it asks the hub:
 A self-hosted Node API doesn't register the route, so the request reaches the
 frontend fall-through and answers `404`. The page treats that, a `false` and a
 network failure alike: no button. The answer is kept for the page load
-(`checkPracticeAvailable` in `apps/web/src/lib/practiceLink.js`), except a
-network failure, which is asked again the next time a walkthrough opens.
+(`checkPracticeAvailable` in `@spelling-creator/core/browser/practiceHost`),
+except a network failure, which is asked again the next time a walkthrough
+opens.
 
 ## Transport
 
@@ -80,8 +81,8 @@ exported from `routes/collab.js` and imported here, so the two can't drift), and
 folds it to capitals before addressing the room, so a partner typing a code on
 a tablet doesn't have to hold shift. The Practice page issues six characters from
 an alphabet with no letters that look like digits and no digits that look like
-letters (`newPracticeCode` in `apps/web/src/lib/practiceLink.js`), about 887
-million codes. The code is the only secret: the room refuses a second host rather
+letters (`newPracticeCode` in `@spelling-creator/core/browser/practiceHost`),
+about 887 million codes. The code is the only secret: the room refuses a second host rather
 than letting whoever holds the code take a session over, and boards' joins are
 limited by address (below).
 
@@ -192,15 +193,22 @@ wait for the commonest cause, and one that dropped after `hello` as
 
 ## The host in the browser
 
-`usePracticeHost` (`apps/web/src/lib/practiceLink.js`) owns the socket. It
-takes the lesson id, the step index and the answer box's text as props, and
-sends a `state` whenever any of them changes, coalesced over 50 ms so a burst of
-keystrokes is one message. The first `state` goes out on `hello`, so a board
-that was waiting on the code is caught up at once; from then on the room's
-stored copy of the last `state` does that for later boards. What the board sends
-comes back as three callbacks, `onText`, `onAnswer` and `onStep`, and the hook
+`createPracticeHost` (`packages/core/src/browser/practiceHost.ts`) owns the
+socket, and knows nothing about React. It is given the lesson id, the step
+index and the answer box's text (`setPosition`), and sends a `state` whenever
+any of them changes, coalesced over 50 ms so a burst of keystrokes is one
+message. The first `state` goes out on `hello`, so a board that was waiting on
+the code is caught up at once; from then on the room's stored copy of the last
+`state` does that for later boards. What the board sends comes back as three
+callbacks, `onText`, `onAnswer` and `onStep`, and the session's snapshot (it is
+a store, see [Sessions outside React](./project-structure.md#sessions-outside-react))
 reports `status` (`idle`, `connecting`, `live`), the `code`, the number of
 `boards` and an `error` key the component translates.
+
+`usePracticeHost` (`apps/web/src/lib/practiceLink.js`) is the hook over it:
+one host per walkthrough, the position and the callbacks passed on from props
+in effects, the snapshot read with `useStore`, and the session stopped when the
+walkthrough unmounts.
 
 `InteractiveLesson` wires those callbacks to its own state:
 
@@ -245,7 +253,8 @@ by hand. Three things follow from it being a Durable Object migration:
 | `apps/api/src/practice-room.js`                 | The `PracticeRoom` Durable Object: roles, the stored state, relay, validation, limits                    |
 | `apps/api/src/routes/practice.js`               | `handlePractice`, `handlePracticeInfo`, `parsePracticeCode` and `practiceRoom`: gate, limits, forwarding |
 | `apps/api/src/lib/joinLimit.js`                 | The join token bucket, shared with `/collab`                                                             |
-| `apps/web/src/lib/practiceLink.js`              | `usePracticeHost`, `usePracticeAvailable` and `newPracticeCode`                                          |
+| `packages/core/src/browser/practiceHost.ts`     | `createPracticeHost`, `checkPracticeAvailable` and `newPracticeCode`: the session, with no React in it   |
+| `apps/web/src/lib/practiceLink.js`              | `usePracticeHost` and `usePracticeAvailable`, the hooks over it                                          |
 | `apps/web/src/components/LetterboardLink.jsx`   | The tablet button and popover in interactive mode's top bar                                              |
 | `apps/web/src/components/InteractiveLesson.jsx` | Where the board's text, answers and moves are applied                                                    |
 | `apps/stub-api/src/practice.js`                 | The same room on the local [stub API](../stub-api.md), so a session can be tried without Cloudflare      |

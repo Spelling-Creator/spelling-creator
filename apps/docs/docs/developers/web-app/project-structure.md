@@ -114,7 +114,8 @@ src/
     lessonChecks.js        the lesson checks as the editor shows them (the checks themselves are in core)
     factCheck.js           fact checking as the editor shows it
     collab.js              useCollaboration hook (one WebSocket to the CollabRoom Durable Object; doc sync, cursors, chat)
-    practiceLink.js        usePracticeHost hook (one WebSocket to the PracticeRoom Durable Object; the step out, the letterboard's sentence and answers in)
+    practiceLink.js        usePracticeHost and usePracticeAvailable: the hooks over core's letterboard session (browser/practiceHost)
+    useStore.js            reads a core store (core/store) as React state through useSyncExternalStore; a session hook is this plus a few effects
     useSelectionBroadcast.js broadcasts the local editor selection to peers
     useDragAutoScroll.js   scrolls the page while a block drag hovers near a window edge (the browser only auto-scrolls a native drag while the pointer keeps moving)
     useScrollAnchor.js     keeps a section/block still on screen while the move buttons reorder it, plus scrollToElement/idSelector (see navigating-large-lessons.md)
@@ -190,6 +191,7 @@ only through another module.
   lessonResponses       saved answers from interactive mode, via the Worker
   lessonTranslation     what on-device translation covers in a lesson, and its lookup keys
   id                    id generation
+  store                 the external store a session keeps its state in: one snapshot, replaced on change, and listeners (see "Sessions outside React" below)
   username              usernames as login identifiers, for an instance with no mail server
   wikimedia             Commons action-API round trip + attribution metadata
   lessons               list / fetch / publish hub lessons (+ the feed URL)
@@ -245,6 +247,7 @@ the MCP server cannot reach it by accident:
   googleDrive           OAuth2 + upload the docx to Drive as a Google Doc
   sanitizeRichText      the render-time DOMPurify pass (policy comes from ../richText)
   commonsImages         search Wikimedia Commons + download an image (no key, no proxy)
+  practiceHost          the host's side of a letterboard session: the socket to the PracticeRoom, the state it sends, what the board sends back (see letterboard-sync.md)
   presence              per-collaborator color + selection presence helpers
   summarizer            on-device summaries: browser Summarizer API with an in-page fallback (fails closed when neither can run)
   fallbackSummarizer    (internal) the fallback itself: LFM2.5 via transformers.js on WebGPU, a lazy chunk only a click ever loads
@@ -311,6 +314,41 @@ so under a lazily resolved config all of them would have read as `false`. They a
 now predicates: `hasSupabase()`, `hasGoogleDrive()` and `hasApi()` (the last
 replacing four names for one predicate), joined since by `hasTurnstile()`,
 `hasAiChallenge()`, `hasPasswordAuth()` and `hasMagicLinkAuth()`.
+
+### Sessions outside React
+
+A session (a live collaboration, a letterboard session, a lesson's version
+history, read-aloud) used to be a React hook that owned a socket or a model
+along with a dozen `useState` and `useRef` calls. Everything subtle about it
+(the order a guest is admitted in, a commit racing a branch switch, a cancel
+that isn't synchronous) was tangled up with how React re-renders, which made
+it hard to test and impossible to reuse outside the app.
+
+Each of those is now an object in core that knows nothing about React. It
+keeps its state in a store (`@spelling-creator/core/store`): one snapshot,
+replaced whole on every change, and listeners told when that happens. The
+object's methods are its actions (`start`, `stop`, `setPosition`, and so on),
+and its inputs that change over time are setters rather than arguments, so a
+caller feeds it the latest value whenever it has one.
+
+The web app reads such a store with `useStore` (`apps/web/src/lib/useStore.js`),
+one `useSyncExternalStore` call: the component renders again when the snapshot
+changes and not otherwise. A session hook is then a few lines: make the session
+once (`useState(() => create...)`), pass props on in effects, read the
+snapshot, stop the session when the component unmounts. The hook's return
+shape is unchanged, so nothing above it knows the difference.
+
+Two rules keep this honest. The snapshot is the same object until something
+changes, so identity is the change check. And a session is reusable after
+`stop`: it goes back to idle rather than becoming unusable, which is also what
+lets React's StrictMode mount, unmount and mount it again in development.
+
+The sessions, each tested in core against a stub of what it talks to:
+
+```
+@spelling-creator/core/browser/
+  practiceHost          createPracticeHost: a letterboard session's host (letterboard-sync.md)
+```
 
 ### Why version history splits the way it does
 

@@ -4,19 +4,16 @@
 //
 // The room is a stub WebSocket the test drives by hand, speaking the JSON
 // messages of the board contract (docs/live-sync.md in the board's repository),
-// and the hook runs inside a real React root so its effects (the debounced
-// `state` above all) run as they do in interactive mode.
+// and the hook runs inside a real React root so its effects (feeding the
+// session its position, above all) run as they do in interactive mode. The
+// session itself is tested in core (browser/practiceHost.test.ts); this is the
+// hook over it.
 
 import { act, createElement, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configureCore } from "@spelling-creator/core/config";
-import {
-  checkPracticeAvailable,
-  forgetPracticeAvailability,
-  newPracticeCode,
-  usePracticeHost,
-} from "./practiceLink.js";
+import { usePracticeHost } from "./practiceLink.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -137,69 +134,6 @@ async function startAndHello(handle) {
 }
 
 // ---- tests ------------------------------------------------------------------
-
-describe("newPracticeCode", () => {
-  it("makes a six-character code a partner can read off a screen", () => {
-    for (let i = 0; i < 50; i++) {
-      expect(newPracticeCode()).toMatch(
-        /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/,
-      );
-    }
-  });
-});
-
-describe("checkPracticeAvailable", () => {
-  beforeEach(() => {
-    forgetPracticeAvailability();
-    configureCore({ apiUrl: "https://api.example.test" });
-  });
-
-  afterEach(() => {
-    forgetPracticeAvailability();
-    vi.unstubAllGlobals();
-  });
-
-  const answer = (status, body) =>
-    vi.fn(async () => ({ ok: status === 200, json: async () => body }));
-
-  it("asks the hub once, and believes a yes", async () => {
-    const fetch = answer(200, { available: true });
-    vi.stubGlobal("fetch", fetch);
-    expect(await checkPracticeAvailable()).toBe(true);
-    expect(await checkPracticeAvailable()).toBe(true);
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch.mock.calls[0][0]).toBe("https://api.example.test/practice");
-  });
-
-  it("reads a self-hosted hub's 404, or a Worker without the room, as no", async () => {
-    vi.stubGlobal("fetch", answer(404, null));
-    expect(await checkPracticeAvailable()).toBe(false);
-    forgetPracticeAvailability();
-    vi.stubGlobal("fetch", answer(200, { available: false }));
-    expect(await checkPracticeAvailable()).toBe(false);
-  });
-
-  it("asks again after a network failure rather than remembering it", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => {
-        throw new TypeError("offline");
-      }),
-    );
-    expect(await checkPracticeAvailable()).toBe(false);
-    const fetch = answer(200, { available: true });
-    vi.stubGlobal("fetch", fetch);
-    expect(await checkPracticeAvailable()).toBe(true);
-  });
-
-  it("doesn't ask at all without a hub", async () => {
-    configureCore({ apiUrl: "" });
-    const fetch = answer(200, { available: true });
-    vi.stubGlobal("fetch", fetch);
-    expect(await checkPracticeAvailable()).toBe(false);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-});
 
 describe("hosting a letterboard session", () => {
   let handle;
