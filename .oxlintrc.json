@@ -7,7 +7,12 @@
     "**/build/**",
     "**/node_modules/**",
     "**/.wrangler/**",
-    "**/doc_build/**"
+    "**/doc_build/**",
+    // Agent skills: instructions for coding assistants, and any sample code
+    // they carry is shown to an assistant rather than run here. Not project
+    // code, and not held to its environments.
+    ".agents/**",
+    ".claude/**"
   ],
 
   // `eslint` + `react` mirror the previous ESLint setup (js/recommended,
