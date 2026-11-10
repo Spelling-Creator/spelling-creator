@@ -37,6 +37,8 @@ pnpm run deploy         # rebuild the whole site from scratch, then deploy the W
 pnpm test               # every workspace's test suite
 pnpm fmt                # format everything (oxfmt)
 pnpm lint               # check formatting, then lint (oxfmt --check + oxlint)
+
+pnpm --filter @spelling-creator/web test:e2e   # the browser tests, against the stub API (see below)
 ```
 
 `deploy` needs `pnpm run`: a bare `pnpm deploy` is pnpm's own built-in command
@@ -465,6 +467,13 @@ runs directly). `apps/docs` has no test script and is skipped.
 in a real React root, say) opts in with a `// @vitest-environment happy-dom`
 comment on its first line; `src/lib/collab.test.js` is an example, driving the
 live-collaboration hook against a stub WebSocket.
+
+`apps/web` also has browser tests, under Playwright, which `pnpm test` leaves
+out: they start the stub API and the app and drive a real Chromium through the
+hub, a lesson page, the editor and a live collaboration session, which takes a
+minute or two. They are `pnpm --filter @spelling-creator/web test:e2e`, and CI
+runs them in a job of their own. See
+[End-to-end tests](./web-app/end-to-end-tests.md).
 
 `apps/api`'s `test` task depends on `apps/web`'s `build:ssr` in `turbo.json`, as
 its `bundle` task does, and `pnpm dev:api` and `pnpm run deploy` build it before
