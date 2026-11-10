@@ -113,7 +113,7 @@ src/
     formulas.js            renderFormula + useFormula: each formula rendered once per page, through core's door to MathJax
     lessonChecks.js        the lesson checks as the editor shows them (the checks themselves are in core)
     factCheck.js           fact checking as the editor shows it
-    collab.js              useCollaboration hook (one WebSocket to the CollabRoom Durable Object; doc sync, cursors, chat)
+    collab.js              useCollaboration: the hook over core's live collaboration session (browser/collabSession)
     practiceLink.js        usePracticeHost and usePracticeAvailable: the hooks over core's letterboard session (browser/practiceHost)
     useStore.js            reads a core store (core/store) as React state through useSyncExternalStore; a session hook is this plus a few effects
     useSelectionBroadcast.js broadcasts the local editor selection to peers
@@ -227,6 +227,7 @@ the MCP server cannot reach it by accident:
 
 ```
 @spelling-creator/core/browser/
+  collabSession         a live collaboration session: one WebSocket to the CollabRoom, the Yjs document, the roster, admission, cursors, chat and who to credit (see live-collaboration.md)
   imageStore            the IndexedDB stores themselves: the lesson library, its documents, image blobs, editor flags
   imageRef              binary image-ref model (a block references its bytes)
   imageFile             read a File to bytes, measure it, opportunistically re-encode to WEBP
@@ -348,6 +349,7 @@ The sessions, each tested in core against a stub of what it talks to:
 
 ```
 @spelling-creator/core/browser/
+  collabSession         createCollabSession: a live collaboration session (live-collaboration.md)
   practiceHost          createPracticeHost: a letterboard session's host (letterboard-sync.md)
 ```
 

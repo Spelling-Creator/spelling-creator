@@ -23,7 +23,8 @@
 //
 // Wire protocol — binary frames for speed, defined once in
 // packages/core/src/collabFrames.ts and spoken by the room and the browser
-// (apps/web/src/lib/collab.js). Read that file for the frame shapes; a sender is
+// (packages/core/src/browser/collabSession.ts). Read collabFrames.ts for the
+// frame shapes; a sender is
 // identified there by a server-assigned u16 "slot" rather than by name or email,
 // which makes packets smaller and identities unspoofable.
 //

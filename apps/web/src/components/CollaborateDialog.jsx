@@ -2,8 +2,8 @@
 // useCollaboration (a Cloudflare Durable Object relays it server-side): start
 // hosting and share an invite, or join someone else's session by code. The host
 // admits ("adds") pending guests to the lesson before they can collaborate,
-// matching the admission model in lib/collab.js. Hosting and joining require a
-// signed-in account.
+// matching the admission model in core/browser/collabSession. Hosting and
+// joining require a signed-in account.
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

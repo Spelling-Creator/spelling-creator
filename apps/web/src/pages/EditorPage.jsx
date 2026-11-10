@@ -797,7 +797,8 @@ export default function EditorPage() {
   // carry on, because the room's document would land in the lesson they just
   // opened, which is the very overwrite this exists to prevent. So the move
   // fails instead, and the guest leaves the session with an error (see
-  // onAdmitted in lib/collab.js). A session lesson already made by then is
+  // the ADMITTED case in core/browser/collabSession.ts). A session lesson
+  // already made by then is
   // removed again rather than left in the library unopened.
   const openSessionLesson = useCallback(
     async (sessionDoc) => {
