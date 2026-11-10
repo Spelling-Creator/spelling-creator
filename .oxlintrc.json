@@ -7,7 +7,12 @@
     "**/build/**",
     "**/node_modules/**",
     "**/.wrangler/**",
-    "**/doc_build/**"
+    "**/doc_build/**",
+    // Agent skills: instructions for coding assistants, with sample code that
+    // is shown to them rather than run here (the shadcn skill's showcase is
+    // browser and Node snippets side by side). Not project code.
+    ".agents/**",
+    ".claude/**"
   ],
 
   // `eslint` + `react` mirror the previous ESLint setup (js/recommended,
