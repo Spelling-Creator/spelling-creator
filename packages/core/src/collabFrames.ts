@@ -1,7 +1,7 @@
 // The live-collaboration wire protocol, in one place.
 //
 // Three ends speak it: the room that relays (apps/api/src/collab-room.js), the
-// browser that edits (apps/web/src/lib/collab.js), and the MCP server that joins
+// browser that edits (browser/collabSession.ts), and the MCP server that joins
 // a session on an assistant's behalf (apps/mcp/src/collab.js). Until this module
 // existed the type bytes lived in the first two as separate copies joined by a
 // comment reading "must match T in collab-room.js" — which is a convention, not

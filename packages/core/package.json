@@ -9,6 +9,7 @@
   "exports": {
     "./ageRanges": "./src/ageRanges.ts",
     "./aiSuggest": "./src/aiSuggest.ts",
+    "./browser/collabSession": "./src/browser/collabSession.ts",
     "./browser/commonsImages": "./src/browser/commonsImages.ts",
     "./browser/docxExport": "./src/browser/docxExport.ts",
     "./browser/docxImport": "./src/browser/docxImport.ts",

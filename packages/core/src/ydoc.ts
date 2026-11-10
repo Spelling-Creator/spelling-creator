@@ -51,8 +51,8 @@ function isYType(v: unknown): v is Y.Map<unknown> | Y.Array<unknown> | Y.Text {
  * Entries with no id are matched by email instead — this module stays generic
  * about what it is handed. (The app does not in fact send it the lesson's
  * trusted-collaborator list: those are email addresses, and the room is mirrored
- * to everyone the host admits, so lib/collab.js strips the field before
- * reconciling. See stripLocalFields in git/doc.ts.)
+ * to everyone the host admits, so browser/collabSession.ts strips the field
+ * before reconciling. See stripLocalFields in git/doc.ts.)
  */
 export function keyOf(item: unknown): string | null {
   if (!isRecord(item)) return null;

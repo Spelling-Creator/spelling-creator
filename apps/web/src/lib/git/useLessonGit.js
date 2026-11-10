@@ -44,7 +44,7 @@ function worthCommitting(doc) {
  * @param {string}  [opts.localId]   The lesson's id in this device's library —
  *                                   the repository it uses until it's published.
  * @param {object}  [opts.identity]  { uid, name } — stamped on commits.
- * @param {object}  [opts.coAuthors] A live session's `coAuthors` (lib/collab.js):
+ * @param {object}  [opts.coAuthors] A live session's `coAuthors` (core/browser/collabSession):
  *                                   who else's edits a commit holds, credited
  *                                   with a `Co-authored-by` trailer each.
  * @param {boolean} [opts.enabled]   Set false to disable version control entirely.

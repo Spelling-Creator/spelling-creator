@@ -119,7 +119,8 @@ five minutes.
 
 One exception, which falls out of how the editor admits people rather than being designed
 for assistants: the host's editor auto-admits any request whose email is on the lesson's
-trusted collaborators list (`isTrustedEmail` in `apps/web/src/lib/collab.js`), and an
+trusted collaborators list (`isTrustedEmail` in
+`@spelling-creator/core/browser/collabSession`), and an
 agent's roster entry carries its account's email like anyone else's. So an assistant
 connected through a trusted collaborator's account is let in straight away, as that person
 would be.

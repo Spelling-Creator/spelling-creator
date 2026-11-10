@@ -203,9 +203,15 @@ spelling words and answers by the stable `id` they already carry. Its `reconcile
 is **idempotent**, which is what stops a received edit from bouncing straight back
 to the sender.
 
-`apps/web/src/lib/collab.js` is a `useCollaboration` hook that owns the
-WebSocket, the Yjs document, the slot-to-identity roster, the admission state and
-the chat transcript. `apps/web/src/components/CollaborateDialog.jsx` is the
+`createCollabSession` (`packages/core/src/browser/collabSession.ts`) owns the
+WebSocket, the Yjs document, the slot-to-identity roster, the admission state
+and the chat transcript, and knows nothing about React: it is a store (see
+[Sessions outside React](./project-structure.md#sessions-outside-react)) the
+editor feeds the document, the identity and the callbacks through setters, and
+it is tested in core against a stub room. `apps/web/src/lib/collab.js` is the
+`useCollaboration` hook over it: one session per editor, props passed on in
+effects, the snapshot read with `useStore`, the same return shape as before.
+`apps/web/src/components/CollaborateDialog.jsx` is the
 control panel (host/join landing, invite sharing, the waiting-to-join admission
 list, the trusted list, and the roster). It is addressed by URL rather than by
 component state: `/editor/collaborate` opens it and leaving the panel closes it,
@@ -251,15 +257,16 @@ changes only in who a commit credits.
 
 ## Where it lives
 
-| File                                            | What it does                                                                   |
-| ----------------------------------------------- | ------------------------------------------------------------------------------ |
-| `apps/api/src/collab-room.js`                   | The `CollabRoom` Durable Object: admission, relay, persistence, agents, limits |
-| `apps/api/src/routes/collab.js`                 | `handleCollab` and `handleCollabAgent`: sign-in gate, join limits, forwarding  |
-| `packages/core/src/collabFrames.ts`             | The binary frame shapes, shared by the room and the browser                    |
-| `packages/core/src/ydoc.ts`                     | Plain lesson document to Yjs and back (`reconcile`, `docFromY`)                |
-| `packages/core/src/browser/presence.ts`         | Caret offsets and positions inside a text block                                |
-| `apps/web/src/lib/collab.js`                    | `useCollaboration`: socket, Yjs document, roster, admission, chat, `coAuthors` |
-| `apps/web/src/lib/useSelectionBroadcast.js`     | Reports the local selection                                                    |
-| `apps/web/src/components/CollaborateDialog.jsx` | The control panel                                                              |
-| `apps/web/src/components/CollabCursors.jsx`     | Other people's carets                                                          |
-| `apps/web/src/components/CollabChat.jsx`        | The chat panel                                                                 |
+| File                                            | What it does                                                                      |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/api/src/collab-room.js`                   | The `CollabRoom` Durable Object: admission, relay, persistence, agents, limits    |
+| `apps/api/src/routes/collab.js`                 | `handleCollab` and `handleCollabAgent`: sign-in gate, join limits, forwarding     |
+| `packages/core/src/collabFrames.ts`             | The binary frame shapes, shared by the room and the browser                       |
+| `packages/core/src/ydoc.ts`                     | Plain lesson document to Yjs and back (`reconcile`, `docFromY`)                   |
+| `packages/core/src/browser/presence.ts`         | Caret offsets and positions inside a text block                                   |
+| `packages/core/src/browser/collabSession.ts`    | `createCollabSession`: socket, Yjs document, roster, admission, chat, `coAuthors` |
+| `apps/web/src/lib/collab.js`                    | `useCollaboration`, the hook over it                                              |
+| `apps/web/src/lib/useSelectionBroadcast.js`     | Reports the local selection                                                       |
+| `apps/web/src/components/CollaborateDialog.jsx` | The control panel                                                                 |
+| `apps/web/src/components/CollabCursors.jsx`     | Other people's carets                                                             |
+| `apps/web/src/components/CollabChat.jsx`        | The chat panel                                                                    |
