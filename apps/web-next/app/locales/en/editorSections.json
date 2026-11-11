@@ -1,0 +1,257 @@
+{
+  "sectionCard": {
+    "sectionNamePlaceholder": "Section name",
+    "blockCount_one": "{{count}} block",
+    "blockCount_other": "{{count}} blocks",
+    "collapse": "Collapse \"{{name}}\"",
+    "expand": "Expand this section",
+    "collapsedDropHint": "Hold the block here to open this section.",
+    "collapsedSummary": {
+      "text_one": "{{count}} paragraph",
+      "text_other": "{{count}} paragraphs",
+      "image_one": "{{count}} image",
+      "image_other": "{{count}} images",
+      "spelling_one": "{{count}} spelling list",
+      "spelling_other": "{{count}} spelling lists",
+      "question_one": "{{count}} question",
+      "question_other": "{{count}} questions",
+      "vakt_one": "{{count}} VAKT activity",
+      "vakt_other": "{{count}} VAKT activities",
+      "heading_one": "{{count}} heading",
+      "heading_other": "{{count}} headings"
+    },
+    "moveUp": "Move section up",
+    "moveDown": "Move section down",
+    "delete": "Delete section",
+    "emptyDropHint": "Drop the block here to move it into this section.",
+    "emptyState": "No content yet. Add a text block or an image below.",
+    "dragHandle": {
+      "ariaLabel": "Drag to reorder block",
+      "tooltip": "Drag to reorder"
+    },
+    "toolbar": {
+      "addText": "Add text",
+      "addImage": "Add image",
+      "searchImages": "Search images",
+      "addQuestion": "Add question",
+      "spellingWords": "Spelling words",
+      "generateWithAi": "Generate with AI",
+      "aiText": {
+        "label": "Text",
+        "description": "Generate a text block with AI"
+      },
+      "aiQuestion": {
+        "label": "Question",
+        "description": "Generate a question with AI"
+      },
+      "addVakt": "VAKT activity",
+      "addHeading": "Heading"
+    },
+    "errors": {
+      "addImageFailed": "Failed to add image.",
+      "replaceImageFailed": "Failed to replace image."
+    }
+  },
+  "contentBlock": {
+    "controls": {
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "delete": "Delete block"
+    },
+    "text": {
+      "placeholder": "Type lesson text here...",
+      "ariaLabel": "Lesson text",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "footnoteMarkerTitle": "Footnote. Click to edit it."
+    },
+    "image": {
+      "altFallback": "lesson image",
+      "alignmentAriaLabel": "image alignment",
+      "alignLeft": "align left",
+      "alignCenter": "align center",
+      "alignRight": "align right",
+      "sizeAriaLabel": "image size",
+      "replace": "Replace",
+      "uploadFile": {
+        "label": "Upload file",
+        "description": "Swap in an image from your device"
+      },
+      "searchOnline": {
+        "label": "Search online",
+        "description": "Find a replacement from Pixabay or Wikimedia"
+      },
+      "captionLabel": "Caption (optional)"
+    },
+    "credit": {
+      "label": "Credit",
+      "help": "Shown in small print under the picture. Free images usually require it.",
+      "confirmRemove": {
+        "title": "Remove the image credit?",
+        "description": "Most free images, including those from Wikimedia Commons, may only be used if the person who made them is credited. Only remove it if you took the picture yourself or know it isn't needed.",
+        "cancel": "Keep the credit",
+        "confirm": "Remove it"
+      }
+    },
+    "spelling": {
+      "badge": "Spelling words",
+      "wordPlaceholder": "Word {{number}}",
+      "removeWord": "Remove word",
+      "addWord": "Add word",
+      "fillCapitalizedAvailable": "Fill in every ALL-CAPS word from the lesson text",
+      "fillCapitalizedEmpty": "No ALL-CAPS words in the lesson text yet"
+    },
+    "question": {
+      "label": "Question",
+      "number": "Q{{number}}",
+      "promptPlaceholder": "Type the question...",
+      "answerLabel": "Answer",
+      "answerPlaceholder": "The correct answer...",
+      "stepPlaceholder": "Step {{number}}",
+      "removeStep": "Remove step",
+      "addStep": "Add step",
+      "stepsHelp": "Optional: break the solution into steps the speller can work through.",
+      "answerPlaceholderMultiple": "Answer {{number}}",
+      "removeAnswer": "Remove answer",
+      "addAnswer": "Add answer",
+      "answersHelp": "Type every accepted answer. The speller only needs to give one of them to be correct.",
+      "threeBoard": "Three-board (3B)",
+      "threeBoardHelp": "Marks the question \"(3B)\" when printed.",
+      "besidesLabel": "Besides line",
+      "besidesNone": "None",
+      "besidesHelp": "A follow-up printed under the question: Besides \"{{answer}}\" asks for one of the other answers.",
+      "suggestedAnswersHelp": "Type a few answers that would count. These are suggestions, not the only right answers. Anything that fits the topic is correct.",
+      "answerPlaceholderExample": "Example {{number}}",
+      "addExampleAnswer": "Add example",
+      "exampleAnswersHelp": "Optional: a few examples of what would count. A tight open has no answer key, so leave these out if the question doesn't need them."
+    },
+    "heading": {
+      "badge": "Heading",
+      "label": "Heading",
+      "placeholder": "A short heading, such as WOULD YOU RATHER over a run of those questions"
+    },
+    "vakt": {
+      "badge": "VAKT activity",
+      "label": "Activity",
+      "placeholder": "Bob likes to do jumping jacks. Let's do 3 of those.",
+      "imageAlt": "VAKT activity image",
+      "captionLabel": "Caption (optional)",
+      "addImage": "Add image",
+      "replaceImage": "Replace image",
+      "removeImage": "Remove image",
+      "addLink": "Add link",
+      "removeLink": "Remove link",
+      "linkLabelPlaceholder": "Link text (optional)",
+      "linkUrlPlaceholder": "https://...",
+      "linkLabelAriaLabel": "Link {{number}} text",
+      "linkUrlAriaLabel": "Link {{number}} address",
+      "linksHelp": "Links open in a new tab. A link with no text shows its address.",
+      "uploadFileDescription": "Use a picture from your device",
+      "searchOnlineDescription": "Find one on Pixabay or Wikimedia"
+    },
+    "footnote": {
+      "addButton": "Add a footnote",
+      "addButtonShort": "Footnote",
+      "editButton": "Edit this footnote",
+      "editButtonShort": "Edit footnote",
+      "sourceLabel": "Source",
+      "noSource": "No source, just a note",
+      "untitledSource": "Untitled source",
+      "newSource": "Add a new source",
+      "addSource": "Add source",
+      "cancel": "Cancel",
+      "locatorLabel": "Page or section (optional)",
+      "locatorPlaceholder": "p. 12",
+      "noteLabel": "Note",
+      "noteLabelOptional": "Note (optional)",
+      "notePlaceholder": "Anything the reader should know about this part of the text",
+      "insert": "Add footnote",
+      "update": "Save",
+      "remove": "Remove footnote"
+    },
+    "readAloud": {
+      "button": "How this is read aloud",
+      "buttonShort": "Read aloud",
+      "hintLabel": "Read the selected words",
+      "kinds": {
+        "ipa": "Pronounce",
+        "alias": "Say instead",
+        "spell": "Spell out"
+      },
+      "ipaLabel": "Pronunciation",
+      "ipaHelp": "In the IPA, the alphabet dictionaries use for sounds. The words still show as you wrote them.",
+      "aliasLabel": "Words to say",
+      "aliasPlaceholder": "World Wide Fund for Nature",
+      "aliasHelp": "Read aloud in place of the selected words, which still show as written.",
+      "spellHelp": "The selected words are read one letter at a time, like R, E, E, F.",
+      "selectFirst": "Select a word to change how it is said, or add a pause below.",
+      "addHint": "Save",
+      "update": "Save",
+      "removeHint": "Remove",
+      "addPause": "Add a pause",
+      "pauseHelp": "A pause is silent in read-aloud and doesn't show in the lesson.",
+      "pauseLength": "Pause length",
+      "short": "Short",
+      "long": "Long",
+      "removePause": "Remove pause",
+      "shortPauseChip": "pause",
+      "longPauseChip": "long pause",
+      "describeIpa": "Read aloud as /{{ipa}}/",
+      "describeAlias": "Read aloud as \"{{alias}}\"",
+      "describeSpell": "Read aloud one letter at a time"
+    },
+    "formula": {
+      "addButton": "Add a formula",
+      "addButtonShort": "Formula",
+      "editButton": "Edit this formula",
+      "editButtonShort": "Edit formula",
+      "formatLabel": "Written in",
+      "formats": {
+        "asciimath": "AsciiMath",
+        "tex": "LaTeX"
+      },
+      "sourceLabel": "Formula",
+      "help": {
+        "asciimath": "Type it the way you would in a message: 2 xx 8 for times, 48 -: 6 for divided by, 3/4 for a fraction, 10^6 for a power, sqrt(81) for a root.",
+        "tex": "LaTeX math, without the dollar signs: 2 \\times 8, 48 \\div 6, \\frac{3}{4}, 10^6, \\sqrt{81}."
+      },
+      "previewEmpty": "The formula shows here as you type it.",
+      "placementLabel": "Place it",
+      "inline": "In the sentence",
+      "display": "On its own line",
+      "spokenLabel": "Read aloud as (optional)",
+      "spokenPlaceholder": "three quarters of the fans",
+      "spokenHelp": "Formulas are read aloud automatically. Give the words to say instead if that reading is awkward.",
+      "insert": "Add formula",
+      "update": "Save",
+      "remove": "Remove formula"
+    }
+  },
+  "sources": {
+    "heading": "Sources",
+    "description": "Books, articles and websites this lesson draws on. They print in a list at the end of the lesson, and footnotes in the text can cite them.",
+    "empty": "No sources yet.",
+    "add": "Add source",
+    "remove": "Remove source",
+    "citedCount_one": "Cited once",
+    "citedCount_other": "Cited {{count}} times",
+    "notCited": "Not cited in the text",
+    "fields": {
+      "title": "Title",
+      "author": "Author",
+      "publisher": "Publisher or website",
+      "year": "Year",
+      "url": "Link",
+      "urlPlaceholder": "https://example.com"
+    },
+    "invalidUrl": "Links need to start with http://, https:// or mailto:, or they won't be shown.",
+    "confirmRemove": {
+      "title": "Remove this source?",
+      "description_one": "It is cited once in the text. That footnote will be removed, or kept as a plain note if it has one.",
+      "description_other": "It is cited {{count}} times in the text. Those footnotes will be removed, or kept as plain notes if they have one.",
+      "cancel": "Keep it",
+      "confirm": "Remove source"
+    }
+  }
+}

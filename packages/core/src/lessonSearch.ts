@@ -14,7 +14,8 @@ import Fuse, { type IFuseOptions } from "fuse.js";
 export interface LessonSummary {
   id: string;
   title?: string;
-  author?: string;
+  /** Null for a nameless author, the way the hub's listing reports one. */
+  author?: string | null;
 }
 
 /** What the index holds: the searchable text, and the summary it came from. */

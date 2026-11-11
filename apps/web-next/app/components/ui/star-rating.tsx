@@ -1,0 +1,106 @@
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { StarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const SIZES = { sm: "size-4", default: "size-5" };
+
+// A single star, drawn as a muted background star with a --focus-colored
+// foreground star clipped to `fill` (0 to 1) on top: the two-layer trick that
+// lets a read-only rating show a fractional average (4.3 stars, say) without
+// slicing SVG paths.
+function Star({ fill, sizeClass }: { fill: number; sizeClass: string }) {
+  return (
+    <span className={cn("relative inline-block shrink-0", sizeClass)}>
+      <StarIcon
+        className={cn("absolute inset-0", sizeClass, "text-muted-foreground")}
+      />
+      <span
+        className="absolute inset-0 overflow-hidden"
+        style={{ width: `${fill * 100}%` }}
+      >
+        <StarIcon className={cn(sizeClass, "fill-focus text-focus")} />
+      </span>
+    </span>
+  );
+}
+
+/**
+ * A 1-to-max star rating: interactive (click to set) or read-only (supports a
+ * fractional `value` for showing an average).
+ */
+export function StarRating({
+  value,
+  onChange,
+  readOnly = false,
+  disabled = false,
+  max = 5,
+  size = "default",
+  className,
+  "aria-label": ariaLabelProp,
+}: {
+  value?: number | null;
+  onChange?: (value: number) => void;
+  readOnly?: boolean;
+  disabled?: boolean;
+  max?: number;
+  size?: keyof typeof SIZES;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  const { t } = useTranslation("common");
+  const ariaLabel = ariaLabelProp ?? t("starRating.defaultAriaLabel");
+  const [hover, setHover] = useState<number | null>(null);
+  const interactive = !readOnly && !disabled;
+  const display = interactive ? (hover ?? value ?? 0) : (value ?? 0);
+  const sizeClass = SIZES[size] || SIZES.default;
+
+  if (!interactive) {
+    return (
+      <div
+        role="img"
+        aria-label={t("starRating.ratingSummary", {
+          label: ariaLabel,
+          display,
+          max,
+        })}
+        className={cn("inline-flex items-center gap-0.5", className)}
+      >
+        {Array.from({ length: max }, (_, i) => (
+          <Star
+            key={i}
+            fill={Math.max(0, Math.min(1, display - i))}
+            sizeClass={sizeClass}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className={cn("inline-flex items-center gap-0.5", className)}
+      onMouseLeave={() => setHover(null)}
+    >
+      {Array.from({ length: max }, (_, i) => {
+        const starValue = i + 1;
+        return (
+          <button
+            key={starValue}
+            type="button"
+            role="radio"
+            aria-checked={value === starValue}
+            aria-label={t("starRating.starLabel", { count: starValue })}
+            onClick={() => onChange?.(starValue)}
+            onMouseEnter={() => setHover(starValue)}
+            className="cursor-pointer rounded-sm border-0 bg-transparent p-0.5 text-muted-foreground transition-colors hover:text-focus"
+          >
+            <Star fill={starValue <= display ? 1 : 0} sizeClass={sizeClass} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}

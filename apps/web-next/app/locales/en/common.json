@@ -1,0 +1,101 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "status": {
+    "loading": "Loading"
+  },
+  "speechVoice": {
+    "defaultVoice": "Browser default",
+    "naturalVoices": "Natural voices",
+    "browserVoices": "This browser's voices",
+    "naturalNote": "Natural voices read English only. The first one you use downloads about {{mb}} MB, once, and runs on this computer."
+  },
+  "nav": {
+    "lessonHub": "Lesson hub",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
+    "accountMenuAriaLabel": "account menu",
+    "signedIn": "Signed in",
+    "myProfile": "My profile",
+    "editDisplayName": "Edit display name",
+    "moderation": "Moderation",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "signIn": "Sign in",
+    "appName": "Spelling Creator",
+    "openMenu": "Open menu",
+    "home": "Home",
+    "newLesson": "New lesson",
+    "onThisDevice": "On this device"
+  },
+  "install": {
+    "ariaLabel": "install app",
+    "tooltip": "Install app",
+    "iosTitle": "Install Spelling Creator",
+    "iosDescription": "Add it to your Home Screen to open it like an app: full screen, and your lessons stay available offline.",
+    "iosStepShare": "Tap the Share button in Safari's toolbar.",
+    "iosStepAdd": "Choose \"Add to Home Screen\"."
+  },
+  "pwa": {
+    "updateTitle": "A new version is available",
+    "updateDescription": "Reload to update. Your saved lessons aren't affected.",
+    "updateAction": "Reload"
+  },
+  "notificationBell": {
+    "tooltip": "Notifications",
+    "menuLabel": "Notifications",
+    "ariaLabel": "notifications",
+    "ariaLabelUnread": "notifications ({{count}} unread)",
+    "empty": "No notifications yet."
+  },
+  "displayNameDialog": {
+    "titleRequired": "Choose a display name",
+    "titleEdit": "Edit display name",
+    "description": "This is the name other people see on your lessons and comments. Your email address is never shown.",
+    "label": "Display name",
+    "charCountHint": "{{min}}-{{max}} characters.",
+    "saveError": "Could not save your display name."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "heading": "There's nothing at this address",
+    "description": "The link may be mistyped, or the lesson it pointed at may have been deleted or made private.",
+    "goHome": "Go to the home page",
+    "browseHub": "Browse the lesson hub"
+  },
+  "errorPage": {
+    "heading": "Something went wrong",
+    "description": "This page could not be shown. Reloading it may help; if it keeps happening, the problem is on our side."
+  },
+  "starRating": {
+    "defaultAriaLabel": "rating",
+    "ratingSummary": "{{label}}: {{display}} out of {{max}}",
+    "starLabel_one": "{{count}} star",
+    "starLabel_other": "{{count}} stars"
+  },
+  "lessonFind": {
+    "button": "Find in lesson",
+    "label": "Find in lesson",
+    "placeholder": "Find a word or phrase",
+    "clearAria": "Clear",
+    "hint": "Searches the passages, spelling words, questions, captions and activities of this lesson.",
+    "resultsLabel": "Matches",
+    "noMatches": "No matches.",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches",
+    "shownOf": "Showing the first {{shown}} of {{count}} matches.",
+    "section": "Section {{n}}",
+    "kind": {
+      "section": "Section name",
+      "heading": "Heading",
+      "text": "Paragraph {{n}}",
+      "spelling": "Spelling words",
+      "question": "Q{{n}}",
+      "image": "Picture",
+      "vakt": "VAKT"
+    }
+  }
+}

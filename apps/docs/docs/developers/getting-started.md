@@ -21,6 +21,7 @@ description: "Setting up the monorepo: requirements, commands, portless URLs, Tu
 pnpm install            # install all workspace deps
 
 pnpm dev:web            # run the frontend (Vite)
+pnpm dev:next           # run the new frontend, apps/web-next (React Router; see below)
 pnpm dev:api            # build the web app, then run the Worker locally (wrangler dev)
 pnpm dev:mcp            # run the MCP server over stdio
 pnpm dev:docs           # run this documentation site (VitePress)
@@ -28,8 +29,9 @@ pnpm mcp:login          # sign the MCP server in and store a refresh token
 
 pnpm dev:stub           # run the stub API instead of a real backend
 pnpm dev:web:stub       # run the frontend against it
+pnpm dev:next:stub      # run the new frontend against it
 
-pnpm build              # build the frontend: apps/web/dist and apps/web/dist-ssr
+pnpm build              # build both frontends: apps/web/dist (with the new app's files copied in), apps/web/dist-ssr and apps/web-next/build
 pnpm build:docs         # build the whole site: the frontend, then the docs into apps/web/dist/docs
 pnpm preview            # serve the built frontend (vite preview)
 pnpm run deploy         # rebuild the whole site from scratch, then deploy the Worker (wrangler deploy)
@@ -53,10 +55,12 @@ The dev and preview servers run through
 | Command                                        | URL                                                     |
 | ---------------------------------------------- | ------------------------------------------------------- |
 | `pnpm dev:web`                                 | `https://spelling-creator.localhost`                    |
+| `pnpm dev:next`                                | `https://next.spelling-creator.localhost`               |
 | `pnpm dev:api`                                 | `https://api.spelling-creator.localhost`                |
 | `pnpm dev:docs`                                | `https://docs.spelling-creator.localhost/docs/`         |
 | `pnpm dev:stub`                                | `https://api.stub.spelling-creator.localhost`           |
 | `pnpm dev:web:stub`                            | `https://stub.spelling-creator.localhost`               |
+| `pnpm dev:next:stub`                           | `https://next.stub.spelling-creator.localhost`          |
 | `pnpm preview`                                 | `https://preview.spelling-creator.localhost`            |
 | `pnpm --filter @spelling-creator/docs preview` | `https://preview.docs.spelling-creator.localhost/docs/` |
 
@@ -87,8 +91,8 @@ which also sorts out two things the proxy would otherwise get in the way of:
   `VITE_API_URL=https://api.spelling-creator.localhost` in `apps/web/.env`.
 
 `PORTLESS=0` in front of a command skips portless and runs the server on its
-usual port: Vite on 5173 (5180 in stub mode), wrangler and the stub on 8787,
-the docs on 5173 (4173 for the preview).
+usual port: Vite on 5173 (5180 in stub mode), the new app on 5181 in stub
+mode, wrangler and the stub on 8787, the docs on 5173 (4173 for the preview).
 
 Two things are tied to the address the app runs on, and so changed when these
 URLs did:
@@ -398,12 +402,16 @@ Node runs them directly by stripping the types. None of those read the types, so
 the check is a separate command:
 
 ```bash
-pnpm typecheck      # turbo run typecheck: core and the CLI
+pnpm typecheck      # turbo run typecheck: core, the CLI and the new web app
 ```
 
-Both use TypeScript 7 with `erasableSyntaxOnly`, so the source holds to what Node
-can strip (no enums, namespaces or parameter properties), and relative imports
-name the `.ts` file.
+All three use TypeScript 7 with `erasableSyntaxOnly`, so the source holds to
+what Node can strip (no enums, namespaces or parameter properties). In core
+and the CLI, relative imports name the `.ts` file. The new web app
+(`apps/web-next`, see [The rewrite](./web-app/rewrite.md)) is bundled by Vite
+and resolves the bundler's way, with React Router's generated route types
+(`react-router typegen` runs first) under `.react-router/`, which is
+gitignored.
 
 Core runs in three places, so `packages/core/tsconfig.json` points at three
 projects, which `tsc -b` checks together:

@@ -6,7 +6,11 @@ dist/
 dist-ssr/
 out/
 apps/mcp/build/
+apps/web-next/build/
 *.mcpb
+
+# React Router's generated route types (apps/web-next, `react-router typegen`)
+.react-router/
 
 # Logs
 *.log
@@ -16,8 +20,9 @@ logs/
 .env
 .env.*
 !.env.example
-# Points the web app at the local stub API; holds no secrets.
+# Points the web apps at the local stub API; holds no secrets.
 !apps/web/.env.stub
+!apps/web-next/.env.stub
 .dev.vars
 .dev.vars.*
 !.dev.vars.example

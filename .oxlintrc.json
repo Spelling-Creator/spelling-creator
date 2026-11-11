@@ -8,6 +8,8 @@
     "**/node_modules/**",
     "**/.wrangler/**",
     "**/doc_build/**",
+    // React Router's generated route types (apps/web-next).
+    "**/.react-router/**",
     // Agent skills: instructions for coding assistants, and any sample code
     // they carry is shown to an assistant rather than run here. Not project
     // code, and not held to its environments.
@@ -66,6 +68,29 @@
     {
       "files": ["apps/web/e2e/**/*.ts", "apps/web/playwright.config.ts"],
       "env": { "browser": true, "node": true }
+    },
+
+    // The new web app (apps/web-next): React Router framework mode, in
+    // TypeScript. Its route modules run in the browser and on the server (the
+    // Worker and the Node host), so they are held to the browser's globals,
+    // which the server's Web-standard surface shares. The build tooling and
+    // the copy script run under Node.
+    {
+      "files": ["apps/web-next/app/**/*.ts", "apps/web-next/app/**/*.tsx"],
+      "env": { "browser": true },
+      "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
+        "react/set-state-in-effect": "off"
+      }
+    },
+    {
+      "files": [
+        "apps/web-next/vite.config.ts",
+        "apps/web-next/react-router.config.ts",
+        "apps/web-next/scripts/**/*.mjs"
+      ],
+      "env": { "node": true }
     },
 
     // API — Cloudflare Worker runtime

@@ -45,6 +45,22 @@
       "outputs": ["dist-ssr/**"]
     },
 
+    // The new app (apps/web-next, React Router framework mode) builds its
+    // client and server halves in one `react-router build`, into build/. Its
+    // client files are then copied into apps/web/dist beside the old app's,
+    // the way the docs are, and for the same reason the copy is never cached.
+    // The VITE_* values are baked in here too.
+    "@spelling-creator/web-next#build": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["VITE_*"],
+      "outputs": ["build/**"]
+    },
+    "@spelling-creator/web-next#copy-to-web": {
+      "dependsOn": ["build", "@spelling-creator/web#build"],
+      "cache": false
+    },
+
     // VitePress builds into doc_build. Putting it in apps/web/dist/docs is a
     // separate step that is never cached, because a cache hit on the web build
     // restores dist without the docs in it.
@@ -56,19 +72,26 @@
       "cache": false
     },
 
-    // routes/ssr.js imports apps/web/dist-ssr, and wrangler will not bundle
-    // without apps/web/dist as its assets directory. `wrangler dev` and
-    // `wrangler deploy` are not tasks here: they can prompt (to log in, or to
-    // pick an account), and turbo gives a task no terminal to prompt in. The
-    // root dev:api and deploy scripts build through turbo, then run wrangler.
+    // routes/ssr.js imports apps/web/dist-ssr, routes/next.js imports
+    // apps/web-next/build/server, and wrangler will not bundle without
+    // apps/web/dist as its assets directory. `wrangler dev` and `wrangler
+    // deploy` are not tasks here: they can prompt (to log in, or to pick an
+    // account), and turbo gives a task no terminal to prompt in. The root
+    // dev:api and deploy scripts build through turbo, then run wrangler.
     "@spelling-creator/api#test": {
-      "dependsOn": ["transit", "@spelling-creator/web#build:ssr"]
+      "dependsOn": [
+        "transit",
+        "@spelling-creator/web#build:ssr",
+        "@spelling-creator/web-next#build"
+      ]
     },
     "@spelling-creator/api#bundle": {
       "dependsOn": [
         "transit",
         "@spelling-creator/web#build",
-        "@spelling-creator/web#build:ssr"
+        "@spelling-creator/web#build:ssr",
+        "@spelling-creator/web-next#build",
+        "@spelling-creator/web-next#copy-to-web"
       ],
       "outputs": ["dist/**"]
     },
