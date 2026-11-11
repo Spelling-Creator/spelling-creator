@@ -1,0 +1,84 @@
+{
+  "meta": {
+    "title": "Lesson hub",
+    "description": "Browse free community-made lessons for Spelling, copy one for your speller, and print it or run it on screen."
+  },
+  "header": {
+    "title": "Lesson hub"
+  },
+  "card": {
+    "editDraftTooltip": "Edit this draft",
+    "editLessonTooltip": "Edit this lesson",
+    "editDraftAria": "edit draft",
+    "editLessonAria": "edit lesson",
+    "deleteDraftTooltip": "Delete this draft",
+    "deleteLessonTooltip": "Delete this lesson",
+    "deleteDraftAria": "delete draft",
+    "deleteLessonAria": "delete lesson",
+    "draftBadge": "Draft",
+    "untitledLesson": "Untitled Lesson",
+    "anonymousAuthor": "Anonymous",
+    "sectionCount_one": "{{count}} section",
+    "sectionCount_other": "{{count}} sections"
+  },
+  "list": {
+    "publishedHeading": "Published lessons",
+    "count_one": "{{count}} lesson",
+    "count_other": "{{count}} lessons"
+  },
+  "toolbar": {
+    "description": "Browse lessons shared by the community. Open one to preview it.",
+    "remoteTooltip": "Copy a lesson from another instance",
+    "remoteAria": "copy a lesson from another instance",
+    "feedTooltip": "Subscribe to the latest lessons (RSS)",
+    "feedAria": "latest lessons RSS feed",
+    "refreshTooltip": "Refresh",
+    "refreshAria": "refresh"
+  },
+  "drafts": {
+    "heading": "Your drafts",
+    "description": "Backed up to the cloud, visible only to you. Open one to edit and publish it."
+  },
+  "search": {
+    "label": "Search lessons",
+    "placeholder": "Search lessons by title or author...",
+    "clearAria": "clear search"
+  },
+  "alerts": {
+    "hubDisabled": "The lesson hub is not configured (VITE_API_URL is missing).",
+    "retry": "Retry"
+  },
+  "emptyState": {
+    "noLessonsTitle": "No lessons yet",
+    "noLessonsHintPrefix": "Be the first to publish: build a lesson in the editor and press",
+    "publishToHub": "Publish to hub",
+    "noMatchesTitle": "No matches",
+    "noMatchesHint": "No lessons match \"{{query}}\". Try a different search."
+  },
+  "toast": {
+    "deleted": "Deleted \"{{title}}\"."
+  },
+  "errors": {
+    "loadFailed": "Could not load lessons.",
+    "deleteFailed": "Could not delete this lesson."
+  },
+  "remoteDialog": {
+    "title": "Copy a lesson from another instance",
+    "description": "Paste the address of a lesson page on another Spelling Creator hub. It opens in the editor as a fork, with its history, and you can save it to this hub as your own.",
+    "urlLabel": "Lesson address",
+    "urlPlaceholder": "https://other.example/hub/...",
+    "invalid": "That is not a web address.",
+    "signIn": "Sign in first: the hub fetches the lesson for you.",
+    "storageUnavailable": "Your browser would not let the hub hand the lesson to the editor.",
+    "cancel": "Cancel",
+    "copy": "Open in the editor"
+  },
+  "deleteDialog": {
+    "title": "Delete this lesson?",
+    "confirmPrefix": "This permanently deletes",
+    "confirmSuffix": "This can't be undone. To confirm, type the lesson's name below.",
+    "nameLabel": "Lesson name",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  }
+}

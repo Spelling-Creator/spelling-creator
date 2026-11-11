@@ -1,0 +1,606 @@
+/* Tailwind v4, full preflight — MUI is gone, so nothing for the reset to
+   fight anymore. Was theme+utilities-only (with two rules cherry-picked from
+   preflight) for the length of the MUI→shadcn migration; see git history on
+   this file for that era's reasoning if it's ever relevant again. */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Dark mode is driven by data-theme="dark"|"light" on <html> (set by
+   ColorSchemeProvider, src/lib/colorScheme.jsx), not shadcn's default .dark
+   class — matches the approved design mockup's own toggle mechanism. */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Spelling Creator semantic accents — distinct from shadcn's defaults. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-flag: var(--flag);
+  --color-flag-foreground: var(--flag-foreground);
+  --color-focus: var(--focus);
+  --color-focus-foreground: var(--focus-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-panel: var(--radius-panel);
+  --radius-tile: var(--radius-tile);
+  --radius-pill: var(--radius-pill);
+
+  /* Semantic surface roles for the bordered-box layout — see the theme blocks
+     below for what they resolve to.
+
+     --color-surface-muted is the tint a box header sits on (the strip carrying
+     a section's name and its counters), and it is deliberately its own token
+     rather than a reuse of --muted: --muted is a *content* surface (a code
+     block, the collab chat's message well, an avatar fallback), and the two
+     drifted apart the moment cards went opaque. Sharing one token meant a
+     panel header and the code block inside it were the same colour, which is
+     exactly the flattening the bordered layout is meant to fix. */
+  --color-surface-muted: var(--surface-muted);
+
+  /* Public Sans (400/500/600) for body/UI text — the default everywhere, via
+     the `body` rule below. Fraunces (600) is a deliberately separate
+     `font-serif` opt-in for display/marketing headings (HomePage's hero and
+     section headlines) — not applied blanket to every <h1>-<h6>, since most
+     headings in the app are ordinary UI chrome (dialog titles, card titles)
+     that should read as part of the same UI as the buttons/labels around
+     them, not as editorial copy. */
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+}
+
+/* This app's only addition to Tailwind's preflight: the default border-color
+   (Tailwind v4's bare `border` utility resolves to `currentColor`, not a
+   theme color, unless told otherwise) and the page's base background/text/
+   font — standard shadcn boilerplate. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* The app's keyboard focus ring, for everything that doesn't draw its own.
+     shadcn's primitives all pair `outline-none` with a `focus-visible:ring-*`
+     of their own, but the app is full of hand-written links and icon buttons
+     (the header triggers, the editor's toolbar buttons, the star rating) that
+     never had a focus style — so they fell through to the browser's default
+     ring, which Chrome draws as a dark outline banded with white. That looked
+     like stray chrome rather than part of the app, and on the old indigo header
+     bar the white band was the only part you saw.
+
+     A base-layer rule rather than a class each control has to remember: the
+     ones that were missing it are exactly the ones nobody thought about, and
+     a new hand-rolled control gets this for free. `outline-none` is a utility,
+     and utilities beat base, so nothing that already styles its own focus is
+     touched. */
+  :focus-visible {
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* There used to be a `header :focus-visible` override here, because the app
+     bar was a block of --primary and --ring *is* --primary, so the ring was
+     invisible against it. PageBar.jsx replaced that bar with one drawn on the
+     page background, so the ordinary ring is correct again — and the override
+     is not merely redundant now but wrong, since it would paint a near-white
+     ring on a light background. */
+}
+
+/* Safe areas: the parts of an iPhone screen taken by the status bar, the
+   notch, the rounded corners and the home indicator. The viewport meta sets
+   viewport-fit=cover (see index.html), so the page draws under all of them,
+   and anything pinned to a screen edge has to step back by the matching
+   --safe-* token (defined in :root below). Each is 0 wherever the screen has
+   nothing in the way, so none of this changes a desktop browser.
+
+   The bare utilities are for an element whose own padding or margin on that
+   edge is zero, which is every sheet and overlay that reaches the edge of the
+   screen. The bottom ones keep things out of the ~34px home-indicator strip,
+   where the swipe gesture wins and a tap doesn't land; pt-safe drops a bar's
+   contents below the clock and battery while its background still reaches
+   the top. The margins exist so a floating element keeps its own offset
+   (`bottom-4 sm:bottom-8` on the editor's + button) instead of restating it.
+
+   The px-safe-* family is for the page's chrome and content columns, which
+   already have side padding. In landscape iOS reports the same inset on both
+   sides (~59px on an iPhone 15), not just the side the notch is on, so a
+   full-width column loses that much at each end. Plain `px-4 px-safe` would
+   replace the 1rem rather than add to it, so these take the usual spacing
+   step and add the inset on top: px-safe-4 is px-4 on a desktop and 1rem
+   inside each inset on a phone. Content columns get it through PAGE_GUTTER
+   (layout/PageBody.jsx). See mobile-layout.md. */
+@utility pt-safe {
+  padding-top: var(--safe-top);
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+@utility pl-safe {
+  padding-left: var(--safe-left);
+}
+@utility pr-safe {
+  padding-right: var(--safe-right);
+}
+@utility mb-safe {
+  margin-bottom: var(--safe-bottom);
+}
+@utility ml-safe {
+  margin-left: var(--safe-left);
+}
+@utility mr-safe {
+  margin-right: var(--safe-right);
+}
+@utility mx-safe {
+  margin-left: var(--safe-left);
+  margin-right: var(--safe-right);
+}
+@utility px-safe-* {
+  padding-left: calc(var(--spacing) * --value(integer) + var(--safe-left));
+  padding-right: calc(var(--spacing) * --value(integer) + var(--safe-right));
+}
+
+:root {
+  /* Tells the browser to render native chrome (scrollbars, form controls) in
+     the light palette — without this, native scrollbars stay light-themed
+     even when our own data-theme switches to dark, since that's a custom
+     attribute the browser doesn't otherwise know maps to a color scheme. */
+  color-scheme: light;
+
+  /* One radius family, and a much firmer one than the mockup's. The app used to
+     step 8px → 14px → 20px as a surface got larger, which reads as softness at
+     the size of a button and as an unfinished edge at the size of a panel — and
+     it made a card nested in a panel visibly step against its parent's corner.
+     Everything a border is drawn around now shares 8px; only the pill is
+     special, because a pill is a shape rather than a radius. */
+  --radius: 0.5rem; /* 8px */
+  --radius-panel: 0.5rem; /* 8px — same as --radius, see above */
+  --radius-tile: 0.375rem; /* 6px */
+  --radius-pill: 999px;
+
+  /* The chrome's heights, published as tokens so anything that has to sit
+     clear of a sticky bar references them instead of restating pixels.
+
+     --header-row-h is AppHeader's row (it applies it as h-(--header-row-h), so
+     this is the single source of truth); --pagebar-row-h is PageBar's, the
+     contextual crumbs-and-actions bar the lesson pages and the editor pin
+     beneath it. --appheader-h adds the iOS status-bar inset the header pads
+     itself by when the app runs installed — it's where PageBar pins its top.
+
+     --header-h is the total: the real distance from the top of the viewport to
+     the first pixel of page content on a page that has a PageBar — which is
+     every page that pins something to it. It's what the editor's sticky
+     section headers and the lesson's tab bar pin to, and what
+     scroll-mt-(--header-h) offsets a scrolled-to element by. (Pages without a
+     PageBar have nothing sticky below the header, so nothing there reads it.) */
+  --header-row-h: 4rem;
+  --pagebar-row-h: 3rem;
+  --appheader-h: calc(var(--header-row-h) + var(--safe-top));
+  --header-h: calc(var(--appheader-h) + var(--pagebar-row-h));
+
+  /* The screen's safe-area insets, one per edge, read by the *-safe utilities
+     above. Tokens rather than env() at every use so there is one place that
+     knows where the insets come from, and so they can be set by hand to check
+     a layout in a desktop browser, which has no notch to report:
+     document.documentElement.style.setProperty("--safe-top", "59px"). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  /* The bigger inset on each axis, for something centred on the screen that
+     has to clear both ends of it (DialogContent's size caps). */
+  --safe-x: max(var(--safe-left), var(--safe-right));
+  --safe-y: max(var(--safe-top), var(--safe-bottom));
+
+  /* THE LIGHT PALETTE. Three surfaces, in the order the eye should read them:
+     the page is a tinted well (--background), content boxes are white on top of
+     it (--card), and the app's chrome — the header and page bars — is white too,
+     separated from the well by a border rather than by a tint.
+
+     Every one of these used to be translucent, and that is the change. --border
+     was white at 85% *on* a white card, which is not an edge at all: nothing on
+     a busy page had a boundary, and the only thing separating two surfaces was
+     a drop shadow. Opaque surfaces with a real border is what lets a list of
+     sixty lessons stay legible, and it is most of what the redesign is.
+
+     The identity comes from the logo, a stencil letterboard. --primary is the
+     board's charcoal, and the chrome, --accent included, stays neutral on
+     purpose: a lesson already uses a color for each question type, plus VAKT
+     red and the spelling teal, and the --focus amber marks warnings. A colored
+     hover or selection would sit among them and could be read as one. The
+     pencil yellow is kept for the logo, the hero's main button and the Merged
+     pill (--brand). Because --primary is as dark (or as light) as the text,
+     links are underlined and "you are here" states use a bar, not a tint. */
+  --background: #f4f3ef;
+  --foreground: #1f1f1f;
+  --card: #ffffff;
+  --card-foreground: #1f1f1f;
+  --popover: #ffffff;
+  --popover-foreground: #1f1f1f;
+  --primary: #292929;
+  --primary-foreground: #ffffff;
+  --secondary: #ecebe6;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f1f0ec;
+  --muted-foreground: #6b6a66;
+  --accent: #ecebe6;
+  --accent-foreground: #1f1f1f;
+  --destructive: #d94b64;
+  --destructive-foreground: #ffffff;
+  --border: #dddbd5;
+  /* Stronger than --border on purpose: a field has to look like something you
+     can type into while sitting on the same white card as everything else. */
+  --input: #cbc9c2;
+  --ring: #292929;
+
+  --success: #2f9e6e;
+  --success-foreground: #ffffff;
+  --flag: #d94b64;
+  --flag-foreground: #ffffff;
+  --focus: #b9791f;
+  --focus-foreground: #1f1f1f;
+
+  /* The logo's pencil yellow, for the few places the brand fills a surface.
+     The same in both themes (charcoal on it is 9.5:1), so the theme blocks
+     below don't restate it. Too light for text or an edge on white. */
+  --brand: #ffca3d;
+  --brand-foreground: #292929;
+
+  --surface-muted: #f0efeb;
+
+  /* Kept its name, narrowed its job. This used to sit under every card on the
+     page, doing the separating that --border couldn't. Now it belongs only to
+     things that genuinely float above the page — dialogs, popovers, menus,
+     toasts, the collab chat — so it is a shorter, tighter shadow rather than a
+     48px lift. Anything in the page's own flow gets a border and nothing else.
+
+     --glass-blur and --glass-border-outer used to live here too. Both are gone:
+     with opaque surfaces the blur was compositing a layer per overlay to filter
+     a background nobody could see through, and the outer 1px ring existed only
+     to give a translucent panel an edge that --border now draws itself.
+     --shadow-tile went with them — it was already unreferenced. */
+  --shadow-panel:
+    0 8px 24px -6px rgba(20, 20, 20, 0.18), 0 2px 6px rgba(20, 20, 20, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    /* THE DARK PALETTE — the same three surfaces as light, and the same reason
+       for each. The page well is the darkest thing on screen, content boxes are
+       lifted above it, and the chrome sits between the two so the header reads
+       as the frame rather than as another panel.
+
+       Dark is where the old translucency hurt most: --card at 58% over a
+       gradient meant a card's colour depended on what happened to be behind it,
+       so two identical panels on the same page were different greys. These are
+       flat values, and a panel is now the same panel wherever it lands. */
+    --background: #111111;
+    --foreground: #f0efeb;
+    --card: #1b1b1b;
+    --card-foreground: #f0efeb;
+    --popover: #212121;
+    --popover-foreground: #f0efeb;
+    --primary: #f0efeb;
+    --primary-foreground: #1b1b1b;
+    --secondary: #2a2a2a;
+    --secondary-foreground: #f0efeb;
+    --muted: #1e1e1e;
+    --muted-foreground: #b0aea8;
+    --accent: #2a2a2a;
+    --accent-foreground: #f0efeb;
+    --destructive: #f0788d;
+    --destructive-foreground: #1b1b1b;
+    --border: #303030;
+    --input: #424242;
+    --ring: #f0efeb;
+
+    --success: #57cd99;
+    --success-foreground: #1b1b1b;
+    --flag: #f0788d;
+    --flag-foreground: #1b1b1b;
+    --focus: #e3b567;
+    --focus-foreground: #1b1b1b;
+
+    --surface-muted: #222222;
+
+    --shadow-panel:
+      0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Same values as the prefers-color-scheme block above — see the commentary
+     there. Restated rather than shared because this one has to win against a
+     light OS preference, which a single combined selector can't do. */
+  --background: #111111;
+  --foreground: #f0efeb;
+  --card: #1b1b1b;
+  --card-foreground: #f0efeb;
+  --popover: #212121;
+  --popover-foreground: #f0efeb;
+  --primary: #f0efeb;
+  --primary-foreground: #1b1b1b;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #f0efeb;
+  --muted: #1e1e1e;
+  --muted-foreground: #b0aea8;
+  --accent: #2a2a2a;
+  --accent-foreground: #f0efeb;
+  --destructive: #f0788d;
+  --destructive-foreground: #1b1b1b;
+  --border: #303030;
+  --input: #424242;
+  --ring: #f0efeb;
+
+  --success: #57cd99;
+  --success-foreground: #1b1b1b;
+  --flag: #f0788d;
+  --flag-foreground: #1b1b1b;
+  --focus: #e3b567;
+  --focus-foreground: #1b1b1b;
+
+  --surface-muted: #222222;
+
+  --shadow-panel:
+    0 10px 28px -8px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Same values as the :root block — see the commentary there. Restated so an
+     explicit light choice wins against a dark OS preference. */
+  --background: #f4f3ef;
+  --foreground: #1f1f1f;
+  --card: #ffffff;
+  --card-foreground: #1f1f1f;
+  --popover: #ffffff;
+  --popover-foreground: #1f1f1f;
+  --primary: #292929;
+  --primary-foreground: #ffffff;
+  --secondary: #ecebe6;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f1f0ec;
+  --muted-foreground: #6b6a66;
+  --accent: #ecebe6;
+  --accent-foreground: #1f1f1f;
+  --destructive: #d94b64;
+  --destructive-foreground: #ffffff;
+  --border: #dddbd5;
+  --input: #cbc9c2;
+  --ring: #292929;
+
+  --success: #2f9e6e;
+  --success-foreground: #ffffff;
+  --flag: #d94b64;
+  --flag-foreground: #ffffff;
+  --focus: #b9791f;
+  --focus-foreground: #1f1f1f;
+
+  --surface-muted: #f0efeb;
+
+  --shadow-panel:
+    0 8px 24px -6px rgba(20, 20, 20, 0.18), 0 2px 6px rgba(20, 20, 20, 0.08);
+}
+
+/* "You are here" for a row in a list (the current page in the menu sheet, the
+   chosen version, the current find result). --accent is a neutral tint that
+   sits under 3:1 against the surface, too faint to carry a state on its own,
+   so a bar in the text color goes down the row's leading edge as well. */
+@utility selected-bar {
+  box-shadow: inset 3px 0 0 var(--foreground);
+}
+
+/* Shared spacing for rendered rich text — both the live tiptap editor
+   (RichTextInput.jsx, class="prose-editor") and stored-HTML display
+   (RichText.jsx) use this, so a comment looks the same while being written
+   and after it's posted. */
+.prose-editor,
+.prose-content {
+  word-break: break-word;
+}
+.prose-editor > :first-child,
+.prose-content > :first-child {
+  margin-top: 0;
+}
+.prose-editor > :last-child,
+.prose-content > :last-child {
+  margin-bottom: 0;
+}
+.prose-editor p,
+.prose-content p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.prose-editor ul,
+.prose-editor ol,
+.prose-content ul,
+.prose-content ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding-left: 1.5em;
+}
+.prose-editor li > p,
+.prose-content li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.prose-editor blockquote,
+.prose-content blockquote {
+  margin: 0.5em 0;
+  padding-left: 0.75em;
+  border-left: 3px solid var(--border);
+  color: var(--muted-foreground);
+}
+.prose-editor code,
+.prose-content code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875em;
+  background: var(--accent);
+  padding: 0.125em 0.375em;
+  border-radius: 0.25em;
+}
+/* Underlined, because --primary is as dark (or as light) as the text around
+   it, so color alone wouldn't say "link". */
+.prose-editor a,
+.prose-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+/* The lesson text editor (LessonTextInput.jsx). A paragraph there is one line
+   of the lesson, the way it was in the plain textarea it replaced, so lines sit
+   tight together and a blank line is an empty paragraph. */
+.lesson-text-editor p {
+  margin: 0;
+  min-height: 1.5em;
+}
+
+/* The one-line editor (LessonLineInput.jsx): one paragraph, sized like the
+   Input it replaced, and wrapping rather than scrolling when a prompt runs
+   long. */
+.lesson-line-editor p {
+  margin: 0;
+  min-height: 1.75em;
+  line-height: 1.75;
+}
+
+/* Footnote markers. The editor starts the counter at the number of footnotes
+   that come before its block (an inline counter-reset on the wrapper), so the
+   markers carry the numbers the printed lesson will. */
+.lesson-footnote {
+  counter-increment: lesson-footnote;
+  margin: 0 1px;
+  padding: 0 3px;
+  border-radius: 0.25em;
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.75em;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lesson-footnote::after {
+  content: counter(lesson-footnote);
+}
+.lesson-footnote.ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* Read-aloud hints. They change how words are said, not how they look, so the
+   editor marks them lightly and nothing else draws them. A pause's label comes
+   from its data-label through CSS, so it is never part of the text. */
+.lesson-speech {
+  text-decoration: underline dotted
+    color-mix(in oklab, var(--primary) 70%, transparent);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.lesson-pause {
+  margin: 0 1px;
+  padding: 0 4px;
+  border-radius: 0.25em;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.75em;
+  cursor: pointer;
+}
+.lesson-pause::after {
+  content: attr(data-label);
+}
+.lesson-pause.ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* Formulas (Formula.jsx). MathJax's own stylesheet sizes the SVG; these say
+   where a formula sits: in the line, or centered on a line of its own. The
+   source shows in its place until MathJax has drawn it, or where it can't. */
+.lesson-formula {
+  display: inline;
+}
+/* Tailwind's preflight makes every svg a block. An inline formula is one or
+   more SVGs in a line (MathJax cuts a long one where it may wrap), and each
+   has to sit in the text like a character. */
+.lesson-formula mjx-container > svg {
+  display: inline;
+}
+.lesson-formula[data-display] {
+  display: block;
+  text-align: center;
+  margin: 0.5em 0;
+}
+.lesson-formula-source {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.95em;
+}
+.lesson-formula-node {
+  border-radius: 0.25em;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.lesson-formula-node[data-display] {
+  display: block;
+}
+.lesson-formula-node-selected {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* The ALTCHA widget (src/lib/aiChallenge.jsx), on instances that use it
+   instead of Turnstile. Its own styles read these variables, so pointing them
+   at the app's tokens makes it look like the rest of the dialog and follow the
+   light and dark themes without a theme of its own. */
+altcha-widget {
+  --altcha-color-base: var(--card);
+  --altcha-color-base-content: var(--card-foreground);
+  --altcha-color-primary: var(--primary);
+  --altcha-color-primary-content: var(--primary-foreground);
+  --altcha-color-error: var(--destructive);
+  --altcha-border-color: var(--border);
+  --altcha-border-radius: var(--radius);
+  --altcha-max-width: 100%;
+}

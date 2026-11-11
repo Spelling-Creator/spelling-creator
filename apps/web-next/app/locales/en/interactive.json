@@ -1,0 +1,117 @@
+{
+  "title": "Interactive lesson",
+  "untitledLesson": "Untitled Lesson",
+  "untitledSection": "Untitled section",
+  "emptyLesson": "This lesson has nothing in it to work through yet.",
+  "close": "Close",
+  "speech": {
+    "turnOn": "Read aloud",
+    "turnOff": "Turn off reading aloud",
+    "stop": "Stop reading",
+    "readAgain": "Read this step again",
+    "settings": "Voice settings",
+    "voice": "Voice",
+    "pace": "Pace",
+    "downloadingVoice": "Downloading the natural voice (one time, about {{mb}} MB)... {{percent}}%",
+    "downloadingVoiceAnnouncement": "Downloading the natural voice. The browser's voice reads until it's ready.",
+    "loadingVoice": "Getting the natural voice ready...",
+    "voiceFailed": "The natural voice couldn't load, so the browser's voice is reading instead.",
+    "voiceFailedRetry": "The natural voice couldn't load, so the browser's voice is reading. It will try again on the next step.",
+    "voiceStopped": "The natural voice stopped working, so the browser's voice is reading instead.",
+    "paceOption_one": "Normal speed",
+    "paceOption_other": "{{rate}} times normal speed"
+  },
+  "letterboard": {
+    "open": "Letterboard",
+    "title": "Letterboard session",
+    "description": "On the tablet, open Spelling Creator Board, choose Join a letterboard session and enter this code. The board follows this lesson step by step, and what is spelled on it appears in the answer box here.",
+    "signIn": "Sign in to run this lesson with a letterboard.",
+    "start": "Start a session",
+    "starting": "Starting the session...",
+    "codeLabel": "Session code",
+    "copyCode": "Copy code",
+    "copiedCode": "Copied!",
+    "boards_zero": "No board has joined yet.",
+    "boards_one": "{{count}} board is following.",
+    "boards_other": "{{count}} boards are following.",
+    "stop": "End session",
+    "dismiss": "Dismiss",
+    "errors": {
+      "notConfigured": "The lesson hub is not configured, so a letterboard can't join.",
+      "signIn": "Sign in to run this lesson with a letterboard.",
+      "couldNotStart": "Couldn't start the session. Check your connection and try again.",
+      "refused": "The hub turned the session down. Starting several in a row can do this, so wait a minute and try again.",
+      "disconnected": "The letterboard session was disconnected. The board keeps the lesson, so the speller can carry on there."
+    }
+  },
+  "answers": {
+    "show": "Show answers",
+    "hide": "Hide answers",
+    "label": "Answer",
+    "labelPlural": "Answers",
+    "labelSuggested": "Suggested answers",
+    "suggestedNote": "Examples, not the only right answers. Anything that fits the topic counts.",
+    "working": "Working",
+    "none": "This question has no set answer.",
+    "use": "Put this in your answer",
+    "useThis": "Put \"{{answer}}\" in your answer"
+  },
+  "step": {
+    "noQuestionText": "(no question text)",
+    "besides": "Besides \"{{answer}}\"",
+    "yourAnswer": "Your answer",
+    "answerPlaceholder": "Type your answer...",
+    "imageAlt": "lesson image",
+    "spellingWords": "Spelling words",
+    "speakWord": "Read \"{{word}}\" aloud",
+    "vaktLabel": "VAKT activity"
+  },
+  "progress": {
+    "finished": "Finished",
+    "stepCount": "Step {{current}} of {{total}}",
+    "questionsAnswered": "{{answered}}/{{total}} answered"
+  },
+  "nav": {
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "resume": {
+    "title": "Picked up where you left off",
+    "body": "Your answers from last time are still here, kept on this device. Carry on, or start the lesson again from the beginning.",
+    "startAgain": "Start again"
+  },
+  "quit": {
+    "title": "Leave the lesson?",
+    "body": "Your answers are kept on this device, so you can open the lesson again and carry on from here.",
+    "noStorageTitle": "Leave without saving?",
+    "noStorageBody": "This browser won't let us keep your answers, so there's nothing to come back to. Leaving now discards what you've typed.",
+    "keepGoing": "Keep going",
+    "leave": "Leave",
+    "discard": "Discard answers"
+  },
+  "summary": {
+    "readThrough": "You worked through the whole lesson.",
+    "answered": "You answered {{answered}} of {{total}} questions.",
+    "skipped": "Skipped",
+    "saving": "Saving your answers...",
+    "saved": "Saved privately to your account.",
+    "couldNotSave": "Could not save your answers.",
+    "retry": "Retry",
+    "notConfigured": "The lesson hub is not configured, so your answers can't be saved.",
+    "signInToSave": "Sign in before you start to have your answers saved privately to your account.",
+    "signedInSince": "A different account signed in while you were working, so these answers aren't filed to it. They're still on this device, kept for whoever started this run-through.",
+    "startAgain": "Start again",
+    "done": "Done"
+  },
+  "saved": {
+    "heading": "Your answers",
+    "privateNote": "Only you can see these. The lesson's author can't.",
+    "answeredCount": "{{answered}}/{{total}} answered",
+    "delete": "Delete these answers",
+    "deleted": "Answers deleted.",
+    "couldNotDelete": "Could not delete these answers.",
+    "couldNotLoad": "Could not load your answers.",
+    "retry": "Retry"
+  }
+}

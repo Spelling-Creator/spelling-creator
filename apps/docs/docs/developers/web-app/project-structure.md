@@ -10,6 +10,11 @@ leans on (`packages/core`), then covers two conventions that live in shared
 components rather than in any one page: auto-growing text fields and the focus
 ring.
 
+The app is being rewritten in `apps/web-next`, a route at a time; that app's
+tree, and how the two share the site meanwhile, are on
+[The rewrite](./rewrite.md). Everything below describes `apps/web` as it
+stands.
+
 ## The web app's source tree
 
 ```

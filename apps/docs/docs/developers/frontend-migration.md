@@ -15,6 +15,12 @@ worth not repeating.
 follow-up described below was never started, so link previews still come from
 the Chromium screenshot in `ogImage()`.
 
+**Update (November 2026).** The framework decision stands, but the app is
+being rewritten on top of it: `apps/web-next` is React on React Router's
+framework mode, in TypeScript, replacing the hand-rolled server render below
+with the router's own and moving one route at a time while the old app
+serves the rest. See [The rewrite](./web-app/rewrite.md).
+
 ## The decision
 
 Option C (Solid without a meta-framework) was measured against option D and lost

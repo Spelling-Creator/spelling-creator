@@ -23,6 +23,7 @@
     "**/dist-ssr/**",
     "**/build/**",
     "**/.wrangler/**",
+    "**/.react-router/**",
 
     "apps/docs/doc_build/**",
     "apps/docs/docs/.vitepress/cache/**"

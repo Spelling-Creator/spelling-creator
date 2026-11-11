@@ -255,6 +255,10 @@ export default defineConfig({
               link: "/developers/web-app/end-to-end-tests",
             },
             {
+              text: "The rewrite (apps/web-next)",
+              link: "/developers/web-app/rewrite",
+            },
+            {
               text: "Project structure",
               link: "/developers/web-app/project-structure",
             },
