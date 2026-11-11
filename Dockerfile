@@ -46,6 +46,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
+COPY apps/web-next/package.json ./apps/web-next/
 COPY apps/mcp/package.json ./apps/mcp/
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/stub-api/package.json ./apps/stub-api/
@@ -87,12 +88,17 @@ ENV VITE_API_URL=$VITE_API_URL \
     VITE_AUTH_MODE=$VITE_AUTH_MODE \
     VITE_USERNAME_DOMAIN=$VITE_USERNAME_DOMAIN
 
-# The web app has two halves: dist (the SPA) and dist-ssr (the server bundle
-# routes/ssr.js imports). The docs are copied into dist/docs last, because the
-# SPA build empties dist. These are the steps `pnpm build:docs` runs through
-# Turborepo, spelled out, since the image has no .git and no use for a cache.
+# The old web app has two halves: dist (the SPA) and dist-ssr (the server
+# bundle routes/ssr.js imports). The new app (apps/web-next) builds into its
+# own build/, whose server half routes/next.js imports and whose client files
+# are copied into dist beside the old app's. The docs are copied into
+# dist/docs the same way. Both copies come after the SPA build, because it
+# empties dist. These are the steps `pnpm build:docs` runs through Turborepo,
+# spelled out, since the image has no .git and no use for a cache.
 RUN pnpm --filter @spelling-creator/web build \
  && pnpm --filter @spelling-creator/web build:ssr \
+ && pnpm --filter @spelling-creator/web-next build \
+ && pnpm --filter @spelling-creator/web-next copy-to-web \
  && pnpm --filter @spelling-creator/docs build \
  && pnpm --filter @spelling-creator/docs copy-to-web
 

@@ -1,18 +1,21 @@
 name: Deploy to Cloudflare
 
-# The Worker now hosts the SPA: it serves the built web app as static assets and
-# prerenders pages for crawlers with Browser Rendering. So a deploy builds the
-# web app and the VitePress docs (into apps/web/dist/docs), then `wrangler
-# deploy` uploads the Worker together with apps/web/dist.
+# The Worker hosts the web apps: it serves the built files as static assets,
+# renders the new app's pages through its server build, and prerenders the old
+# app's pages for crawlers with Browser Rendering. So a deploy builds both web
+# apps and the VitePress docs (into apps/web/dist/docs), then `wrangler deploy`
+# uploads the Worker together with apps/web/dist.
 #
-# That happens in two jobs. `build` lints and builds, and hands apps/web/dist and
-# apps/web/dist-ssr to `deploy` as an artifact. `deploy` is the only job that
-# reads the Cloudflare token, so none of the build tooling runs with it in
-# reach, and a failed deploy can be re-run on its own without rebuilding.
+# That happens in two jobs. `build` lints and builds, and hands apps/web/dist,
+# apps/web/dist-ssr and apps/web-next/build to `deploy` as an artifact.
+# `deploy` is the only job that reads the Cloudflare token, so none of the
+# build tooling runs with it in reach, and a failed deploy can be re-run on its
+# own without rebuilding.
 on:
   push:
     paths:
       - "apps/web/**"
+      - "apps/web-next/**"
       - "apps/api/**"
       - "apps/mcp/**"
       - "apps/docs/**"
@@ -81,29 +84,37 @@ jobs:
           test -n "${{ secrets.VITE_SUPABASE_URL }}" && echo "supabase url ok"
           test -n "${{ secrets.VITE_SUPABASE_ANON_KEY }}" && echo "supabase anon key ok"
 
+      # Both apps read the same values; each from its own .env, since Vite reads
+      # env files from the package holding its config.
       - name: Inject env vars
         run: |
-          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> apps/web/.env
-          echo "VITE_TURNSTILE_SITE_KEY=${{ secrets.VITE_TURNSTILE_SITE_KEY }}" >> apps/web/.env
-          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> apps/web/.env
-          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> apps/web/.env
-          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> apps/web/.env
+          for app in apps/web apps/web-next; do
+            echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> "$app/.env"
+            echo "VITE_TURNSTILE_SITE_KEY=${{ secrets.VITE_TURNSTILE_SITE_KEY }}" >> "$app/.env"
+            echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> "$app/.env"
+            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> "$app/.env"
+            echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> "$app/.env"
+          done
 
       - name: Lint
         run: pnpm lint
 
-      # Builds both halves of the web app and the VitePress docs, then copies the
-      # docs into apps/web/dist/docs so they ship in the same assets bundle and
-      # are served at /docs. Turborepo runs the copy after the web build, which
-      # matters because Vite empties apps/web/dist each time. There is no cache
-      # to restore here (see the note in ci.yml), so everything really builds.
-      - name: Build web app and docs
+      # Builds both halves of the old web app, the new app, and the VitePress
+      # docs, then copies the new app's client files and the docs into
+      # apps/web/dist so they ship in the same assets bundle. Turborepo runs
+      # the copies after the old app's build, which matters because Vite
+      # empties apps/web/dist each time. There is no cache to restore here (see
+      # the note in ci.yml), so everything really builds.
+      - name: Build web apps and docs
         run: pnpm build:docs
 
-      # dist is the static assets bundle (docs included); dist-ssr is the server
-      # renderer that apps/api/src/routes/ssr.js imports, so the Worker can't be
-      # bundled without it. Hidden files are included so the artifact is an exact
-      # copy of the build even if something like a .well-known/ file lands in it.
+      # dist is the static assets bundle (the new app's files and the docs
+      # included); dist-ssr is the old app's server renderer that
+      # apps/api/src/routes/ssr.js imports, and apps/web-next/build/server the
+      # new app's that routes/next.js imports, so the Worker can't be bundled
+      # without them. Hidden files are included so the artifact is an exact
+      # copy of the build even if something like a .well-known/ file lands in
+      # it.
       - name: Upload build
         uses: actions/upload-artifact@v7
         with:
@@ -111,6 +122,7 @@ jobs:
           path: |
             apps/web/dist
             apps/web/dist-ssr
+            apps/web-next/build
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
@@ -142,13 +154,13 @@ jobs:
       - name: Debug env
         run: test -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" && echo "cloudflare token ok"
 
-      # The artifact's root is apps/web (the common parent of both paths), so
-      # this restores apps/web/dist and apps/web/dist-ssr.
+      # The artifact's root is apps (the common parent of the three paths), so
+      # this restores apps/web/dist, apps/web/dist-ssr and apps/web-next/build.
       - name: Download build
         uses: actions/download-artifact@v8
         with:
           name: web-build
-          path: apps/web
+          path: apps
 
       # Deploys the Worker (apps/api) which bundles apps/web/dist as static
       # assets via the `assets` config in wrangler.jsonc.

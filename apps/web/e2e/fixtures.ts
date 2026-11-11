@@ -38,6 +38,8 @@ export interface HubLesson {
   id: string;
   title: string;
   author: string;
+  /** The author's user id, which is their profile's path (/users/:id). */
+  authorId: string;
   sectionCount: number;
 }
 

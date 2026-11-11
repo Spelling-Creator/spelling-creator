@@ -29,17 +29,19 @@ const stripTags = (html) => html.replace(/<[^>]+>/g, "").trim();
 
 /**
  * @param {object} state  From seed(), with `packs` and `pullPacks` from buildGit().
- * @param {{ appOrigin: string, peerOrigin: string, dataDir: string, hubUrl: string, ai: object, log: Function }} opts
+ * @param {{ appOrigin: string, peerOrigin: string, extraOrigins?: string[], dataDir: string, hubUrl: string, ai: object, log: Function }} opts
  *   `ai` is createAi() from ./ai.js.
  * @returns {(req, res) => Promise<void>}
  */
 export function createHandler(
   state,
-  { appOrigin, peerOrigin, dataDir, hubUrl, ai, log },
+  { appOrigin, peerOrigin, extraOrigins = [], dataDir, hubUrl, ai, log },
 ) {
-  // Both origins the app is served from (the second for /split).
+  // Every origin an app is served from: the two the links and /split use,
+  // and any other that may call this stub from a browser (the new app's dev
+  // server, while the two apps run side by side).
   const appOrigins = new Set(
-    [appOrigin, peerOrigin].map((o) => new URL(o).origin),
+    [appOrigin, peerOrigin, ...extraOrigins].map((o) => new URL(o).origin),
   );
   const routes = [];
   const on = (method, pattern, fn) =>

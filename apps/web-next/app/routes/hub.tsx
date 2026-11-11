@@ -66,6 +66,7 @@ import { formatDate } from "@/lib/format";
 import { i18n } from "@/lib/i18n";
 import { buildLessonListSchema, jsonLd, pageMeta } from "@/lib/seo";
 import { siteOriginOf } from "@/lib/site";
+import { useHydrated } from "@/lib/useHydrated";
 
 // The published listing. A failure is the page's to show (with a retry),
 // not the error boundary's: the hub is the site's front door, and an
@@ -273,6 +274,7 @@ export default function Hub({ loaderData }: Route.ComponentProps) {
   // Client-side search. `query` is what the user typed; `debouncedQuery`
   // lags it by 200ms so the index isn't queried on every keystroke. The
   // index is rebuilt only when the lesson list changes.
+  const hydrated = useHydrated();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -486,6 +488,10 @@ export default function Hub({ loaderData }: Route.ComponentProps) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={loading}
+                // The box arrives in the server's HTML before the script
+                // that filters on it; until that has run, typing would go
+                // nowhere, so the box doesn't take it.
+                readOnly={!hydrated}
                 className="pr-9 pl-9"
               />
               {query && (

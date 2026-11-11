@@ -113,9 +113,24 @@ files, `apps/web/dist`, and decides per request which app answers a page.
   moving later has to be added, or returning visitors keep getting the old
   page.
 
-The Worker's side of this lands with the next layer of the rewrite
-(`apps/api/src/routes/next.js`); until then the new app runs on its own dev
-server, below.
+The Worker's side is `apps/api/src/routes/next.js`: `shouldServeNext` asks
+`isNextPath` about the request (with a `.data` suffix stripped, which is how
+a client navigation asks for a page's data), and `serveNext` runs the
+request handler with the host's settings in the context. `handleFrontend`
+in `routes/render.js` calls it before the old server render, and the Node
+entry's `frontend` does the same. The settings a host passes are only the
+ones it knows: the Worker's bindings for the API origin, the Supabase
+project and the sign-in mode; on the Node server the same browser settings
+it writes into the old app's shell. Anything left out keeps the build's
+value, so the Turnstile site key and the Google client id the deploy bakes
+in survive. `node/next.test.js` pins the hand-off down from the Node entry,
+and the profile cases in `node/ssr.test.js` now run against the new app.
+
+The deploy builds both apps (`.github/workflows/deploy.yml` injects the
+`VITE_*` values into each app's `.env` and ships `apps/web-next/build` beside
+the old app's `dist` and `dist-ssr`), and the Docker image does the same
+(`Dockerfile`). `turbo.json` builds the new app before the API's tests and
+the Worker bundle, both of which import it.
 
 ## Moving a route
 
@@ -130,8 +145,9 @@ server, below.
    that explains an odd line is usually the record of one.
 3. Add the path to `NEXT_PATHS` in `app/lib/routes.ts`, and to
    `WORKER_PATHS` in `apps/web/vite.config.js` if it is not covered there.
-4. Run the browser tests for the route against the new app (the project in
-   `apps/web/playwright.config.ts` that targets it) and watch them pass.
+4. Add the route's specs to `NEXT_SPECS` in `apps/web/playwright.config.ts`,
+   the `web-next` project's list, and watch them pass against the new app
+   (see [End-to-end tests](./end-to-end-tests.md#two-apps-two-projects)).
 5. Delete the old route's files, and whatever only they used.
 
 ## Running it

@@ -216,17 +216,20 @@ writing it out.
 default `http://localhost:5180`, where it is without portless), `peerOrigin`
 (the right pane of `/split`, default the same address on `127.0.0.1`; an
 `appOrigin` without a port, such as a portless one, has to come with its own),
-`dataDir` (the snapshot, image cache and saved
-AI answers, default `apps/stub-api/.cache`), `hubUrl` (where to snapshot from,
-default the live hub at `https://spellingcreator.org`), `now` (the time the
-seeded dates count back from, default the real time), `ai` (`"claude"` to ask
-Claude when no answer is saved), `aiModel` (default `"sonnet"`),
-`aiReplayDelayMs` (how long a saved answer takes, default 1200) and `log`. From
-the command line the same settings are the `PORT`, `APP_ORIGIN`,
-`PEER_ORIGIN`, `STUB_DATA_DIR`, `HUB_URL`, `STUB_AI` and `STUB_AI_MODEL`
-environment variables. Under portless, `PORT` comes from portless, and
-`APP_ORIGIN` and `PEER_ORIGIN` default to the app's two portless URLs. The package also exports the made-up people as
-`@spelling-creator/stub-api/people`.
+`extraOrigins` (other origins allowed to call the stub from a browser: the
+[new app's](./web-app/rewrite.md) dev server, while it runs beside the old
+one), `dataDir` (the snapshot, image cache and saved AI answers, default
+`apps/stub-api/.cache`), `hubUrl` (where to snapshot from, default the live
+hub at `https://spellingcreator.org`), `now` (the time the seeded dates count
+back from, default the real time), `ai` (`"claude"` to ask Claude when no
+answer is saved), `aiModel` (default `"sonnet"`), `aiReplayDelayMs` (how long
+a saved answer takes, default 1200) and `log`. From the command line the same
+settings are the `PORT`, `APP_ORIGIN`, `PEER_ORIGIN`, `EXTRA_ORIGINS`
+(comma-separated), `STUB_DATA_DIR`, `HUB_URL`, `STUB_AI` and `STUB_AI_MODEL`
+environment variables. Under portless, `PORT` comes from portless,
+`APP_ORIGIN` and `PEER_ORIGIN` default to the app's two portless URLs, and
+`EXTRA_ORIGINS` to the new app's. The package also exports the made-up people
+as `@spelling-creator/stub-api/people`.
 
 ## Where the code lives
 

@@ -14,6 +14,7 @@
 import puppeteer from "@cloudflare/puppeteer";
 import { textResponse } from "../lib/http.js";
 import { responseCache } from "../platform/index.js";
+import { serveNext, shouldServeNext, workerSettings } from "./next.js";
 import { serverRender, shouldServerRender } from "./ssr.js";
 import { isAppRoute, serveApp } from "./spa.js";
 
@@ -208,15 +209,21 @@ export async function ogImage(request, env, ctx, url) {
 
 // Serve the frontend, in preference order:
 //
-//   1. Server-render it, for everyone, if it's one of the public read routes
-//      (routes/ssr.js). Returns null if it isn't, or if anything went wrong.
-//   2. Prerender it with headless Chromium, for crawlers only, on the app's
+//   1. The new app, if the path is one it serves (routes/next.js). It renders
+//      its own pages and answers its own 404s, so nothing below sees them.
+//   2. Server-render it, for everyone, if it's one of the public read routes
+//      the old app still owns (routes/ssr.js). Returns null if it isn't, or if
+//      anything went wrong.
+//   3. Prerender it with headless Chromium, for crawlers only, on the app's
 //      routes that SSR doesn't cover, and on an SSR route whose render failed.
 //      The one that matters is "/"; the rest are signed-in pages that ask not
-//      to be indexed. Never an unknown path, which gets step 3's real 404.
-//   3. Hand back the static asset, the SPA shell for a client-side route, or a
+//      to be indexed. Never an unknown path, which gets step 4's real 404.
+//   4. Hand back the static asset, the SPA shell for a client-side route, or a
 //      real 404 for a path that is neither (routes/spa.js).
 export async function handleFrontend(request, env, ctx, url) {
+  if (shouldServeNext(request, url)) {
+    return serveNext(request, workerSettings(env, url), url);
+  }
   if (shouldServerRender(request, url)) {
     const rendered = await serverRender(request, env, ctx, url);
     if (rendered) return rendered;
