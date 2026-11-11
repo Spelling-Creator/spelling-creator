@@ -2,10 +2,11 @@
 // pnpm dev:stub                                       start the stub API on https://api.stub.spelling-creator.localhost
 // pnpm --filter @spelling-creator/stub-api snapshot   re-read the live hub's lessons
 //
-// Environment: PORT, APP_ORIGIN, PEER_ORIGIN, STUB_DATA_DIR, HUB_URL, STUB_AI,
-// STUB_AI_MODEL (see server.js), and PIXABAY_API_KEY for Pixabay image search
-// (see ai.js). `pnpm dev:stub` runs this through portless, which sets PORT and
-// PORTLESS_URL; without PORTLESS_URL it falls back to port 8787.
+// Environment: PORT, APP_ORIGIN, PEER_ORIGIN, EXTRA_ORIGINS (comma-separated),
+// STUB_DATA_DIR, HUB_URL, STUB_AI, STUB_AI_MODEL (see server.js), and
+// PIXABAY_API_KEY for Pixabay image search (see ai.js). `pnpm dev:stub` runs
+// this through portless, which sets PORT and PORTLESS_URL; without
+// PORTLESS_URL it falls back to port 8787.
 
 import {
   STUB,
@@ -24,15 +25,27 @@ const hubUrl = process.env.HUB_URL || DEFAULT_HUB_URL;
 if (process.argv[2] === "snapshot") {
   await loadHub({ dataDir, hubUrl, refresh: true, log });
 } else {
-  // Under portless, `pnpm dev:web:stub` and its /split alias have named URLs
-  // too (see scripts/portless.mjs).
-  const [appUrl, peerUrl] = underPortless()
-    ? await Promise.all([portlessUrl(STUB.app), portlessUrl(STUB.peer)])
+  // Under portless, `pnpm dev:web:stub`, its /split alias and the new app's
+  // `pnpm dev:next:stub` have named URLs too (see scripts/portless.mjs).
+  const [appUrl, peerUrl, nextUrl] = underPortless()
+    ? await Promise.all([
+        portlessUrl(STUB.app),
+        portlessUrl(STUB.peer),
+        portlessUrl(STUB.next),
+      ])
     : [];
+  const extraOrigins = process.env.EXTRA_ORIGINS
+    ? process.env.EXTRA_ORIGINS.split(",")
+        .map((o) => o.trim())
+        .filter(Boolean)
+    : nextUrl
+      ? [nextUrl]
+      : [];
   const stub = await startStub({
     port: Number(process.env.PORT || 8787),
     appOrigin: process.env.APP_ORIGIN || appUrl,
     peerOrigin: process.env.PEER_ORIGIN || peerUrl,
+    extraOrigins,
     dataDir,
     hubUrl,
     ai: process.env.STUB_AI || "",

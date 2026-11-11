@@ -145,10 +145,11 @@ describe("server rendering a page that does not exist", () => {
 
   it("drops a trailing slash from the canonical URL, as the sitemap does", async () => {
     // /hub/ is the same route as /hub, and only /hub is in the sitemap; the
-    // slashed spelling must not claim to be canonical in its own right.
+    // slashed spelling must not claim to be canonical in its own right. The
+    // hub is the new app's now (routes/next.js), which keeps the rule.
     const handle = handler(vi.fn(async () => Response.json([])));
     const res = await ask(handle, "/hub/");
-    expect(res.headers.get("x-rendered")).toBe("ssr");
+    expect(res.headers.get("x-rendered")).toBe("next");
     const text = await res.text();
     expect(text).toContain(
       '<link rel="canonical" href="http://localhost:8080/hub"',
@@ -178,8 +179,10 @@ describe("server rendering a page that does not exist", () => {
     expect(network).not.toHaveBeenCalled();
   });
 
-  // GoTrue's admin lookup, as the profile route calls it: 404 for a user that
-  // doesn't exist, or `status` for an outage.
+  // The profile pages are the new app's now (routes/next.js), which keeps
+  // every one of these promises; node/next.test.js has the rest of what it
+  // answers. GoTrue's admin lookup, as the profile route calls it: 404 for a
+  // user that doesn't exist, or `status` for an outage.
   const gotrue = (status) =>
     vi.fn(async (input) => {
       const url = new URL(input instanceof Request ? input.url : input);
@@ -194,6 +197,7 @@ describe("server rendering a page that does not exist", () => {
       "/users/00000000-0000-0000-0000-000000000001",
     );
     expect(res.status).toBe(404);
+    expect(res.headers.get("x-rendered")).toBe("next");
   });
 
   it("renders a profile page with its ProfilePage markup", async () => {
@@ -210,7 +214,7 @@ describe("server rendering a page that does not exist", () => {
     const res = await ask(handler(network), `/users/${USER_ID}`);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("x-rendered")).toBe("ssr");
+    expect(res.headers.get("x-rendered")).toBe("next");
     const text = await res.text();
     // The JSON-LD is in the served HTML, so a crawler needs no JavaScript.
     expect(text).toContain('"@type":"ProfilePage"');

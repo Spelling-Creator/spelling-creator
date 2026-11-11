@@ -19,14 +19,25 @@ the same in the new app before the old one goes.
 pnpm --filter @spelling-creator/web test:e2e
 ```
 
-`playwright.config.ts` starts both servers itself, without portless, at the
-addresses `apps/web/.env.stub` and the stub's defaults agree on: the stub on
-`http://localhost:8787` and the app, in stub mode, on `http://localhost:5180`.
-A server already running at either address is reused outside CI, which is how
-to watch a test against your own dev servers (`PORTLESS=0 pnpm dev:stub` and
-`PORTLESS=0 pnpm dev:web:stub`). The first start of the stub snapshots the
-live hub's lessons into `apps/stub-api/.cache`, which is why its startup
-timeout is generous.
+`playwright.config.ts` starts the servers itself, without portless, at the
+addresses the apps' `.env.stub` files and the stub's defaults agree on: the
+stub on `http://localhost:8787`, the old app, in stub mode, on
+`http://localhost:5180`, and the new app on `http://127.0.0.1:5181`. A server
+already running at any of the addresses is reused outside CI, which is how
+to watch a test against your own dev servers (`PORTLESS=0 pnpm dev:stub`,
+`PORTLESS=0 pnpm dev:web:stub` and `PORTLESS=0 pnpm dev:next:stub`). The
+first start of the stub snapshots the live hub's lessons into
+`apps/stub-api/.cache`, which is why its startup timeout is generous.
+
+## Two apps, two projects
+
+While the app is being [rewritten](./rewrite.md), the suite runs as two
+Playwright projects: `web` runs every spec against the old app, and
+`web-next` runs the specs for the routes that have moved against the new
+one, listed in `NEXT_SPECS` in the config. A spec whose name ends in
+`.next.spec.ts` is the new app's alone: it checks something only it does.
+`pnpm --filter @spelling-creator/web test:e2e --project web-next` runs one
+project. When the last route moves, the old project goes.
 
 The browser comes from
 `pnpm --filter @spelling-creator/web exec playwright install chromium` the
@@ -38,14 +49,17 @@ fails.
 
 ## What they cover
 
-| Spec                 | Flow                                                                                                                                                                                                                              |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hub.spec.ts`        | The hub lists the published lessons; search finds them by title or author; a lesson opens from the list with its tabs.                                                                                                            |
-| `lesson.spec.ts`     | A published lesson shows its sections, spelling lists, question-type key and the About rail; interactive mode steps forward and back; the History tab lists commits; a visitor is asked to sign in before commenting.             |
-| `discussion.spec.ts` | A signed-in reader posts a comment and rates the lesson.                                                                                                                                                                          |
-| `editor.spec.ts`     | A lesson built with no account: title, a section, a text block; a version is taken once the writer pauses and shows in the history dialog; the library lists the lesson and opens it as it was left.                              |
-| `collab.spec.ts`     | Two browsers: the host starts a session, the guest asks in from a lesson of their own and waits, the host admits them, the guest's editor takes the host's lesson, edits sync both ways, and the guest's own lesson is untouched. |
-| `publish.spec.ts`    | A signed-in author saves a lesson to the hub, where it appears under their name.                                                                                                                                                  |
+| Spec                   | Flow                                                                                                                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hub.spec.ts`          | The hub lists the published lessons; search finds them by title or author; a lesson opens from the list with its tabs.                                                                                                            |
+| `profile.spec.ts`      | A person's profile shows their lessons; a signed-in reader follows and unfollows them, and the count follows.                                                                                                                     |
+| `profile.next.spec.ts` | New app only: a profile nobody has is a 404, status and page both.                                                                                                                                                                |
+| `handoff.next.spec.ts` | New app only: a link to a page the old app still serves leaves as a document load, so the Worker can answer it with the old app.                                                                                                  |
+| `lesson.spec.ts`       | A published lesson shows its sections, spelling lists, question-type key and the About rail; interactive mode steps forward and back; the History tab lists commits; a visitor is asked to sign in before commenting.             |
+| `discussion.spec.ts`   | A signed-in reader posts a comment and rates the lesson.                                                                                                                                                                          |
+| `editor.spec.ts`       | A lesson built with no account: title, a section, a text block; a version is taken once the writer pauses and shows in the history dialog; the library lists the lesson and opens it as it was left.                              |
+| `collab.spec.ts`       | Two browsers: the host starts a session, the guest asks in from a lesson of their own and waits, the host admits them, the guest's editor takes the host's lesson, edits sync both ways, and the guest's own lesson is untouched. |
+| `publish.spec.ts`      | A signed-in author saves a lesson to the hub, where it appears under their name.                                                                                                                                                  |
 
 Every test is its own browser context with its own storage. The stub keeps
 what a test publishes or comments until it restarts, and the browser keeps

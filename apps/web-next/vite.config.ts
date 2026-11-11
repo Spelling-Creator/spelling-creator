@@ -4,13 +4,33 @@ import { reactRouter } from "@react-router/dev/vite";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { reactCompilerPreset } from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-import { underPortless } from "../../scripts/portless.mjs";
+import { defineConfig, type Plugin } from "vite";
+import { STUB, portlessUrl, underPortless } from "../../scripts/portless.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// `pnpm dev:next:stub` under portless, which serves the app at a named
+// https://*.localhost URL: point the app at the stub API's portless URL
+// instead of .env.stub's localhost:8787, which is only for running without
+// portless. In the `config` hook because that is before Vite reads the .env
+// files, and Vite never lets a .env file override a variable already in the
+// environment. The same thing apps/web/vite.config.js does for the old app.
+function portlessStub(mode: string): Plugin | null {
+  if (mode !== "stub" || !underPortless()) return null;
+  return {
+    name: "portless-stub",
+    apply: "serve",
+    async config() {
+      const api = await portlessUrl(STUB.api);
+      process.env.VITE_API_URL = api;
+      process.env.VITE_SUPABASE_URL = api;
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => ({
   plugins: [
+    portlessStub(mode),
     reactRouter(),
     // The React Compiler, as a Babel pass after React Router's own transform
     // of the route modules. The preset carries the TypeScript and JSX syntax

@@ -483,13 +483,14 @@ minute or two. They are `pnpm --filter @spelling-creator/web test:e2e`, and CI
 runs them in a job of their own. See
 [End-to-end tests](./web-app/end-to-end-tests.md).
 
-`apps/api`'s `test` task depends on `apps/web`'s `build:ssr` in `turbo.json`, as
-its `bundle` task does, and `pnpm dev:api` and `pnpm run deploy` build it before
-starting wrangler. That is not incidental:
-`routes/ssr.js` imports the built bundle _statically_, deliberately, so that a
-missing one is a build failure rather than a runtime surprise, and the Node
-entry's tests reach it through `createHandler`. The dependency is what lets
-`pnpm test` work from a clean checkout.
+`apps/api`'s `test` task depends on `apps/web`'s `build:ssr` and
+`apps/web-next`'s `build` in `turbo.json`, as its `bundle` task does, and
+`pnpm dev:api` and `pnpm run deploy` build them before starting wrangler.
+That is not incidental: `routes/ssr.js` and `routes/next.js` import the
+built bundles _statically_, deliberately, so that a missing one is a build
+failure rather than a runtime surprise, and the Node entry's tests reach
+them through `createHandler`. The dependency is what lets `pnpm test` work
+from a clean checkout.
 
 The CI build runs without the `VITE_*` secrets: they are injected only for the
 real deploy, and a pull request from a fork could not read them anyway. It still

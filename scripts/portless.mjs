@@ -9,12 +9,14 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 
-/** The names the stub pair is registered under. Keep in step with their package scripts. */
+/** The names the stub servers are registered under. Keep in step with their package scripts. */
 export const STUB = {
   app: "stub.spelling-creator",
   // The second origin of the stub API's /split page: an alias for the app's
   // own server (see portlessStub in apps/web/vite.config.js).
   peer: "peer.stub.spelling-creator",
+  // The new app (apps/web-next), while it runs beside the old one.
+  next: "next.stub.spelling-creator",
   api: "api.stub.spelling-creator",
 };
 

@@ -132,6 +132,10 @@ the usual chrome and offers the home page and the hub; it replaced a
 `<Navigate to="/">` that quietly turned every dead link into the homepage,
 telling nobody anything had gone wrong.
 
+Two of the routes above, `/hub` and `/users/:id`, are answered by the
+[new app](./rewrite.md) before any of this runs; the rest of this section is
+about the paths the old app still serves.
+
 The status matters as much as the page, and it is the host's to send.
 `apps/api/src/routes/spa.js` holds **the same route table** (`APP_PATHS`) and
 `serveApp()` decides what a path gets. Both hosts end their frontend

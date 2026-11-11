@@ -46,6 +46,8 @@ function defaultPeerOrigin(appOrigin) {
  * @param {string} [opts.peerOrigin]  The second origin /split loads the app from (see split.js).
  *                                    Default the same address on 127.0.0.1, which needs appOrigin
  *                                    to name its port; any other appOrigin needs a peerOrigin.
+ * @param {string[]} [opts.extraOrigins]  Other origins allowed to call the stub from a browser:
+ *                                    the new app's dev server, while it runs beside the old one.
  * @param {string} [opts.dataDir]     The hub snapshot and image cache. Default apps/stub-api/.cache.
  * @param {string} [opts.hubUrl]      Where to snapshot published lessons from. Default the live hub.
  * @param {number} [opts.now]         "Now", for the seeded dates. Default the real time.
@@ -60,6 +62,7 @@ export async function startStub({
   port = 8787,
   appOrigin = "http://localhost:5180",
   peerOrigin = defaultPeerOrigin(appOrigin),
+  extraOrigins = [],
   dataDir = DEFAULT_DATA_DIR,
   hubUrl = DEFAULT_HUB_URL,
   now = Date.now(),
@@ -88,6 +91,7 @@ export async function startStub({
     createHandler(state, {
       appOrigin,
       peerOrigin,
+      extraOrigins,
       dataDir,
       hubUrl,
       ai: aiRoutes,

@@ -5,6 +5,15 @@ description: How the Worker server-renders the hub, lesson and profile pages, wh
 
 # Server rendering
 
+::: info The hub and the profile pages are the new app's
+`/hub` and `/users/:id` are served by `apps/web-next` now, where React
+Router renders every route on the server through the route's own loader; the
+Worker and the Node server hand those two paths to it before anything on
+this page runs (`apps/api/src/routes/next.js`). What follows describes the
+old app's server render, which still covers the lesson pages until they
+move. See [The rewrite](./rewrite.md).
+:::
+
 Three kinds of page are rendered on the server before the browser runs any
 JavaScript, and then hydrated in place:
 
@@ -15,6 +24,9 @@ JavaScript, and then hydrated in place:
 | `/hub/:id/<tab>`      | `fetchLesson(id)`                       | Everyone     |
 | `/hub/:id/discussion` | `fetchLesson(id)` + `fetchComments(id)` | Everyone     |
 | `/users/:id`          | `fetchUserProfile(id)`                  | Everyone     |
+
+(The first and last rows are the new app's now, as the note above says; the
+old render still matches them, but is never asked.)
 
 Only the discussion tab fetches comments, because it is the only view that
 shows them. They seed its thread, so the comments are in the served HTML

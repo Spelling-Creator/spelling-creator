@@ -22,25 +22,46 @@ import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 
 import { createApp, registerFrontend } from "../app.js";
+import { defined, serveNext, shouldServeNext } from "../routes/next.js";
 import { serverRender, shouldServerRender } from "../routes/ssr.js";
 import { serveApp } from "../routes/spa.js";
 import { assetServer } from "./assets.js";
-import { withBrowserConfig } from "./browserConfig.js";
+import { browserConfig, withBrowserConfig } from "./browserConfig.js";
 import { withForwardedScheme } from "./forwardedScheme.js";
 import { nodePlatform } from "./platform.js";
 import { installSelfFetch, servingSelf } from "../lib/selfFetch.js";
 
 /**
- * The frontend fall-through for this host: server-render the public read routes,
- * and otherwise serve the built app — asset, shell, or 404 (routes/spa.js).
+ * The settings this host hands the new app (routes/next.js): the same browser
+ * settings it writes into the old app's shell (browserConfig.js), from the
+ * same environment, plus what main.jsx worked out for itself there. This
+ * process is the API and serves the page, so the page's own origin is where
+ * the browser reaches both, unless PUBLIC_SUPABASE_URL says the identity
+ * service is elsewhere.
+ */
+function nodeSettings(env, url) {
+  return defined({
+    apiUrl: url.origin,
+    supabaseUrl: url.origin,
+    ...browserConfig(env),
+  });
+}
+
+/**
+ * The frontend fall-through for this host: the new app for the paths it
+ * serves, the server render for the public read routes the old app still
+ * owns, and otherwise the built app: asset, shell, or 404 (routes/spa.js).
  *
- * Deliberately not the Worker's `handleFrontend`, which is the same two steps
- * with headless-Chromium prerendering between them — importing it would pull
+ * Deliberately not the Worker's `handleFrontend`, which is the same steps
+ * with headless-Chromium prerendering among them; importing it would pull
  * `@cloudflare/puppeteer` into a Node process that can never use it. The step
  * that is missing only ever applied to crawlers on "/", and SSR already covers
  * every other public page.
  */
 async function frontend(request, env, ctx, url) {
+  if (shouldServeNext(request, url)) {
+    return serveNext(request, nodeSettings(env, url), url);
+  }
   if (shouldServerRender(request, url)) {
     const rendered = await serverRender(request, env, ctx, url);
     if (rendered) return rendered;
