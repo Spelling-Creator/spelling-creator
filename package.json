@@ -24,10 +24,10 @@
     "fmt": "oxfmt ."
   },
   "devDependencies": {
-    "oxfmt": "^0.74.0",
-    "oxlint": "^1.89.0",
-    "portless": "^0.15.9",
-    "turbo": "^2.11.10"
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
+    "portless": "^0.17.0",
+    "turbo": "^2.11.11"
   },
   "packageManager": "pnpm@12.16.1"
 }
