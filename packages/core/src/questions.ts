@@ -56,7 +56,18 @@ export interface QuestionFields {
   threeBoard?: unknown;
   besides?: unknown;
   answer?: unknown;
-  answers?: ReadonlyArray<{ text?: string }>;
+  answers?: ReadonlyArray<AnswerRow>;
+}
+
+// A normalized lesson only holds { text } rows, but a block mid-edit or a caller
+// that skips normalizing can hold a null, or a bare string from a hand-written
+// file, which the type leaves out so the rows stay readable as { text } elsewhere.
+type AnswerRow = { text?: string } | null | undefined;
+
+/** A row of a question's answer list as text, or "" when it holds none. */
+export function answerRowText(row: AnswerRow | string): string {
+  const text = typeof row === "string" ? row : row?.text;
+  return typeof text === "string" ? text : "";
 }
 
 export const QUESTION_TYPES: {
@@ -297,8 +308,7 @@ export function questionBesides(
     .toLowerCase();
   if (!wanted) return null;
   const match = (block.answers || [])
-    .map((a) => (typeof a === "string" ? a : a?.text) || "")
-    .map((text) => text.trim())
+    .map((a) => answerRowText(a).trim())
     .find((text) => text && text.toLowerCase() === wanted);
   return match ?? null;
 }
@@ -586,7 +596,7 @@ export function questionAnswerItems(
   }
   if (LIST_ANSWER_TYPES.has(block.questionType)) {
     return (block.answers || [])
-      .map((a) => (a.text || "").trim())
+      .map((a) => answerRowText(a).trim())
       .filter(Boolean);
   }
   return [];

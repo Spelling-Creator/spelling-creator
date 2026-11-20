@@ -35,7 +35,11 @@ import {
   textBlockFormattedSpans,
   textBlockPlain,
 } from "@spelling-creator/core/lessonText";
-import { isOpenType, resolveOpenType } from "@spelling-creator/core/questions";
+import {
+  answerRowText,
+  isOpenType,
+  resolveOpenType,
+} from "@spelling-creator/core/questions";
 import type { FormattedSpan } from "./lessonText.ts";
 import type {
   Block,
@@ -511,8 +515,7 @@ function answerIdOf(block: QuestionBlock, answer: string) {
 function answersOf(block: QuestionBlock): string[] {
   if (ORANGE_TYPES.has(block?.questionType)) {
     return (Array.isArray(block.answers) ? block.answers : [])
-      .map((a) => (typeof a === "string" ? a : a?.text) || "")
-      .map((a) => a.trim())
+      .map((a) => answerRowText(a).trim())
       .filter(Boolean);
   }
   const answer = block?.answer;

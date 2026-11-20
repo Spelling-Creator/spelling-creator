@@ -88,7 +88,9 @@ shows after its prompt: one answer for the single-answer types, every non-blank
 answer for the amber types and a tight open's examples (joined with
 `ANSWER_GAP`, a space, a non-breaking space and a space, since the PDF's HTML
 would collapse ordinary spaces), and nothing for `paraphrase`, `broad_open`,
-`open`, `wyr` or an unanswered question. A tight open's examples print after
+`open`, `wyr` or an unanswered question. A row with no text in an answer list,
+such as the null a block mid-edit can hold, counts as blank (`answerRowText`). A
+tight open's examples print after
 `EXAMPLE_ANSWER_PREFIX` ("e.g. "), which the DOCX importer strips again, so
 whoever is scoring reads them as examples and not as the key. A number
 question's `steps` print as an indented numbered list under it and come back
