@@ -40,8 +40,8 @@ import {
   imageSizeScale,
   IMAGE_ALIGNS,
   IMAGE_SIZES,
-  DEFAULT_IMAGE_SIZE,
-  DEFAULT_IMAGE_ALIGN,
+  imageAlignOrDefault,
+  imageSizeOrDefault,
 } from "@spelling-creator/core/image";
 import { newId } from "@spelling-creator/core/id";
 import {
@@ -413,8 +413,10 @@ function ImageBlock({
     if (file) onReplaceFile?.(file);
   };
 
-  const align = block.align || DEFAULT_IMAGE_ALIGN;
-  const size = block.size || DEFAULT_IMAGE_SIZE;
+  // A lesson saved before imports checked these can still hold an unknown value,
+  // which would leave the toggles below with none pressed.
+  const align = imageAlignOrDefault(block.align);
+  const size = imageSizeOrDefault(block.size);
   const preview = fitWithin(
     block.width,
     block.height,

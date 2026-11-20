@@ -113,7 +113,7 @@ export interface ImageBlock extends Picture {
   type: "image";
   /**
    * A key of IMAGE_SIZES in image.ts. A block built for the MCP server may
-   * leave it out; jsonImport fills in the default.
+   * leave it out; jsonImport fills in the default, for an unknown size too.
    */
   size?: string;
   /** One of IMAGE_ALIGNS in image.ts, defaulted the same way. */
